@@ -6,6 +6,7 @@
 prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
   ## Todo: optimise which data is essential
   ## Todo: don't use names for reads, use index instead? Names are require a lot of memory
+
   if(class(bamFile)=='BamFile') {
     if(!is.null(yieldSize)) {
       yieldSize(bamFile) <- yieldSize
@@ -17,7 +18,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
     if(is.null(yieldSize)) {
       yieldSize <- NA
     }
-    bamFile <- BamFile(bamFile, yieldSize = yieldSize)
+    bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
   }
   bf <- open(bamFile)
   #readJunctions <- GRangesList()
@@ -30,7 +31,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
 
   while(isIncomplete(bf)){
     # reads=readGAlignments(bamFile, param=ScanBamParam(flag=scanBamFlag(isSecondaryAlignment=FALSE),what = scanBamWhat()), use.names=T)
-    reads=readGAlignments(bf,
+    reads=GenomicAlignments::readGAlignments(bf,
                           param=ScanBamParam(flag=scanBamFlag(isSecondaryAlignment=FALSE)), ## whether supplementary alignments would be considered as well?? To confirm with Jonathan.
                           use.names=TRUE)
     #readJunctions <- c(readJunctions,junctions(reads))
