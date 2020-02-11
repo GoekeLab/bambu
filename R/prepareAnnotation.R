@@ -5,12 +5,12 @@
 #'@examples
 #' \dontrun{
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-#'  txdb <- as.list(TxDb.Hsapiens.UCSC.hg38.knownGene)
+#'  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
 #'  prepareAnnotations(txdb)
 #'  }
 prepareAnnotations <- function(txdb) {
   txdbTablesList <- list()
-  txdbTablesList[['intronsByTxEns']] <- intronsByTranscript(txdb,use.names=T)
+  txdbTablesList[['intronsByTxEns']] <- intronsByTranscript(txdb,use.names=TRUE)
 
 
   #txdbTablesList[['exonsByGene']]=exonsBy(txdb,by='gene')

@@ -68,14 +68,18 @@ bamboo <- function(obj,  algo.control,...){
   return(est.list)
 }
 
-setMethod("bamboo", signature(obj = "data.table"),
-          definition = function(obj){
-            bamboo(obj,...)
-          })
+
+setGeneric("bamboo", function(object,  algo.control){
+  standardGeneric("bamboo")
+})
+# setMethod("bamboo", signature("data.table"),
+#           function(object){
+#             bamboo(object,...)
+#           })
 ## method when output from buildTranscriptModel is provided
-setMethod("bamboo", signature(obj = "summarizedExperiment"),
-          definiton = function(obj){
-            dt <- process_se(obj)
+setMethod("bamboo", signature("summarizedExperiment"),
+          function(object){
+            dt <- process_se(object)
             rowData <- metadata(dt)[,c("TXNAME","GeneID","eqClass")]
             rownames(rowData) <- rowData$TXNAME
             rowData$TXNAME <- NULL
@@ -92,8 +96,8 @@ setMethod("bamboo", signature(obj = "summarizedExperiment"),
 
 
 
-setMethod("bamboo", signature(obj = "character"),
-          function(obj){
+setMethod("bamboo", signature("character"),
+          function(object){
             if(is.null(txdbTablesList)){
               if(is.null(txdb)){
                 stop("txdb object is missing!")

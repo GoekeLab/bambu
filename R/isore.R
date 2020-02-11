@@ -39,10 +39,10 @@
 #'@examples
 #' \dontrun{
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-#'  txdb <- as.list(TxDb.Hsapiens.UCSC.hg38.knownGene) #
+#'  txdb <- loadDb(system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")) #
 #'  test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
 #'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-#'  bamboo(obj = test.bam,  txdb = TxDb.Hsapiens.UCSC.hg38.knownGene,genomeFA = fa.file)
+#'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = fa.file)
 #'  }
 isore <- function(bamFile,
                   txdb=NULL, ##CY: this should all be based on R objects in memory, not files (if possible)
@@ -55,7 +55,7 @@ isore <- function(bamFile,
                   minimumReadSupport=2,
                   minimumTxFraction = 0.02)
 {
-  standardJunctionModelFile <- paste0('data/standardJunctionModel-temp.rds') ## note: test which standard junction model to use? One by protocol? need to compare
+  #standardJunctionModelFile <- paste0('data/standardJunctionModel-temp.rds') ## note: test which standard junction model to use? One by protocol? need to compare
   ## comment: how to create this and would this change at different conditions?
 
   cat('### prepare annotations ### \n')
@@ -214,6 +214,8 @@ isore <- function(bamFile,
   cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
 
+  cat('### Create summarizedExperiment output')
+  se <- summarizedExperiment()
 
   return(readClassListFull)
 }

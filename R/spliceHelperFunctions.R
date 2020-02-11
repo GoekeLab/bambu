@@ -147,7 +147,7 @@ spliceStrand <- function(motif){
 #'@param ignore.strand
 evalAnnotationOverlap <- function(intronRanges, intronsByTx, ignore.strand=FALSE)
 {
-  return(table(!is.na(match(intronRanges, unique(unlist(intronsByTx)),ignore.strand=ignore.strand))))
+  return(table(!is.na(GenomicRanges::match(intronRanges, unique(unlist(intronsByTx)),ignore.strand=ignore.strand))))
 }
 #'@title TRIMFIRSTLASTEXONS
 #'@description function returns exon granges list where the first and last exons are trimmed to width 2, all introns are preserved, requires exon_rank and exon_endRank
