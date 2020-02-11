@@ -12,9 +12,9 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Depends: 
-   R(>= 3.6.0),
+   R(>= 3.2.0),
    data.table(>= 1.1.8),
-   S4Vectors(>= 0.23.18), 
+   dplyr(>= 0.8.1)
 Suggests: 
     knitr,
     rmarkdown,
@@ -41,12 +41,14 @@ RoxygenNote: 7.0.2
 LinkingTo: 
     Rcpp,
     RcppArmadillo
-Imports: 
+Imports:
+   S4Vectors(>= 0.23.18), 
     IRanges, 
     GenomicRanges, 
     GenomicAlignments,
+    glmnet,
+    Rsamtools,
     SummarizedExperiment(>= 1.1.6),
     Rcpp,
-    RcppArmadillo,
-    dplyr
+    RcppArmadillo
 VignetteBuilder: knitr

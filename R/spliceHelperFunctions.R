@@ -55,9 +55,9 @@ myCompatibleTranscription <- function(query, subject, splice)
   srng <- ranges(subject)
   sprng <- ranges(splice)
 
-  bnds <- elementNROWS(setdiff(qrng, srng)) == 0L
-  splc <- elementNROWS(intersect(srng, sprng)) == 0L
-  bnds & splc
+  bnds <- elementNROWS(GenomicRanges::setdiff(qrng, srng)) == 0L
+  splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
+  return(bnds & splc)
 }
 
 #'@title MYONEMATCH
@@ -133,9 +133,9 @@ myGaps <- function(x, start=NA, end=NA)
 #'@title SPLICESTRAND
 #'@param motif
 spliceStrand <- function(motif){
-  NATURAL_INTRON_MOTIFS_RC <- as.character(reverseComplement(DNAStringSet(NATURAL_INTRON_MOTIFS)))
+  NATURAL_INTRON_MOTIFS_RC <- as.character(reverseComplement(DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
 
-  motifStrand <- ifelse(motif %in% NATURAL_INTRON_MOTIFS,'+','*')
+  motifStrand <- ifelse(motif %in% GenomicAlignments::NATURAL_INTRON_MOTIFS,'+','*')
   motifStrand[motif %in% NATURAL_INTRON_MOTIFS_RC] <- '-'
   return(motifStrand)
 }

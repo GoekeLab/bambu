@@ -77,6 +77,7 @@ setGeneric("bamboo", function(object,  algo.control){
 #             bamboo(object,...)
 #           })
 ## method when output from buildTranscriptModel is provided
+setOldClass("summarizedExperiment")
 setMethod("bamboo", signature("summarizedExperiment"),
           function(object){
             dt <- process_se(object)

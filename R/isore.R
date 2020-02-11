@@ -39,8 +39,10 @@
 #'@examples
 #' \dontrun{
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-#'  txdb <- loadDb(system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")) #
+#'  samplefile <- system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")
+#'  txdb <- loadDb(samplefile) #
 #'  test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
+#'  standardJunctionModelFile <- system.file("extdata", "standardJunctionModel-temp.rds", package = "bamboo")
 #'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
 #'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = fa.file)
 #'  }
@@ -53,9 +55,10 @@ isore <- function(bamFile,
                   protocol=NULL,
                   prefix='',  ## prefix for new gene names (for combining multiple runs gene Ids can be made unique and merged later)
                   minimumReadSupport=2,
-                  minimumTxFraction = 0.02)
+                  minimumTxFraction = 0.02,
+                  standardJunctionModelFile = standardJunctionModelFile)
 {
-  #standardJunctionModelFile <- paste0('data/standardJunctionModel-temp.rds') ## note: test which standard junction model to use? One by protocol? need to compare
+  ### note: test which standard junction model to use? One by protocol? need to compare
   ## comment: how to create this and would this change at different conditions?
 
   cat('### prepare annotations ### \n')
@@ -215,7 +218,7 @@ isore <- function(bamFile,
 
 
   cat('### Create summarizedExperiment output')
-  se <- summarizedExperiment()
+  se <- summarizedExperiment(assays(list = ))
 
   return(readClassListFull)
 }
