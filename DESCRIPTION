@@ -12,16 +12,13 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Depends: 
+   R(>= 3.6.0),
+   data.table(>= 1.1.8),
    S4Vectors(>= 0.23.18), 
-   IRanges, 
-   GenomicRanges, 
-   GenomicAlignments,
-   SummarizedExperiment(>= 1.1.6),
-   data.table(>= 1.1.0)
 Suggests: 
-    TxDb,
     knitr,
     rmarkdown,
+    TxDb.Hsapiens.UCSC.hg38.knownGene,
     testthat
 Enhances: parallel
 SystemRequirements:
@@ -42,7 +39,14 @@ bugReports: https://github.com/GoekeLab/bamboo/issues
 URL: https://github.com/GoekeLab/bamboo
 RoxygenNote: 7.0.2
 LinkingTo: 
-    Rcpp
+    Rcpp,
+    RcppArmadillo
 Imports: 
-    Rcpp
+    IRanges, 
+    GenomicRanges, 
+    GenomicAlignments,
+    SummarizedExperiment(>= 1.1.6),
+    Rcpp,
+    RcppArmadillo,
+    dplyr
 VignetteBuilder: knitr
