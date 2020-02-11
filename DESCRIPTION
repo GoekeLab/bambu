@@ -1,0 +1,48 @@
+Package: bamboo
+Type: Package
+Title: ISOFORM RECONSTRUCTION AND QUANTIFICATION FOR LONG READ
+Version: 0.1.0
+Author: c(person("Jonathan", "Developer", role = c("aut", "cre"),
+                     email = ""),
+              person("Ying Chen", "Developer", role = "aut"))
+Maintainer: Ying Chen <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Depends: 
+   S4Vectors(>= 0.23.18), 
+   IRanges, 
+   GenomicRanges, 
+   GenomicAlignments,
+   SummarizedExperiment(>= 1.1.6),
+   data.table(>= 1.1.0)
+Suggests: 
+    TxDb,
+    knitr,
+    rmarkdown,
+    testthat
+Enhances: parallel
+SystemRequirements:
+biocViews: 
+     FeatureExtraction, 
+     GeneExpression, 
+     GeneExpressionWorkflow, 
+     GenomeAnnotation, 
+     ImmunoOncology, 
+     Normalization, 
+     RNASeq, 
+     Regression, 
+     Sequencing, 
+     Software, 
+     Transcription, 
+     Transctiptomics
+bugReports: https://github.com/GoekeLab/bamboo/issues
+URL: https://github.com/GoekeLab/bamboo
+RoxygenNote: 7.0.2
+LinkingTo: 
+    Rcpp
+Imports: 
+    Rcpp
+VignetteBuilder: knitr
