@@ -4,6 +4,7 @@
 #' @param unlisted_junctions
 #' @param readGrglist
 #' @param readNames
+#' @importFrom unstrsplit getFromNamespace
 constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames){ #, startRanges, endRanges) {
   options(scipen = 999)
 
@@ -67,30 +68,16 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   readTable[, 'start'] <- pmin(min(start(readGrglist[uniqueReadNames])),min(intronStartCoordinates[uniqueReadNames] -2))  # min(start(readGrglist))
   readTable[, 'end']   <- pmax(max(end(readGrglist[uniqueReadNames])),max(intronEndCoordinates[uniqueReadNames]+2))  # max(end(readGrglist))
   readTable[, 'blockCount'] <- elementNROWS(junctionsByReadListCorrected[uniqueReadNames])
-  readTable[, 'exonStarts'] <- paste(intronEndCoordinates[uniqueReadNames]+1,collapse=',') #### replace with unstrsplit function (should be faster)
-  readTable[, 'exonEnds'] <- paste(intronStartCoordinates[uniqueReadNames]-1,collapse=',')
-  readTable[, 'intronEnds'] <- paste(intronEndCoordinates[uniqueReadNames],collapse=',') #### replace with unstrsplit function (should be faster)
-  readTable[, 'intronStarts'] <- paste(intronStartCoordinates[uniqueReadNames],collapse=',')
+  readTable[, 'exonStarts'] <- unstriplit(intronEndCoordinates[uniqueReadNames]+1,sep=',') #### replace with unstrsplit function (should be faster)
+  readTable[, 'exonEnds'] <- unstriplit(intronStartCoordinates[uniqueReadNames]-1,sep=',')
+  readTable[, 'intronEnds'] <- unstriplit(intronEndCoordinates[uniqueReadNames],sep=',') #### replace with unstrsplit function (should be faster)
+  readTable[, 'intronStarts'] <- unstriplit(intronStartCoordinates[uniqueReadNames],sep=',')
   readTable[, 'strand'] <- readStrand[uniqueReadNames]
   readTable[, 'readId'] <- readNames[as.integer(uniqueReadNames)]
   readTable[, 'confidenceType'] <- 'highConfidenceJunctionReads'
   readTable[, 'readClassId'] <- NA
 
-  #   candReads <- names(which(highConfReadSet))
-  #   readTable[, 'chr']    <- as.character(seqnames(startRanges[candReads]) )  # as.character(unique(seqnames(readGrglist)))
-  #   readTable[, 'start'] <- pmin(start(startRanges[candReads]),min(intronStartCoordinates[candReads] -2))  # min(start(readGrglist))
-  #   readTable[, 'end']   <- pmax(end(endRanges[candReads]),max(intronEndCoordinates[candReads]+2))  # max(end(readGrglist))
-  #   readTable[, 'blockCount'] <- elementNROWS(junctionsByReadListCorrected[candReads])
-  #   readTable[, 'exonStarts'] <- paste(intronEndCoordinates[candReads]+1,collapse=',') #### replace with unstrsplit function (should be faster)
-  #   readTable[, 'exonEnds'] <- paste(intronStartCoordinates[candReads]-1,collapse=',')
-  #   readTable[, 'intronEnds'] <- paste(intronEndCoordinates[candReads],collapse=',') #### replace with unstrsplit function (should be faster)
-  #   readTable[, 'intronStarts'] <- paste(intronStartCoordinates[candReads],collapse=',')
-  #   readTable[, 'strand'] <- readStrand[candReads]
-  #   readTable[, 'readId'] <- candReads
-  #   readTable[, 'confidenceType'] <- 'highConfidenceJunctionReads'
-  #   readTable[, 'readClassId'] <- NA
-  #
-  #################HERE @################
+
   #include reads with low confidence junctions, need to be assigned to real transcripts
   readTable[sum(is.na(junctionsByReadListCorrected[uniqueReadNames]))>0, 'confidenceType'] <- 'lowConfidenceJunctionReads'
 

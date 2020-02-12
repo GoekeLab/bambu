@@ -44,7 +44,7 @@
 #'  test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
 #'  standardJunctionModelFile <- system.file("extdata", "standardJunctionModel-temp.rds", package = "bamboo")
 #'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-#'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = fa.file)
+#'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = FaFile(fa.file))
 #'  }
 isore <- function(bamFile,
                   txdb=NULL, ##CY: this should all be based on R objects in memory, not files (if possible)
@@ -55,16 +55,31 @@ isore <- function(bamFile,
                   protocol=NULL,
                   prefix='',  ## prefix for new gene names (for combining multiple runs gene Ids can be made unique and merged later)
                   minimumReadSupport=2,
-                  minimumTxFraction = 0.02,
-                  standardJunctionModelFile = standardJunctionModelFile)
+                  minimumTxFraction = 0.02)
 {
   ### note: test which standard junction model to use? One by protocol? need to compare
   ## comment: how to create this and would this change at different conditions?
 
   cat('### prepare annotations ### \n')
-  if(!is.null(txdb)) # txdb object by reading txdb file
-  {
-    txdbTablesList <- prepareAnnotations(txdb) ## note: check which annotation tables are reused multiple times, and inlcude only those. Optimise required annotations if possible
+  if(is.null(txdbTablesList)){
+    if(!is.null(txdb)) # txdb object by reading txdb file
+    {
+      if(class(txdb) != 'TxDb'){
+        stop("txdb object is missing.")
+      }
+      txdbTablesList <- prepareAnnotations(txdb) ## note: check which annotation tables are reused multiple times, and inlcude only those. Optimise required annotations if possible
+    }else{
+      stop("txdb object is missing.")
+    }
+  }
+
+
+  if(is.null(genomeFA)){
+    stop("GenomeFA file is missing.")
+  }else if(!grepl('.fa',genomeFA)){
+    stop("GenomeFA file is missing.")
+  }else if(class(genomeFA) != 'FaFile'){
+    genomeFA <- Rsamtools::FaFile(genomeFA)
   }
 
 
@@ -92,7 +107,7 @@ isore <- function(bamFile,
   gc()
 
   cat('### find annotated introns ### \n')
-  uniqueJunctions$annotatedJunction <- (uniqueJunctions %in% unique(txdbTablesList[['unlisted_introns']]))
+  uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, unique(txdbTablesList[['unlisted_introns']]))))
 
   # Indicator: is the junction start annotated as a intron start?
   annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName ,sum)>0
@@ -113,7 +128,7 @@ isore <- function(bamFile,
     uniqueJunctions=predictSpliceSites[[1]]
     junctionModel=predictSpliceSites[[2]]
   } else {
-    junctionModel=readRDS(standardJunctionModelFile)
+    junctionModel = standardJunctionModels_temp
     predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = junctionModel)
     uniqueJunctions=predictSpliceSites[[1]]
     show('Warning: junction correction with not enough data, precalculated model is used')
@@ -166,8 +181,8 @@ isore <- function(bamFile,
   ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches
   ## might not be a big issue (not clear)
   distTable <- calculateDistToAnnotation(readClassListFull$exonsByReadClass,txdbTablesList$exonsByTx,maxDist = 35, primarySecondaryDist = 5, ignore.strand= !stranded)  # [readClassListFull$txTable$confidenceType=='highConfidenceJunctionReads' ]   ### change txId OK
-  distTable <- left_join(distTable, select(readClassListFull$readClassTable, readClassId, readCount, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
-  distTable <- left_join(distTable, select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
+  distTable <- left_join(distTable, dplyr::select(readClassListFull$readClassTable, readClassId, readCount, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
+  distTable <- left_join(distTable, dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
   readClassListFull$distTable <- distTable
   end.ptm <- proc.time()
   cat(paste0('Finished calculating distance of read classes to annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
@@ -175,7 +190,7 @@ isore <- function(bamFile,
   cat('### assign unmatched readClasses to new geneIds ### \n')
   start.ptm <- proc.time()
 
-  readClassToGeneIdTable <- select(distTable, readClassId, GENEID, readCount) %>%group_by(GENEID) %>% mutate(geneCount = sum(readCount)) %>% distinct() %>%group_by(readClassId) %>% filter(geneCount==max(geneCount)) %>%filter(row_number()==1) %>% select(readClassId, geneId=GENEID) %>% ungroup()
+  readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%group_by(GENEID) %>% mutate(geneCount = sum(readCount)) %>% distinct() %>%group_by(readClassId) %>% filter(geneCount==max(geneCount)) %>%filter(row_number()==1) %>% dplyr::select(readClassId, geneId=GENEID) %>% ungroup()
 
   newGeneCandidates <- (!readClassListFull$readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
   readClassToGeneIdTableNew <- assignNewGeneIds(readClassListFull$exonsByReadClass[newGeneCandidates], prefix=prefix, minoverlap=5, ignore.strand=F)
@@ -217,15 +232,36 @@ isore <- function(bamFile,
   cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
 
-  cat('### Create summarizedExperiment output')
-  se <- summarizedExperiment(assays(list = ))
+  cat('### Create summarizedExperiment output ###')
+  ## This chunk of code should be able to produce output required for quantification:
+  ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
+  ## rowData: can be empty
+  ## metadata: eqClass to tx assignment; distTable for each rc and eqClass
+  distTable <- data.table(readClassListFull$distTable)[,.(readClassId, annotationTxId, readCount, GENEID)]
+  distTable[, eqClass:=paste(sort(unique(annotationTxId)),collapse='.'), by = list(readClassId,GENEID)]
 
-  return(readClassListFull)
+  eqClassCountTable <- distTable[,list(readCount=sum(readCount)), by = list(eqClass, GENEID)]
+  eqClassTable <- data.table(txdbTablesList$txIdToGeneIdTable)
+  eqClassCountTable <- unique(eqClassCountTable[eqClassTable, on = c('GENEID','eqClass')])
+  eqClassCountTable[is.na(readCount), readCount:=0]
+
+  counts <- unique(eqClassCountTable[,.(eqClass, readCount)])
+  counts <- setDF(counts)
+  row.names(counts) <- counts$eqClass
+  counts$eqClass <- NULL
+  if(class(bamFile)=='BamFile'){
+    bamFile <- path(bamFile)
+  }
+  colnames(counts) <-  gsub('.bam','',data.table::last(unlist(strsplit(bamFile,'\\/'))))
+
+  se <- SummarizedExperiment(assays=list(counts = counts),
+                             metadata=list(distTable = distTable,
+                                           eqClassTable = eqClassTable))
+
+  return(se)
 }
 
-#' function to classify read classes into new categories
-#' @title CLASSIFY READ CLASSES
-#' @param readClassList
+
 classifyReadClasses <- function(readClassList) {
 
   exByTx_singleBpStartEnd <- cutStartEndFromGrangesList(readClassListFull$exonsByReadClass)
@@ -250,7 +286,7 @@ classifyReadClasses <- function(readClassList) {
   readClassListFull$readClassTable$txHasSubsetInUnexplained <- txHasSubsetInUnexplained
 
 
-  distTableByGene <- left_join(distTable, select(readClassListFull$readClassTable, readClassId,txIsSubsetOf, txHasSubsetInUnexplained)) %>% group_by(GENEID) %>% mutate(geneCount = sum(relativeReadCount), geneCountFractionCompatible = sum(relativeReadCount * compatible)/ geneCount)
+  distTableByGene <- left_join(distTable, dplyr::select(readClassListFull$readClassTable, readClassId,txIsSubsetOf, txHasSubsetInUnexplained)) %>% group_by(GENEID) %>% mutate(geneCount = sum(relativeReadCount), geneCountFractionCompatible = sum(relativeReadCount * compatible)/ geneCount)
 
   ## here ##
   ## here: add longest transcripts first, then validate with number of explained reads, predict tss/tes is separate task (?)
@@ -261,12 +297,7 @@ classifyReadClasses <- function(readClassList) {
 
 }
 
-#' function to assign new gene ids to a set of transcripts
-#' @title ASSIGNNEWGENEIDS
-#' @param exByTx
-#' @param prefix
-#' @param minoverlap
-#' @param ignore.strand
+
 assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
 
   exonSelfOverlaps <- findOverlaps(exByTx,exByTx,select = 'all',minoverlap = minoverlap, ignore.strand=ignore.strand)
@@ -277,25 +308,17 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
 
     length_tmp = nrow(hitObject)
     show(length_tmp)
-    hitObject= inner_join(hitObject,hitObject,by=c("subjectHits"="queryHits")) %>% select(queryHits,subjectHits.y) %>% distinct() %>%rename(subjectHits=subjectHits.y)
+    hitObject= inner_join(hitObject,hitObject,by=c("subjectHits"="queryHits")) %>% dplyr::select(queryHits,subjectHits.y) %>% distinct() %>% dplyr::rename(subjectHits=subjectHits.y)
   }
 
-  geneTxNames <- hitObject %>% arrange(queryHits, subjectHits) %>% group_by(queryHits) %>% mutate(geneId = paste('gene',prefix,'.',first(subjectHits),sep='')) %>% select(queryHits, geneId) %>% distinct() %>% ungroup()
+  geneTxNames <- hitObject %>% arrange(queryHits, subjectHits) %>% group_by(queryHits) %>% mutate(geneId = paste('gene',prefix,'.',dplyr::first(subjectHits),sep='')) %>% dplyr::select(queryHits, geneId) %>% distinct() %>% ungroup()
   geneTxNames$readClassId <- names(exByTx)[geneTxNames$queryHits]
-  geneTxNames <- select(geneTxNames, readClassId, geneId)
+  geneTxNames <- dplyr::select(geneTxNames, readClassId, geneId)
   return(geneTxNames)
 }
 
 
 
-##
-##
-# example: spliceTable <- getMinimumEqClassByTx(txdbTablesList$exonsByTx)
-#' Function to create a table with the minimum transcript equivalent classes for each transcript
-#' @title GETMINIMUMEQCLASSBYTX
-#' @description any transcript that is not a perfect subset of another transcript has a unique read class,
-#' for transcripts which are subsets,the minimal read class will be all transcripts that it is a subset of
-#' @param exonsByTranscripts
 getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
   exByTxAnnotated_singleBpStartEnd <- cutStartEndFromGrangesList(exonsByTranscripts)  # estimate overlap only based on junctions
@@ -303,26 +326,20 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
   spliceOverlapsSelected =spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,] ## select splicing compatible transcript matches
 
   minReadClassTable <- as_tibble(spliceOverlapsSelected) %>%
-    select(queryHits, subjectHits)
+    dplyr::select(queryHits, subjectHits)
   minReadClassTable$queryTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$queryHits]
   minReadClassTable$subjectTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$subjectHits]
   minReadClassTable <- minReadClassTable %>%
     group_by(queryTxId) %>%
     arrange(queryTxId, subjectTxId) %>%
     mutate(eqClass = paste(subjectTxId, collapse='.'), minEqClassSize = n()) %>%
-    select(queryTxId, eqClass, minEqClassSize) %>%
+    dplyr::select(queryTxId, eqClass, minEqClassSize) %>%
     distinct()
   return(minReadClassTable)
 }
 
 
-#' Calculate distance to annotation
-#' @title CALCULATEDISTTOANNOTATION
-#' @param exByTx
-#' @param exByTxRef
-#' @param maxDist
-#' @param primarySecondaryDist
-#' @param ignore.strand
+
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySecondaryDist = 5, ignore.strand=FALSE) {  #### HERE #### 2019-10-03: create table with read calss to transcript and read class to gene annotation. ANything iwhtout match is either new (annotated as new 5' exon, new 3' exon, new exon withmin 30bp threhsold(? etc) or discarded (?) (classificaiton has medium results... only in addition?)
 
   #(1)  find overlaps of read classes with annotated transcripts, allow for maxDist [b] distance for each exon; exons with size less than 35bp are dropped to find overlaps, but counted towards distance and compatibility
@@ -440,7 +457,7 @@ predictTrueTranscriptsDirectRna <- function(txDataTable, interactions = F, model
   registerDoMC(cores=cores)
 
 
-  txDataTable <- txDataTable %>% select(combinedTxId,exonOverlapGeneId,nAnnotatedTxByGene,confidenceType,firstJunctionCountPerRead, lastJunctionCountPerRead, firstJunctionInternalCountPerRead, lastJunctionInternalCountPerRead,readCount, relativeReadCount, uniqueReadCount, fullSpliceSupportReadCount, txSubsetNumber, txStartOverlapNumber, txEndOverlapNumber, uniqueReadCountByGene, fullSpliceSupportReadCountByGene, nTxByGene) %>%
+  txDataTable <- txDataTable %>% dplyr::select(combinedTxId,exonOverlapGeneId,nAnnotatedTxByGene,confidenceType,firstJunctionCountPerRead, lastJunctionCountPerRead, firstJunctionInternalCountPerRead, lastJunctionInternalCountPerRead,readCount, relativeReadCount, uniqueReadCount, fullSpliceSupportReadCount, txSubsetNumber, txStartOverlapNumber, txEndOverlapNumber, uniqueReadCountByGene, fullSpliceSupportReadCountByGene, nTxByGene) %>%
     mutate( rel_firstJunctionCountPerRead = firstJunctionCountPerRead/readCount,
             rel_lastJunctionCountPerRead = lastJunctionCountPerRead/readCount,
             rel_firstJunctionInternalCountPerRead = firstJunctionInternalCountPerRead/readCount,
@@ -479,7 +496,7 @@ predictTrueTranscriptsDirectRna <- function(txDataTable, interactions = F, model
 
 
   modelData <- txDataTableTrain %>%
-    select(firstJunctionCountPerRead,
+    dplyr::select(firstJunctionCountPerRead,
            lastJunctionCountPerRead,
            firstJunctionInternalCountPerRead,
            lastJunctionInternalCountPerRead,
@@ -508,7 +525,7 @@ predictTrueTranscriptsDirectRna <- function(txDataTable, interactions = F, model
   modelData[is.na(modelData)] <- 0
 
   testData <- txDataTable %>%
-    select(firstJunctionCountPerRead,
+    dplyr::select(firstJunctionCountPerRead,
            lastJunctionCountPerRead,
            firstJunctionInternalCountPerRead,
            lastJunctionInternalCountPerRead,
@@ -586,7 +603,7 @@ evaluateTxdiscriminationModels <- function(txDataTable, interactions = F, model 
   registerDoMC(cores=cores)
 
 
-  txDataTable <- txDataTable %>% select(combinedTxId,exonOverlapGeneId,nAnnotatedTxByGene,confidenceType,firstJunctionCountPerRead, lastJunctionCountPerRead, firstJunctionInternalCountPerRead, lastJunctionInternalCountPerRead,readCount, relativeReadCount, uniqueReadCount, fullSpliceSupportReadCount, txSubsetNumber, txStartOverlapNumber, txEndOverlapNumber, uniqueReadCountByGene, fullSpliceSupportReadCountByGene, nTxByGene) %>%
+  txDataTable <- txDataTable %>% dplyr::select(combinedTxId,exonOverlapGeneId,nAnnotatedTxByGene,confidenceType,firstJunctionCountPerRead, lastJunctionCountPerRead, firstJunctionInternalCountPerRead, lastJunctionInternalCountPerRead,readCount, relativeReadCount, uniqueReadCount, fullSpliceSupportReadCount, txSubsetNumber, txStartOverlapNumber, txEndOverlapNumber, uniqueReadCountByGene, fullSpliceSupportReadCountByGene, nTxByGene) %>%
     mutate( rel_firstJunctionCountPerRead = firstJunctionCountPerRead/readCount,
             rel_lastJunctionCountPerRead = lastJunctionCountPerRead/readCount,
             rel_firstJunctionInternalCountPerRead = firstJunctionInternalCountPerRead/readCount,
@@ -614,7 +631,7 @@ evaluateTxdiscriminationModels <- function(txDataTable, interactions = F, model 
 
   # model 1: baseline
   modelData[[1]] <- trainingTxData %>%
-    select(readCount,
+    dplyr::select(readCount,
            uniqueReadCountByGene)
 
   # # model2: count based
@@ -636,7 +653,7 @@ evaluateTxdiscriminationModels <- function(txDataTable, interactions = F, model 
   #                         rel_readCount)
   # model2: relative count based (normalised by gene count)
   modelData[[2]] <- trainingTxData %>%
-    select(firstJunctionCountPerRead,
+    dplyr::select(firstJunctionCountPerRead,
            lastJunctionCountPerRead,
            firstJunctionInternalCountPerRead,
            lastJunctionInternalCountPerRead,
@@ -687,7 +704,7 @@ evaluateTxdiscriminationModels <- function(txDataTable, interactions = F, model 
 
 
   modelData[[3]] <- trainingTxData %>%
-    select(firstJunctionCountPerRead,
+    dplyr::select(firstJunctionCountPerRead,
            lastJunctionCountPerRead,
            firstJunctionInternalCountPerRead,
            lastJunctionInternalCountPerRead,
@@ -718,7 +735,7 @@ evaluateTxdiscriminationModels <- function(txDataTable, interactions = F, model 
 
 
   modelData[[4]] <- trainingTxData %>%
-    select(
+    dplyr::select(
       uniqueReadCount,
       fullSpliceSupportReadCount,
       uniqueReadCountByGene,
@@ -870,7 +887,7 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
   trainingTxData <- combinedTxTable %>% filter(nAnnotatedTxByGene>=0, readCount>1, uniqueReadCountByGene > 3 , fullSpliceSupportReadCountByGene>3, confidenceType == "highConfidenceJunctionReads", txSubsetNumber>=0)
 
   dataSubset <- as_tibble(data[data$names %in% readTxTable$readName[readTxTable$confidenceType=='highConfidenceJunctionReads' & readTxTable$combinedTxId %in% trainingTxData$combinedTxId],]) %>%
-    select(names, strandScore, pa3Prime, pa3PrimeMinus, barcode5Prime.plus.score, barcode5Prime.minus.score, barcode3Prime.plus.score, barcode3Prime.minus.score)
+    dplyr::select(names, strandScore, pa3Prime, pa3PrimeMinus, barcode5Prime.plus.score, barcode5Prime.minus.score, barcode3Prime.plus.score, barcode3Prime.minus.score)
 
   readData=left_join(readTxTable[readTxTable$confidenceType=='highConfidenceJunctionReads' & readTxTable$combinedTxId %in% trainingTxData$combinedTxId,], dataSubset, c('readName'='names'))
 
@@ -892,12 +909,12 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
            relCountPolyA5 = sum(polyATail>5)/n(),
            relCountBarcode5Prime = sum(barcode5PrimeScore>0)/n(),
            relCountBarcode3Prime = sum(barcode3PrimeScore>0)/n()) %>%
-    select(combinedTxId, strand, meanStrandScore, meanPolyATail, meanBarcode5PrimeScore, meanBarcode3PrimeScore, relCountPolyA5, relCountBarcode5Prime, relCountBarcode3Prime) %>%
+    dplyr::select(combinedTxId, strand, meanStrandScore, meanPolyATail, meanBarcode5PrimeScore, meanBarcode3PrimeScore, relCountPolyA5, relCountBarcode5Prime, relCountBarcode3Prime) %>%
     distinct() %>% ungroup()
 
   trainingTxData <- left_join(trainingTxData, readData2, by='combinedTxId')
 
-  trainingTxDataSelect <- trainingTxData %>% select(firstJunctionCountPerRead, lastJunctionCountPerRead, firstJunctionInternalCountPerRead, lastJunctionInternalCountPerRead,readCount, relativeReadCount, uniqueReadCount, fullSpliceSupportReadCount, txSubsetNumber, txStartOverlapNumber, txEndOverlapNumber, uniqueReadCountByGene, fullSpliceSupportReadCountByGene, nTxByGene,
+  trainingTxDataSelect <- trainingTxData %>% dplyr::select(firstJunctionCountPerRead, lastJunctionCountPerRead, firstJunctionInternalCountPerRead, lastJunctionInternalCountPerRead,readCount, relativeReadCount, uniqueReadCount, fullSpliceSupportReadCount, txSubsetNumber, txStartOverlapNumber, txEndOverlapNumber, uniqueReadCountByGene, fullSpliceSupportReadCountByGene, nTxByGene,
                                                     meanStrandScore,meanPolyATail,meanBarcode5PrimeScore,meanBarcode3PrimeScore,relCountPolyA5,relCountBarcode5Prime,relCountBarcode3Prime)
 
   # trainingTxDataSelect <- trainingTxData %>% select(firstJunctionCountPerRead, lastJunctionCountPerRead, firstJunctionInternalCountPerRead, lastJunctionInternalCountPerRead,readCount, relativeReadCount, uniqueReadCount, fullSpliceSupportReadCount, txSubsetNumber, txStartOverlapNumber, txEndOverlapNumber, uniqueReadCountByGene, fullSpliceSupportReadCountByGene, nTxByGene)
@@ -915,7 +932,7 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
     mutate(txSubsetNumber = (txSubsetNumber==0))
 
   model2_data <- trainingTxDataSelect %>%
-    select(rel_firstJunctionCountPerRead,
+    dplyr::select(rel_firstJunctionCountPerRead,
            rel_lastJunctionCountPerRead,
            rel_firstJunctionInternalCountPerRead,
            rel_lastJunctionInternalCountPerRead,
@@ -931,7 +948,7 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
   #                        mutate(txSubsetNumber = (txSubsetNumber==0))
   #
   model3_data <- trainingTxDataSelect %>%
-    select(rel_firstJunctionCountPerRead,
+    dplyr::select(rel_firstJunctionCountPerRead,
            rel_lastJunctionCountPerRead,
            rel_firstJunctionInternalCountPerRead,
            rel_lastJunctionInternalCountPerRead,
@@ -946,7 +963,7 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
            fullSpliceSupportReadCount= log(fullSpliceSupportReadCount))
 
   model3_data <- trainingTxDataSelect %>%
-    select(rel_firstJunctionCountPerRead,
+    dplyr::select(rel_firstJunctionCountPerRead,
            rel_lastJunctionCountPerRead,
            rel_firstJunctionInternalCountPerRead,
            rel_lastJunctionInternalCountPerRead,
@@ -956,7 +973,7 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
     mutate(txSubsetNumber = (txSubsetNumber==0))
 
   model3_data <- trainingTxDataSelect %>%
-    select(rel_firstJunctionCountPerRead,
+    dplyr::select(rel_firstJunctionCountPerRead,
            rel_lastJunctionCountPerRead,
            rel_firstJunctionInternalCountPerRead,
            rel_lastJunctionInternalCountPerRead,
@@ -1217,7 +1234,7 @@ createTesTable <- function(lastExon, windowDist, windowSize=3, minRelativeReadCo
   exonDistTable=tbl_df(data.frame(lastExon=lastExon, windowDist=windowDist))
 
   exonDistTable <- exonDistTable %>% group_by(lastExon, windowDist) %>% mutate(count=n()) %>% distinct() %>% arrange(lastExon, windowDist)
-  exonDistTable <- exonDistTable %>% group_by(lastExon) %>% mutate(readCount = sum(count), maxCountByExon = max(count), firstCountByExon = first(count))
+  exonDistTable <- exonDistTable %>% group_by(lastExon) %>% mutate(readCount = sum(count), maxCountByExon = max(count), firstCountByExon = dplyr::first(count))
 
 
 
@@ -1225,13 +1242,13 @@ createTesTable <- function(lastExon, windowDist, windowSize=3, minRelativeReadCo
   exonDistTable <- exonDistTable %>% mutate(relCount=count/readCount)
 
   #only calculate parameters using TES with minimum read count at first position and only 10 positions
-  exonDistTable_parameter = exonDistTable %>% filter(windowDist<=10) %>% group_by(lastExon) %>% mutate(readCount = sum(count))  %>% filter(first(count)>10) %>% mutate(relCount=count/readCount)
+  exonDistTable_parameter = exonDistTable %>% filter(windowDist<=10) %>% group_by(lastExon) %>% mutate(readCount = sum(count))  %>% filter(dplyr::first(count)>10) %>% mutate(relCount=count/readCount)
 
   #model for 10 windows? currently not used
   #parameterTable2 <- exonDistTable_parameter %>% group_by(windowDist) %>% summarise (mu = mean(relCount), var=var(relCount), a=((1 - mu) / var - 1 / mu) * mu ^ 2, b=a * (1 / mu - 1))
 
   #including longer distant counts is more accurate when they are not excluded
-  parameterTable3 <- exonDistTable %>%  group_by(lastExon) %>% filter(first(count)>10) %>% mutate(windowDist=pmin(30,windowDist)) %>% group_by(windowDist) %>% summarise (mu = mean(relCount), var=var(relCount), a=((1 - mu) / var - 1 / mu) * mu ^ 2, b=a * (1 / mu - 1))
+  parameterTable3 <- exonDistTable %>%  group_by(lastExon) %>% filter(dplyr::first(count)>10) %>% mutate(windowDist=pmin(30,windowDist)) %>% group_by(windowDist) %>% summarise (mu = mean(relCount), var=var(relCount), a=((1 - mu) / var - 1 / mu) * mu ^ 2, b=a * (1 / mu - 1))
 
   #exonDistTable$dbeta_count <- (dbeta(exonDistTable$relCount, parameterTable3$a[pmin(30,exonDistTable$windowDist)], parameterTable3$b[pmin(30,exonDistTable$windowDist)],log=T))
   #exonDistTable$dbinom_count <- (dbinom(exonDistTable$count,exonDistTable$readCount, parameterTable3$mu[pmin(30,exonDistTable$windowDist)],log=T))
@@ -1244,7 +1261,7 @@ createTesTable <- function(lastExon, windowDist, windowSize=3, minRelativeReadCo
 
   # find new candidate TES within last exon based on binomial distribution (p<1e-05)
   tesCount = length(unique((exonDistTable$lastExon)))
-  exonDistTable = exonDistTable %>% ungroup() %>% mutate(newExonSplit = cumsum((pbinom_count < (log(0.001)) & count>1 & relCount > minRelativeReadCount) | windowDist==1 | (count==maxCountByExon & count>firstCountByExon ))) %>% group_by(newExonSplit) %>% mutate(newDist = windowDist - first(windowDist) + 1, newReadCount = sum(count))
+  exonDistTable = exonDistTable %>% ungroup() %>% mutate(newExonSplit = cumsum((pbinom_count < (log(0.001)) & count>1 & relCount > minRelativeReadCount) | windowDist==1 | (count==maxCountByExon & count>firstCountByExon ))) %>% group_by(newExonSplit) %>% mutate(newDist = windowDist - dplyr::first(windowDist) + 1, newReadCount = sum(count))
   exonDistTable$pbinom_count_new <- round(pbinom(exonDistTable$count,exonDistTable$newReadCount, parameterTable3$mu[pmin(30,exonDistTable$newDist)],lower.tail = F,log=T),2)
 
 
@@ -1253,12 +1270,12 @@ createTesTable <- function(lastExon, windowDist, windowSize=3, minRelativeReadCo
     tesCount <- length(unique((exonDistTable$newExonSplit)))
     show('find new candidate TES, number:')
     show(tesCount)
-    exonDistTable = exonDistTable %>% ungroup() %>% mutate(newExonSplit = cumsum((pbinom_count_new < (log(0.001)) & count>1 & relCount > minRelativeReadCount) | newDist==1)) %>% group_by(newExonSplit) %>% mutate(newDist = windowDist - first(windowDist) + 1, newReadCount = sum(count))
+    exonDistTable = exonDistTable %>% ungroup() %>% mutate(newExonSplit = cumsum((pbinom_count_new < (log(0.001)) & count>1 & relCount > minRelativeReadCount) | newDist==1)) %>% group_by(newExonSplit) %>% mutate(newDist = windowDist - dplyr::first(windowDist) + 1, newReadCount = sum(count))
     exonDistTable$pbinom_count_new <- round(pbinom(exonDistTable$count,exonDistTable$newReadCount, parameterTable3$mu[pmin(30,exonDistTable$newDist)],lower.tail = F,log=T),2)
   }
 
   #remove candidates which have read count (sum of all reads ending only in this end) within this exon of less than 5%
-  exonDistTable2 = exonDistTable %>% ungroup() %>% mutate(tesCandidate = (newDist==1 & (relCount > minRelativeReadCount | newReadCount/readCount > minRelativeReadCount)), newExonSplit = cumsum(tesCandidate)) %>% group_by(newExonSplit, lastExon) %>% mutate(newDist = windowDist - first(windowDist) + 1, newReadCount = sum(count))
+  exonDistTable2 = exonDistTable %>% ungroup() %>% mutate(tesCandidate = (newDist==1 & (relCount > minRelativeReadCount | newReadCount/readCount > minRelativeReadCount)), newExonSplit = cumsum(tesCandidate)) %>% group_by(newExonSplit, lastExon) %>% mutate(newDist = windowDist - dplyr::first(windowDist) + 1, newReadCount = sum(count))
 
   #merge TES based on nearby distance, always choose the one from the longer transcript to be more inclusive (no length normalisation required)
   exonDistTable3 = exonDistTable2 %>% ungroup() %>%
@@ -1268,7 +1285,7 @@ createTesTable <- function(lastExon, windowDist, windowSize=3, minRelativeReadCo
              (lag(tesCandidate, 2, default=FALSE)==FALSE | lastExon!=lag(lastExon, 2,default=0) | (windowDist - lag(windowDist, 2, default=0) >2) | ((lag(relCount, 2, default=1) > 0.15 & lag(count, 2, default=0) >2) |relCount<lag(relCount, 2, default=1) )),
            newExonSplit = cumsum(tesCandidateFinal)) %>%
     group_by(newExonSplit, lastExon) %>%
-    mutate(newDist = windowDist - first(windowDist) + 1, newReadCount = sum(count))
+    mutate(newDist = windowDist - dplyr::first(windowDist) + 1, newReadCount = sum(count))
 
 
 
@@ -1288,7 +1305,7 @@ createTesTable <- function(lastExon, windowDist, windowSize=3, minRelativeReadCo
             windowSizeTES = sum(tesCandidate)) %>%
     filter(tesCandidateFinal == TRUE) %>%
     ungroup() %>%
-    select(lastExon,windowDistanceToMaxTES,readCountAtFirstTESPosition, readCountByLastExon, relCountByLastExon, readCountByTES, min_pbinom_vs_pos1,mergedTESCandidates, readCountByMergedTESCandidates,windowsCoveredByMergedTES, relCountByMergedTES)
+    dplyr::select(lastExon,windowDistanceToMaxTES,readCountAtFirstTESPosition, readCountByLastExon, relCountByLastExon, readCountByTES, min_pbinom_vs_pos1,mergedTESCandidates, readCountByMergedTESCandidates,windowsCoveredByMergedTES, relCountByMergedTES)
   return(tesTable)
 }
 
@@ -1330,7 +1347,7 @@ findFusionCandidates<-function(bamFile, barcodeFile) ### just some test code... 
 
 
   readTable <- tbl_df(as.data.frame(readsDuplicated)) %>% group_by(readName) %>% filter(n()==2) %>% arrange(readName, cigOpLength1)
-  readTable <- readTable %>% mutate(combinedLength = first(cigOpLength2)+last(cigOpLength1), readLength = max(qwidth), dist=max(start)-min(end), equalChr = first(seqnames)==last(seqnames) )
+  readTable <- readTable %>% mutate(combinedLength = dplyr::first(cigOpLength2)+last(cigOpLength1), readLength = max(qwidth), dist=max(start)-min(end), equalChr = dplyr::first(seqnames)==last(seqnames) )
 
   if(!is.null(barcodeFile)){
     barcodeData <- readRDS(file=barcodeFile)
@@ -1340,13 +1357,13 @@ findFusionCandidates<-function(bamFile, barcodeFile) ### just some test code... 
   } else {
     readTableFiltered = readTable %>% filter(equalChr==FALSE, abs(readLength-combinedLength) < 10)
   }
-  readTableFiltered <- mutate(readTableFiltered,seqCombo=paste(first(seqnames), last(seqnames), sep=':'))
+  readTableFiltered <- mutate(readTableFiltered,seqCombo=paste(dplyr::first(seqnames), last(seqnames), sep=':'))
 
 
   #
   # readTable2 = readTable %>% group_by(readName) %>% filter(n()==2)
   #
-  # readTable3 <- readTable2 %>% arrange(readName, cigOpLength1) %>% mutate(combinedLength = first(cigOpLength2)+last(cigOpLength1), readLength = max(qwidth), dist=max(start)-min(end), equalChr = first(seqnames)==last(seqnames) )
+  # readTable3 <- readTable2 %>% arrange(readName, cigOpLength1) %>% mutate(combinedLength = dplyr::first(cigOpLength2)+last(cigOpLength1), readLength = max(qwidth), dist=max(start)-min(end), equalChr = first(seqnames)==last(seqnames) )
   #
   # readTable4=inner_join(readTable3,tbl_df(barcodeData),by=c('readName'='names'))
   #

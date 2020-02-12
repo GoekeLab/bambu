@@ -42,7 +42,7 @@ LinkingTo:
     Rcpp,
     RcppArmadillo
 Imports:
-   S4Vectors(>= 0.23.18), 
+    S4Vectors(>= 0.23.18), 
     IRanges, 
     GenomicRanges, 
     GenomicAlignments,
