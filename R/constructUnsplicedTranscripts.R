@@ -242,7 +242,7 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
 
 
   compatible <- rangesDist(query, subject, splice, maxDist)
-  equal <- olap %in% olapEqual
+  equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
   unique <- myOneMatch(compatible$compatible, queryHits(olap))
   strandSpecific <- all(strand(query) != "*")
   strandedMatch <- ((all(strand(query)=='-') & all(strand(subject)=='-'))| (all(strand(query)=='+') & all(strand(subject)=='+')))

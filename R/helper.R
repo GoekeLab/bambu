@@ -1,3 +1,1 @@
-.onUnload <- function (libpath) {
-  library.dynam.unload("bamboo", libpath)
-}
+.onUnload <- function (libpath) { library.dynam.unload("bamboo", libpath) }

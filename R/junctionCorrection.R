@@ -41,8 +41,8 @@ createJunctionTable <- function(unlisted_junction_granges, genomeDB=NULL, genome
   # } else
   #
   if (!is.null(genomeFA)) {
-    junctionSeqStart<-getSeq(genomeFA,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
-    junctionSeqEnd<-getSeq(genomeFA,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
+    junctionSeqStart<-BSgenome::getSeq(genomeFA,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
+    junctionSeqEnd<-BSgenome::getSeq(genomeFA,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
 
     junctionMotif <- paste(junctionSeqStart,junctionSeqEnd,sep='-')
     uniqueJunctions_mcols <- cbind(uniqueJunctions_mcols,

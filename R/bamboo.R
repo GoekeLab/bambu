@@ -1,22 +1,48 @@
+#' @rdname bamboo
+#' @export
+setGeneric("bamboo", function(object,...) standardGeneric("bamboo"))
+
 #' Transcript abundance quantification and isoform recontruction
-#'@title Transcript abundance quantification and isoform recontruction
-#'@param obj  A named vector of observed counts for each read class
-#'@param annotation A \code{.data.frame} object that maps read class to transcript, with first column being read class name or ids, second column being transcript id or names
-#'@param col_indexes A vector that indicates the columns for read class, transcript, and gene.
-#'@export
-#'@examples
+#' @title Transcript abundance quantification and isoform recontruction
+#' @param obj  A named vector of observed counts for each read class
+#' @param annotation A \code{.data.frame} object that maps read class to transcript, with first column being read class name or ids, second column being transcript id or names
+#' @param col_indexes A vector that indicates the columns for read class, transcript, and gene.
+#' @useDynLib bamboo
+#' @importFrom Rcpp sourceCpp
+#' @export
+#' @examples
 #' \dontrun{
 #'  test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
 #'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
 #'  bamboo(obj = test.bam, fa.file = fa.file)
 #'  }
-bamboo <- function(obj,  algo.control,...){
-  input.list <- list(obj,  algo.control)
-  ##----step1: check input arguments and preprocess input arguments
-  input.list <- checkInput(input.list)
+bamboo <- function(object,algo.control = NULL,...){
+  if(is.null(object)){
+    stop("Input object is missing.")
+  }else if(any(!(c('gene_id','tx_id','read_class_id') %in% colnames(object)))){
+    stop("Columns gene_id, tx_id, read_class_id are missing from object.")
+  }
+  dt <- object
 
-  dt <- input.list[[1]]
-  algo.control <- input.list[[2]]
+  ## check quantification parameters
+   default.algo.control <- list(ncore = detectCores(),
+                               method = "two-step",
+                               convcontrol = 10^(-3))
+
+  if(is.null(algo.control)){
+    algo.control <- default.algo.control
+  }else{
+    if(is.null(algo.control[["ncore"]])|(as.numeric(algo.control[["ncore"]])>default.algo.control[["ncore"]])){
+      algo.control[["ncore"]] <- default.algo.control[["ncore"]]
+    }
+    if(is.null(algo.control[["method"]])|(!(algo.control[["method"]] %in% c("one-step","two-step")))){
+      algo.control[["method"]] <- default.algo.control[["method"]]
+    }
+    if(is.null(algo.control[["method"]])){
+      algo.control[["convcontrol"]] <- default.algo.control[["convcontrol"]]
+    }
+  }
+
   ##----step2: match to simple numbers to increase claculation efficiency
   geneVec <- unique(dt$gene_id)
   txVec <- unique(dt$tx_id)
@@ -68,85 +94,147 @@ bamboo <- function(obj,  algo.control,...){
   return(est.list)
 }
 
-
-setGeneric("bamboo", function(object,  algo.control){
-  standardGeneric("bamboo")
-})
 # setMethod("bamboo", signature("data.table"),
 #           function(object){
 #             bamboo(object,...)
 #           })
 ## method when output from buildTranscriptModel is provided
+
+summarizedExperiment.bamboo <- function(object){
+  dt <- process_se(object)
+  rowData <- metadata(dt)[,c("TXNAME","GeneID","eqClass")]
+  rownames(rowData) <- rowData$TXNAME
+  rowData$TXNAME <- NULL
+  ## To do:
+  ## task1: optional: to implement filtering function
+  ## task2: to implement for multiple samples, when multiple samples are provided, run txdbtableslist for one time
+  est <- bamboo(dt)
+  counts <- est[["counts"]]
+  seOutput <- summarizedExperiment(assays = list(counts = counts[match(rownames(rowData),rownames(counts)),]),
+                                   rowData = rowData,
+                                   metadata = est[["metadata"]]) # transcript annotation with read class information
+  return(seOutput)
+}
+
 setOldClass("summarizedExperiment")
-setMethod("bamboo", signature("summarizedExperiment"),
-          function(object){
-            dt <- process_se(object)
-            rowData <- metadata(dt)[,c("TXNAME","GeneID","eqClass")]
-            rownames(rowData) <- rowData$TXNAME
-            rowData$TXNAME <- NULL
-            ## To do:
-            ## task1: optional: to implement filtering function
-            ## task2: to implement for multiple samples, when multiple samples are provided, run txdbtableslist for one time
-            est <- bamboo(dt)
-            counts <- est[["counts"]]
-            seOutput <- summarizedExperiment(assays = list(counts = counts[match(rownames(rowData),rownames(counts)),]),
-                                             rowData = rowData,
-                                             metadata = est[["metadata"]]) # transcript annotation with read class information
-            return(seOutput)
-          })
+#' Accessors for the 'counts' slot of a DESeqDataSet object.
+#'
+#' The counts slot holds the count data as a matrix of non-negative integer
+#' count values, one row for each observational unit (gene or the like), and one
+#' column for each sample.
+#'
+#' @docType methods
+#' @name counts
+#' @rdname counts
+#' @aliases counts counts,DESeqDataSet-method counts<-,DESeqDataSet,matrix-method
+#'
+#' @param object a \code{DESeqDataSet} object.
+#' @param normalized logical indicating whether or not to divide the counts by
+#' the size factors or normalization factors before returning
+#' (normalization factors always preempt size factors)
+#' @param replaced after a \code{DESeq} call, this argument will return the counts
+#' with outliers replaced instead of the original counts, and optionally \code{normalized}.
+#' The replaced counts are stored by \code{DESeq} in \code{assays(object)[['replaceCounts']]}.
+#' @param value an integer matrix
+#' @author Simon Anders
+#' @seealso \code{\link{sizeFactors}}, \code{\link{normalizationFactors}}
+#'
+#' @examples
+#'
+#' dds <- makeExampleDESeqDataSet(m=4)
+#' head(counts(dds))
+#'
+#' dds <- estimateSizeFactors(dds) # run this or DESeq() first
+#' head(counts(dds, normalized=TRUE))
+#'
+#' @export
+setMethod("bamboo", signature("summarizedExperiment"),summarizedExperiment.bamboo)
 
 
 
-setMethod("bamboo", signature("character"),
-          function(object){
-            if(is.null(txdbTablesList)){
-              if(is.null(txdb)){
-                stop("txdb object is missing!")
-              }else{
-                txdbTablesList <- prepareAnnotations(txdb)
-              }
-            }
-            if(is.null(fa.file)){
-              stop("Genome fa file is missing!")
-            }else{
-              if(class(fa.file)!='FaFile') {
-                fa.file <- FaFile(fa.file)
-              }else{
-                stop('Genome Fa is not a fa file')
-              }
-            }
-            if(is.null(ir.control)){
-              ir.control <- list(stranded = FALSE,
-                                 protocol = NULL,
-                                 prefix = '',
-                                 minimumReadSupport = 2,
-                                 minimumTxFraction = 0.02)
-            }else{
-              if(is.null(ir.control[['stranded']])){
-                ir.control[['stranded']] <- FALSE
-              }
-              if(is.null(ir.control[['prefix']])){
-                ir.control[['prefix']] <- ''
-              }
-              if(is.null(ir.control[['minimumReadSupport']])){
-                ir.control[['minimumReadSupport']] <- 2
-              }
-              if(ir.control[['minimumTxFraction']]){
-                ir.control[['minimumTxFraction']] <- 0.02
-              }
-            }
-            start.time <- proc.time()
-            se  <- isore(obj,txdbTablesList = txdbTablesList,
-                                         genomeFA = fa.file,
-                                         stranded = ir.control[['stranded']],
-                                         protocol = ir.control[['protocol']],
-                                         prefix = ir.control[['prefix']],
-                                         minimumReadSupport= ir.control[['minimumReadSupport']],
-                                         minimumTxFraction = ir.control[['minimumTxFraction']])
-            end.time <- proc.time()
-            cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+bam.bamboo <- function(object,fa.file=NULL, txdb=NULL, txdbTablesList=NULL){
+  if(is.null(txdbTablesList)){
+    if(is.null(txdb)){
+      stop("txdb object is missing!")
+    }else{
+      txdbTablesList <- prepareAnnotations(txdb)
+    }
+  }
+  if(is.null(fa.file)){
+    stop("Genome fa file is missing!")
+  }else{
+    if(class(fa.file)!='FaFile') {
+      fa.file <- Rsamtools::FaFile(fa.file)
+    }else{
+      stop('Genome Fa is not a fa file')
+    }
+  }
+  if(is.null(ir.control)){
+    ir.control <- list(stranded = FALSE,
+                       protocol = NULL,
+                       prefix = '',
+                       minimumReadSupport = 2,
+                       minimumTxFraction = 0.02)
+  }else{
+    if(is.null(ir.control[['stranded']])){
+      ir.control[['stranded']] <- FALSE
+    }
+    if(is.null(ir.control[['prefix']])){
+      ir.control[['prefix']] <- ''
+    }
+    if(is.null(ir.control[['minimumReadSupport']])){
+      ir.control[['minimumReadSupport']] <- 2
+    }
+    if(ir.control[['minimumTxFraction']]){
+      ir.control[['minimumTxFraction']] <- 0.02
+    }
+  }
+  start.time <- proc.time()
+  se  <- isore(obj,txdbTablesList = txdbTablesList,
+               genomeFA = fa.file,
+               stranded = ir.control[['stranded']],
+               protocol = ir.control[['protocol']],
+               prefix = ir.control[['prefix']],
+               minimumReadSupport= ir.control[['minimumReadSupport']],
+               minimumTxFraction = ir.control[['minimumTxFraction']])
+  end.time <- proc.time()
+  cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
-            seOutput <- bamboo(se)
-            return(seOutput)
-          }
-)
+  seOutput <- bamboo(se)
+  return(seOutput)
+}
+
+
+#' Accessors for the 'counts' slot of a DESeqDataSet object.
+#'
+#' The counts slot holds the count data as a matrix of non-negative integer
+#' count values, one row for each observational unit (gene or the like), and one
+#' column for each sample.
+#'
+#' @docType methods
+#' @name counts
+#' @rdname counts
+#' @aliases counts counts,DESeqDataSet-method counts<-,DESeqDataSet,matrix-method
+#'
+#' @param object a \code{DESeqDataSet} object.
+#' @param normalized logical indicating whether or not to divide the counts by
+#' the size factors or normalization factors before returning
+#' (normalization factors always preempt size factors)
+#' @param replaced after a \code{DESeq} call, this argument will return the counts
+#' with outliers replaced instead of the original counts, and optionally \code{normalized}.
+#' The replaced counts are stored by \code{DESeq} in \code{assays(object)[['replaceCounts']]}.
+#' @param value an integer matrix
+#' @author Simon Anders
+#' @seealso \code{\link{sizeFactors}}, \code{\link{normalizationFactors}}
+#'
+#' @examples
+#'
+#' dds <- makeExampleDESeqDataSet(m=4)
+#' head(counts(dds))
+#'
+#' dds <- estimateSizeFactors(dds) # run this or DESeq() first
+#' head(counts(dds, normalized=TRUE))
+#'
+#' @export
+setMethod("bamboo", signature("character"), bam.bamboo)
+
