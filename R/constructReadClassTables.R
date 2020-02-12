@@ -68,10 +68,10 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   readTable[, 'start'] <- pmin(min(start(readGrglist[uniqueReadNames])),min(intronStartCoordinates[uniqueReadNames] -2))  # min(start(readGrglist))
   readTable[, 'end']   <- pmax(max(end(readGrglist[uniqueReadNames])),max(intronEndCoordinates[uniqueReadNames]+2))  # max(end(readGrglist))
   readTable[, 'blockCount'] <- elementNROWS(junctionsByReadListCorrected[uniqueReadNames])
-  readTable[, 'exonStarts'] <- unstriplit(intronEndCoordinates[uniqueReadNames]+1,sep=',') #### replace with unstrsplit function (should be faster)
-  readTable[, 'exonEnds'] <- unstriplit(intronStartCoordinates[uniqueReadNames]-1,sep=',')
-  readTable[, 'intronEnds'] <- unstriplit(intronEndCoordinates[uniqueReadNames],sep=',') #### replace with unstrsplit function (should be faster)
-  readTable[, 'intronStarts'] <- unstriplit(intronStartCoordinates[uniqueReadNames],sep=',')
+  readTable[, 'exonStarts'] <- sapply(intronEndCoordinates[uniqueReadNames]+1,paste0, collapse=',') #### replace with unstrsplit function (should be faster)
+  readTable[, 'exonEnds'] <- sapply(intronStartCoordinates[uniqueReadNames]-1,paste0, collapse=',')
+  readTable[, 'intronEnds'] <- sapply(intronEndCoordinates[uniqueReadNames],paste0, collapse=',') #### replace with unstrsplit function (should be faster)
+  readTable[, 'intronStarts'] <- sapply(intronStartCoordinates[uniqueReadNames],paste0, collapse=',')
   readTable[, 'strand'] <- readStrand[uniqueReadNames]
   readTable[, 'readId'] <- readNames[as.integer(uniqueReadNames)]
   readTable[, 'confidenceType'] <- 'highConfidenceJunctionReads'
@@ -93,7 +93,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   ### todo here: create txTable after merging all idetnical intron-reads, then reconstruct transcrtipts, and compare with annoated transcripts (using intron ranges only). COmpare this approach to more naive approach, how many distinct RNAs are found, how many reads supprt them etc. It seem like correcting junctions greatly reduves the complexity of transcripts. This appraoch should be very fast in the end
   readClassTable[,'readClassId'] <- paste('rc',1:nrow(readClassTable),sep='.')
 
-  readTable=left_join(select(readTable,readId,chr,strand,intronEnds,intronStarts,confidenceType),select(readClassTable,chr,strand,intronEnds,intronStarts,readClassId)) %>% select(readId,readClassId,confidenceType, strand)
+  readTable=left_join(dplyr::select(readTable,readId,chr,strand,intronEnds,intronStarts,confidenceType),dplyr::select(readClassTable,chr,strand,intronEnds,intronStarts,readClassId)) %>% dplyr::select(readId,readClassId,confidenceType, strand)
 
   #remove unecessary information from readTable
   #readTable <- readTable %>% select(readId,readClassId,confidenceType, strand)
@@ -123,7 +123,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 
   exonsByReadClass <- relist(unlistData, partitioning)
 
-  readClassTable <- readClassTable %>% select(chr, start, end, strand, readCount, confidenceType, readClassId)
+  readClassTable <- readClassTable %>% dplyr::select(chr, start, end, strand, readCount, confidenceType, readClassId)
 
   return(list(exonsByReadClass = exonsByReadClass, readClassTable = readClassTable, readTable = readTable))
 }
@@ -154,20 +154,20 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     hitsDF$strand <- as.character(strand(grangesReference)[subjectHits(hitsWithin)])
   }
   ## create single exon read class by using the minimum end and maximum start of all overlapping exons (identical to minimum equivalent class)
-  hitsDFGrouped <- hitsDF %>% group_by(queryHits) %>% mutate(maxStart=max(start), minEnd = min(end)) %>% select(queryHits, chr, maxStart, minEnd, strand) %>% distinct() %>% group_by(chr, maxStart, minEnd, strand) %>% mutate(readClassId = paste0('rc',prefix,'.', group_indices())) %>% ungroup()
+  hitsDFGrouped <- hitsDF %>% group_by(queryHits) %>% mutate(maxStart=max(start), minEnd = min(end)) %>% dplyr::select(queryHits, chr, maxStart, minEnd, strand) %>% distinct() %>% group_by(chr, maxStart, minEnd, strand) %>% mutate(readClassId = paste0('rc',prefix,'.', group_indices())) %>% ungroup()
 
   readClassTableUnspliced <- hitsDFGrouped %>%
-    select(chr, start=maxStart, end=minEnd, strand, readClassId) %>%
+    dplyr::select(chr, start=maxStart, end=minEnd, strand, readClassId) %>%
     group_by(readClassId) %>%
     mutate(readCount=n()) %>%
     distinct() %>%
     ungroup() %>%
     mutate(confidenceType=confidenceType) %>%
-    select(chr, start, end, strand, readCount, confidenceType, readClassId)
+    dplyr::select(chr, start, end, strand, readCount, confidenceType, readClassId)
 
-  readTableUnspliced <-  select(hitsDFGrouped, readClassId) %>%
+  readTableUnspliced <-  dplyr::select(hitsDFGrouped, readClassId) %>%
     mutate(confidenceType=confidenceType, strand=as.character(strand(granges[hitsDFGrouped$queryHits])), readId=readNames[as.integer(names(granges[hitsDFGrouped$queryHits]))]) %>%
-    select(readId,  readClassId, confidenceType, strand)
+    dplyr::select(readId,  readClassId, confidenceType, strand)
 
   exByReadClassUnspliced <- GRanges(seqnames=readClassTableUnspliced$chr, ranges=IRanges(start=readClassTableUnspliced$start, end=readClassTableUnspliced$end), strand=readClassTableUnspliced$strand)
   exByReadClassUnspliced$exon_id <- paste0('exId',prefix,'.',1:length(exByReadClassUnspliced))
@@ -242,10 +242,10 @@ combineWithAnnotations <- function(txList, txdbTablesList, matchOnly = T) {
 
     length_tmp = nrow(hitObject)
     show(length_tmp)
-    hitObject= inner_join(hitObject,hitObject,by=c("subjectHits"="queryHits")) %>% select(queryHits,subjectHits.y) %>% distinct() %>%rename(subjectHits=subjectHits.y)
+    hitObject= inner_join(hitObject,hitObject,by=c("subjectHits"="queryHits")) %>% dplyr::select(queryHits,subjectHits.y) %>% distinct() %>%rename(subjectHits=subjectHits.y)
   }
 
-  geneTxNames <- hitObject %>% group_by(queryHits) %>% mutate(geneId = paste('gene',first(subjectHits),sep='.')) %>% select(queryHits, geneId) %>% distinct()
+  geneTxNames <- hitObject %>% group_by(queryHits) %>% mutate(geneId = paste('gene',first(subjectHits),sep='.')) %>% dplyr::select(queryHits, geneId) %>% distinct()
   geneIdByExon[is.na(geneIdByExon)] <- geneTxNames$geneId
   txList$txTable$geneId <- geneIdByExon
 

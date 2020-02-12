@@ -1,5 +1,5 @@
 process_se <- function(se){
-  obj <- assay(se)
+  obj <- assays(se)
   annotation <- metadata(se)[,c("TXNAME","GENEID","eqClass")]
   annotation <- data.table(annotation)
   setnames(annotation,old = c("TXNAME","GENEID","eqClass") , new = c("tx_id","gene_id","read_class_id"))

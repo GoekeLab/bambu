@@ -1,8 +1,8 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txb object
-#'@title PREPAREANNOTATIONS
-#'@param txdb
-#'@export
-#'@examples
+#' @title PREPAREANNOTATIONS
+#' @param txdb
+#' @export
+#' @examples
 #' \dontrun{
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 #'  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
@@ -54,14 +54,14 @@ prepareAnnotations <- function(txdb) {
   spliceOverlapsCompatible =spliceOverlapsAnnotations[mcols(spliceOverlapsAnnotations)$compatible==TRUE,] ## select splicing compatible transcript matches
 
   minEqClassTable <- as_tibble(spliceOverlapsCompatible) %>%
-    select(queryHits, subjectHits)
+    dplyr::select(queryHits, subjectHits)
   minEqClassTable$queryTxId <- names(annotationsExonsByCut)[minEqClassTable$queryHits]
   minEqClassTable$subjectTxId <- names(annotationsExonsByCut)[minEqClassTable$subjectHits]
   minEqClassTable <- minEqClassTable %>%
     group_by(queryTxId) %>%
     arrange(queryTxId, subjectTxId) %>%
     mutate(eqClass = paste(subjectTxId, collapse='.'), minEqClassSize = n()) %>%
-    select(queryTxId, eqClass, minEqClassSize) %>%
+    dplyr::select(queryTxId, eqClass, minEqClassSize) %>%
     distinct()
 
   txdbTablesList[['txIdToGeneIdTable']]<- left_join(txdbTablesList[['txIdToGeneIdTable']],minEqClassTable, by=c('TXNAME'='queryTxId'))
