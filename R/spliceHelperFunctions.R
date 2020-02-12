@@ -38,7 +38,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
 
 
   compatible <- myCompatibleTranscription(query, subject, splice)
-  equal <- olap %in% olapEqual
+  equal <- (!is.na(S4Vectors::match(olap ,olapEqual)))
   unique <- myOneMatch(compatible, queryHits(olap))
   strandSpecific <- all(strand(query) != "*")
   mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific)
@@ -125,7 +125,6 @@ myGaps <- function(x, start=NA, end=NA)
   end(Ldinucl_gr) <- start(Ldinucl_gr) + 1L
   start(Rdinucl_gr) <- end(Rdinucl_gr) - 1L
   all_dinucl <- getSeq(genome, c(Ldinucl_gr, Rdinucl_gr))
-  Ldinucl <- head(all_dinucl, n=junctions_len)
   Rdinucl <- tail(all_dinucl, n=junctions_len)
   xscat(Ldinucl, "-", Rdinucl)
 }
@@ -133,7 +132,7 @@ myGaps <- function(x, start=NA, end=NA)
 #'@title SPLICESTRAND
 #'@param motif
 spliceStrand <- function(motif){
-  NATURAL_INTRON_MOTIFS_RC <- as.character(reverseComplement(DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
+  NATURAL_INTRON_MOTIFS_RC <- as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
 
   motifStrand <- ifelse(motif %in% GenomicAlignments::NATURAL_INTRON_MOTIFS,'+','*')
   motifStrand[motif %in% NATURAL_INTRON_MOTIFS_RC] <- '-'
