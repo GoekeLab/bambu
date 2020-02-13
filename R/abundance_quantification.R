@@ -23,7 +23,7 @@ abundance_quantification <- function(read_classDT,mc.cores = 1,
   outData <- lapply(as.list(1:n_chunk), function(i){
     gene_sid_chunk <- gene_sidList[splitIndex[[i]]]
     #print(i)
-    outData <- mclapply(gene_sid_chunk,run_parallel,method = method, conv.control = conv.control, read_classDT = read_classDT,
+    outData <- parallel::mclapply(gene_sid_chunk,run_parallel,method = method, conv.control = conv.control, read_classDT = read_classDT,
                         mc.cores = mc.cores, mc.preschedule = TRUE)
     outDataList <- list(do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[1]])),
                         do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[2]])))

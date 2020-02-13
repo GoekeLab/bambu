@@ -96,6 +96,7 @@ List optim_rcpp(const arma::rowvec par,
 //' @param Y observed number of reads for each read class j
 //' @param lambda, the tuning parameter for bias estimation
 //' @param conv convergence threshold of likelihoods
+//' @export
 // [[Rcpp::export]]
 List emWithoutL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
                   const arma::rowvec Y, // observed number of reads for each read class j
@@ -226,6 +227,7 @@ List emWithoutL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 i
 //' @param Y observed number of reads for each read class j
 //' @param lambda, the tuning parameter for bias estimation
 //' @param conv convergence threshold of likelihoods
+//' @export
 // [[Rcpp::export]]
 List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
                const arma::rowvec Y, // observed number of reads for each read class j

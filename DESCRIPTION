@@ -49,6 +49,7 @@ Imports:
     glmnet,
     Rsamtools,
     SummarizedExperiment(>= 1.1.6),
+    parallel,
     Rcpp,
     RcppArmadillo
 VignetteBuilder: knitr

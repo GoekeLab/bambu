@@ -28,6 +28,7 @@ optim_rcpp <- function(par, X, Y, lambda, theta) {
 #' @param Y observed number of reads for each read class j
 #' @param lambda, the tuning parameter for bias estimation
 #' @param conv convergence threshold of likelihoods
+#' @export
 emWithoutL1 <- function(X, Y, par, lambda, conv = 0.001) {
     .Call('_bamboo_emWithoutL1', PACKAGE = 'bamboo', X, Y, par, lambda, conv)
 }
@@ -38,6 +39,7 @@ emWithoutL1 <- function(X, Y, par, lambda, conv = 0.001) {
 #' @param Y observed number of reads for each read class j
 #' @param lambda, the tuning parameter for bias estimation
 #' @param conv convergence threshold of likelihoods
+#' @export
 emWithL1 <- function(X, Y, lambda, conv = 0.001) {
     .Call('_bamboo_emWithL1', PACKAGE = 'bamboo', X, Y, lambda, conv)
 }

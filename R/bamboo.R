@@ -19,26 +19,30 @@ setGeneric("bamboo", function(object,...) standardGeneric("bamboo"))
 bamboo <- function(object,algo.control = NULL,...){
   if(is.null(object)){
     stop("Input object is missing.")
-  }else if(any(!(c('gene_id','tx_id','read_class_id') %in% colnames(object)))){
-    stop("Columns gene_id, tx_id, read_class_id are missing from object.")
+  }else if(any(!(c('gene_id','tx_id','read_class_id','nobs') %in% colnames(object)))){
+    stop("Columns gene_id, tx_id, read_class_id, nobs, are missing from object.")
   }
   dt <- object
 
   ## check quantification parameters
-   default.algo.control <- list(ncore = detectCores(),
+   default.algo.control <- list(ncore = parallel::detectCores(),
                                method = "two-step",
                                convcontrol = 10^(-3))
 
   if(is.null(algo.control)){
     algo.control <- default.algo.control
   }else{
-    if(is.null(algo.control[["ncore"]])|(as.numeric(algo.control[["ncore"]])>default.algo.control[["ncore"]])){
+    if(is.null(algo.control[["ncore"]])){
+      algo.control[["ncore"]] <- default.algo.control[["ncore"]]
+    }else if(as.numeric(algo.control[["ncore"]])>default.algo.control[["ncore"]]){
       algo.control[["ncore"]] <- default.algo.control[["ncore"]]
     }
-    if(is.null(algo.control[["method"]])|(!(algo.control[["method"]] %in% c("one-step","two-step")))){
+    if(is.null(algo.control[["method"]])){
+      algo.control[["method"]] <- default.algo.control[["method"]]
+    }else if(!(algo.control[["method"]] %in% c("one-step","two-step"))){
       algo.control[["method"]] <- default.algo.control[["method"]]
     }
-    if(is.null(algo.control[["method"]])){
+    if(is.null(algo.control[["convcontrol"]])){
       algo.control[["convcontrol"]] <- default.algo.control[["convcontrol"]]
     }
   }
@@ -47,9 +51,9 @@ bamboo <- function(object,algo.control = NULL,...){
   geneVec <- unique(dt$gene_id)
   txVec <- unique(dt$tx_id)
   readclassVec <- unique(dt$read_class_id)
-  dt[, gene_sid:=match(gene_id, geneVecTotal)]
-  dt[, tx_sid:=match(tx_id, txVecTotal)]
-  dt[, read_class_sid:=match(tx_id, txVecTotal)]
+  dt[, gene_sid:=match(gene_id, geneVec)]
+  dt[, tx_sid:=match(tx_id, txVec)]
+  dt[, read_class_sid:=match(read_class_id, readclassVec)]
 
 
   ##----step3: aggregate read class
@@ -68,13 +72,13 @@ bamboo <- function(object,algo.control = NULL,...){
 
 
   theta_est <- outList[[1]]
-  theta_est[, `:=`(tx_name = txVecTotal[as.numeric(tx_sid)],
-                   gene_name = geneVecTotal[gene_sid] )]
+  theta_est[, `:=`(tx_name = txVec[as.numeric(tx_sid)],
+                   gene_name = geneVec[gene_sid] )]
   theta_est[,`:=`(tx_sid=NULL, gene_sid=NULL)]
 
 
   b_est <- outList[[2]]
-  b_est[, `:=`(gene_name = geneVecTotal[gene_sid], equiClass = equiClassVec[read_class_sid])]
+  b_est[, `:=`(gene_name = geneVec[gene_sid], equiClass = equiClassVec[read_class_sid])]
   b_est[, `:=`(gene_sid = NULL,read_class_sid=NULL)]
 
 
@@ -100,7 +104,7 @@ bamboo <- function(object,algo.control = NULL,...){
 #           })
 ## method when output from buildTranscriptModel is provided
 
-summarizedExperiment.bamboo <- function(object){
+summarizedExperiment.bamboo <- function(object,algo.control = NULL){
   dt <- process_se(object)
   rowData <- metadata(dt)[,c("TXNAME","GeneID","eqClass")]
   rownames(rowData) <- rowData$TXNAME
@@ -108,7 +112,7 @@ summarizedExperiment.bamboo <- function(object){
   ## To do:
   ## task1: optional: to implement filtering function
   ## task2: to implement for multiple samples, when multiple samples are provided, run txdbtableslist for one time
-  est <- bamboo(dt)
+  est <- bamboo(dt,algo.control)
   counts <- est[["counts"]]
   seOutput <- summarizedExperiment(assays = list(counts = counts[match(rownames(rowData),rownames(counts)),]),
                                    rowData = rowData,
@@ -152,7 +156,7 @@ setMethod("bamboo", signature("summarizedExperiment"),summarizedExperiment.bambo
 
 
 
-bam.bamboo <- function(object,fa.file=NULL, txdb=NULL, txdbTablesList=NULL){
+bam.bamboo <- function(object,algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL){
   if(is.null(txdbTablesList)){
     if(is.null(txdb)){
       stop("txdb object is missing!")
@@ -200,7 +204,7 @@ bam.bamboo <- function(object,fa.file=NULL, txdb=NULL, txdbTablesList=NULL){
   end.time <- proc.time()
   cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
-  seOutput <- bamboo(se)
+  seOutput <- bamboo(se, algo.control)
   return(seOutput)
 }
 
