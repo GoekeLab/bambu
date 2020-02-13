@@ -2,20 +2,20 @@ context("Isoform quantification")
 library(bamboo)
 
 test_that("generic function of isoform quantification of data.table is list of 2",{
-  expect_type(bamboo(example_data[[1]]), "list")
-  expect_output(bamboo(example_data[[1]]),"Finished EM estimation in")
-  expect_type(bamboo(example_data[[2]]), "list")
-  expect_output(bamboo(example_data[[2]]),"Finished EM estimation in")
-  expect_type(bamboo(example_data[[3]]), "list")
-  expect_output(bamboo(example_data[[3]]),"Finished EM estimation in")
-  expect_type(bamboo(example_data[[4]]), "list")
-  expect_output(bamboo(example_data[[4]]),"Finished EM estimation in")
+  expect_type(bamboo(example_data[[1]], algo.control=list(ncore = 1)), "list")
+  expect_output(bamboo(example_data[[1]], algo.control=list(ncore = 1)),"Finished EM estimation in")
+  expect_type(bamboo(example_data[[2]], algo.control=list(ncore = 1)), "list")
+  expect_output(bamboo(example_data[[2]], algo.control=list(ncore = 1)),"Finished EM estimation in")
+  expect_type(bamboo(example_data[[3]], algo.control=list(ncore = 1)), "list")
+  expect_output(bamboo(example_data[[3]], algo.control=list(ncore = 1)),"Finished EM estimation in")
+  expect_type(bamboo(example_data[[4]], algo.control=list(ncore = 1)), "list")
+  expect_output(bamboo(example_data[[4]], algo.control=list(ncore = 1)),"Finished EM estimation in")
 })
 
 
 test_that("isoform quantification of summarizedExperiment is summrizedExperiment",{
-   expect_s4_class(bamboo(sysdata_expect_output), "summarizedExperiment")
-   expect_output(bamboo(sysdata_expect_output),"Finished EM estimation in")
+   expect_s4_class(bamboo(object = sysdata_se,algo.control=list(ncore = 1)), "summarizedExperiment")
+   expect_output(bamboo(sysdata_se,algo.control=list(ncore = 1)),"Finished EM estimation in")
 })
 
 test_that("isoform quantification of bam file is summrizedExperiment",{
