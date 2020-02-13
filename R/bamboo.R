@@ -55,11 +55,12 @@ bamboo <- function(object,algo.control = NULL,...){
   dt[, tx_sid:=match(tx_id, txVec)]
   dt[, read_class_sid:=match(read_class_id, readclassVec)]
 
+  dt[,`:=`(tx_id = NULL, gene_id = NULL, read_class_id = NULL)]
 
   ##----step3: aggregate read class
   temp <- aggReadClass(dt)
   dt <- temp[[1]]
-  equiClassVec <- temp[[2]]
+  eqClassVec <- temp[[2]]
 
   ##----step4: quantification
   start.time <- proc.time()
@@ -78,7 +79,7 @@ bamboo <- function(object,algo.control = NULL,...){
 
 
   b_est <- outList[[2]]
-  b_est[, `:=`(gene_name = geneVec[gene_sid], equiClass = equiClassVec[read_class_sid])]
+  b_est[, `:=`(gene_name = geneVec[gene_sid], eqClass = eqClassVec[as.numeric(read_class_sid)])]
   b_est[, `:=`(gene_sid = NULL,read_class_sid=NULL)]
 
 
@@ -90,8 +91,6 @@ bamboo <- function(object,algo.control = NULL,...){
   rownames(theta_est) <- theta_est$tx_name
   theta_est$tx_name <- NULL
 
-
-  b_est[, nobs:=NULL]
   b_est <- setDF(b_est)
 
   est.list <- list(counts = theta_est, metadata = b_est)
@@ -104,10 +103,10 @@ bamboo <- function(object,algo.control = NULL,...){
 #           })
 ## method when output from buildTranscriptModel is provided
 
-summarizedExperiment.bamboo <- function(object,algo.control = NULL){
+se.bamboo <- function(object,algo.control = NULL){
   dt <- process_se(object)
-  rowData <- metadata(dt)[,c("TXNAME","GeneID","eqClass")]
-  rownames(rowData) <- rowData$TXNAME
+  rowData <- metadata(dt)[,c("tx_id","gene_id","read_class_id")]
+  rownames(rowData) <- rowData$tx_id
   rowData$TXNAME <- NULL
   ## To do:
   ## task1: optional: to implement filtering function
@@ -120,7 +119,9 @@ summarizedExperiment.bamboo <- function(object,algo.control = NULL){
   return(seOutput)
 }
 
+
 setOldClass("summarizedExperiment")
+
 #' Accessors for the 'counts' slot of a DESeqDataSet object.
 #'
 #' The counts slot holds the count data as a matrix of non-negative integer
@@ -152,7 +153,8 @@ setOldClass("summarizedExperiment")
 #' head(counts(dds, normalized=TRUE))
 #'
 #' @export
-setMethod("bamboo", signature("summarizedExperiment"),summarizedExperiment.bamboo)
+setMethod("bamboo", signature(object = "summarizedExperiment"),se.bamboo)
+
 
 
 
