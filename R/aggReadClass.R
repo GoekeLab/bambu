@@ -3,10 +3,10 @@
 #'@param mapping
 #'@param nobs
 aggReadClass <- function(dt){
-  dt[, equiClass_p:=paste(sort(unique(tx_sid)), collapse = '.'), by = list(read_class_sid,gene_sid)]
+  dt[, eqClass:=paste(sort(unique(tx_sid)), collapse = '.'), by = list(read_class_sid,gene_sid)]
   dt[, read_class_sid_stored:=read_class_sid]
-  equiClassVec <- unique(dt$equiClass_p)
-  dt[, read_class_sid:=match(equiClass_p,equiClassVec)]
+  eqClassVec <- unique(dt$eqClass)
+  dt[, read_class_sid:=match(eqClass,eqClassVec)]
   dt[, nobs_stored:=nobs]
   dt[, nobs:=NULL]
   tmp <- unique(dt[,.(read_class_sid, read_class_sid_stored, nobs_stored)])

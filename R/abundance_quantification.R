@@ -3,8 +3,6 @@
 #' @param method A string variable indicates the whether a one-step or two-step approach will be used. See \code{Details}
 #' for details on one-step and two-step approach.
 #' @param read_classDT A \code{data.table} with columns
-#' @useDynLib bamboo emWithL1 emWithoutL1
-#' @importFrom Rcpp sourceCpp
 #' @examples
 #' \dontrun{
 #' system.file("extdata", "example_data.rds", package = "bamboo")

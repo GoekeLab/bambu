@@ -18,7 +18,7 @@ NULL
 #' @param lambda, the tuning parameter for bias estimation
 #' @param theta estimates for isoform expression
 optim_rcpp <- function(par, X, Y, lambda, theta) {
-    .Call('_bamboo_optim_rcpp', PACKAGE = 'bamboo', par, X, Y, lambda, theta)
+    .Call(`_bamboo_optim_rcpp`, par, X, Y, lambda, theta)
 }
 
 #' EM algorithm without L1-penalty
@@ -30,7 +30,7 @@ optim_rcpp <- function(par, X, Y, lambda, theta) {
 #' @param conv convergence threshold of likelihoods
 #' @export
 emWithoutL1 <- function(X, Y, par, lambda, conv = 0.001) {
-    .Call('_bamboo_emWithoutL1', PACKAGE = 'bamboo', X, Y, par, lambda, conv)
+    .Call(`_bamboo_emWithoutL1`, X, Y, par, lambda, conv)
 }
 
 #' EM algorithm with L1-penalty
@@ -41,6 +41,6 @@ emWithoutL1 <- function(X, Y, par, lambda, conv = 0.001) {
 #' @param conv convergence threshold of likelihoods
 #' @export
 emWithL1 <- function(X, Y, lambda, conv = 0.001) {
-    .Call('_bamboo_emWithL1', PACKAGE = 'bamboo', X, Y, lambda, conv)
+    .Call(`_bamboo_emWithL1`, X, Y, lambda, conv)
 }
 
