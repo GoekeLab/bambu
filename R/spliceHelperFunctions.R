@@ -9,8 +9,8 @@ rangesDist <- function(query, subject, splice, maxDist)
   srng <- ranges(subject)
   sprng <- ranges(splice)
 
-  setDiffQ <-   width(setdiff(qrng, srng))
-  interesectS <- width(intersect(srng, sprng))
+  setDiffQ <-   width(GenomicRanges::setdiff(qrng, srng))
+  interesectS <- width(GenomicRanges::intersect(srng, sprng))
   uniqueLengthQuery <- sum(setDiffQ)
   uniqueLengthSubject <- sum(interesectS)
 
