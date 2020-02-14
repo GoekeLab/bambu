@@ -269,7 +269,7 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
       myId <- rep(1:length(queryStart),elementNROWS(subjectFull))
       byExonIntersect=pintersect(queryStartList,subjectList, resolve.empty='start.x')
       startDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryStart)))
-      uniqueStartLengthQuery <-   sum(width(setdiff(queryStart, subjectFull)))
+      uniqueStartLengthQuery <-   sum(width(GenomicRanges::setdiff(queryStart, subjectFull)))
       uniqueStartLengthSubject <-  startDist - uniqueStartLengthQuery
 
 
@@ -278,7 +278,7 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
       myId <- rep(1:length(queryEnd),elementNROWS(subjectFull))
       byExonIntersect=pintersect(queryEndList,subjectList, resolve.empty='start.x')
       endDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryEnd)))
-      uniqueEndLengthQuery <-   sum(width(setdiff(queryEnd, subjectFull)))
+      uniqueEndLengthQuery <-   sum(width(GenomicRanges::setdiff(queryEnd, subjectFull)))
       uniqueEndLengthSubject <-  endDist - uniqueEndLengthQuery
     } else {
       startMatch <- NULL
