@@ -234,7 +234,7 @@ isore <- function(bamFile,
   cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
 
-  cat('### Create summarizedExperiment output ###')
+  cat('### Create summarizedExperiment output ### \n')
   ## This chunk of code should be able to produce output required for quantification:
   ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
   ## rowData: can be empty

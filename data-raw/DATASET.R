@@ -25,4 +25,14 @@ example_data[[4]] <- data.table(tx_id = c(1,2,3,1,2,1,2,3),
                                 nobs = c(100,5,500,rep(20,2),rep(5,3)),
                                 gene_id = 4)
 
-usethis::use_data("example_data")
+samplefile <- system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")
+txdb <- AnnotationDbi::loadDb(samplefile)
+example_txdbTablesList <- prepareAnnotations(txdb)
+
+example_se <- isore(bamFile = test.bam,  txdbTablesList = example_txdbTablesList,genomeFA = fa.file)
+
+test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
+fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
+example_quantOutput <- bamboo(test.bam, fa.file = fa.file, txdbTablesList = example_txdbTablesList,algo.control=list(ncore = 1))
+
+usethis::use_data("example_data","example_txdbTablesList","example_se","example_quantOutput")

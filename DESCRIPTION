@@ -14,7 +14,8 @@ LazyData: true
 Depends: 
    R(>= 3.2.0),
    data.table(>= 1.1.8),
-   dplyr(>= 0.8.1)
+   dplyr,
+   GenomicRanges
 Suggests: 
     knitr,
     rmarkdown,
@@ -43,6 +44,7 @@ LinkingTo:
     RcppArmadillo
 Imports:
     S4Vectors(>= 0.23.18), 
+    data.table,
     IRanges, 
     GenomicRanges, 
     GenomicAlignments,

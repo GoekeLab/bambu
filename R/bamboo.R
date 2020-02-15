@@ -5,10 +5,14 @@ bamboo <- function(bam.file = NULL, se = NULL, dt = NULL,txdb = NULL, txdbTables
   }
 
   if(is.null(txdbTablesList)){
-    if(is.null(txdb)){
-      stop("txdb object is missing!")
+    if(!is.null(txdb)) # txdb object by reading txdb file
+    {
+      if(class(txdb) != 'TxDb'){
+        stop("txdb object is missing.")
+      }
+      txdbTablesList <- prepareAnnotations(txdb) ## note: check which annotation tables are reused multiple times, and inlcude only those. Optimise required annotations if possible
     }else{
-      txdbTablesList <- prepareAnnotations(txdb)
+      stop("txdb object is missing.")
     }
   }
 
@@ -107,6 +111,18 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
 
 
 bamboo.quantSE <- function(se = se,txdb = NULL, txdbTablesList = NULL, algo.control = NULL){
+  if(is.null(txdbTablesList)){
+    if(!is.null(txdb)) # txdb object by reading txdb file
+    {
+      if(class(txdb) != 'TxDb'){
+        stop("txdb object is missing.")
+      }
+      txdbTablesList <- prepareAnnotations(txdb) ## note: check which annotation tables are reused multiple times, and inlcude only those. Optimise required annotations if possible
+    }else{
+      stop("txdb object is missing.")
+    }
+  }
+
   dt <- getEmptyClassFromSE(se, txdbTablesList)
 
   ## To do:
@@ -152,8 +168,23 @@ bamboo.quantISORE <- function(bam.file = bam.file,algo.control = NULL, fa.file=N
       ir.control[['minimumTxFraction']] <- 0.02
     }
   }
+
+  if(is.null(txdbTablesList)){
+    if(!is.null(txdb)) # txdb object by reading txdb file
+    {
+      if(class(txdb) != 'TxDb'){
+        stop("txdb object is missing.")
+      }
+      txdbTablesList <- prepareAnnotations(txdb) ## note: check which annotation tables are reused multiple times, and inlcude only those. Optimise required annotations if possible
+    }else{
+      stop("txdb object is missing.")
+    }
+  }
+
   start.time <- proc.time()
-  se  <- isore(bamFile = bam.file,txdbTablesList = txdbTablesList,
+  se  <- isore(bamFile = bam.file,
+               txdb = NULL,
+               txdbTablesList = txdbTablesList,
                genomeFA = fa.file,
                stranded = ir.control[['stranded']],
                protocol = ir.control[['protocol']],
@@ -164,7 +195,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,algo.control = NULL, fa.file=N
   cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
 
-  seOutput <- bamboo.quantSE(se = se,txdb = txdb, txdbTablesList = txdbTablesList, algo.control = algo.control)
+  seOutput <- bamboo.quantSE(se = se,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
   return(seOutput)
 }
 
