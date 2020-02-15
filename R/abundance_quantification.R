@@ -34,10 +34,8 @@ abundance_quantification <- function(read_classDT,mc.cores = 1,
 }
 
 run_parallel <- function(g,method,conv.control,read_classDT){
-  print(g)
   tmp <- read_classDT[gene_sid==g]
-
-  if(nrow(tmp)==1){
+  if((nrow(tmp)==1)|(sum(tmp$nobs)==0)){
     outData <- list(data.table(tx_sid = tmp$tx_sid,
                                estimates = tmp$nobs,
                                gene_sid = tmp$gene_sid,

@@ -75,6 +75,7 @@ myOneMatch <- function(x, idx)
 #'@param x
 #'@param start
 #'@param end
+#'@importFrom GenomicRanges
 myGaps <- function(x, start=NA, end=NA)
 {
   if (!.isNumericOrNAs(start))
@@ -103,7 +104,7 @@ myGaps <- function(x, start=NA, end=NA)
     ##         'start' and 'end' not quite right here
     firstseg <- start(PartitioningByWidth(x))
     seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
-    strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
+    strand <- rep(strand(flat)[firstseg],elementNROWS(gaps))
     gr <- relist(GRanges(seqnms, unlist(gaps, use.names=FALSE), strand), gaps)
     gr
   } else {
