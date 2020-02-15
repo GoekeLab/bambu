@@ -1,31 +1,38 @@
-#' @rdname bamboo
-#' @export
-setGeneric("bamboo", function(object,...) standardGeneric("bamboo"))
+bamboo <- function(bam.file = NULL, se = NULL, dt = NULL,txdb = NULL, txdbTablesList = NULL, algo.control = NULL, ir.control = NULL, fa.file = NULL){
 
-#' Transcript abundance quantification and isoform recontruction
-#' @title Transcript abundance quantification and isoform recontruction
-#' @param obj  A named vector of observed counts for each read class
-#' @param annotation A \code{.data.frame} object that maps read class to transcript, with first column being read class name or ids, second column being transcript id or names
-#' @param col_indexes A vector that indicates the columns for read class, transcript, and gene.
-#' @useDynLib bamboo
-#' @importFrom Rcpp sourceCpp
-#' @export
-#' @examples
-#' \dontrun{
-#'  test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
-#'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-#'  bamboo(obj = test.bam, fa.file = fa.file)
-#'  }
-bamboo <- function(object,algo.control = NULL,...){
-  if(is.null(object)){
+  if(!is.null(dt)){
+    return(bamboo.quantDT(dt = dt,algo.control = algo.control))
+  }
+
+  if(is.null(txdbTablesList)){
+    if(is.null(txdb)){
+      stop("txdb object is missing!")
+    }else{
+      txdbTablesList <- prepareAnnotations(txdb)
+    }
+  }
+
+    if(!is.null(se)){
+      return(bamboo.quantSE(se = se,txdb = txdb, txdbTablesList = txdbTablesList, algo.control = algo.control))
+          }
+    if(!is.null(bam.file)){
+      return(bamboo.quantISORE(bam.file = bam.file,algo.control = algo.control, fa.file=fa.file,
+                               txdb=txdb,
+                               txdbTablesList=txdbTablesList, ir.control = ir.control))
+    }
+
+  stop("At least bam.file or summarizedExperiment output from isore need to be provided.")
+}
+
+bamboo.quantDT <- function(dt = dt,algo.control = NULL){
+  if(is.null(dt)){
     stop("Input object is missing.")
-  }else if(any(!(c('gene_id','tx_id','read_class_id','nobs') %in% colnames(object)))){
+  }else if(any(!(c('gene_id','tx_id','read_class_id','nobs') %in% colnames(dt)))){
     stop("Columns gene_id, tx_id, read_class_id, nobs, are missing from object.")
   }
-  dt <- object
 
   ## check quantification parameters
-   default.algo.control <- list(ncore = parallel::detectCores(),
+  default.algo.control <- list(ncore = parallel::detectCores(),
                                method = "two-step",
                                convcontrol = 10^(-3))
 
@@ -87,93 +94,43 @@ bamboo <- function(object,algo.control = NULL,...){
 
   theta_est <- theta_est[,.(tx_name, estimates)]
   theta_est[,`:=`(CPM = estimates/sum(estimates)*(10^6))]
-  theta_est <- setDF(theta_est)
-  rownames(theta_est) <- theta_est$tx_name
-  theta_est$tx_name <- NULL
 
-  b_est <- setDF(b_est)
+
+
 
   est.list <- list(counts = theta_est, metadata = b_est)
   return(est.list)
 }
 
-# setMethod("bamboo", signature("data.table"),
-#           function(object){
-#             bamboo(object,...)
-#           })
-## method when output from buildTranscriptModel is provided
 
-se.bamboo <- function(object,algo.control = NULL){
-  dt <- process_se(object)
-  rowData <- metadata(dt)[,c("tx_id","gene_id","read_class_id")]
-  rownames(rowData) <- rowData$tx_id
-  rowData$TXNAME <- NULL
+
+
+
+bamboo.quantSE <- function(se = se,txdb = NULL, txdbTablesList = NULL, algo.control = NULL){
+  dt <- getEmptyClassFromSE(se, txdbTablesList)
+
   ## To do:
   ## task1: optional: to implement filtering function
   ## task2: to implement for multiple samples, when multiple samples are provided, run txdbtableslist for one time
-  est <- bamboo(dt,algo.control)
-  counts <- est[["counts"]]
-  seOutput <- summarizedExperiment(assays = list(counts = counts[match(rownames(rowData),rownames(counts)),]),
-                                   rowData = rowData,
-                                   metadata = est[["metadata"]]) # transcript annotation with read class information
+  est <- bamboo.quantDT(dt,algo.control = algo.control)
+  counts <- est$counts
+  ColNames <- colnames(se)
+  counts <- merge(counts,data.table(tx_name = names(txdbTablesList$exonsByTx)), all = TRUE,  on = 'tx_name')
+  counts[is.na(estimates),`:=`(estimates = 0, CPM = 0) ]
+  counts <- setDF(counts)
+  seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(estimates = matrix(counts$estimates,ncol = length(ColNames), dimnames = list(counts$tx_name, ColNames)),
+                                                                       normEstimates = matrix(counts$CPM, ncol =  length(ColNames), dimnames = list(counts$tx_name, ColNames))),
+                                   rowRanges = txdbTablesList$exonsByTx[counts$tx_name],
+                                   metadata = est$metadata) # transcript annotation with read class information
   return(seOutput)
 }
 
 
-setOldClass("summarizedExperiment")
 
-#' Accessors for the 'counts' slot of a DESeqDataSet object.
-#'
-#' The counts slot holds the count data as a matrix of non-negative integer
-#' count values, one row for each observational unit (gene or the like), and one
-#' column for each sample.
-#'
-#' @docType methods
-#' @name counts
-#' @rdname counts
-#' @aliases counts counts,DESeqDataSet-method counts<-,DESeqDataSet,matrix-method
-#'
-#' @param object a \code{DESeqDataSet} object.
-#' @param normalized logical indicating whether or not to divide the counts by
-#' the size factors or normalization factors before returning
-#' (normalization factors always preempt size factors)
-#' @param replaced after a \code{DESeq} call, this argument will return the counts
-#' with outliers replaced instead of the original counts, and optionally \code{normalized}.
-#' The replaced counts are stored by \code{DESeq} in \code{assays(object)[['replaceCounts']]}.
-#' @param value an integer matrix
-#' @author Simon Anders
-#' @seealso \code{\link{sizeFactors}}, \code{\link{normalizationFactors}}
-#'
-#' @examples
-#'
-#' dds <- makeExampleDESeqDataSet(m=4)
-#' head(counts(dds))
-#'
-#' dds <- estimateSizeFactors(dds) # run this or DESeq() first
-#' head(counts(dds, normalized=TRUE))
-#'
-#' @export
-setMethod("bamboo", signature(object = "summarizedExperiment"),se.bamboo)
+bamboo.quantISORE <- function(bam.file = bam.file,algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL){
 
-
-
-
-bam.bamboo <- function(object,algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL){
-  if(is.null(txdbTablesList)){
-    if(is.null(txdb)){
-      stop("txdb object is missing!")
-    }else{
-      txdbTablesList <- prepareAnnotations(txdb)
-    }
-  }
   if(is.null(fa.file)){
     stop("Genome fa file is missing!")
-  }else{
-    if(class(fa.file)!='FaFile') {
-      fa.file <- Rsamtools::FaFile(fa.file)
-    }else{
-      stop('Genome Fa is not a fa file')
-    }
   }
   if(is.null(ir.control)){
     ir.control <- list(stranded = FALSE,
@@ -196,7 +153,7 @@ bam.bamboo <- function(object,algo.control = NULL, fa.file=NULL, txdb=NULL, txdb
     }
   }
   start.time <- proc.time()
-  se  <- isore(obj,txdbTablesList = txdbTablesList,
+  se  <- isore(bamFile = bam.file,txdbTablesList = txdbTablesList,
                genomeFA = fa.file,
                stranded = ir.control[['stranded']],
                protocol = ir.control[['protocol']],
@@ -206,41 +163,11 @@ bam.bamboo <- function(object,algo.control = NULL, fa.file=NULL, txdb=NULL, txdb
   end.time <- proc.time()
   cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
-  seOutput <- bamboo(se, algo.control)
+
+  seOutput <- bamboo.quantSE(se = se,txdb = txdb, txdbTablesList = txdbTablesList, algo.control = algo.control)
   return(seOutput)
 }
 
 
-#' Accessors for the 'counts' slot of a DESeqDataSet object.
-#'
-#' The counts slot holds the count data as a matrix of non-negative integer
-#' count values, one row for each observational unit (gene or the like), and one
-#' column for each sample.
-#'
-#' @docType methods
-#' @name counts
-#' @rdname counts
-#' @aliases counts counts,DESeqDataSet-method counts<-,DESeqDataSet,matrix-method
-#'
-#' @param object a \code{DESeqDataSet} object.
-#' @param normalized logical indicating whether or not to divide the counts by
-#' the size factors or normalization factors before returning
-#' (normalization factors always preempt size factors)
-#' @param replaced after a \code{DESeq} call, this argument will return the counts
-#' with outliers replaced instead of the original counts, and optionally \code{normalized}.
-#' The replaced counts are stored by \code{DESeq} in \code{assays(object)[['replaceCounts']]}.
-#' @param value an integer matrix
-#' @author Simon Anders
-#' @seealso \code{\link{sizeFactors}}, \code{\link{normalizationFactors}}
-#'
-#' @examples
-#'
-#' dds <- makeExampleDESeqDataSet(m=4)
-#' head(counts(dds))
-#'
-#' dds <- estimateSizeFactors(dds) # run this or DESeq() first
-#' head(counts(dds, normalized=TRUE))
-#'
-#' @export
-setMethod("bamboo", signature("character"), bam.bamboo)
+
 

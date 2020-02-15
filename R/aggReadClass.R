@@ -13,5 +13,5 @@ aggReadClass <- function(dt){
   tmp[, nobs:=sum(nobs_stored), by = read_class_sid]
   tmp <- unique(tmp[,.(read_class_sid, nobs)])
   dt <- unique(dt[,.(read_class_sid, tx_sid,gene_sid)])[tmp, on = 'read_class_sid']
-  return(list(dt,equiClassVec))
+  return(list(dt,eqClassVec))
 }

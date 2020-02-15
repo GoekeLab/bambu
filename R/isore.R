@@ -35,6 +35,7 @@
 #'@param minimumReadSupport A integer value that indicates that least number of reads needed to support, default to 2.
 #'@param prefix prefix for new gene names (for combining multiple runs gene Ids can be made unique and merged later)
 #'@param minimumTxFraction A numeric value indicates the minimum transcript coverage fraction needed to support, default to 0.02, i.e., 2%.
+#'@param yieldSize A numeric value indicates the yieldSize.
 #'@export
 #'@examples
 #' \dontrun{
@@ -55,7 +56,8 @@ isore <- function(bamFile,
                   protocol=NULL,
                   prefix='',  ## prefix for new gene names (for combining multiple runs gene Ids can be made unique and merged later)
                   minimumReadSupport=2,
-                  minimumTxFraction = 0.02)
+                  minimumTxFraction = 0.02,
+                  yieldSize = NULL)
 {
   ### note: test which standard junction model to use? One by protocol? need to compare
   ## comment: how to create this and would this change at different conditions?
@@ -237,26 +239,19 @@ isore <- function(bamFile,
   ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
   ## rowData: can be empty
   ## metadata: eqClass to tx assignment; distTable for each rc and eqClass
-  distTable <- data.table(readClassListFull$distTable)[,.(readClassId, annotationTxId, readCount, GENEID)]
-  distTable[, eqClass:=paste(sort(unique(annotationTxId)),collapse='.'), by = list(readClassId,GENEID)]
+  counts <- unique(data.table(readClassListFull$readClassTable)[,.(readClassId, readCount)])
 
-  eqClassCountTable <- distTable[,list(readCount=sum(readCount)), by = list(eqClass, GENEID)]
-  eqClassTable <- data.table(txdbTablesList$txIdToGeneIdTable)
-  eqClassCountTable <- unique(eqClassCountTable[eqClassTable, on = c('GENEID','eqClass')])
-  eqClassCountTable[is.na(readCount), readCount:=0]
+  ColNames <-  gsub('.bam','',data.table::last(unlist(strsplit(ifelse(class(bamFile)=='BamFile', path(bamFile), bamFile),'\\/'))))
 
-  counts <- unique(eqClassCountTable[,.(eqClass, readCount)])
-  counts <- setDF(counts)
-  row.names(counts) <- counts$eqClass
-  counts$eqClass <- NULL
-  if(class(bamFile)=='BamFile'){
-    bamFile <- path(bamFile)
-  }
-  colnames(counts) <-  gsub('.bam','',data.table::last(unlist(strsplit(bamFile,'\\/'))))
+  #rowData <- DataFrame(row.names =  counts$readClassId)
+  ## when bamFile is of BamFile type, need to extract the path as a string variable, otherwise it's a connection and cannot use strsplit
 
-  se <- SummarizedExperiment(assays=list(counts = counts),
-                             metadata=list(distTable = distTable,
-                                           eqClassTable = eqClassTable))
+
+  se <- SummarizedExperiment::SummarizedExperiment(assays=matrix(counts$readCount, ncol = 1, dimnames = list(counts$readClassId, ColNames)),
+                                                   rowRanges = readClassListFull$exonsByReadClass,
+                                           metadata=list(distTable = data.table(readClassListFull$distTable),
+                                           readClassTable = data.table(readClassListFull$readClassTable),
+                                           readTable = data.table(readClassListFull$readTable)))
 
   return(se)
 }
