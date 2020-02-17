@@ -257,19 +257,19 @@ isore <- function(bamFile,
   ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
   ## rowData: can be empty
   ## metadata: eqClass to tx assignment; distTable for each rc and eqClass
-  counts <- unique(data.table(readClassTable)[,.(readClassId, readCount)])
-
-  ColNames <-  gsub('.bam','',data.table::last(unlist(strsplit(ifelse(class(bamFile)=='BamFile', path(bamFile), bamFile),'\\/'))))
-
-  #rowData <- DataFrame(row.names =  counts$readClassId)
-  ## when bamFile is of BamFile type, need to extract the path as a string variable, otherwise it's a connection and cannot use strsplit
 
 
-  se <- SummarizedExperiment::SummarizedExperiment(assays=matrix(counts$readCount, ncol = 1, dimnames = list(counts$readClassId, ColNames)),
+  bamFile.basename <- tools::file_path_sans_ext(basename(path(bamFile)))
+  counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), bamFile.basename))
+  colDataDf <- DataFrame(name=bamFile.basename, row.names=bamFile.basename)
+
+  # readTable is currently not returned
+  se <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts),
                                                    rowRanges = exonsByReadClass,
-                                           metadata=list(distTable = data.table(distTable),
-                                           readClassTable = data.table(readClassTable),
-                                           readTable = data.table(readTable)))
+                                                   colData = colDataDf,
+                                                   metadata=list(distTable = distTable,
+                                                                 readClassTable = readClassTable))
+
   rm(list=c('counts','distTable','exonsByReadClass','readClassTable','readTable'))
   return(se)
 }
