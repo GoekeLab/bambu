@@ -4,7 +4,7 @@ library(bamboo)
 
 test_that("isoform reconstruction runs without error on example data", {
   bamFile <- BamFile(system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo"),yieldSize=1000000)
-  genomeFA <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
+  genomeFA <- FaFile(system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo"))
   txdbTablesList <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/HomoSapiens_ensembl91_Grch38_txdbTablesList.rds"))
   stranded=TRUE
   protocol='cDNA'

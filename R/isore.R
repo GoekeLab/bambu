@@ -78,10 +78,12 @@ isore <- function(bamFile,
 
   if(is.null(genomeFA)){
     stop("GenomeFA file is missing.")
-  }else if(!grepl('.fa',genomeFA)){
-    stop("GenomeFA file is missing.")
   }else if(class(genomeFA) != 'FaFile'){
-    genomeFA <- Rsamtools::FaFile(genomeFA)
+    if(!grepl('.fa',genomeFA)){
+    stop("GenomeFA file is missing.")
+    }else{
+      genomeFA <- Rsamtools::FaFile(genomeFA)
+    }
   }
 
 
