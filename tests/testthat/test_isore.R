@@ -30,7 +30,7 @@ test_that("isoform reconstruction of missing both txdb and txdbTablesList object
 
 test_that("isoform reconstruction of missing fa file is error", {
   test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
-  example_txdbTablesList <- readRDS("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/HomoSapiens_ensembl91_Grch38_txdbTablesList.rds")
+  example_txdbTablesList <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/HomoSapiens_ensembl91_Grch38_txdbTablesList.rds"))
   expect_error(isore(bamFile = test.bam,  txdbTablesList = example_txdbTablesList,genomeFA = ""))
   expect_error(isore(bamFile = test.bam,  txdbTablesList = example_txdbTablesList,genomeFA = NULL),"GenomeFA file is missing.")
 })
