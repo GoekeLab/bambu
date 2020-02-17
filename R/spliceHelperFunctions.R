@@ -38,9 +38,14 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
 
 
   compatible <- myCompatibleTranscription(query, subject, splice)
-  equal <- (!is.na(S4Vectors::match(olap ,olapEqual)))
-  unique <- myOneMatch(compatible, queryHits(olap))
   strandSpecific <- all(strand(query) != "*")
+  rm(list=c('query','subject'))
+  gc()
+  equal <- (!is.na(S4Vectors::match(olap ,olapEqual)))
+  rm(olapEqual)
+  gc()
+  unique <- myOneMatch(compatible, queryHits(olap))
+
   mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific)
   olap
 }
@@ -178,7 +183,7 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
     data.train.cv.test=data.train[-mySample,]#[-(1:floor(length(mySample)/2))],]
     labels.train.cv.test=labels.train[-mySample]#[-(1:floor(length(mySample)/2))]]
 
-    cv.fit=cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial', ...)
+    cv.fit=glmnet::cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial', ...)
     predictions=predict(cv.fit,newx=data.train.cv.test,s='lambda.min')
     show('prediction accuracy (CV) (higher for splice donor than splice acceptor)')
 
@@ -186,7 +191,7 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
     show(myPerformance(labels.train.cv.test==1,predictions)$AUC	)
   }
 
-  cv.fit=cv.glmnet(x=data.train,y=labels.train,family='binomial', ...)
+  cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial', ...)
   predictions= predict(cv.fit,newx=data.test,s='lambda.min')
   return(list(predictions,cv.fit))
 }
