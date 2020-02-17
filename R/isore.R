@@ -254,6 +254,7 @@ isore <- function(bamFile,
                                            readTable = data.table(readClassListFull$readTable)))
 
   return(se)
+  # test commit
 }
 
 
