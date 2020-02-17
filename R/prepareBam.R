@@ -26,7 +26,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
   }
   bf <- open(bamFile)
   #readJunctions <- GRangesList()
-  readGrglist <- GRangesList()
+  readGrglist <- GenomicRanges::GRangesList()
   # startRanges <- GRanges()
   # endRanges <- GRanges()
   # readAlignmentStrand <- NULL
@@ -39,7 +39,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
                           param=Rsamtools::ScanBamParam(flag=Rsamtools::scanBamFlag(isSecondaryAlignment=FALSE)), ## whether supplementary alignments would be considered as well?? To confirm with Jonathan.
                           use.names=TRUE)
     #readJunctions <- c(readJunctions,junctions(reads))
-    readGrglist<-c(readGrglist,grglist(reads))
+    readGrglist<-c(readGrglist,GenomicAlignments::grglist(reads))
     # startRanges <- c(startRanges,GRanges(seqnames=seqnames(reads),ranges=IRanges(start=start(reads),end=start(reads))))  ## can be extracted from readGrglist, remove here? range(readGrglist[1:10])
     # endRanges <- c(endRanges,GRanges(seqnames=seqnames(reads),ranges=IRanges(start=end(reads),end=end(reads))))## can be extracted from readGrglist, remove here? range(readGrglist[1:10])
     # readIdToName <- c(readIdToName,names(reads))## replace with integer Ids or use real names
@@ -49,7 +49,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
   }
 
   close(bf)
-  readGrglist <- readGrglist[width(readGrglist)>1]  # remove microexons Of width 1bp from list
+  readGrglist <- readGrglist[GenomicRanges::width(readGrglist)>1]  # remove microexons Of width 1bp from list
   readNames <- names(readGrglist)
   names(readGrglist) <- 1:length(readGrglist)  # names needed to be replaced as some reads are multiple times mapped (distinct parts of the read which are compatible)
 
