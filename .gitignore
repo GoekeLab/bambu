@@ -39,3 +39,6 @@ vignettes/*.pdf
 .Renviron
 packrat/lib*/
 .Rproj.user
+
+# R project varaible
+bamboo.Rproj

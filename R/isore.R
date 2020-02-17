@@ -112,13 +112,13 @@ isore <- function(bamFile,
   uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, unique(txdbTablesList[['unlisted_introns']]))))
 
   # Indicator: is the junction start annotated as a intron start?
-  annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName ,sum)>0
+  annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
   uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
   rm(annotatedStart)
   gc()
 
   # Indicator: is the junction end annotated as a intron end?
-  annotatedEnd <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionEndName ,sum)>0
+  annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
   uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
   rm(annotatedEnd)
   gc()
@@ -149,13 +149,16 @@ isore <- function(bamFile,
   uniqueJunctions$strand.mergedHighConfJunction <- as.character(strand(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
   end.ptm <- proc.time()
   cat(paste0('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
+  rm(junctionModel)
+  gc()
 
   cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
   readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readData$readGrglist, readData$readNames)  ## speed up this function ##
   end.ptm <- proc.time()
   cat(paste0('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+   rm(list = c('uniqueJunctions','unlisted_junctions'))
+   gc()
 
   cat('### create single exon transcript models (read classes) ### \n')
   start.ptm <- proc.time()
@@ -165,42 +168,55 @@ isore <- function(bamFile,
   readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(singleExonReads,referenceExons, readData$readNames, confidenceType = 'unsplicedWithin', prefix='unsplicedWithin',stranded=stranded) ### change txId OK
 
   singleExonReadsOutside <- singleExonReads[!(readData$readNames[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readTable$readId)]
+  rm(list=c('singleExonReads'))
+  gc()
+
   combinedSingleExonRanges <- reduce(singleExonReadsOutside)
   readClassListUnsplicedReduced <- constructUnsplicedReadClasses(singleExonReadsOutside,combinedSingleExonRanges, readData$readNames, confidenceType = 'unsplicedNew', prefix='unsplicedNew',stranded=stranded)
+  rm(list = c('singleExonReadsOutside','combinedSingleExonRanges','readData'))
+  gc()
 
   end.ptm <- proc.time()
   cat(paste0('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
-  readClassListFull=list()
-  readClassListFull$exonsByReadClass = c(readClassListSpliced$exonsByReadClass, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
-  readClassListFull$readClassTable = rbind(readClassListSpliced$readClassTable, readClassListUnsplicedWithAnnotation$readClassTable, readClassListUnsplicedReduced$readClassTable)
-  readClassListFull$readTable = rbind(readClassListSpliced$readTable, readClassListUnsplicedWithAnnotation$readTable, readClassListUnsplicedReduced$readTable)
+
+  exonsByReadClass = c(readClassListSpliced$exonsByReadClass, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
+  readClassTable = rbind(readClassListSpliced$readClassTable, readClassListUnsplicedWithAnnotation$readClassTable, readClassListUnsplicedReduced$readClassTable)
+  readTable = rbind(readClassListSpliced$readTable, readClassListUnsplicedWithAnnotation$readTable, readClassListUnsplicedReduced$readTable)
+  rm(list=c('readClassListSpliced','readClassListUnsplicedWithAnnotation','readClassListUnsplicedReduced'))
+  gc()
 
   cat('### calculate distance of read classes to annotations, basic filter for read-tx assignments ### \n')
   start.ptm <- proc.time()
 
+
   ## note/todo: here the stranded mode should always be used, need to check that in unstranded mode, readClasses without strand information from splice sites are '*'
   ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches
   ## might not be a big issue (not clear)
-  distTable <- calculateDistToAnnotation(readClassListFull$exonsByReadClass,txdbTablesList$exonsByTx,maxDist = 35, primarySecondaryDist = 5, ignore.strand= !stranded)  # [readClassListFull$txTable$confidenceType=='highConfidenceJunctionReads' ]   ### change txId OK
-  distTable <- left_join(distTable, dplyr::select(readClassListFull$readClassTable, readClassId, readCount, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
+  distTable <- calculateDistToAnnotation(exonsByReadClass,txdbTablesList$exonsByTx,maxDist = 35, primarySecondaryDist = 5, ignore.strand= !stranded)  # [readClassListFull$txTable$confidenceType=='highConfidenceJunctionReads' ]   ### change txId OK
+  distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, readCount, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
   distTable <- left_join(distTable, dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
-  readClassListFull$distTable <- distTable
   end.ptm <- proc.time()
   cat(paste0('Finished calculating distance of read classes to annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+
 
   cat('### assign unmatched readClasses to new geneIds ### \n')
   start.ptm <- proc.time()
 
   readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%group_by(GENEID) %>% mutate(geneCount = sum(readCount)) %>% distinct() %>%group_by(readClassId) %>% filter(geneCount==max(geneCount)) %>%filter(row_number()==1) %>% dplyr::select(readClassId, geneId=GENEID) %>% ungroup()
 
-  newGeneCandidates <- (!readClassListFull$readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
-  readClassToGeneIdTableNew <- assignNewGeneIds(readClassListFull$exonsByReadClass[newGeneCandidates], prefix=prefix, minoverlap=5, ignore.strand=F)
+
+  newGeneCandidates <- (!readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
+  readClassToGeneIdTableNew <- assignNewGeneIds(exonsByReadClass[newGeneCandidates], prefix=prefix, minoverlap=5, ignore.strand=F)
   readClassGeneTable <- rbind(readClassToGeneIdTable,readClassToGeneIdTableNew)
-  readClassListFull$readClassTable <- left_join(readClassListFull$readClassTable, readClassGeneTable)
+  readClassTable <- left_join(readClassTable, readClassGeneTable)
   end.ptm <- proc.time()
   cat(paste0('Finished assigning unmatched readClasses to new geneIds in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
+  rm(list = c('newGeneCandidates','readClassGeneTable'))
+  gc()
 
   ## implement next
   ############### FROM HERE ##############
@@ -239,7 +255,7 @@ isore <- function(bamFile,
   ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
   ## rowData: can be empty
   ## metadata: eqClass to tx assignment; distTable for each rc and eqClass
-  counts <- unique(data.table(readClassListFull$readClassTable)[,.(readClassId, readCount)])
+  counts <- unique(data.table(readClassTable)[,.(readClassId, readCount)])
 
   ColNames <-  gsub('.bam','',data.table::last(unlist(strsplit(ifelse(class(bamFile)=='BamFile', path(bamFile), bamFile),'\\/'))))
 
@@ -248,11 +264,11 @@ isore <- function(bamFile,
 
 
   se <- SummarizedExperiment::SummarizedExperiment(assays=matrix(counts$readCount, ncol = 1, dimnames = list(counts$readClassId, ColNames)),
-                                                   rowRanges = readClassListFull$exonsByReadClass,
-                                           metadata=list(distTable = data.table(readClassListFull$distTable),
-                                           readClassTable = data.table(readClassListFull$readClassTable),
-                                           readTable = data.table(readClassListFull$readTable)))
-
+                                                   rowRanges = exonsByReadClass,
+                                           metadata=list(distTable = data.table(distTable),
+                                           readClassTable = data.table(readClassTable),
+                                           readTable = data.table(readTable)))
+  rm(list=c('counts','distTable','exonsByReadClass','readClassTable','readTable'))
   return(se)
 }
 
@@ -297,16 +313,20 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
 
   exonSelfOverlaps <- findOverlaps(exByTx,exByTx,select = 'all',minoverlap = minoverlap, ignore.strand=ignore.strand)
   hitObject = tbl_df(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
+  hitObject <- data.table::data.table(hitObject)
+  temp <- hitObject %>% filter(queryHits<= subjectHits) ## remove identical hits
+  #temp <- hitObject
+  rm(list=c('exonSelfOverlaps','hitObject'))
+  gc()
   length_tmp = 1
-  while(nrow(hitObject)>length_tmp) {
+  while(nrow(temp)>length_tmp) {
     show('annotated transcripts from unknown genes by new gene id')
-
-    length_tmp = nrow(hitObject)
+    length_tmp = nrow(temp)
     show(length_tmp)
-    hitObject= inner_join(hitObject,hitObject,by=c("subjectHits"="queryHits")) %>% dplyr::select(queryHits,subjectHits.y) %>% distinct() %>% dplyr::rename(subjectHits=subjectHits.y)
+    temp= inner_join(temp,temp,by=c("subjectHits"="queryHits")) %>% dplyr::select(queryHits,subjectHits.y) %>% distinct() %>% dplyr::rename(subjectHits=subjectHits.y)
   }
 
-  geneTxNames <- hitObject %>% arrange(queryHits, subjectHits) %>% group_by(queryHits) %>% mutate(geneId = paste('gene',prefix,'.',dplyr::first(subjectHits),sep='')) %>% dplyr::select(queryHits, geneId) %>% distinct() %>% ungroup()
+  geneTxNames <- temp %>% arrange(queryHits, subjectHits) %>% group_by(queryHits) %>% mutate(geneId = paste('gene',prefix,'.',dplyr::first(subjectHits),sep='')) %>% dplyr::select(queryHits, geneId) %>% distinct() %>% ungroup()
   geneTxNames$readClassId <- names(exByTx)[geneTxNames$queryHits]
   geneTxNames <- dplyr::select(geneTxNames, readClassId, geneId)
   return(geneTxNames)
@@ -559,7 +579,7 @@ predictTrueTranscriptsDirectRna <- function(txDataTable, interactions = F, model
   # x <- x_test[mySample,]
   #  test=glmnet(x, y)
   # predictions= predict(test,newx=x_test)
-  cv.fit=cv.glmnet(x=x,y=y, parallel = T)
+  cv.fit=glmnet::cv.glmnet(x=x,y=y, parallel = T)
   ##  cv.fit=cv.glmnet(x=x,y=y,family='binomial', parallel = T)  ## slow but more correct
 
 
@@ -571,7 +591,7 @@ predictTrueTranscriptsDirectRna <- function(txDataTable, interactions = F, model
   x <- x_test[mySample,]
   #  test=glmnet(x, y)
   # predictions= predict(test,newx=x_test)
-  cv.fit=cv.glmnet(x=x,y=y,family='binomial', parallel = T)
+  cv.fit=glmnet::cv.glmnet(x=x,y=y,family='binomial', parallel = T)
 
 
   predictions= predict(cv.fit,newx=x_test,s='lambda.min')
@@ -784,7 +804,7 @@ evaluateTxdiscriminationModels <- function(txDataTable, interactions = F, model 
       plot(c(0,1),c(0,1),xlim=c(0,1),ylim=c(0,1),ty='l')
       for(j in 1:(length(modelData))) {
         # test_model1 <- fitBinomialModel(trainingLabels[mySampleTrain], as.matrix(modelData[[j]][mySampleTrain,]), as.matrix(modelData[[j]][mySampleTest,]), show.cv=TRUE, maxSize.cv=10000, parallel = T)
-        cv.fit=cv.glmnet(x=as.matrix(modelData[[j]][mySampleTrain,]),y=trainingLabels[mySampleTrain],family='binomial',  parallel = T)
+        cv.fit=glmnet::cv.glmnet(x=as.matrix(modelData[[j]][mySampleTrain,]),y=trainingLabels[mySampleTrain],family='binomial',  parallel = T)
         predictions= predict(cv.fit,newx=as.matrix(modelData[[j]][mySampleTest,]),s='lambda.min')
         performance_tmp=myPerformance(trainingLabels[mySampleTest]==1,predictions)
         resultMatrix[myIndex,j+2] <- performance_tmp$AUC
@@ -802,7 +822,7 @@ evaluateTxdiscriminationModels <- function(txDataTable, interactions = F, model 
       x_test <- model.matrix(~.*., modelData[[3]][mySampleTest,])[, -1]
       #  test=glmnet(x, y)
       # predictions= predict(test,newx=x_test)
-      cv.fit=cv.glmnet(x=x,y=y, parallel = T)
+      cv.fit=glmnet::cv.glmnet(x=x,y=y, parallel = T)
       ##  cv.fit=cv.glmnet(x=x,y=y,family='binomial', parallel = T)  ## slow but more correct
       predictions= predict(cv.fit,newx=x_test,s='lambda.min')
       performance_tmp=myPerformance(trainingLabels[mySampleTest]==1,predictions)
@@ -1047,7 +1067,7 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
   #  test=glmnet(x, y)
   # predictions= predict(test,newx=x_test)
   #cv.fit=cv.glmnet(x=x,y=y, parallel = T)
-  cv.fit=cv.glmnet(x=x,y=y,family='binomial', parallel = T)  ## slow but more correct
+  cv.fit=glmnet::cv.glmnet(x=x,y=y,family='binomial', parallel = T)  ## slow but more correct
   predictions= predict(cv.fit,newx=x_test,s='lambda.min')
 
 
@@ -1072,11 +1092,11 @@ useBarcodeData <- function(combinedTxTable, readTxTable, barcodeData) {
 
 
 
-  cv.fit=cv.glmnet(x=x,y=y, parallel = T)
+  cv.fit=glmnet::cv.glmnet(x=x,y=y, parallel = T)
   predictions= predict(cv.fit,newx=x_test,s='lambda.min')
 
 
-  cv.fit=cv.glmnet(x=x,y=y,family='binomial', parallel = T)
+  cv.fit=glmnet::cv.glmnet(x=x,y=y,family='binomial', parallel = T)
   predictions= predict(cv.fit,newx=x_test,s='lambda.min')
 
 
