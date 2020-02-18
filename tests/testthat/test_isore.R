@@ -6,12 +6,13 @@ test_that("isoform reconstruction runs without error on example data", {
   bamFile <- BamFile(system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo"),yieldSize=1000000)
   genomeFA <- FaFile(system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo"))
   txdbTablesList <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/HomoSapiens_ensembl91_Grch38_txdbTablesList.rds"))
-  stranded=TRUE
+  stranded=FALSE
   protocol='cDNA'
   prefix=''
   minimumReadSupport=2
   minimumTxFraction = 0.02
-  testData <- isore(bamFile = bamFile,  txdbTablesList = txdbTablesList, genomeFA = genomeFA, stranded=stranded, protocol=protocol, prefix=prefix, minimumReadSupport=minimumReadSupport, minimumTxFraction=minimumTxFraction)
+  yieldSize=1000000
+  testData <- isore(bamFile = bamFile,  txdbTablesList = txdbTablesList, genomeFA = genomeFA, stranded=stranded, protocol=protocol, prefix=prefix, minimumReadSupport=minimumReadSupport, minimumTxFraction=minimumTxFraction, yieldSize = yieldSize)
   expect_s4_class(testData, "SummarizedExperiment")
 })
 
