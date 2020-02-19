@@ -10,9 +10,9 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
 
   if(class(bamFile)=='BamFile') {
     if(!is.null(yieldSize)) {
-      yieldSize(bamFile) <- yieldSize
+      Rsamtools::yieldSize(bamFile) <- yieldSize
     } else {
-      yieldSize <- yieldSize(bamFile)
+      yieldSize <- Rsamtools::yieldSize(bamFile)
     }
 
   }else if(!grepl('.bam',bamFile)){
