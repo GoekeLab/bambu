@@ -78,15 +78,33 @@ isore <- function(bamFile,
 
   if(is.null(genomeFA)){
     stop("GenomeFA file is missing.")
-  }else if(!grepl('.fa',genomeFA)){
-    stop("GenomeFA file is missing.")
   }else if(class(genomeFA) != 'FaFile'){
-    genomeFA <- Rsamtools::FaFile(genomeFA)
+    if(!grepl('.fa',genomeFA)){
+    stop("GenomeFA file is missing.")
+    }else{
+      genomeFA <- Rsamtools::FaFile(genomeFA)
+    }
   }
 
 
   cat('### load data ### \n')
   start.ptm <- proc.time()
+  ## create BamFile object from character ##
+  if(class(bamFile)=='BamFile') {
+    if(!is.null(yieldSize)) {
+      yieldSize(bamFile) <- yieldSize
+    } else {
+      yieldSize <- yieldSize(bamFile)
+    }
+  }else if(!grepl('.bam',bamFile)){
+    stop("Bam file is missing from arguments.")
+  }else{
+    if(is.null(yieldSize)) {
+      yieldSize <- NA
+    }
+    bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
+  }
+
   readData <- prepareDataFromBam(bamFile)
   end.ptm <- proc.time()
   cat(paste0('Finished loading data in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
@@ -255,19 +273,19 @@ isore <- function(bamFile,
   ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
   ## rowData: can be empty
   ## metadata: eqClass to tx assignment; distTable for each rc and eqClass
-  counts <- unique(data.table(readClassTable)[,.(readClassId, readCount)])
-
-  ColNames <-  gsub('.bam','',data.table::last(unlist(strsplit(ifelse(class(bamFile)=='BamFile', path(bamFile), bamFile),'\\/'))))
-
-  #rowData <- DataFrame(row.names =  counts$readClassId)
-  ## when bamFile is of BamFile type, need to extract the path as a string variable, otherwise it's a connection and cannot use strsplit
 
 
-  se <- SummarizedExperiment::SummarizedExperiment(assays=matrix(counts$readCount, ncol = 1, dimnames = list(counts$readClassId, ColNames)),
+  bamFile.basename <- tools::file_path_sans_ext(basename(path(bamFile)))
+  counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), bamFile.basename))
+  colDataDf <- DataFrame(name=bamFile.basename, row.names=bamFile.basename)
+
+  # readTable is currently not returned
+  se <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts),
                                                    rowRanges = exonsByReadClass,
-                                           metadata=list(distTable = data.table(distTable),
-                                           readClassTable = data.table(readClassTable),
-                                           readTable = data.table(readTable)))
+                                                   colData = colDataDf,
+                                                   metadata=list(distTable = distTable,
+                                                                 readClassTable = readClassTable))
+
   rm(list=c('counts','distTable','exonsByReadClass','readClassTable','readTable'))
   return(se)
 }
@@ -313,26 +331,73 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
 
   exonSelfOverlaps <- findOverlaps(exByTx,exByTx,select = 'all',minoverlap = minoverlap, ignore.strand=ignore.strand)
   hitObject = tbl_df(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
-  hitObject <- data.table::data.table(hitObject)
-  temp <- hitObject %>% filter(queryHits<= subjectHits) ## remove identical hits
+  candidateList <- hitObject %>%
+                    group_by(queryHits) %>%
+                    filter( queryHits <= min(subjectHits), queryHits != subjectHits) %>%
+                    ungroup()
+
+  filteredOverlapList <- hitObject %>% filter(queryHits < subjectHits)
+
+  #temp <- candidateList  ## %>% filter(queryHits<= subjectHits) ## remove identical hits will lead to wrong results
   #temp <- hitObject
   rm(list=c('exonSelfOverlaps','hitObject'))
   gc()
   length_tmp = 1
-  while(nrow(temp)>length_tmp) {
-    show('annotated transcripts from unknown genes by new gene id')
-    length_tmp = nrow(temp)
+  while(nrow(candidateList)>length_tmp) {  # loop to include overlappng read classes which are not in order
+    length_tmp = nrow(candidateList)
+    temp <- left_join(candidateList,filteredOverlapList,by=c("subjectHits"="queryHits")) %>%
+            group_by(queryHits) %>% filter(! subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
+            ungroup %>%
+            dplyr::select(queryHits,subjectHits.y) %>%
+            distinct() %>%
+            dplyr::rename(subjectHits=subjectHits.y)
+    candidateList <- rbind(temp, candidateList)
+    while(nrow(temp)>0) {
+      show('annotated transcripts from unknown genes by new gene id')
+
+      show(nrow(candidateList))
+      temp= left_join(candidateList,filteredOverlapList,by=c("subjectHits"="queryHits")) %>%
+              group_by(queryHits) %>%
+              filter(! subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
+              ungroup %>%
+              dplyr::select(queryHits,subjectHits.y) %>%
+              distinct() %>%
+              dplyr::rename(subjectHits=subjectHits.y)
+
+      candidateList <- rbind(temp, candidateList)
+    }
+    #length_tmp = nrow(candidateList)
+    show('second loop')
     show(length_tmp)
-    temp= inner_join(temp,temp,by=c("subjectHits"="queryHits")) %>% dplyr::select(queryHits,subjectHits.y) %>% distinct() %>% dplyr::rename(subjectHits=subjectHits.y)
+    tst <- candidateList %>%
+            group_by(subjectHits) %>%
+            mutate(subjectCount = n()) %>%
+            group_by(queryHits) %>%
+            filter(max(subjectCount)>1) %>%
+            ungroup()
+
+    temp2= inner_join(tst,tst,by=c("subjectHits"="subjectHits")) %>%
+            filter(queryHits.x!=queryHits.y)  %>%
+            mutate(queryHits = if_else(queryHits.x > queryHits.y, queryHits.y, queryHits.x),
+                   subjectHits = if_else(queryHits.x > queryHits.y, queryHits.x, queryHits.y)) %>%
+            dplyr::select(queryHits,subjectHits) %>%
+            distinct()
+    candidateList <-  distinct(rbind(temp2, candidateList))
   }
 
-  geneTxNames <- temp %>% arrange(queryHits, subjectHits) %>% group_by(queryHits) %>% mutate(geneId = paste('gene',prefix,'.',dplyr::first(subjectHits),sep='')) %>% dplyr::select(queryHits, geneId) %>% distinct() %>% ungroup()
-  geneTxNames$readClassId <- names(exByTx)[geneTxNames$queryHits]
-  geneTxNames <- dplyr::select(geneTxNames, readClassId, geneId)
-  return(geneTxNames)
+  candidateList <- candidateList %>%
+                    filter(! queryHits %in% subjectHits) %>%
+                    arrange(queryHits, subjectHits)
+  idToAdd <- (which(!(1:length(exByTx) %in% unique(candidateList$subjectHits))))
+
+  candidateList <- rbind(candidateList, tibble(queryHits=idToAdd, subjectHits=idToAdd)) %>%
+                    arrange(queryHits, subjectHits) %>%
+                    mutate(geneId = paste('gene',prefix,'.',queryHits,sep='')) %>%
+                    dplyr::select(subjectHits, geneId)
+  candidateList$readClassId <- names(exByTx)[candidateList$subjectHits]
+  candidateList <- dplyr::select(candidateList, readClassId, geneId)
+  return(candidateList)
 }
-
-
 
 getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
