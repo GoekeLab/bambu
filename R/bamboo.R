@@ -143,8 +143,8 @@ bamboo.quantSE <- function(se = se,txdb = NULL, txdbTablesList = NULL, algo.cont
 
 
 
-bamboo.quantISORE <- function(bam.file = bam.file,algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL){
-
+bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL, yieldSize = NULL, quickMode = FALSE){
+## NOTE: SE object needs to be properly annotated
   if(is.null(fa.file)){
     stop("Genome fa file is missing!")
   }
@@ -181,21 +181,53 @@ bamboo.quantISORE <- function(bam.file = bam.file,algo.control = NULL, fa.file=N
     }
   }
 
-  start.time <- proc.time()
-  se  <- isore(bamFile = bam.file,
-               txdb = NULL,
-               txdbTablesList = txdbTablesList,
-               genomeFA = fa.file,
-               stranded = ir.control[['stranded']],
-               protocol = ir.control[['protocol']],
-               prefix = ir.control[['prefix']],
-               minimumReadSupport= ir.control[['minimumReadSupport']],
-               minimumTxFraction = ir.control[['minimumTxFraction']])
-  end.time <- proc.time()
-  cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+  ## create BamFileList object from character ##
+  if(class(bam.file)=='BamFile') {
+    if(!is.null(yieldSize)) {
+      yieldSize(bam.file) <- yieldSize
+    } else {
+      yieldSize <- yieldSize(bam.file)
+    }
+    bam.file <- Rsamtools::BamFileList(bam.file)
+  }else if(class(bam.file)=='BamFileList') {
+    if(!is.null(yieldSize)) {
+      yieldSize(bam.file) <- yieldSize
+    } else {
+      yieldSize <- min(yieldSize(bam.file))
+    }
+  }else if(any(!grepl('\\.bam$',bam.file))){
+    stop("Bam file is missing from arguments.")
+  }else{
+    if(is.null(yieldSize)) {
+      yieldSize <- NA
+    }
+    bam.file <- Rsamtools::BamFileList(bam.file, yieldSize = yieldSize)
+  }
 
+  for(bam.file.index in seq_along(bam.file)){
+    start.time <- proc.time()
+    se  <- isore(bamFile = bam.file[[bam.file.index]],
+                 txdb = NULL,
+                 txdbTablesList = txdbTablesList,
+                 genomeFA = fa.file,
+                 stranded = ir.control[['stranded']],
+                 protocol = ir.control[['protocol']],
+                 prefix = ir.control[['prefix']],
+                 minimumReadSupport= ir.control[['minimumReadSupport']],
+                 minimumTxFraction = ir.control[['minimumTxFraction']],
+                 quickMode= quickMode)
+    end.time <- proc.time()
+    cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
-  seOutput <- bamboo.quantSE(se = se,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
+    se.quant <- bamboo.quantSE(se = se,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
+
+    if(bam.file.index==1){
+      seOutput <- se.quant  # create se object
+    }else {
+      seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+    }
+
+  }
   return(seOutput)
 }
 
