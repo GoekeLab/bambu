@@ -204,29 +204,46 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
     bam.file <- Rsamtools::BamFileList(bam.file, yieldSize = yieldSize)
   }
 
-  for(bam.file.index in seq_along(bam.file)){
-    start.time <- proc.time()
-    se  <- isore(bamFile = bam.file[[bam.file.index]],
-                 txdb = NULL,
-                 txdbTablesList = txdbTablesList,
-                 genomeFA = fa.file,
-                 stranded = ir.control[['stranded']],
-                 protocol = ir.control[['protocol']],
-                 prefix = ir.control[['prefix']],
-                 minimumReadSupport= ir.control[['minimumReadSupport']],
-                 minimumTxFraction = ir.control[['minimumTxFraction']],
-                 quickMode= quickMode)
-    end.time <- proc.time()
-    cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+  if(extendAnnotations==FALSE) {
+    for(bam.file.index in seq_along(bam.file)){
+      start.time <- proc.time()
+      se  <- isore(bamFile = bam.file[[bam.file.index]],
+                   txdb = NULL,
+                   txdbTablesList = txdbTablesList,
+                   genomeFA = fa.file,
+                   stranded = ir.control[['stranded']],
+                   protocol = ir.control[['protocol']],
+                   prefix = ir.control[['prefix']],
+                   minimumReadSupport= ir.control[['minimumReadSupport']],
+                   minimumTxFraction = ir.control[['minimumTxFraction']],
+                   quickMode= quickMode)
+      end.time <- proc.time()
+      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
-    se.quant <- bamboo.quantSE(se = se,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
+      se.quant <- bamboo.quantSE(se = se,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
 
-    if(bam.file.index==1){
-      seOutput <- se.quant  # create se object
-    }else {
-      seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+      if(bam.file.index==1){
+        seOutput <- se.quant  # create se object
+      }else {
+        seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+      }
     }
-
+  }else{
+    seList=list()
+    for(bam.file.index in seq_along(bam.file)){
+      start.time <- proc.time()
+      seList[[bam.file.index]]  <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
+                   txdbTablesList = txdbTablesList,
+                   genomeFA = fa.file,
+                   stranded = ir.control[['stranded']],
+                   protocol = ir.control[['protocol']],
+                   prefix = ir.control[['prefix']],
+                   minimumReadSupport= ir.control[['minimumReadSupport']],
+                   minimumTxFraction = ir.control[['minimumTxFraction']],
+                   quickMode= quickMode)
+      end.time <- proc.time()
+      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+    }
   }
   return(seOutput)
 }
