@@ -57,7 +57,8 @@ isore <- function(bamFile,
                   prefix='',  ## prefix for new gene names (for combining multiple runs gene Ids can be made unique and merged later)
                   minimumReadSupport=2,
                   minimumTxFraction = 0.02,
-                  yieldSize = NULL)
+                  yieldSize = NULL,
+                  quickMode = FALSE)
 {
   ### note: test which standard junction model to use? One by protocol? need to compare
   ## comment: how to create this and would this change at different conditions?
@@ -172,7 +173,7 @@ isore <- function(bamFile,
 
   cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
-  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readData$readGrglist, readData$readNames)  ## speed up this function ##
+  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readData$readGrglist, readData$readNames, quickMode = quickMode)  ## speed up this function ##
   end.ptm <- proc.time()
   cat(paste0('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
    rm(list = c('uniqueJunctions','unlisted_junctions'))
