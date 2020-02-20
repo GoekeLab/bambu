@@ -127,7 +127,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 
   exonsByReadClass <- relist(unlistData, partitioning)
 
-  readClassTable <- readClassTable %>% dplyr::select(chr, start, end, strand, readCount, confidenceType, readClassId)
+  readClassTable <- readClassTable %>% dplyr::select(chr, start, end, strand, intronStarts, intronEnds, confidenceType, readClassId, readCount)
 
   return(list(exonsByReadClass = exonsByReadClass, readClassTable = readClassTable, readTable = readTable))
 }
@@ -166,8 +166,10 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     mutate(readCount=n()) %>%
     distinct() %>%
     ungroup() %>%
-    mutate(confidenceType=confidenceType) %>%
-    dplyr::select(chr, start, end, strand, readCount, confidenceType, readClassId)
+    mutate(confidenceType=confidenceType,
+           intronStarts=NA,
+           intronEnds=NA) %>%
+    dplyr::select(chr, start, end, strand,intronStarts,intronEnds, confidenceType, readClassId, readCount)
 
   readTableUnspliced <-  dplyr::select(hitsDFGrouped, readClassId) %>%
     mutate(confidenceType=confidenceType, strand=as.character(strand(granges[hitsDFGrouped$queryHits])), readId=readNames[as.integer(names(granges[hitsDFGrouped$queryHits]))]) %>%

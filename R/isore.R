@@ -190,7 +190,7 @@ isore <- function(bamFile,
   rm(list=c('singleExonReads'))
   gc()
 
-  combinedSingleExonRanges <- reduce(singleExonReadsOutside)
+  combinedSingleExonRanges <- reduce(singleExonReadsOutside, ignore.strand=!stranded)
   readClassListUnsplicedReduced <- constructUnsplicedReadClasses(singleExonReadsOutside,combinedSingleExonRanges, readData$readNames, confidenceType = 'unsplicedNew', prefix='unsplicedNew',stranded=stranded)
   rm(list = c('singleExonReadsOutside','combinedSingleExonRanges','readData'))
   gc()
@@ -291,6 +291,214 @@ isore <- function(bamFile,
   return(se)
 }
 
+
+isore.constructReadClasses <- function(bamFile,
+                                       txdbTablesList, ## has to be provided (function should be called through bamboo, so is optional through that main function)
+                                       genomeDB=NULL, ## is required to avoid providing a fasta file with genome sequence, helpful for most users
+                                       genomeFA=NULL, ## genome FA file, should be in .fa format
+                                       stranded=FALSE,
+                                       protocol=NULL,
+                                       prefix='',  ## prefix for new gene names (for combining multiple runs gene Ids can be made unique and merged later)
+                                       minimumReadSupport=2,
+                                       minimumTxFraction = 0.02,
+                                       yieldSize = NULL,
+                                       quickMode = FALSE){
+
+
+
+
+
+  if(is.null(genomeFA)){
+    stop("GenomeFA file is missing.")
+  }else if(class(genomeFA) != 'FaFile'){
+    if(!grepl('.fa',genomeFA)){
+      stop("GenomeFA file is missing.")
+    }else{
+      genomeFA <- Rsamtools::FaFile(genomeFA)
+    }
+  }
+
+
+  cat('### load data ### \n')
+  start.ptm <- proc.time()
+  ## create BamFile object from character ##
+  if(class(bamFile)=='BamFile') {
+    if(!is.null(yieldSize)) {
+      yieldSize(bamFile) <- yieldSize
+    } else {
+      yieldSize <- Rsamtools::yieldSize(bamFile)
+    }
+  }else if(!grepl('.bam',bamFile)){
+    stop("Bam file is missing from arguments.")
+  }else{
+    if(is.null(yieldSize)) {
+      yieldSize <- NA
+    }
+    bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
+  }
+
+  readData <- prepareDataFromBam(bamFile)
+  end.ptm <- proc.time()
+  cat(paste0('Finished loading data in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+  unlisted_junctions <- unlist(myGaps(readData$readGrglist))
+  cat('### create junction list with splice motif ### \n')
+  start.ptm <- proc.time()
+  uniqueJunctions <- createJunctionTable(unlisted_junctions, genomeDB = genomeDB, genomeFA=genomeFA)
+  end.ptm <- proc.time()
+  cat(paste0('Finished creating junction list with splice motif in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+
+  cat('### infer strand/strand correction of junctions ### \n')
+  junctionTables <- junctionStrandCorrection(uniqueJunctions, unlisted_junctions, txdbTablesList[['intronsByTxEns']], stranded=stranded)
+  uniqueJunctions <- junctionTables[[1]]
+  unlisted_junctions <- junctionTables[[2]]
+  rm(junctionTables)
+  gc()
+
+  cat('### find annotated introns ### \n')
+  uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, unique(txdbTablesList[['unlisted_introns']]))))
+
+  # Indicator: is the junction start annotated as a intron start?
+  annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
+  uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
+  rm(annotatedStart)
+  gc()
+
+  # Indicator: is the junction end annotated as a intron end?
+  annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
+  uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
+  rm(annotatedEnd)
+  gc()
+
+  cat('### build model to predict true splice sites ### \n')
+  start.ptm <- proc.time()
+  if(sum(uniqueJunctions$annotatedJunction)>4500 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## note: these are thresholds that should be adjusted, or changed. Also can look into the code to find out what is the issue, probably number of training data per strand?
+    predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = NULL)
+    uniqueJunctions=predictSpliceSites[[1]]
+    junctionModel=predictSpliceSites[[2]]
+  } else {
+    junctionModel = standardJunctionModels_temp
+    predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = junctionModel)
+    uniqueJunctions=predictSpliceSites[[1]]
+    show('Warning: junction correction with not enough data, precalculated model is used')
+  }
+  rm(predictSpliceSites)  # clean up should be done more efficiently
+  gc()
+  end.ptm <- proc.time()
+  cat(paste0('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+  cat('### correct junctions based on set of high confidence junctions ### \n')
+  start.ptm <- proc.time()
+  uniqueJunctions <- findHighConfidenceJunctions(uniqueJunctions, junctionModel)
+  uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- uniqueJunctions$mergedHighConfJunctionId
+  uniqueJunctions$mergedHighConfJunctionIdAll_noNA[is.na(uniqueJunctions$mergedHighConfJunctionId)] <- names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
+  uniqueJunctions$strand.mergedHighConfJunction <- as.character(strand(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
+  end.ptm <- proc.time()
+  cat(paste0('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  rm(junctionModel)
+  gc()
+
+  cat('### create transcript models (read classes) from spliced reads ### \n')
+  start.ptm <- proc.time()
+  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readData$readGrglist, readData$readNames, quickMode = quickMode)  ## speed up this function ##
+  end.ptm <- proc.time()
+  cat(paste0('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  rm(list = c('uniqueJunctions','unlisted_junctions'))
+  gc()
+
+  cat('### create single exon transcript models (read classes) ### \n')
+  start.ptm <- proc.time()
+
+  singleExonReads <- unlist(readData$readGrglist[elementNROWS(readData$readGrglist)==1])
+  referenceExons<-unique(c(granges(unlist(readClassListSpliced[['exonsByReadClass']][readClassListSpliced$readClassTable$confidenceType=='highConfidenceJunctionReads' & readClassListSpliced$readClassTable$strand!='*'])), granges(unlist(txdbTablesList[['exonsByTx']]))))
+  readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(singleExonReads,referenceExons, readData$readNames, confidenceType = 'unsplicedWithin', prefix='unsplicedWithin',stranded=stranded) ### change txId OK
+
+  singleExonReadsOutside <- singleExonReads[!(readData$readNames[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readTable$readId)]
+  rm(list=c('singleExonReads'))
+  gc()
+
+  combinedSingleExonRanges <- reduce(singleExonReadsOutside,ignore.strand=!stranded)
+  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(singleExonReadsOutside,combinedSingleExonRanges, readData$readNames, confidenceType = 'unsplicedNew', prefix='unsplicedNew',stranded=stranded)
+  rm(list = c('singleExonReadsOutside','combinedSingleExonRanges','readData'))
+  gc()
+
+  end.ptm <- proc.time()
+  cat(paste0('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+  exonsByReadClass = c(readClassListSpliced$exonsByReadClass, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
+  readClassTable = rbind(readClassListSpliced$readClassTable, readClassListUnsplicedWithAnnotation$readClassTable, readClassListUnsplicedReduced$readClassTable)
+  #readTable = rbind(readClassListSpliced$readTable, readClassListUnsplicedWithAnnotation$readTable, readClassListUnsplicedReduced$readTable)
+  rm(list=c('readClassListSpliced','readClassListUnsplicedWithAnnotation','readClassListUnsplicedReduced'))
+  gc()
+
+
+  bamFile.basename <- tools::file_path_sans_ext(basename(path(bamFile)))
+  counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), bamFile.basename))
+  colDataDf <- DataFrame(name=bamFile.basename, row.names=bamFile.basename)
+
+  # readTable is currently not returned
+  se <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts),
+                                                   rowRanges = exonsByReadClass,
+                                                   colData = colDataDf,
+                                                   metadata=list(readClassTable = readClassTable))
+
+
+  rm(list=c('counts','exonsByReadClass','readClassTable'))
+  return(se)
+}
+
+
+isore.combineTranscriptCandidates <- function(readClassSeRef, readClassSeNew, suffix=c(".x",".y")){
+
+  readClassSeRefReadClassTable=metadata(readClassSeRef)[[1]]
+  readClassSeNewReadClassTable=metadata(readClassSeNew)[[1]]
+
+  tmp=full_join(filter(readClassSeRefReadClassTable, confidenceType=='highConfidenceJunctionReads') %>%
+                  select(chr, start, end, strand, intronStarts, intronEnds, readCount),
+                filter(readClassSeNewReadClassTable, confidenceType=='highConfidenceJunctionReads') %>%
+                  select(chr, start, end, strand, intronStarts, intronEnds, readCount),
+                by=c('chr'='chr','strand'='strand', 'intronStarts'='intronStarts', 'intronEnds'='intronEnds'), suffix=suffix)
+  tmp %>% mutate(start=rowMins(as.matrix(select(tmp, starts_with('start'))), na.rm=T), end=rowMaxs(as.matrix(select(tmp, starts_with('end'))), na.rm=T)) %>% select(chr, start, end, strand, intronStarts, intronEnds, everything())
+
+  unsplicedTableRef <- filter(readClassSeRefReadClassTable, confidenceType=='unsplicedNew') %>% select(chr, start, end, strand, intronStarts, intronEnds, confidenceType, readCount)
+
+  unsplicedRangesRef=GRanges(seqnames=unsplicedTableRef$chr, ranges=IRanges(start=unsplicedTableRef$start, end=unsplicedTableRef$end), strand=unsplicedTableRef$strand)
+
+  unsplicedTableNew <- filter(readClassSeRefReadClassTable, confidenceType=='unsplicedNew') %>% select(chr, start, end, strand, intronStarts, intronEnds, confidenceType, readCount)
+
+  unsplicedRangesNew=GRanges(seqnames=unsplicedTableNew$chr, ranges=IRanges(start=unsplicedTableNew$start, end=unsplicedTableNew$end), strand=unsplicedTableNew$strand)
+
+
+  combinedSingleExonRanges <- reduce(c(unsplicedRangesRef,unsplicedRangesNew), ignore.strand=!stranded)
+  overlapRefToCombined <-findOverlaps(unsplicedRangesRef,combinedSingleExonRanges, type='within', ignore.strand=!stranded, select='first')
+  overlapNewToCombined <-findOverlaps(unsplicedRangesNew,combinedSingleExonRanges, type='within', ignore.strand=!stranded, select='first')
+
+
+  readClassTableUnspliced <- as_tibble(data.frame(combinedSingleExonRanges)) %>% select(seqnames, start, end, strand) %>% mutate(intronStarts=NA, intronEnds=NA, mergeId=1:n())
+
+  unsplicedTableRef <- unsplicedTableRef %>% mutate(mergeId=overlapRefToCombined) %>% rename(start=paste0('start', suffix[1]), end=paste0('end', suffix[1]),readCount=paste0('readCount', suffix[1]))
+
+  unsplicedTableNew <- unsplicedTableNew %>% mutate(mergeId=overlapNewToCombined) %>% rename(start=paste0('start', suffix[2]), end=paste0('end', suffix[2]),readCount=paste0('readCount', suffix[2]))
+
+ ######HERE: finish the 2 tables for spliced and unspliced, compelete function, and test. careful to add all infor, pairwise merge might not work for the first sample. create reference first, then, merge others.
+
+  ## simplest approach: add all columns and then group by intron, then add read counts and sample counts. for single exon new genes based on reduced ranges, combine and findOverlap will work. with large sample number will be problematic? maybe parirwise merge better? anyway need to finish
+  return(annotationList)
+}
+
+isore.extendAnnotations <- function(readClassList, txdbTables){
+  annotationList <- list(exonsByTranscript, transcriptTable)
+  return(annotationList)
+}
+
+isore.estimateDistanceToAnnotations <- function(exonsByTranscript, txdbTables){
+  return(distTable)
+}
 
 classifyReadClasses <- function(readClassList) {
 
