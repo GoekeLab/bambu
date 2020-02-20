@@ -137,6 +137,7 @@ bamboo.quantSE <- function(se = se,txdb = NULL, txdbTablesList = NULL, algo.cont
   seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(estimates = matrix(counts$estimates,ncol = length(ColNames), dimnames = list(counts$tx_name, ColNames)),
                                                                        normEstimates = matrix(counts$CPM, ncol =  length(ColNames), dimnames = list(counts$tx_name, ColNames))),
                                    rowRanges = txdbTablesList$exonsByTx[counts$tx_name],
+                                   colData = colData(se),
                                    metadata = est$metadata) # transcript annotation with read class information
   return(seOutput)
 }
