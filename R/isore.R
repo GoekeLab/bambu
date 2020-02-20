@@ -95,7 +95,7 @@ isore <- function(bamFile,
     if(!is.null(yieldSize)) {
       yieldSize(bamFile) <- yieldSize
     } else {
-      yieldSize <- yieldSize(bamFile)
+      yieldSize <- Rsamtools::yieldSize(bamFile)
     }
   }else if(!grepl('.bam',bamFile)){
     stop("Bam file is missing from arguments.")
