@@ -5,7 +5,7 @@
 #' @param readGrglist
 #' @param readNames
 #' @importFrom unstrsplit getFromNamespace
-constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames){ #, startRanges, endRanges) {
+constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames, quickMode = FALSE){ #, startRanges, endRanges) {
   options(scipen = 999)
 
   show('### create transcript models ###')
@@ -82,7 +82,11 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   readTable[sum(is.na(junctionsByReadListCorrected[uniqueReadNames]))>0, 'confidenceType'] <- 'lowConfidenceJunctionReads'
 
   ## currently the 90% quantile is used to define the start and end ## this is the slowest part in the function.
-  readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+  if(quickMode==FALSE){
+    readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+  } else {
+    readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = min(start), end = max(end), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+  }
 
   #readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
 
