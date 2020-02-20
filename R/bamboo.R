@@ -145,7 +145,6 @@ bamboo.quantSE <- function(se = se,txdb = NULL, txdbTablesList = NULL, algo.cont
 
 
 bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL, yieldSize = NULL, quickMode = FALSE){
-## NOTE: SE object needs to be properly annotated
   if(is.null(fa.file)){
     stop("Genome fa file is missing!")
   }
