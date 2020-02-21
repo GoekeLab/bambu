@@ -440,12 +440,11 @@ isore.constructReadClasses <- function(bamFile,
   bamFile.basename <- tools::file_path_sans_ext(basename(path(bamFile)))
   counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), bamFile.basename))
   colDataDf <- DataFrame(name=bamFile.basename, row.names=bamFile.basename)
-
+  mcols(exonsByReadClass) <- select(readClassTable, chr.rc = chr, strand.rc=strand, intronStarts, intronEnds, confidenceType)
   # readTable is currently not returned
   se <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts),
                                                    rowRanges = exonsByReadClass,
-                                                   colData = colDataDf,
-                                                   metadata=list(readClassTable = readClassTable))
+                                                   colData = colDataDf)
 
 
   rm(list=c('counts','exonsByReadClass','readClassTable'))
@@ -453,51 +452,267 @@ isore.constructReadClasses <- function(bamFile,
 }
 
 
-isore.combineTranscriptCandidates <- function(readClassSeRef, readClassSeNew, suffix=c(".x",".y")){
+isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, stranded=FALSE){
+# seListTMP=seList[[3]]
+# readClassSe <- seListTMP[grepl('highConfidenceJunctionReads|unsplicedNew', rowData(seListTMP)$confidenceType),]
+  show('combine new transcript candidates')
+  if(is.null(readClassSeRef)){  #if no reerence object is given, create one from a readClassSe object
+    counts <- assays(readClassSe)$counts
+    start <- matrix(min(start(rowRanges(readClassSe))), dimnames = dimnames(counts))
+    end <- matrix(max(end(rowRanges(readClassSe))), dimnames = dimnames(counts))
+    rowData <- as_tibble(rowData(readClassSe))
+    rowData$start <- rowMins(start)
+    rowData$end <- rowMaxs(end)
+    rowData <- rowData %>% select(chr=chr.rc, start, end, strand=strand.rc, intronStarts, intronEnds, confidenceType)
 
-  readClassSeRefReadClassTable=metadata(readClassSeRef)[[1]]
-  readClassSeNewReadClassTable=metadata(readClassSeNew)[[1]]
+    readClassSeRef <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts, start=start, end=end),
+                                                                 rowData = rowData,
+                                                                 colData = colData(readClassSe))
 
-  tmp=full_join(filter(readClassSeRefReadClassTable, confidenceType=='highConfidenceJunctionReads') %>%
-                  select(chr, start, end, strand, intronStarts, intronEnds, readCount),
-                filter(readClassSeNewReadClassTable, confidenceType=='highConfidenceJunctionReads') %>%
-                  select(chr, start, end, strand, intronStarts, intronEnds, readCount),
-                by=c('chr'='chr','strand'='strand', 'intronStarts'='intronStarts', 'intronEnds'='intronEnds'), suffix=suffix)
-  tmp %>% mutate(start=rowMins(as.matrix(select(tmp, starts_with('start'))), na.rm=T), end=rowMaxs(as.matrix(select(tmp, starts_with('end'))), na.rm=T)) %>% select(chr, start, end, strand, intronStarts, intronEnds, everything())
+  }else {
+    colDataCombined <- rbind(colData(readClassSeRef), colData(readClassSe))
 
-  unsplicedTableRef <- filter(readClassSeRefReadClassTable, confidenceType=='unsplicedNew') %>% select(chr, start, end, strand, intronStarts, intronEnds, confidenceType, readCount)
+    readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), rownames='id')
+    readClassSeTBL <- as_tibble(rowData(readClassSe), rownames='id') %>%
+                                mutate(start=min(start(rowRanges(readClassSe))),
+                                       end=max(end(rowRanges(readClassSe))))
 
-  unsplicedRangesRef=GRanges(seqnames=unsplicedTableRef$chr, ranges=IRanges(start=unsplicedTableRef$start, end=unsplicedTableRef$end), strand=unsplicedTableRef$strand)
+  rowData.spliced <- full_join(filter(readClassSeRefTBL, confidenceType=='highConfidenceJunctionReads'),
+                          filter(readClassSeTBL, confidenceType=='highConfidenceJunctionReads'),
+                          by=c('chr'='chr.rc','strand'='strand.rc','intronStarts', 'intronEnds'), suffix=c('.ref','.new'))
 
-  unsplicedTableNew <- filter(readClassSeRefReadClassTable, confidenceType=='unsplicedNew') %>% select(chr, start, end, strand, intronStarts, intronEnds, confidenceType, readCount)
+  #create first SE object for spliced Tx
 
-  unsplicedRangesNew=GRanges(seqnames=unsplicedTableNew$chr, ranges=IRanges(start=unsplicedTableNew$start, end=unsplicedTableNew$end), strand=unsplicedTableNew$strand)
+
+  counts.splicedRef <- matrix(0, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.spliced))
+  start.splicedRef <- matrix(NA, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.spliced))
+  end.splicedRef <- start.splicedRef
+
+  counts.splicedNew <- matrix(0, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.spliced))
+  start.splicedNew <- matrix(NA, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.spliced))
+  end.splicedNew <- start.splicedNew
+
+
+  counts.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$counts[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+
+  start.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$start[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+  end.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$end[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+
+
+  counts.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(assays(readClassSe)$counts[rowData.spliced$id.new[!is.na(rowData.spliced$id.new)],])
+  start.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'start.new'])
+  end.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'end.new'])
+
+
+
+  counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
+  start.spliced <- cbind(start.splicedRef, start.splicedNew)
+  end.spliced <- cbind(end.splicedRef, end.splicedNew)
+  rowData.spliced$start <- rowMins(start.spliced, na.rm=T)
+  rowData.spliced$end <- rowMaxs(end.spliced, na.rm=T)
+  rowData.spliced <- select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds) %>%
+                      mutate(confidenceType='highConfidenceJunctionReads')
+
+  se.spliced <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts.spliced, start=start.spliced, end=end.spliced),
+                                                               rowData = rowData.spliced,
+                                                               colData = colDataCombined)
+
+
+
+  ## create second SE object for unspliced Tx
+
+
+  readClassSeRefTBL.unspliced <- filter(readClassSeRefTBL, confidenceType=='unsplicedNew')
+  readClassSeTBL.unspliced <- filter(readClassSeTBL, confidenceType=='unsplicedNew')
+  unsplicedRangesRef=GRanges(seqnames=readClassSeRefTBL.unspliced$chr,
+                             ranges=IRanges(start=readClassSeRefTBL.unspliced$start,
+                                            end=readClassSeRefTBL.unspliced$end),
+                             strand=readClassSeRefTBL.unspliced$strand)
+  unsplicedRangesNew=GRanges(seqnames=readClassSeTBL.unspliced$chr.rc,
+                             ranges=IRanges(start=readClassSeTBL.unspliced$start,
+                                            end=readClassSeTBL.unspliced$end),
+                             strand=readClassSeTBL.unspliced$strand.rc)
+
 
 
   combinedSingleExonRanges <- reduce(c(unsplicedRangesRef,unsplicedRangesNew), ignore.strand=!stranded)
+
+  rowData.unspliced <- as_tibble(as.data.frame(combinedSingleExonRanges, stringsAsFactors = FALSE)) %>%
+    mutate_if(is.factor, as.character) %>%
+    select(chr=seqnames, start, end, strand=strand) %>%
+    mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
+
   overlapRefToCombined <-findOverlaps(unsplicedRangesRef,combinedSingleExonRanges, type='within', ignore.strand=!stranded, select='first')
   overlapNewToCombined <-findOverlaps(unsplicedRangesNew,combinedSingleExonRanges, type='within', ignore.strand=!stranded, select='first')
 
+  countsRef.unspliced <- as_tibble(assays(readClassSeRef)[['counts']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+                          mutate(index=overlapRefToCombined) %>%
+                          group_by(index) %>%
+                          summarise_all(sum)
 
-  readClassTableUnspliced <- as_tibble(data.frame(combinedSingleExonRanges)) %>% select(seqnames, start, end, strand) %>% mutate(intronStarts=NA, intronEnds=NA, mergeId=1:n())
+  countsNew.unspliced <- as_tibble(assays(readClassSe)[['counts']])[rowData(readClassSe)$confidenceType=='unsplicedNew',] %>%
+                          mutate(index=overlapNewToCombined) %>%
+                          group_by(index) %>%
+                          summarise_all(sum)
 
-  unsplicedTableRef <- unsplicedTableRef %>% mutate(mergeId=overlapRefToCombined) %>% rename(start=paste0('start', suffix[1]), end=paste0('end', suffix[1]),readCount=paste0('readCount', suffix[1]))
+  startRef.unspliced <- as_tibble(assays(readClassSeRef)[['start']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+                          mutate(index=overlapRefToCombined) %>%
+                          group_by(index) %>%
+                          summarise_all(min)
 
-  unsplicedTableNew <- unsplicedTableNew %>% mutate(mergeId=overlapNewToCombined) %>% rename(start=paste0('start', suffix[2]), end=paste0('end', suffix[2]),readCount=paste0('readCount', suffix[2]))
+  startNew.unspliced <- readClassSeTBL %>% filter(confidenceType=='unsplicedNew') %>%
+                                            select(start) %>%
+                                            mutate(index=overlapNewToCombined) %>%
+                                            group_by(index) %>%
+                                            summarise_all(min)
 
- ######HERE: finish the 2 tables for spliced and unspliced, compelete function, and test. careful to add all infor, pairwise merge might not work for the first sample. create reference first, then, merge others.
+  endRef.unspliced <- as_tibble(assays(readClassSeRef)[['end']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+                        mutate(index=overlapRefToCombined) %>%
+                        group_by(index) %>%
+                        summarise_all(max)
 
-  ## simplest approach: add all columns and then group by intron, then add read counts and sample counts. for single exon new genes based on reduced ranges, combine and findOverlap will work. with large sample number will be problematic? maybe parirwise merge better? anyway need to finish
-  return(annotationList)
+  endNew.unspliced <- readClassSeTBL %>% filter(confidenceType=='unsplicedNew') %>%
+                                          select(end) %>%
+                                          mutate(index=overlapNewToCombined) %>%
+                                          group_by(index) %>%
+                                          summarise_all(max)
+
+  counts.unsplicedRef <- matrix(0, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.unspliced))
+  start.unsplicedRef <- matrix(NA, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.unspliced))
+  end.unsplicedRef <- start.unsplicedRef
+
+  counts.unsplicedNew <- matrix(0, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.unspliced))
+  start.unsplicedNew <- matrix(NA, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.unspliced))
+  end.unsplicedNew <- start.unsplicedNew
+
+
+  counts.unsplicedRef[countsRef.unspliced$index, ] <- as.matrix(countsRef.unspliced[,colnames(counts.unsplicedRef)])
+  start.unsplicedRef[countsRef.unspliced$index, ] <- as.matrix(startRef.unspliced[,colnames(start.unsplicedRef)])
+  end.unsplicedRef[countsRef.unspliced$index, ] <- as.matrix(endRef.unspliced[,colnames(end.unsplicedRef)])
+  counts.unsplicedNew[countsNew.unspliced$index, ] <- as.matrix(countsNew.unspliced[,colnames(counts.unsplicedNew)])
+  start.unsplicedNew[countsNew.unspliced$index, ] <- as.matrix(startNew.unspliced[,'start'])
+  end.unsplicedNew[countsNew.unspliced$index, ] <- as.matrix(endNew.unspliced[,'end'])
+
+
+
+  counts.unspliced <- cbind(counts.unsplicedRef, counts.unsplicedNew)
+  start.unspliced <- cbind(start.unsplicedRef, start.unsplicedNew)
+  end.unspliced <- cbind(end.unsplicedRef, end.unsplicedNew)
+
+  rowData.unspliced <- as_tibble(data.frame(combinedSingleExonRanges)) %>%
+                        select(chr=seqnames, start, end, strand=strand) %>%
+                        mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
+
+
+  se.unspliced <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts.unspliced, start=start.unspliced, end=end.unspliced),
+                                                               rowData = rowData.unspliced,
+                                                               colData = colDataCombined)
+
+  se.combined <- SummarizedExperiment::rbind(se.spliced,se.unspliced)
+  rownames(se.combined) <- 1:nrow(se.combined)
+  rm(se.spliced, se.unspliced)
+  return(se.combined)
+  }
 }
 
-isore.extendAnnotations <- function(readClassList, txdbTables){
-  annotationList <- list(exonsByTranscript, transcriptTable)
-  return(annotationList)
+
+isore.extendAnnotations <- function(se, txdbTables){
+  show('not yet implemented')
+  return()
 }
 
-isore.estimateDistanceToAnnotations <- function(exonsByTranscript, txdbTables){
-  return(distTable)
+isore.estimateDistanceToAnnotations <- function(seReadClass, txdbTables, stranded=FALSE, prefix=''){
+  cat('### calculate distance of read classes to annotations, basic filter for read-tx assignments ### \n')
+  start.ptm <- proc.time()
+
+  exonsByReadClass = rowRanges(seReadClass)
+  readClassTable=as_tibble(rowData(seReadClass), rownames='readClassId')
+
+  ## note/todo: here the stranded mode should always be used, need to check that in unstranded mode, readClasses without strand information from splice sites are '*'
+  ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches
+  ## might not be a big issue (not clear)
+  distTable <- calculateDistToAnnotation(exonsByReadClass,txdbTablesList$exonsByTx,maxDist = 35, primarySecondaryDist = 5, ignore.strand= !stranded)  # [readClassListFull$txTable$confidenceType=='highConfidenceJunctionReads' ]   ### change txId OK
+  ## this line is removed, counts are in assays(se)
+
+  distTable$readCount = assays(seReadClass)$counts[distTable$readClassId,]  # should actually be stored in counts, but is here to  assign genes based on high read counts
+  distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
+  distTable <- left_join(distTable, dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
+  end.ptm <- proc.time()
+  cat(paste0('Finished calculating distance of read classes to annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+
+
+  cat('### assign unmatched readClasses to new geneIds ### \n')
+  start.ptm <- proc.time()
+
+  readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%group_by(GENEID) %>% mutate(geneCount = sum(readCount)) %>% distinct() %>%group_by(readClassId) %>% filter(geneCount==max(geneCount)) %>%filter(row_number()==1) %>% dplyr::select(readClassId, geneId=GENEID) %>% ungroup()
+
+
+  newGeneCandidates <- (!readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
+  readClassToGeneIdTableNew <- assignNewGeneIds(exonsByReadClass[newGeneCandidates], prefix=prefix, minoverlap=5, ignore.strand=F)
+  readClassGeneTable <- rbind(readClassToGeneIdTable,readClassToGeneIdTableNew)
+  readClassTable <- left_join(readClassTable, readClassGeneTable)
+  end.ptm <- proc.time()
+  cat(paste0('Finished assigning unmatched readClasses to new geneIds in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+  rm(list = c('newGeneCandidates','readClassGeneTable'))
+  gc()
+
+  ## implement next
+  ############### FROM HERE ##############
+  ## 2020-01-30:
+  ## implement multi sample mode and read class annotation and filtering
+  ########################################
+
+  ## optional for multi sample quantification/ reconstruction
+  cat('### [TODO] [optional] Combine read classes from multiple samples ### \n')
+  start.ptm <- proc.time()
+  end.ptm <- proc.time()
+  cat(paste0('[TODO] [optional] Finished combining read classes from multiple samples in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+  cat('### [TODO] filter read classes/single sample or multi sample mode ### \n')
+  start.ptm <- proc.time()
+  end.ptm <- proc.time()
+  cat(paste0('[TODO] Finished filtering read classes in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+  cat('### [TODO] [optional]  classify readClasses ### \n')
+  start.ptm <- proc.time()
+  ## TODO: classify all read classes
+  ## categories:
+  ## compatible
+  ## subset
+  ## new transcript within annotation
+
+  #readClassListFull <- classifyReadClasses(readClassListFull)
+
+  end.ptm <- proc.time()
+  cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+
+  cat('### Create summarizedExperiment output ### \n')
+  ## This chunk of code should be able to produce output required for quantification:
+  ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
+  ## rowData: can be empty
+  ## metadata: eqClass to tx assignment; distTable for each rc and eqClass
+
+
+  # bamFile.basename <- tools::file_path_sans_ext(basename(path(bamFile)))
+  # counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), bamFile.basename))
+  # colDataDf <- DataFrame(name=bamFile.basename, row.names=bamFile.basename)
+  #
+  # # readTable is currently not returned
+  # se <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts),
+  #                                                  rowRanges = exonsByReadClass,
+  #                                                  colData = colDataDf,
+  #                                                  metadata=list(distTable = distTable,
+  #                                                                readClassTable = readClassTable))
+   metadata(seReadClass)<-list(distTable=distTable)
+  rowData(seReadClass) <- readClassTable
+
+  rm(list=c('distTable','exonsByReadClass','readClassTable'))
+  return(seReadClass)
 }
 
 classifyReadClasses <- function(readClassList) {

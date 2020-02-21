@@ -144,7 +144,7 @@ bamboo.quantSE <- function(se = se,txdb = NULL, txdbTablesList = NULL, algo.cont
 
 
 
-bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL, yieldSize = NULL, quickMode = FALSE){
+bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL, yieldSize = NULL, quickMode = FALSE, extendAnnotations=FALSE){
   if(is.null(fa.file)){
     stop("Genome fa file is missing!")
   }
@@ -229,7 +229,8 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
       }
     }
   }else{
-    seList=list()
+    seList = list()
+    combinedTxCandidates = NULL
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
       seList[[bam.file.index]]  <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
@@ -243,6 +244,16 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
                    quickMode= quickMode)
       end.time <- proc.time()
       cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+      combinedTxCandidates <- isore.combineTranscriptCandidates(seList[[bam.file.index]], readClassSeRef = combinedTxCandidates)
+      extendedAnnoations = isore.extendAnnotations(se=NULL, txdbTables=NULL) ## missing
+      seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], txdbTablesList, stranded=stranded)
+      se.quant <- bamboo.quantSE(se = seWithDist,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
+      if(bam.file.index==1){
+        seOutput <- se.quant  # create se object
+      }else {
+        seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+      }
+
     }
   }
   return(seOutput)
