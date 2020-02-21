@@ -16,12 +16,21 @@ test_that("isoform reconstruction runs without error on example data", {
   expect_s4_class(testData, "SummarizedExperiment")
 })
 
+test_that("isore.combineTranscriptCandidates creates correct reference SE object", {
+  readClassSe <- NULL
+  readClassSeRef <- isore.combineTranscriptCandidates(readClassSe)
+  expect_named(assays(readClassSeRef), c("counts", "start",  "end"))
+  expect_named(rowData(readClassSeRef), c("intronStarts", "intronEnds",  "confidenceType"))
+  })
+
 test_that("combining isoform reconstruction runs without error on example data", {
+  bam.files=list.files('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-directRNA/', pattern='.bam$', recursive=T, full.names=T)
+
   bamFile <- BamFile(system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo"),yieldSize=1000000)
 
   bfListSmall <- BamFileList(bamFile, bamFile)
 
-  bamFile <- BamFile('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-cDNA/GIS_Hct116_directcDNA_Rep2-Run2/GIS_Hct116_directcDNA_Rep2-Run2.bam',yieldSize=10000000)
+  bamFile2 <- BamFile('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-cDNA/GIS_Hct116_directcDNA_Rep2-Run2/GIS_Hct116_directcDNA_Rep2-Run2.bam',yieldSize=10000000)
   bamFile3 <- BamFile('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-directRNA/GIS_Hct116_directRNA_3/GIS_Hct116_directRNA_3.bam',yieldSize=1000000)
   bamFile4 <- BamFile('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-directRNA/GIS_Hct116_directRNA_4/GIS_Hct116_directRNA_4.bam',yieldSize=1000000)
   genomeFA = FaFile('/mnt/ont/s3.ontdata.store.genome.sg/annotations/Grch38/ensembl-91/Homo_sapiens.GRCh38.dna_sm.primary_assembly_wtChrIS.fa')
