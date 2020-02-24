@@ -207,21 +207,19 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
   if(extendAnnotations==FALSE) {
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
-      se  <- isore(bamFile = bam.file[[bam.file.index]],
-                   txdb = NULL,
-                   txdbTablesList = txdbTablesList,
-                   genomeFA = fa.file,
-                   stranded = ir.control[['stranded']],
-                   protocol = ir.control[['protocol']],
-                   prefix = ir.control[['prefix']],
-                   minimumReadSupport= ir.control[['minimumReadSupport']],
-                   minimumTxFraction = ir.control[['minimumTxFraction']],
-                   quickMode= quickMode)
+      se  <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
+                                                              txdbTablesList = txdbTablesList,
+                                                              genomeFA = fa.file,
+                                                              stranded = ir.control[['stranded']],
+                                                              protocol = ir.control[['protocol']],
+                                                              prefix = ir.control[['prefix']],
+                                                              minimumReadSupport= ir.control[['minimumReadSupport']],
+                                                              minimumTxFraction = ir.control[['minimumTxFraction']],
+                                                              quickMode= quickMode)
       end.time <- proc.time()
-      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
-
-      se.quant <- bamboo.quantSE(se = se,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
-
+      cat(paste0('Finished build read classes models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+      seWithDist <- isore.estimateDistanceToAnnotations(se, txdbTablesList, stranded=ir.control[['stranded']])
+      se.quant <- bamboo.quantSE(se = seWithDist,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
@@ -231,7 +229,7 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
   }else{
     seList = list()
     combinedTxCandidates = NULL
-    for(bam.file.index in seq_along(bam.file)){
+    for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
       start.time <- proc.time()
       seList[[bam.file.index]]  <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
                    txdbTablesList = txdbTablesList,
@@ -245,15 +243,17 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
       end.time <- proc.time()
       cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
       combinedTxCandidates <- isore.combineTranscriptCandidates(seList[[bam.file.index]], readClassSeRef = combinedTxCandidates)
-      extendedAnnoations = isore.extendAnnotations(se=NULL, txdbTables=NULL) ## missing
-      seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], txdbTablesList, stranded=stranded)
-      se.quant <- bamboo.quantSE(se = seWithDist,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
+    }
+    extendedAnnotations = isore.extendAnnotations(se=NULL, txdbTables=NULL) ## missing
+
+    for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
+      seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], txdbTablesList, stranded=stranded) ## NOTE: replace txdbTableList with new annotation table list
+      se.quant <- bamboo.quantSE(se = seWithDist,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
-
     }
   }
   return(seOutput)
