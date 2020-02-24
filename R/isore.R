@@ -60,235 +60,7 @@ isore <- function(bamFile,
                   yieldSize = NULL,
                   quickMode = FALSE)
 {
-  ### note: test which standard junction model to use? One by protocol? need to compare
-  ## comment: how to create this and would this change at different conditions?
-
-  cat('### prepare annotations ### \n')
-  if(is.null(txdbTablesList)){
-    if(!is.null(txdb)) # txdb object by reading txdb file
-    {
-      if(class(txdb) != 'TxDb'){
-        stop("txdb object is missing.")
-      }
-      txdbTablesList <- prepareAnnotations(txdb) ## note: check which annotation tables are reused multiple times, and inlcude only those. Optimise required annotations if possible
-    }else{
-      stop("txdb object is missing.")
-    }
-  }
-
-
-  if(is.null(genomeFA)){
-    stop("GenomeFA file is missing.")
-  }else if(class(genomeFA) != 'FaFile'){
-    if(!grepl('.fa',genomeFA)){
-    stop("GenomeFA file is missing.")
-    }else{
-      genomeFA <- Rsamtools::FaFile(genomeFA)
-    }
-  }
-
-
-  cat('### load data ### \n')
-  start.ptm <- proc.time()
-  ## create BamFile object from character ##
-  if(class(bamFile)=='BamFile') {
-    if(!is.null(yieldSize)) {
-      yieldSize(bamFile) <- yieldSize
-    } else {
-      yieldSize <- Rsamtools::yieldSize(bamFile)
-    }
-  }else if(!grepl('.bam',bamFile)){
-    stop("Bam file is missing from arguments.")
-  }else{
-    if(is.null(yieldSize)) {
-      yieldSize <- NA
-    }
-    bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
-  }
-
-  readData <- prepareDataFromBam(bamFile)
-  end.ptm <- proc.time()
-  cat(paste0('Finished loading data in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-
-  unlisted_junctions <- unlist(myGaps(readData$readGrglist))
-  cat('### create junction list with splice motif ### \n')
-  start.ptm <- proc.time()
-  uniqueJunctions <- createJunctionTable(unlisted_junctions, genomeDB = genomeDB, genomeFA=genomeFA)
-  end.ptm <- proc.time()
-  cat(paste0('Finished creating junction list with splice motif in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-
-
-  cat('### infer strand/strand correction of junctions ### \n')
-  junctionTables <- junctionStrandCorrection(uniqueJunctions, unlisted_junctions, txdbTablesList[['intronsByTxEns']], stranded=stranded)
-  uniqueJunctions <- junctionTables[[1]]
-  unlisted_junctions <- junctionTables[[2]]
-  rm(junctionTables)
-  gc()
-
-  cat('### find annotated introns ### \n')
-  uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, unique(txdbTablesList[['unlisted_introns']]))))
-
-  # Indicator: is the junction start annotated as a intron start?
-  annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
-  uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
-  rm(annotatedStart)
-  gc()
-
-  # Indicator: is the junction end annotated as a intron end?
-  annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
-  uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
-  rm(annotatedEnd)
-  gc()
-
-  cat('### build model to predict true splice sites ### \n')
-  start.ptm <- proc.time()
-  if(sum(uniqueJunctions$annotatedJunction)>4500 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## note: these are thresholds that should be adjusted, or changed. Also can look into the code to find out what is the issue, probably number of training data per strand?
-    predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = NULL)
-    uniqueJunctions=predictSpliceSites[[1]]
-    junctionModel=predictSpliceSites[[2]]
-  } else {
-    junctionModel = standardJunctionModels_temp
-    predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = junctionModel)
-    uniqueJunctions=predictSpliceSites[[1]]
-    show('Warning: junction correction with not enough data, precalculated model is used')
-  }
-  rm(predictSpliceSites)  # clean up should be done more efficiently
-  gc()
-  end.ptm <- proc.time()
-  cat(paste0('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-
-  cat('### correct junctions based on set of high confidence junctions ### \n')
-  start.ptm <- proc.time()
-  uniqueJunctions <- findHighConfidenceJunctions(uniqueJunctions, junctionModel)
-  uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- uniqueJunctions$mergedHighConfJunctionId
-  uniqueJunctions$mergedHighConfJunctionIdAll_noNA[is.na(uniqueJunctions$mergedHighConfJunctionId)] <- names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
-  uniqueJunctions$strand.mergedHighConfJunction <- as.character(strand(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
-  end.ptm <- proc.time()
-  cat(paste0('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-  rm(junctionModel)
-  gc()
-
-  cat('### create transcript models (read classes) from spliced reads ### \n')
-  start.ptm <- proc.time()
-  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readData$readGrglist, readData$readNames, quickMode = quickMode)  ## speed up this function ##
-  end.ptm <- proc.time()
-  cat(paste0('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-   rm(list = c('uniqueJunctions','unlisted_junctions'))
-   gc()
-
-  cat('### create single exon transcript models (read classes) ### \n')
-  start.ptm <- proc.time()
-
-  singleExonReads <- unlist(readData$readGrglist[elementNROWS(readData$readGrglist)==1])
-  referenceExons<-unique(c(granges(unlist(readClassListSpliced[['exonsByReadClass']][readClassListSpliced$readClassTable$confidenceType=='highConfidenceJunctionReads' & readClassListSpliced$readClassTable$strand!='*'])), granges(unlist(txdbTablesList[['exonsByTx']]))))
-  readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(singleExonReads,referenceExons, readData$readNames, confidenceType = 'unsplicedWithin', prefix='unsplicedWithin',stranded=stranded) ### change txId OK
-
-  singleExonReadsOutside <- singleExonReads[!(readData$readNames[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readTable$readId)]
-  rm(list=c('singleExonReads'))
-  gc()
-
-  combinedSingleExonRanges <- reduce(singleExonReadsOutside, ignore.strand=!stranded)
-  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(singleExonReadsOutside,combinedSingleExonRanges, readData$readNames, confidenceType = 'unsplicedNew', prefix='unsplicedNew',stranded=stranded)
-  rm(list = c('singleExonReadsOutside','combinedSingleExonRanges','readData'))
-  gc()
-
-  end.ptm <- proc.time()
-  cat(paste0('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-
-  exonsByReadClass = c(readClassListSpliced$exonsByReadClass, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
-  readClassTable = rbind(readClassListSpliced$readClassTable, readClassListUnsplicedWithAnnotation$readClassTable, readClassListUnsplicedReduced$readClassTable)
-  readTable = rbind(readClassListSpliced$readTable, readClassListUnsplicedWithAnnotation$readTable, readClassListUnsplicedReduced$readTable)
-  rm(list=c('readClassListSpliced','readClassListUnsplicedWithAnnotation','readClassListUnsplicedReduced'))
-  gc()
-
-  cat('### calculate distance of read classes to annotations, basic filter for read-tx assignments ### \n')
-  start.ptm <- proc.time()
-
-
-  ## note/todo: here the stranded mode should always be used, need to check that in unstranded mode, readClasses without strand information from splice sites are '*'
-  ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches
-  ## might not be a big issue (not clear)
-  distTable <- calculateDistToAnnotation(exonsByReadClass,txdbTablesList$exonsByTx,maxDist = 35, primarySecondaryDist = 5, ignore.strand= !stranded)  # [readClassListFull$txTable$confidenceType=='highConfidenceJunctionReads' ]   ### change txId OK
-  distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, readCount, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
-  distTable <- left_join(distTable, dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
-  end.ptm <- proc.time()
-  cat(paste0('Finished calculating distance of read classes to annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-
-
-
-  cat('### assign unmatched readClasses to new geneIds ### \n')
-  start.ptm <- proc.time()
-
-  readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%group_by(GENEID) %>% mutate(geneCount = sum(readCount)) %>% distinct() %>%group_by(readClassId) %>% filter(geneCount==max(geneCount)) %>%filter(row_number()==1) %>% dplyr::select(readClassId, geneId=GENEID) %>% ungroup()
-
-
-  newGeneCandidates <- (!readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
-  readClassToGeneIdTableNew <- assignNewGeneIds(exonsByReadClass[newGeneCandidates], prefix=prefix, minoverlap=5, ignore.strand=F)
-  readClassGeneTable <- rbind(readClassToGeneIdTable,readClassToGeneIdTableNew)
-  readClassTable <- left_join(readClassTable, readClassGeneTable)
-  end.ptm <- proc.time()
-  cat(paste0('Finished assigning unmatched readClasses to new geneIds in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-  rm(list = c('newGeneCandidates','readClassGeneTable'))
-  gc()
-
-  ## implement next
-  ############### FROM HERE ##############
-  ## 2020-01-30:
-  ## implement multi sample mode and read class annotation and filtering
-  ########################################
-
-  ## optional for multi sample quantification/ reconstruction
-  cat('### [TODO] [optional] Combine read classes from multiple samples ### \n')
-  start.ptm <- proc.time()
-  end.ptm <- proc.time()
-  cat(paste0('[TODO] [optional] Finished combining read classes from multiple samples in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-  cat('### [TODO] filter read classes/single sample or multi sample mode ### \n')
-  start.ptm <- proc.time()
-  end.ptm <- proc.time()
-  cat(paste0('[TODO] Finished filtering read classes in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-
-  cat('### [TODO] [optional]  classify readClasses ### \n')
-  start.ptm <- proc.time()
-  ## TODO: classify all read classes
-  ## categories:
-  ## compatible
-  ## subset
-  ## new transcript within annotation
-
-  #readClassListFull <- classifyReadClasses(readClassListFull)
-
-  end.ptm <- proc.time()
-  cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
-
-  cat('### Create summarizedExperiment output ### \n')
-  ## This chunk of code should be able to produce output required for quantification:
-  ## assays: readClass count with empty read class(final read class that is based on transcript combination,i.e., equivalent class)
-  ## rowData: can be empty
-  ## metadata: eqClass to tx assignment; distTable for each rc and eqClass
-
-
-  bamFile.basename <- tools::file_path_sans_ext(basename(path(bamFile)))
-  counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), bamFile.basename))
-  colDataDf <- DataFrame(name=bamFile.basename, row.names=bamFile.basename)
-
-  # readTable is currently not returned
-  se <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts),
-                                                   rowRanges = exonsByReadClass,
-                                                   colData = colDataDf,
-                                                   metadata=list(distTable = distTable,
-                                                                 readClassTable = readClassTable))
-
-  rm(list=c('counts','distTable','exonsByReadClass','readClassTable','readTable'))
-  return(se)
+  show('deprecated - use bamboo directly')
 }
 
 
@@ -306,7 +78,7 @@ isore.constructReadClasses <- function(bamFile,
 
 
 
-
+ ## todo: which preprocessed junction correction model to use?
 
   if(is.null(genomeFA)){
     stop("GenomeFA file is missing.")
@@ -618,6 +390,21 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, 
 
 isore.extendAnnotations <- function(se, txdbTables){
   show('not yet implemented')
+
+
+  cat('### [TODO] [optional]  classify readClasses ### \n')
+  start.ptm <- proc.time()
+  ## TODO: classify all read classes
+  ## categories:
+  ## compatible
+  ## subset
+  ## new transcript within annotation
+
+  #readClassListFull <- classifyReadClasses(readClassListFull)
+
+  end.ptm <- proc.time()
+  cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
   return()
 }
 
