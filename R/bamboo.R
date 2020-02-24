@@ -1,4 +1,4 @@
-bamboo <- function(bam.file = NULL, se = NULL, dt = NULL,txdb = NULL, txdbTablesList = NULL, algo.control = NULL, ir.control = NULL, fa.file = NULL){
+bamboo <- function(bam.file = NULL, se = NULL, dt = NULL,txdb = NULL, txdbTablesList = NULL, algo.control = NULL, ir.control = NULL, fa.file = NULL, extendAnnotations = FALSE){
 
   if(!is.null(dt)){
     return(bamboo.quantDT(dt = dt,algo.control = algo.control))
@@ -20,9 +20,13 @@ bamboo <- function(bam.file = NULL, se = NULL, dt = NULL,txdb = NULL, txdbTables
       return(bamboo.quantSE(se = se,txdb = txdb, txdbTablesList = txdbTablesList, algo.control = algo.control))
           }
     if(!is.null(bam.file)){
-      return(bamboo.quantISORE(bam.file = bam.file,algo.control = algo.control, fa.file=fa.file,
-                               txdb=txdb,
-                               txdbTablesList=txdbTablesList, ir.control = ir.control))
+      return(bamboo.quantISORE(bam.file = bam.file,
+                               algo.control = algo.control,
+                               fa.file = fa.file,
+                               txdb = txdb,
+                               txdbTablesList = txdbTablesList,
+                               ir.control = ir.control,
+                               extendAnnotations = extendAnnotations))
     }
 
   stop("At least bam.file or summarizedExperiment output from isore need to be provided.")
@@ -218,13 +222,22 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
                                                               quickMode= quickMode)
       end.time <- proc.time()
       cat(paste0('Finished build read classes models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+      start.time <- proc.time()
+
       seWithDist <- isore.estimateDistanceToAnnotations(se, txdbTablesList, stranded=ir.control[['stranded']])
+      end.time <- proc.time()
+      cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+      start.time <- proc.time()
+
       se.quant <- bamboo.quantSE(se = seWithDist,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
+      end.time <- proc.time()
+      cat(paste0('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+
     }
   }else{
     seList = list()
