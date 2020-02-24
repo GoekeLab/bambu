@@ -388,7 +388,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, 
 }
 
 
-isore.extendAnnotations <- function(se, txdbTables){
+isore.extendAnnotations <- function(se, annotationGrangesList){
   show('not yet implemented')
 
 
@@ -405,10 +405,10 @@ isore.extendAnnotations <- function(se, txdbTables){
   end.ptm <- proc.time()
   cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
-  return()
+  return(annotationGrangesList)
 }
 
-isore.estimateDistanceToAnnotations <- function(seReadClass, txdbTables, stranded=FALSE, prefix=''){
+isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, stranded=FALSE, prefix=''){
   cat('### calculate distance of read classes to annotations, basic filter for read-tx assignments ### \n')
   start.ptm <- proc.time()
 
@@ -418,12 +418,12 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, txdbTables, strande
   ## note/todo: here the stranded mode should always be used, need to check that in unstranded mode, readClasses without strand information from splice sites are '*'
   ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches
   ## might not be a big issue (not clear)
-  distTable <- calculateDistToAnnotation(exonsByReadClass,txdbTablesList$exonsByTx,maxDist = 35, primarySecondaryDist = 5, ignore.strand= !stranded)  # [readClassListFull$txTable$confidenceType=='highConfidenceJunctionReads' ]   ### change txId OK
+  distTable <- calculateDistToAnnotation(exonsByReadClass,annotationGrangesList,maxDist = 35, primarySecondaryDist = 5, ignore.strand= !stranded)  # [readClassListFull$txTable$confidenceType=='highConfidenceJunctionReads' ]   ### change txId OK
   ## this line is removed, counts are in assays(se)
 
   distTable$readCount = assays(seReadClass)$counts[distTable$readClassId,]  # should actually be stored in counts, but is here to  assign genes based on high read counts
   distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
-  distTable <- left_join(distTable, dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
+  distTable <- left_join(distTable,  as_tibble(mcols(annotationGrangesList)), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
   end.ptm <- proc.time()
   cat(paste0('Finished calculating distance of read classes to annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 

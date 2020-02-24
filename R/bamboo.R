@@ -224,7 +224,10 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
       cat(paste0('Finished build read classes models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
       start.time <- proc.time()
 
-      seWithDist <- isore.estimateDistanceToAnnotations(se, txdbTablesList, stranded=ir.control[['stranded']])
+      annotationGrangesList <- txdbTablesList$exonsByTx
+      mcols(annotationGrangesList) <- dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID)
+
+      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, stranded=ir.control[['stranded']])
       end.time <- proc.time()
       cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
       start.time <- proc.time()
@@ -257,10 +260,16 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
       cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
       combinedTxCandidates <- isore.combineTranscriptCandidates(seList[[bam.file.index]], readClassSeRef = combinedTxCandidates)
     }
-    extendedAnnotations = isore.extendAnnotations(se=NULL, txdbTables=NULL) ## missing
+
+    annotationGrangesList <- txdbTablesList$exonsByTx
+    mcols(annotationGrangesList) <- dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID)
+
+    extendedAnnotationGRangesList = isore.extendAnnotations(se=NULL, txdbTables=NULL) ## missing
 
     for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
-      seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], txdbTablesList, stranded=stranded) ## NOTE: replace txdbTableList with new annotation table list
+
+
+      seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], extendedAnnotationGRangesList, stranded=stranded) ## NOTE: replace txdbTableList with new annotation table list
       se.quant <- bamboo.quantSE(se = seWithDist,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
