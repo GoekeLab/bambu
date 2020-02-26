@@ -215,12 +215,14 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
     bam.file <- Rsamtools::BamFileList(bam.file, yieldSize = yieldSize)
   }
 
-  bam.file.basenames <- tools::file_path_sans_ext(basename(BiocGenerics::path(bam.file)))
+  bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
   if(extendAnnotations==FALSE) {
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
-      se  <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
+      readGrglist <- isore.preprocessBam(bam.file[[bam.file.index]])
+      se  <- isore.constructReadClasses(readGrgList = readGrgList,
+                                                              runName =bam.file.basenames[bam.file.index],
                                                               txdbTablesList = txdbTablesList,
                                                               genomeFA = fa.file,
                                                               stranded = ir.control[['stranded']],
@@ -251,9 +253,58 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
       cat(paste0('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
     }
   }else if (!is.null(outputReadClassToFolder)){  # if data is written to output directory
+    readClassFiles <- fs::path(outputReadClassToFolder,paste0(bam.file.basenames,'_readClassSe'), ext='rds')
+    combinedTxCandidates <- NULL
     for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
       start.time <- proc.time()
-      se <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
+      readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
+      se <- isore.constructReadClasses(readGrgList = readGrgList,
+                                       runName = bam.file.basenames[bam.file.index],
+                                       txdbTablesList = txdbTablesList,
+                                       genomeFA = fa.file,
+                                       stranded = ir.control[['stranded']],
+                                       protocol = ir.control[['protocol']],
+                                       prefix = ir.control[['prefix']],
+                                       minimumReadSupport= ir.control[['minimumReadSupport']],
+                                       minimumTxFraction = ir.control[['minimumTxFraction']],
+                                       quickMode = quickMode)
+      end.time <- proc.time()
+      rm(readGrgList)
+      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+      #readClassFile <-  fs::path(outputReadClassToFolder,paste0(bam.file.basenames[bam.file.index], '_readClassSe'), ext = 'rds')
+      if(file.exists(readClassFiles[bam.file.index])){
+        warning(paste(readClassFiles[bam.file.index], 'exists, will be overwritten'))
+      }
+      saveRDS(se, file=readClassFiles[bam.file.index])
+      combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates)
+      rm(se)
+      gc()
+    }
+
+    # add new transcripts
+    annotationGrangesList <- txdbTablesList$exonsByTx
+    mcols(annotationGrangesList) <- dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID)
+    extendedAnnotationGRangesList = isore.extendAnnotations(se=combinedTxCandidates, annotationGrangesList=annotationGrangesList) ## missing
+
+    for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
+      se <- readRDS(file=readClassFiles[bam.file.index])
+      seWithDist <- isore.estimateDistanceToAnnotations(se, extendedAnnotationGRangesList, stranded=stranded)
+      se.quant <- bamboo.quantSE(se = seWithDist,txdb = NULL, txdbTablesList = txdbTablesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
+      if(bam.file.index==1){
+        seOutput <- se.quant  # create se object
+      }else {
+        seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+      }
+    }
+
+  }else { # if computation is done in memory in a single session
+    seList = list()
+    combinedTxCandidates = NULL
+    for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
+      start.time <- proc.time()
+      readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
+      seList[[bam.file.index]]  <- isore.constructReadClasses(readGrgList = readGrgList,
+                                                              runName = bam.file.basenames[bam.file.index],
                                                               txdbTablesList = txdbTablesList,
                                                               genomeFA = fa.file,
                                                               stranded = ir.control[['stranded']],
@@ -262,28 +313,6 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
                                                               minimumReadSupport= ir.control[['minimumReadSupport']],
                                                               minimumTxFraction = ir.control[['minimumTxFraction']],
                                                               quickMode= quickMode)
-      end.time <- proc.time()
-      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
-      readClassFile <-  fs::path(outputReadClassToFolder,paste0(bam.file.basenames[bam.file.index], '_readClassSe'), ext = 'rds')
-      if(file.exists(readClassFile)){
-        warning(paste(readClassFile, 'exists, will be overwritten'))
-      }
-      saveRDS(se, file=readClassFile)
-    }
-  }else { # if computation is done in memory in a single session
-    seList = list()
-    combinedTxCandidates = NULL
-    for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
-      start.time <- proc.time()
-      seList[[bam.file.index]]  <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
-                   txdbTablesList = txdbTablesList,
-                   genomeFA = fa.file,
-                   stranded = ir.control[['stranded']],
-                   protocol = ir.control[['protocol']],
-                   prefix = ir.control[['prefix']],
-                   minimumReadSupport= ir.control[['minimumReadSupport']],
-                   minimumTxFraction = ir.control[['minimumTxFraction']],
-                   quickMode= quickMode)
       end.time <- proc.time()
       cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
       combinedTxCandidates <- isore.combineTranscriptCandidates(seList[[bam.file.index]], readClassSeRef = combinedTxCandidates)
