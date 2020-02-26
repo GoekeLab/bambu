@@ -64,6 +64,32 @@ isore <- function(bamFile,
 }
 
 
+isore.preprocessBam <- function(bamFile, yieldSize = NULL){
+
+  cat('### load data ### \n')
+  start.ptm <- proc.time()
+  ## create BamFile object from character ##
+  if(class(bamFile)=='BamFile') {
+    if(!is.null(yieldSize)) {
+      yieldSize(bamFile) <- yieldSize
+    } else {
+      yieldSize <- Rsamtools::yieldSize(bamFile)
+    }
+  }else if(!grepl('.bam',bamFile)){
+    stop("Bam file is missing from arguments.")
+  }else{
+    if(is.null(yieldSize)) {
+      yieldSize <- NA
+    }
+    bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
+  }
+
+  readData <- prepareDataFromBam(bamFile)
+  end.ptm <- proc.time()
+  cat(paste0('Finished loading data in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  return(readData)
+}
+
 isore.constructReadClasses <- function(bamFile,
                                        txdbTablesList, ## has to be provided (function should be called through bamboo, so is optional through that main function)
                                        genomeDB=NULL, ## is required to avoid providing a fasta file with genome sequence, helpful for most users
@@ -109,12 +135,12 @@ isore.constructReadClasses <- function(bamFile,
     bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
   }
 
-  readData <- prepareDataFromBam(bamFile)
+  readGrglist <- prepareDataFromBam(bamFile)
   end.ptm <- proc.time()
   cat(paste0('Finished loading data in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
 
-  unlisted_junctions <- unlist(myGaps(readData$readGrglist))
+  unlisted_junctions <- unlist(myGaps(readGrglist))
   cat('### create junction list with splice motif ### \n')
   start.ptm <- proc.time()
   uniqueJunctions <- createJunctionTable(unlisted_junctions, genomeDB = genomeDB, genomeFA=genomeFA)
@@ -176,7 +202,7 @@ isore.constructReadClasses <- function(bamFile,
 
   cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
-  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readData$readGrglist, readData$readNames, quickMode = quickMode)  ## speed up this function ##
+  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readGrglist, mcols(readGrglist)$qname, quickMode = quickMode)  ## speed up this function ##
   end.ptm <- proc.time()
   cat(paste0('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
   rm(list = c('uniqueJunctions','unlisted_junctions'))
@@ -185,17 +211,17 @@ isore.constructReadClasses <- function(bamFile,
   cat('### create single exon transcript models (read classes) ### \n')
   start.ptm <- proc.time()
 
-  singleExonReads <- unlist(readData$readGrglist[elementNROWS(readData$readGrglist)==1])
+  singleExonReads <- unlist(readGrglist[elementNROWS(readGrglist)==1])
   referenceExons<-unique(c(granges(unlist(readClassListSpliced[['exonsByReadClass']][readClassListSpliced$readClassTable$confidenceType=='highConfidenceJunctionReads' & readClassListSpliced$readClassTable$strand!='*'])), granges(unlist(txdbTablesList[['exonsByTx']]))))
-  readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(singleExonReads,referenceExons, readData$readNames, confidenceType = 'unsplicedWithin', prefix='unsplicedWithin',stranded=stranded) ### change txId OK
+  readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(singleExonReads,referenceExons, mcols(readGrglist)$qname, confidenceType = 'unsplicedWithin', prefix='unsplicedWithin',stranded=stranded) ### change txId OK
 
-  singleExonReadsOutside <- singleExonReads[!(readData$readNames[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readTable$readId)]
+  singleExonReadsOutside <- singleExonReads[!(mcols(readGrglist)$qname[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readTable$readId)]
   rm(list=c('singleExonReads'))
   gc()
 
   combinedSingleExonRanges <- reduce(singleExonReadsOutside,ignore.strand=!stranded)
-  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(singleExonReadsOutside,combinedSingleExonRanges, readData$readNames, confidenceType = 'unsplicedNew', prefix='unsplicedNew',stranded=stranded)
-  rm(list = c('singleExonReadsOutside','combinedSingleExonRanges','readData'))
+  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(singleExonReadsOutside,combinedSingleExonRanges, mcols(readGrglist)$qname, confidenceType = 'unsplicedNew', prefix='unsplicedNew',stranded=stranded)
+  rm(list = c('singleExonReadsOutside','combinedSingleExonRanges','readGrglist'))
   gc()
 
   end.ptm <- proc.time()
@@ -209,7 +235,7 @@ isore.constructReadClasses <- function(bamFile,
   gc()
 
 
-  bamFile.basename <- tools::file_path_sans_ext(basename(path(bamFile)))
+  bamFile.basename <- tools::file_path_sans_ext(basename(BiocGenerics::path(bamFile)))
   counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), bamFile.basename))
   colDataDf <- DataFrame(name=bamFile.basename, row.names=bamFile.basename)
   mcols(exonsByReadClass) <- select(readClassTable, chr.rc = chr, strand.rc=strand, intronStarts, intronEnds, confidenceType)
