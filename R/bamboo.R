@@ -148,10 +148,17 @@ bamboo.quantSE <- function(se = se,txdb = NULL, txdbTablesList = NULL, algo.cont
 
 
 
-bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL, yieldSize = NULL, quickMode = FALSE, extendAnnotations=FALSE){
+bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=NULL, txdb=NULL, txdbTablesList=NULL, ir.control = NULL, yieldSize = NULL, quickMode = FALSE, extendAnnotations=FALSE, outputReadClassToFolder = NULL){
   if(is.null(fa.file)){
     stop("Genome fa file is missing!")
   }
+
+  if(!is.null(outputReadClassToFolder)) {
+    if(!dir.exists(outputReadClassToFolder)) {
+      stop("output folder does not exist")
+    }
+  }
+
   if(is.null(ir.control)){
     ir.control <- list(stranded = FALSE,
                        protocol = NULL,
@@ -208,6 +215,8 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
     bam.file <- Rsamtools::BamFileList(bam.file, yieldSize = yieldSize)
   }
 
+  bam.file.basenames <- tools::file_path_sans_ext(basename(BiocGenerics::path(bam.file)))
+  seOutput = NULL
   if(extendAnnotations==FALSE) {
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
@@ -240,9 +249,28 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
       }
       end.time <- proc.time()
       cat(paste0('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
-
     }
-  }else{
+  }else if (!is.null(outputReadClassToFolder)){  # if data is written to output directory
+    for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
+      start.time <- proc.time()
+      se <- isore.constructReadClasses(bamFile = bam.file[[bam.file.index]],
+                                                              txdbTablesList = txdbTablesList,
+                                                              genomeFA = fa.file,
+                                                              stranded = ir.control[['stranded']],
+                                                              protocol = ir.control[['protocol']],
+                                                              prefix = ir.control[['prefix']],
+                                                              minimumReadSupport= ir.control[['minimumReadSupport']],
+                                                              minimumTxFraction = ir.control[['minimumTxFraction']],
+                                                              quickMode= quickMode)
+      end.time <- proc.time()
+      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+      readClassFile <-  fs::path(outputReadClassToFolder,paste0(bam.file.basenames[bam.file.index], '_readClassSe'), ext = 'rds')
+      if(file.exists(readClassFile)){
+        warning(paste(readClassFile, 'exists, will be overwritten'))
+      }
+      saveRDS(se, file=readClassFile)
+    }
+  }else { # if computation is done in memory in a single session
     seList = list()
     combinedTxCandidates = NULL
     for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
@@ -264,7 +292,7 @@ bamboo.quantISORE <- function(bam.file = bam.file, algo.control = NULL, fa.file=
     annotationGrangesList <- txdbTablesList$exonsByTx
     mcols(annotationGrangesList) <- dplyr::select(txdbTablesList$txIdToGeneIdTable, TXNAME, GENEID)
 
-    extendedAnnotationGRangesList = isore.extendAnnotations(se=NULL, txdbTables=NULL) ## missing
+    extendedAnnotationGRangesList = isore.extendAnnotations(se=NULL, annotationGrangesList=annotationGrangesList) ## missing
 
     for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
 
