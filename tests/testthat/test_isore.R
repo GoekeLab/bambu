@@ -1,6 +1,10 @@
 context("Isoform reconstruction")
 library(bamboo)
 
+isore.constructReadClasses
+isore.combineTranscriptCandidates
+isore.extendAnnotations
+isore.estimateDistanceToAnnotations
 
 test_that("isoform reconstruction runs without error on example data", {
   bamFile <- BamFile(system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo"),yieldSize=1000000)
@@ -14,6 +18,10 @@ test_that("isoform reconstruction runs without error on example data", {
   yieldSize=1000000
   testData <- isore(bamFile = bamFile,  txdbTablesList = txdbTablesList, genomeFA = genomeFA, stranded=stranded, protocol=protocol, prefix=prefix, minimumReadSupport=minimumReadSupport, minimumTxFraction=minimumTxFraction, yieldSize = yieldSize)
   expect_s4_class(testData, "SummarizedExperiment")
+
+  makeBigBedTrack(exonsByReadClass,trackName='allData_filter5_5', outPath='/mnt/ont/ucscTracks/',chrSizeFile ='/mnt/ont/s3.ontdata.store.genome.sg/annotations/Grch38/ensembl-91/Homo_sapiens.GRCh38.dna_sm.primary_assembly_wtChrIS.chrSizes.ucsc.txt', descriptionFile='/mnt/ont/ucscTracks/trackDescriptionFile.txt', awsbin='/home/rstudio/.local/bin/aws')
+
+
 })
 
 test_that("isore.combineTranscriptCandidates creates correct reference SE object", {
@@ -24,9 +32,14 @@ test_that("isore.combineTranscriptCandidates creates correct reference SE object
   })
 
 test_that("combining isoform reconstruction runs without error on example data", {
-  bam.files=list.files('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-directRNA/', pattern='.bam$', recursive=T, full.names=T)
+  bam.files.directRNA=list.files('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-directRNA/', pattern='.bam$', recursive=T, full.names=T)
+  bam.files.cDNA=list.files('/mnt/ont/s3.ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-cDNA/', pattern='.bam$', recursive=T, full.names=T)
+  bam.file = bam.files[grep('Liver', bam.files)]
 
+  readGrangesFiles=list.files('/mnt/ont/github/testdata/readGranges/', pattern='grglist.rds$', recursive=T, full.names=T)
   bamFile <- BamFile(system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo"),yieldSize=1000000)
+
+  outputReadClassToFolder='/mnt/volume3/github/testdata/readClassFiles/'
 
   bfListSmall <- BamFileList(bamFile, bamFile)
 
@@ -45,6 +58,45 @@ test_that("combining isoform reconstruction runs without error on example data",
   testData <- isore(bamFile = bamFile,  txdbTablesList = txdbTablesList, genomeFA = genomeFA, stranded=stranded, protocol=protocol, prefix=prefix, minimumReadSupport=minimumReadSupport, minimumTxFraction=minimumTxFraction, yieldSize = yieldSize)
   expect_s4_class(testData, "SummarizedExperiment")
 
+
+  ## code to parallel compute readclas SEs from granges
+  genomeFA = FaFile('/mnt/ont/s3.ontdata.store.genome.sg/annotations/Grch38/ensembl-91/Homo_sapiens.GRCh38.dna_sm.primary_assembly_wtChrIS.fa')
+
+  txdbTablesList <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/HomoSapiens_ensembl91_Grch38_txdbTablesList.rds"))
+  stranded=FALSE
+  protocol='directRNA'
+  prefix=''
+  minimumReadSupport=2
+  minimumTxFraction = 0.02
+  yieldSize=1000000
+
+  readGrangesFiles=list.files('/mnt/ont/github/testdata/readGranges/', pattern='grglist.rds$', recursive=T, full.names=T)
+
+  fileBasenames<-gsub('_grglist','',tools::file_path_sans_ext(basename(readGrangesFiles)))
+
+
+  mclapply(seq_along(readGrangesFiles), function(x){
+    outFile = paste0('/mnt/ont/github/testdata/readClassFiles/', fileBasenames[x], '_readClassSe.rds')
+    if(!file.exists(outFile)){
+      saveRDS(isore.constructReadClasses(readGrgList=readRDS(readGrangesFiles[x]), runName=fileBasenames[x], txdbTablesList=txdbTablesList, genomeFA=genomeFA, stranded=F, quickMode=F), file=outFile)
+    }
+    gc()
+  },
+  mc.preschedule=FALSE,
+  mc.cores=5)
+
+  combinedTxCandidates <- NULL
+  readClassFiles <- list.files('/mnt/ont/github/testdata/readClassFiles/', pattern='rds$', full.names = T)
+  for(i in 1:length(readClassFiles)){
+    se=readRDS(readClassFiles[i])
+    show(dim(se))
+    show(readClassFiles[i])
+    combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates)
+    show(dim(combinedTxCandidates))
+  gc()
+  }
+  saveRDS(combinedTxCandidates, file='/mnt/ont/github/testdata/combinedTxCandidates.rds')
+}
 })
 
 test_that("constructSplicedReadClassTables runs without error", {
