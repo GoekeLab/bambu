@@ -647,7 +647,21 @@ isore.extendAnnotations <- function(se,
    exonRangesCombinedFiltered <- exonRangesCombinedFiltered[mcols(seCombinedFiltered)$readClassType != 'equal']
    seCombinedFiltered <- seCombinedFiltered[mcols(seCombinedFiltered)$readClassType != 'equal']
 
+   #simplified classification, can be further improved for readibility
+   mcols(seCombinedFiltered)$newTxClass = mcols(seCombinedFiltered)$readClassType
+   mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType=='unsplicedNew' & grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-unspliced'
+   mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType=='allNew' & grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-spliced'
 
+
+  extendedAnnotationRanges <- exonRangesCombinedFiltered
+  mcols(extendedAnnotationRanges) <- mcols(seCombinedFiltered)[,c('TXNAME', 'GENEID','newTxClass')]
+  mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx.', 1:length(extendedAnnotationRanges))
+  names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
+  mcols(extendedAnnotationRanges)$referenceTXNAME <- mcols(extendedAnnotationRanges)$TXNAME  ## reference TXNAME if splice pattern is identical but first/last exon differs. All splice sites differ for new TX so will be identical to TXNAME
+
+   annotationRangesToMerge <- annotationGrangesList
+   mcols(annotationRangesToMerge)$newTxClass <- rep('annotation', length(annotationRangesToMerge))
+   mcols(annotationRangesToMerge) <- mcols(annotationRangesToMerge)[,c('TXNAME', 'GENEID','newTxClass','referenceTXNAME')]
 
 
   #### HERE: Combine with annotations to create a single exonsByTxRanges object with annotations in mcols #####
