@@ -10,6 +10,15 @@
 #' @param theta estimates for isoform expression
 NULL
 
+#' Create likelihood objective function to estimate bias parameters
+#'
+#' @param par A row vector of bias parameters for each read class
+#' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+#' @param Y observed number of reads for each read class j
+#' @param lambda, the tuning parameter for bias estimation
+#' @param nzindex estimates for isoform expression
+NULL
+
 #' Optimization function for bias parameters
 #'
 #' @param par A row vector of bias parameters for each read class
@@ -17,20 +26,19 @@ NULL
 #' @param Y observed number of reads for each read class j
 #' @param lambda, the tuning parameter for bias estimation
 #' @param theta estimates for isoform expression
-optim_rcpp <- function(par, X, Y, lambda, theta) {
-    .Call(`_bamboo_optim_rcpp`, par, X, Y, lambda, theta)
+optim_b_rcpp <- function(theta, X, Y, lambda, b) {
+    .Call(`_bamboo_optim_b_rcpp`, theta, X, Y, lambda, b)
 }
 
-#' EM algorithm without L1-penalty
+#' Optimization function for bias parameters
 #'
-#' @param par A row vector of parameters for isoform expression
+#' @param par A row vector of bias parameters for each read class
 #' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
 #' @param Y observed number of reads for each read class j
 #' @param lambda, the tuning parameter for bias estimation
-#' @param conv convergence threshold of likelihoods
-#' @export
-emWithoutL1 <- function(X, Y, par, lambda, conv = 0.001) {
-    .Call(`_bamboo_emWithoutL1`, X, Y, par, lambda, conv)
+#' @param theta estimates for isoform expression
+optim_thetaandb_rcpp <- function(est, X, Y, lambda, nzindex) {
+    .Call(`_bamboo_optim_thetaandb_rcpp`, est, X, Y, lambda, nzindex)
 }
 
 #' EM algorithm with L1-penalty
@@ -40,7 +48,40 @@ emWithoutL1 <- function(X, Y, par, lambda, conv = 0.001) {
 #' @param lambda, the tuning parameter for bias estimation
 #' @param conv convergence threshold of likelihoods
 #' @export
-emWithL1 <- function(X, Y, lambda, conv = 0.001) {
-    .Call(`_bamboo_emWithL1`, X, Y, lambda, conv)
+em_theta <- function(X, Y, lambda, b, d, maxiter, conv) {
+    .Call(`_bamboo_em_theta`, X, Y, lambda, b, d, maxiter, conv)
+}
+
+#' EM algorithm with L1-penalty
+#'
+#' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+#' @param Y observed number of reads for each read class j
+#' @param lambda, the tuning parameter for bias estimation
+#' @param conv convergence threshold of likelihoods
+#' @export
+emWithL1 <- function(X, Y, lambda, d, maxiter, conv) {
+    .Call(`_bamboo_emWithL1`, X, Y, lambda, d, maxiter, conv)
+}
+
+#' EM algorithm with L1-penalty
+#'
+#' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+#' @param Y observed number of reads for each read class j
+#' @param lambda, the tuning parameter for bias estimation
+#' @param conv convergence threshold of likelihoods
+#' @export
+emWithoutL1 <- function(X, Y, lambda, nzindex, conv) {
+    .Call(`_bamboo_emWithoutL1`, X, Y, lambda, nzindex, conv)
+}
+
+#' run_em
+#'
+#' @param XList sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+#' @param YList observed number of reads for each read class j
+#' @param lambdaList, the tuning parameter for bias estimation
+#' @param conv convergence threshold of likelihoods
+#' @export
+run_em <- function(XList, YList, lambdaList, d, maxiter, conv, nthr, display_progress = TRUE) {
+    .Call(`_bamboo_run_em`, XList, YList, lambdaList, d, maxiter, conv, nthr, display_progress)
 }
 

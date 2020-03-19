@@ -41,7 +41,9 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   ## check quantification parameters
   default.algo.control <- list(ncore = parallel::detectCores(),
                                method = "two-step",
-                               convcontrol = 10^(-3))
+                               bias_correction = TRUE,
+                               maxiter = 20000,
+                               convcontrol = 10^(-4))
 
   if(is.null(algo.control)){
     algo.control <- default.algo.control
@@ -55,6 +57,12 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
       algo.control[["method"]] <- default.algo.control[["method"]]
     }else if(!(algo.control[["method"]] %in% c("one-step","two-step"))){
       algo.control[["method"]] <- default.algo.control[["method"]]
+    }
+    if(is.null(algo.control[["bias_correction"]])){
+      algo.control[["bias_correction"]] <- default.algo.control[["bias_correction"]]
+    }
+    if(is.null(algo.control[["maxiter"]])){
+      algo.control[["maxiter"]] <- default.algo.control[["maxiter"]]
     }
     if(is.null(algo.control[["convcontrol"]])){
       algo.control[["convcontrol"]] <- default.algo.control[["convcontrol"]]
@@ -81,6 +89,8 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   outList <- abundance_quantification(dt,
                                       mc.cores = algo.control[["ncore"]],
                                       method = algo.control[["method"]],
+                                      bias_correction = algo.control[["bias_correction"]],
+                                      maxiter = algo.control[["maxiter"]],
                                       conv.control = algo.control[["convcontrol"]])
   end.time <- proc.time()
   cat(paste0('Finished EM estimation in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
