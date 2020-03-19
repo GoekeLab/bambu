@@ -1,24 +1,21 @@
 ######
-## Todo (2019-10-25 JG):
-## combine transcripts from multiple runs to make the transcript IDs comparable
-## assign tx Ids only after filtering
-## clean up code
+## Todo (2020-03-19 JG):
 
 ## 1) assign read classes to genes (read classes might be assigned to a gene but not to a transcript, for example very low quality reads)
-## 2) among read classes assigned to genes but not to transcripts, identify new transcripts and annotated by type (e.g. new first exons, new last exon, alternative splicing), filter for high quality read classes only
-## 3) among read classes not assigned to any gene, filter high quality read classes and add as new genes
-## 4) extend annotations with new transcripts/genes
-## 5) recalculate distance table for combined annotations+new transcripts/genes (optional?)
-## 6) summarise statistics: how many reads assigned to known transcripts, how many assigned to new transcripts, how many new transcripts, ... some other meaningful statistics?
-## general) clean up code
+## 2) add eqClass to mcols, and don't return distance table (only used for internal filtering?) then the gene Id can also be returned for read classes that don't match any transcript but that match a gene
+## 3) add filter options to bamboo parameters
+##    currently some filters are still missing: a) new transcripts which are a subset of a new transcript
+##                                              b) single exon transcripts which overlap with new genes
+##                                              c) some filters might be too strict
+##                                              d) single exon new transcripts are still an issue
+## 4) (optional) summarise statistics: how many reads assigned to known transcripts, how many assigned to new transcripts, how many new transcripts, ... some other meaningful statistics?
+## 5) test cases
+## 6) clean up code
 
-## todo: create annotation object to avoid multiple copying and processing of the same data (eg resorting exonsByTx etc)
 ## todo: add option to output reads corrected and stranded as bed file
 ## todo: check code for unncecceary commands, columns that are not needed, ways to improve speed remove redundancy
 ## include test cases to measure accuracy against default??
 ## better strand prediction for transcripts without clear strand from junction
-## include no junction reads
-## assign all reads to all transcripts (CY)
 
 
 #####
@@ -47,21 +44,6 @@
 #'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
 #'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = FaFile(fa.file))
 #'  }
-isore <- function(bamFile,
-                  txdb=NULL, ##CY: this should all be based on R objects in memory, not files (if possible)
-                  txdbTablesList=NULL, ## optional  ## will save a lot of time for multiple data sets
-                  genomeDB=NULL, ## to be deleted   ## is required to avoid providing a fasta file with genome sequence, helpful for most users
-                  genomeFA=NULL, ## genome FA file, should be in .fa format
-                  stranded=FALSE,
-                  protocol=NULL,
-                  prefix='',  ## prefix for new gene names (for combining multiple runs gene Ids can be made unique and merged later)
-                  minimumReadSupport=2,
-                  minimumTxFraction = 0.02,
-                  yieldSize = NULL,
-                  quickMode = FALSE)
-{
-  show('deprecated - use bamboo directly')
-}
 
 
 isore.preprocessBam <- function(bamFile, yieldSize = NULL){
@@ -107,39 +89,6 @@ isore.constructReadClasses <- function(readGrgList,
 
  ## todo: which preprocessed junction correction model to use?
   standardJunctionModels_temp
-  # if(is.null(genomeFA)){
-  #   stop("GenomeFA file is missing.")
-  # }else if(class(genomeFA) != 'FaFile'){
-  #   if(!grepl('.fa',genomeFA)){
-  #     stop("GenomeFA file is missing.")
-  #   }else{
-  #     genomeFA <- Rsamtools::FaFile(genomeFA)
-  #   }
-  # }
-
-
-  # cat('### load data ### \n')
-  # start.ptm <- proc.time()
-  # ## create BamFile object from character ##
-  # if(class(bamFile)=='BamFile') {
-  #   if(!is.null(yieldSize)) {
-  #     yieldSize(bamFile) <- yieldSize
-  #   } else {
-  #     yieldSize <- Rsamtools::yieldSize(bamFile)
-  #   }
-  # }else if(!grepl('.bam',bamFile)){
-  #   stop("Bam file is missing from arguments.")
-  # }else{
-  #   if(is.null(yieldSize)) {
-  #     yieldSize <- NA
-  #   }
-  #   bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
-  # }
-  #
-  # readGrglist <- prepareDataFromBam(bamFile)
-  # end.ptm <- proc.time()
-  # cat(paste0('Finished loading data in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-
 
   unlisted_junctions <- unlist(myGaps(readGrgList))
   cat('### create junction list with splice motif ### \n')
@@ -257,8 +206,6 @@ isore.constructReadClasses <- function(readGrgList,
 
 
 isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, stranded=FALSE){
-# seListTMP=seList[[3]]
-# readClassSe <- seListTMP[grepl('highConfidenceJunctionReads|unsplicedNew', rowData(seListTMP)$confidenceType),]
   show('combine new transcript candidates')
   if(is.null(readClassSeRef)){  #if no reerence object is given, create one from a readClassSe object
     counts <- assays(readClassSe)$counts
@@ -430,20 +377,15 @@ isore.extendAnnotations <- function(se,
                                     minSampleNumber = 2,  # minimum sample number with minimum read count
                                     minimumExonDistance = 35,  # minum distance to known transcript to be considered valid as new
                                     minimumExonOverlapWithAnnotation = 10)  # minimum number of bases shared with annotation to be assigned to the same gene id
-  {
+{
   filterSet1 = FALSE
   if(nrow(se)>0){
-  filterSet1=(rowSums(assays(se)$counts>=minAbsoluteReadCount)>=minSampleNumber)
+    filterSet1=(rowSums(assays(se)$counts>=minAbsoluteReadCount)>=minSampleNumber)
   }
   if(sum(filterSet1)>0){
-
-
     ## (1) Spliced Reads
     seFilteredSpliced <- se[rowData(se)$confidenceType!='unsplicedNew' & filterSet1,]
-    #mcols(seFilteredSpliced)$TXNAME = NA
-   mcols(seFilteredSpliced)$GENEID = NA
-
-
+    mcols(seFilteredSpliced)$GENEID = NA
 
     intronsByReadClass= with(rowData(seFilteredSpliced),
                              makeGRangesListFromFeatureFragments(seqnames=chr,
@@ -462,6 +404,7 @@ isore.extendAnnotations <- function(se,
     exonsByReadClass <- narrow(exonsByReadClass,start=2,end = -2)  # correct junction to exon differences in coordinates
     names(exonsByReadClass) <- 1:length(exonsByReadClass)
 
+    # add exon start and exon end rank
     unlistData = unlist(exonsByReadClass, use.names = FALSE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
 
@@ -473,39 +416,20 @@ isore.extendAnnotations <- function(se,
 
     exonsByReadClass <- relist(unlistData, partitioning)
 
-
     ovExon = findSpliceOverlapsQuick(cutStartEndFromGrangesList(exonsByReadClass), cutStartEndFromGrangesList(annotationGrangesList))
 
-
-    # ov = findSpliceOverlapsQuick(intronsByReadClass, myGaps(annotationGrangesList))
-    #####
-    ## note: these should not be in the mcols object and instead be computed separately and merged as a single description of the new tx class
-    #####
-
-    #classificationTable <- tibble(.rows = length(seFilteredSpliced))
+    # classificationTable will contain the different classes of new transcripts that are discovered
     classificationTable=data.frame(matrix('', nrow=length(seFilteredSpliced), ncol=9), stringsAsFactors = FALSE)
     colnames(classificationTable) <- c('equal','compatible','newWithin','newLastJunction','newFirstJunction', 'newJunction', 'allNew','newFirstExon','newLastExon')
 
-    #classificationTable <- mutate(classificationTable,equal = '')
     classificationTable$equal[queryHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]] <-'equal' # annotate as identical,
 
-    # classificationTable <- mutate(classificationTable,compatible = '')
     classificationTable$compatible[queryHits(ovExon[mcols(ovExon)$compatible ])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]] <-'compatible' ##compatible, ( same last exon/ different last exon can be separated later)
     classificationTable$compatible[classificationTable$equal=='equal'] <- ''
 
     ## annotate with transcript and gene Ids
     mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$compatible][!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))])] <-mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$compatible])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]])$GENEID # annotate with compatible gene id,
-    #  mcols(seFilteredSpliced)$TXNAME[queryHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]] <-mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]])$referenceTXNAME # annotate as identical,
     mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$equal][!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))])] <-mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]])$GENEID # annotate as identical,
-
-
-    #
-    #
-    #   mcols(seFilteredSpliced)$equal = FALSE
-    #   mcols(seFilteredSpliced)$equal[queryHits(ovExon[mcols(ovExon)$equal])] <- TRUE    ## annotate as identical,
-    #   mcols(seFilteredSpliced)$compatible = FALSE
-    #   mcols(seFilteredSpliced)$compatible[queryHits(ovExon[mcols(ovExon)$compatible])] <- TRUE  ##compatible, ( same last exon/ different last exon can be separated later)
-    #   mcols(seFilteredSpliced)$compatible[mcols(seFilteredSpliced)$equal] <- FALSE
 
     ##using intron matches
     unlistedIntrons = unlist(intronsByReadClass, use.names = TRUE)
@@ -517,9 +441,6 @@ isore.extendAnnotations <- function(se,
     intronMatchesList <- relist(intronMatches, partitioning)
 
     ## new within annotations (all junctions known)
-    # mcols(seFilteredSpliced)$newWithin = all(intronMatchesList) & ! (mcols(seFilteredSpliced)$compatible | mcols(seFilteredSpliced)$equal)
-
-    # classificationTable <- mutate(classificationTable,newWithin = '')
     classificationTable$newWithin[all(intronMatchesList) & ! (classificationTable$compatible=='compatible' | classificationTable$equal=='equal')] <- 'newWithin'
 
     ## new with new junction internal (new splice variant)
@@ -528,24 +449,18 @@ isore.extendAnnotations <- function(se,
     lastJunctionMatch <- unlist(endoapply(endoapply(intronMatchesList, rev),'[[',1))
     firstJunctionMatch <- unlist(endoapply(intronMatchesList,'[[',1))
 
-    #classificationTable <- mutate(classificationTable,newLastJunction  = '')
     classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand=='+' & !lastJunctionMatch & any(intronMatchesList))] <- 'newLastJunction'
     classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand=='-' & (!firstJunctionMatch & any(intronMatchesList)))] <- 'newLastJunction'
 
-    #classificationTable <- mutate(classificationTable,newFirstJunction  = '')
     classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand=='+' & !firstJunctionMatch & any(intronMatchesList))] <- 'newFirstJunction'
     classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand=='-' & (!lastJunctionMatch & any(intronMatchesList)))] <- 'newFirstJunction'
 
-
-    #classificationTable <- mutate(classificationTable, newJunction  = '')
     classificationTable$newJunction[ (sum(!intronMatchesList)> !firstJunctionMatch + !lastJunctionMatch) & any(intronMatchesList)] <- 'newJunction'
 
-    #classificationTable <- mutate(classificationTable, allNew   = '')
     classificationTable$allNew[!any(intronMatchesList)] <- 'allNew'
 
 
     ## assign gene ids based on the maximum number of matching introns/splice junctions
-    # unlistedIntrons <- unlist(myGaps(exonsByReadClass))
     overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,unlistedIntronsAnnotations,type='equal',select='all', ignore.strand=FALSE)
     maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)], stringsAsFactors=FALSE)) %>% group_by(txId, geneId) %>% summarise(geneCount=n()) %>% group_by(txId) %>% filter(geneCount==max(geneCount)) %>% filter(!duplicated(txId)) %>% ungroup()
 
@@ -554,26 +469,14 @@ isore.extendAnnotations <- function(se,
     geneIdByIntron <- maxGeneCountPerNewTx$geneId[match(names(exonsByReadClass), maxGeneCountPerNewTx$txId)]
     mcols(seFilteredSpliced)$GENEID[is.na(mcols(seFilteredSpliced)$GENEID)] <- geneIdByIntron[is.na(mcols(seFilteredSpliced)$GENEID)]
 
-    #
-    # mcols(seFilteredSpliced)$newLastJunction <- !lastJunctionMatch & any(intronMatchesList)
-    # mcols(seFilteredSpliced)$newLastJunction[which(rowData(seFilteredSpliced)$strand=='-')] <- (!firstJunctionMatch & any(intronMatchesList))[which(rowData(seFilteredSpliced)$strand=='-')]
-    # mcols(seFilteredSpliced)$newFirstJunction <- !firstJunctionMatch & any(intronMatchesList)
-    # mcols(seFilteredSpliced)$newFirstJunction[which(rowData(seFilteredSpliced)$strand=='-')] <-  (!lastJunctionMatch & any(intronMatchesList))[which(rowData(seFilteredSpliced)$strand=='-')]
-    #
-    #
-    # mcols(seFilteredSpliced)$newJunction <- (sum(!intronMatchesList)> !firstJunctionMatch + !lastJunctionMatch) & any(intronMatchesList)
-    # mcols(seFilteredSpliced)$allNew <- !any(intronMatchesList)
-
     distNewTx <- calculateDistToAnnotation(exonsByReadClass, annotationGrangesList, maxDist = minimumExonDistance, primarySecondaryDist = 5, ignore.strand= FALSE)
     distNewTxByQuery =distNewTx %>% group_by(queryHits) %>% summarise(minDist=min(dist), startMatch=any(startMatch), endMatch=any(endMatch), compatible=any(compatible))  ## note: here is more information that can be used to filter and annotate!
 
     classificationTable$compatible[distNewTxByQuery$queryHits[distNewTxByQuery$compatible]] <-'compatible'
 
-    #classificationTable <- mutate(classificationTable, newFirstExon = '')
     classificationTable$newFirstExon[distNewTxByQuery$queryHits[!distNewTxByQuery$startMatch]] <- 'newFirstExon'
     classificationTable$newFirstExon[classificationTable$newFirstJunction!='newFirstJunction'] <- ''
 
-    #classificationTable <- mutate(classificationTable, newLastExon = '')
     classificationTable$newLastExon[distNewTxByQuery$queryHits[!distNewTxByQuery$endMatch]] <- 'newLastExon'
     classificationTable$newLastExon[classificationTable$newLastJunction!='newLastJunction'] <- ''
 
@@ -583,7 +486,6 @@ isore.extendAnnotations <- function(se,
 
     ## unspliced transcripts
 
-
     if(any(rowData(se)$confidenceType=='unsplicedNew' & filterSet1)) {
       seFilteredUnspliced <- se[rowData(se)$confidenceType=='unsplicedNew' & filterSet1,]
       exonsByReadClassUnspliced= GRanges(seqnames=rowData(seFilteredUnspliced)$chr,
@@ -591,16 +493,13 @@ isore.extendAnnotations <- function(se,
                                                         end=rowData(seFilteredUnspliced)$end),
                                          strand=rowData(seFilteredUnspliced)$strand)
 
-
-      # mcols(seFilteredUnspliced)$TXNAME=NA
       mcols(seFilteredUnspliced)$GENEID=NA
       mcols(seFilteredUnspliced)$readClassType='unsplicedNew'
 
-      ## here: add filter to remove unspliced trasncripts which overlap with known transcripts/high quality spliced transcripts
+      ## here: add filter to remove unspliced transcripts which overlap with known transcripts/high quality spliced transcripts
       overlapUnspliced <- findOverlaps(exonsByReadClassUnspliced, annotationGrangesList, minoverlap = minimumExonOverlapWithAnnotation, select='first')
       seFilteredUnspliced <- seFilteredUnspliced[is.na(overlapUnspliced)]
       exonsByReadClassUnspliced <- exonsByReadClassUnspliced[is.na(overlapUnspliced)]
-
 
       ## combined spliced and unspliced Tx candidates
       seCombined <- rbind(seFilteredSpliced, seFilteredUnspliced)
@@ -611,8 +510,7 @@ isore.extendAnnotations <- function(se,
       exonRangesCombined<- exonsByReadClass
       names(exonRangesCombined) <- 1:length(exonRangesCombined)
     }
-      #assign gene IDs based on exon match
-
+    #assign gene IDs based on exon match
     exonMatchGene <- findOverlaps(exonRangesCombined,annotationGrangesList,select = 'arbitrary',minoverlap = minimumExonOverlapWithAnnotation)
     geneIdByExon <- rep(NA,length(exonRangesCombined))
     geneIdByExon[!is.na(exonMatchGene)] <- mcols(annotationGrangesList)$GENEID[exonMatchGene[!is.na(exonMatchGene)]]
@@ -627,7 +525,6 @@ isore.extendAnnotations <- function(se,
     mcols(seCombined)$GENEID[is.na(mcols(seCombined)$GENEID)] <- geneIdByExon[is.na(mcols(seCombined)$GENEID)]
 
     #geneLoci <- mcols(seCombined)$GENEID ## will be used to annotate overlaping genes which do not share any exon or which are antisense
-
     #gene loci calculation
     #rangeOverlap <- findOverlaps(range(exonRangesCombined[is.na(geneLoci)]), annotationGrangesList, ignore.strand=TRUE, minoverlap = minimumExonOverlapWithAnnotation, select = 'arbitrary')
     #geneLoci[is.na(geneLoci)][!is.na(rangeOverlap)] <-  mcols(annotationGrangesList)$GENEID[rangeOverlap[!is.na(rangeOverlap)]]
@@ -666,12 +563,10 @@ isore.extendAnnotations <- function(se,
    mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType=='unsplicedNew' & grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-unspliced'
    mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType=='allNew' & grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-spliced'
 
-
-  extendedAnnotationRanges <- exonRangesCombinedFiltered
-  mcols(extendedAnnotationRanges) <- mcols(seCombinedFiltered)[,c('GENEID','newTxClass')]
-  mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx.', 1:length(extendedAnnotationRanges))
-  names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
- # mcols(extendedAnnotationRanges)$referenceTXNAME <- mcols(extendedAnnotationRanges)$TXNAME  ## reference TXNAME if splice pattern is identical but first/last exon differs. All splice sites differ for new TX so will be identical to TXNAME
+   extendedAnnotationRanges <- exonRangesCombinedFiltered
+   mcols(extendedAnnotationRanges) <- mcols(seCombinedFiltered)[,c('GENEID','newTxClass')]
+   mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx.', 1:length(extendedAnnotationRanges))
+   names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
 
    annotationRangesToMerge <- annotationGrangesList
    mcols(annotationRangesToMerge)$newTxClass <- rep('annotation', length(annotationRangesToMerge))
@@ -682,33 +577,10 @@ isore.extendAnnotations <- function(se,
    mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass[match(names(extendedAnnotationRanges),minEqClasses$queryTxId)]
    mcols(annotationRangesToMerge) <- mcols(annotationRangesToMerge)[,c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
 
-  return(extendedAnnotationRanges)
-    #### HERE: Combine with annotations to create a single exonsByTxRanges object with annotations in mcols #####
-
-    #
-  # mcols(seFilteredSpliced)$newFirstExon = FALSE
-  # mcols(seFilteredSpliced)$newFirstExon[distNewTxByQuery$queryHits[!distNewTxByQuery$startMatch]] <- TRUE    # based on exon overlap
-  # mcols(seFilteredSpliced)$newFirstExon[!mcols(seFilteredSpliced)$newFirstJunction] <- FALSE    # based on exon overlap
-  #
-  # mcols(seFilteredSpliced)$newLastExon = FALSE
-  # mcols(seFilteredSpliced)$newLastExon[distNewTxByQuery$queryHits[!distNewTxByQuery$endMatch]] <- TRUE    # based on exon overlap
-  # mcols(seFilteredSpliced)$newLastExon[!mcols(seFilteredSpliced)$newLastJunction] <- FALSE
-
-  ##compare with annotations, filter out complete matches and subset matches, calculate gene counts, filter by relative count
- # cat('### [TODO] [optional]  classify readClasses ### \n')
-#  start.ptm <- proc.time()
-  ## TODO: classify all read classes
-  ## categories:
-  ## compatible
-  ## subset
-  ## new transcript within annotation
-
-  #readClassListFull <- classifyReadClasses(readClassListFull)
-#  end.ptm <- proc.time()
- # cat(paste0('[TODO] [optional]  Finished  classifying readClasses in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-} else {
-  return(annotationGrangesList)
-}
+   return(extendedAnnotationRanges)
+  } else {
+    return(annotationGrangesList)
+  }
 }
 
 
