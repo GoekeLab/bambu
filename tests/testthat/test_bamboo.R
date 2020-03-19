@@ -10,6 +10,8 @@ test_that("generic function of isoform quantification of data.table is list of 2
   expect_output(bamboo(dt = example_data[[3]], algo.control=list(ncore = 1)),"Finished EM estimation in")
   expect_type(bamboo(dt = example_data[[4]], algo.control=list(ncore = 1)), "list")
   expect_output(bamboo(dt = example_data[[4]], algo.control=list(ncore = 1)),"Finished EM estimation in")
+  expect_type(bamboo(dt = example_data[5], algo.control=list(ncore = 1)), "list")
+  expect_output(bamboo(dt = example_data[[5]], algo.control=list(ncore = 1)),"Finished EM estimation in")
 })
 
 
