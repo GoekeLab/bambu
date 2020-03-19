@@ -25,6 +25,11 @@ example_data[[4]] <- data.table(tx_id = c(1,2,3,1,2,1,2,3),
                                 nobs = c(100,5,500,rep(20,2),rep(5,3)),
                                 gene_id = 4)
 
+example_data[[5]] <- data.table(tx_id = c(1:6,2,3,1,2,5,1,2,3,5,1:5),
+                                read_class_id = c(1:6,rep(7,2),rep(8,3),rep(9,4),rep(10,5)),
+                                nobs = c(2,0,1,0,0,1,rep(2,2),rep(282,3),rep(64,4),rep(5,5)),
+                                gene_id = 5)
+
 samplefile <- system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")
 txdb <- AnnotationDbi::loadDb(samplefile)
 example_txdbTablesList <- prepareAnnotations(txdb)

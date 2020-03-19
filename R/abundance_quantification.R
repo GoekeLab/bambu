@@ -13,18 +13,25 @@
 #' }
 abundance_quantification <- function(read_classDT,mc.cores = 1,
                                      method = 'two-step',
-                                     conv.control = 10^(-3)){
+                                     bias_correction = TRUE,
+                                     maxiter = 20000,
+                                     conv.control = 10^(-8)){
   gene_sidList <- unique(read_classDT$gene_sid)
   n_gene <- length(gene_sidList)
   n_chunk <- ceiling(n_gene/2000)
   splitIndex <- split(1:n_gene, rep(1:n_chunk, ceiling(n_gene/n_chunk))[1:n_gene])
+  pb <- progress::progress_bar$new(
+    format = "  Genes [:bar] :percent in :elapsed",
+    total = n_chunk, clear = FALSE, width= 60)
+  pb$tick(0)
   outData <- lapply(as.list(1:n_chunk), function(i){
     gene_sid_chunk <- gene_sidList[splitIndex[[i]]]
     #print(i)
-    outData <- parallel::mclapply(gene_sid_chunk,run_parallel,method = method, conv.control = conv.control, read_classDT = read_classDT,
+    outData <- parallel::mclapply(gene_sid_chunk,run_parallel,method = method, conv.control = conv.control, bias_correction = bias_correction, maxiter = maxiter, read_classDT = read_classDT,
                         mc.cores = mc.cores, mc.preschedule = TRUE)
     outDataList <- list(do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[1]])),
                         do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[2]])))
+    pb$tick()
     return(outDataList)
   })
   estimates <- list(do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[1]])),
@@ -33,7 +40,8 @@ abundance_quantification <- function(read_classDT,mc.cores = 1,
   return(estimates)
 }
 
-run_parallel <- function(g,method,conv.control,read_classDT){
+run_parallel <- function(g,method,conv.control,bias_correction,maxiter, read_classDT){
+  print(g)
   tmp <- read_classDT[gene_sid==g]
   if((nrow(tmp)==1)|(sum(tmp$nobs)==0)){
     outData <- list(data.table(tx_sid = tmp$tx_sid,
@@ -42,7 +50,7 @@ run_parallel <- function(g,method,conv.control,read_classDT){
                                ntotal = tmp$nobs),
                     NULL)
   }else{
-    tmp_wide <- dcast(tmp, tx_sid~read_class_sid, fun.agg = length,
+    tmp_wide <- dcast(tmp[order(nobs)], tx_sid~read_class_sid, fun.agg = length,
                       value.var = 'nobs')
     a_mat <- tmp_wide[,-1,with=FALSE]
     setDF(a_mat)
@@ -51,6 +59,7 @@ run_parallel <- function(g,method,conv.control,read_classDT){
 
     n.obs <- unique(tmp[,.(read_class_sid,nobs)],by=NULL)$nobs
 
+
     ## using the Jiang and Salzman suggested value
     lambda <- sqrt(max(n.obs))#,25)
 
@@ -58,25 +67,33 @@ run_parallel <- function(g,method,conv.control,read_classDT){
     ##===========================
     ## Step 1 estimate with L1 penalty
     ## EM with L1
-    theta.hat <- emWithL1(X = as.matrix(a_mat),
+    est_output <- emWithL1(X = as.matrix(a_mat),
                           Y = n.obs,
                           lambda = lambda,
+                          d = bias_correction,
+                          maxiter = maxiter,
                           conv = conv.control)
 
-    b_est <- as.numeric(t(theta.hat$b))
+
     ##===========================
     ## Step 2 estimate without L1 penalty
     ## EM without L1
-    if(method == 'two-step'){
-
-      theta.hat <-emWithoutL1(X = as.matrix(a_mat),
-                               Y = n.obs,
-                               par = b_est,#rep(0.5,ncol(a_mat)),#
-                               lambda = lambda,
-                               conv = conv.control)
-
+    # if(method == 'two-step'){
+    #
+    #   est_output <-emWithoutL1(X = as.matrix(a_mat),
+    #                            Y = n.obs,
+    #                            nzindex = est_output[["nzindex"]],#rep(0.5,ncol(a_mat)),#
+    #                            lambda = lambda,
+    #                            conv = conv.control)
+    #
+    # }
+    t_est <- as.numeric(t(est_output[["theta"]]))
+    if(bias_correction){
+      b_est <- as.numeric(t(est_output[["b"]]))
+    }else{
+      b_est <- rep(NA,ncol(a_mat))
     }
-    t_est <- as.numeric(t(theta.hat$theta))
+
     nobs <- sum(n.obs)
     outData <- list(data.table(tx_sid = rownames(a_mat),
                                estimates = t_est,
