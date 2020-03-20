@@ -117,8 +117,8 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   unlistData = unlist(exonsByReadClass, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
 
-  unlistData$exon_id <- paste0('exId.',1:length(unlistData))
-  unlistData$exon_name <- paste0('ex.',1:length(unlistData))
+  #unlistData$exon_id <- paste0('exId.',1:length(unlistData))
+  #unlistData$exon_name <- paste0('ex.',1:length(unlistData))
   exon_rank <- sapply(width((partitioning)),seq, from=1)
   exon_rank[which(readClassTable$strand=='-')] <- lapply(exon_rank[which(readClassTable$strand=='-')], rev)  # * assumes positive for exon ranking
   exon_endRank <- lapply(exon_rank, rev)
@@ -176,8 +176,8 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     dplyr::select(readId,  readClassId, confidenceType, strand)
 
   exByReadClassUnspliced <- GRanges(seqnames=readClassTableUnspliced$chr, ranges=IRanges(start=readClassTableUnspliced$start, end=readClassTableUnspliced$end), strand=readClassTableUnspliced$strand)
-  exByReadClassUnspliced$exon_id <- paste0('exId',prefix,'.',1:length(exByReadClassUnspliced))
-  exByReadClassUnspliced$exon_name <- paste0('ex',prefix,'.', 1:length(exByReadClassUnspliced))
+  #exByReadClassUnspliced$exon_id <- paste0('exId',prefix,'.',1:length(exByReadClassUnspliced))
+  #exByReadClassUnspliced$exon_name <- paste0('ex',prefix,'.', 1:length(exByReadClassUnspliced))
   exByReadClassUnspliced$exon_rank <- 1
   exByReadClassUnspliced$exon_endRank <- 1
   partitioning <- PartitioningByEnd(1:length(exByReadClassUnspliced))
