@@ -21,21 +21,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// optim_thetaandb_rcpp
-List optim_thetaandb_rcpp(const arma::rowvec est, const arma::mat X, const arma::rowvec Y, const double lambda, const arma::rowvec nzindex);
-RcppExport SEXP _bamboo_optim_thetaandb_rcpp(SEXP estSEXP, SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP nzindexSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::rowvec >::type est(estSEXP);
-    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< const double >::type lambda(lambdaSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec >::type nzindex(nzindexSEXP);
-    rcpp_result_gen = Rcpp::wrap(optim_thetaandb_rcpp(est, X, Y, lambda, nzindex));
-    return rcpp_result_gen;
-END_RCPP
-}
 // em_theta
 List em_theta(const arma::mat X, const arma::rowvec Y, const double lambda, const arma::rowvec b, const bool d, const int maxiter, const double conv);
 RcppExport SEXP _bamboo_em_theta(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP bSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
@@ -66,6 +51,21 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type maxiter(maxiterSEXP);
     Rcpp::traits::input_parameter< const double >::type conv(convSEXP);
     rcpp_result_gen = Rcpp::wrap(emWithL1(X, Y, lambda, d, maxiter, conv));
+    return rcpp_result_gen;
+END_RCPP
+}
+// optim_thetaandb_rcpp
+List optim_thetaandb_rcpp(const arma::rowvec est, const arma::mat X, const arma::rowvec Y, const double lambda, const arma::rowvec nzindex);
+RcppExport SEXP _bamboo_optim_thetaandb_rcpp(SEXP estSEXP, SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP nzindexSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::rowvec >::type est(estSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec >::type nzindex(nzindexSEXP);
+    rcpp_result_gen = Rcpp::wrap(optim_thetaandb_rcpp(est, X, Y, lambda, nzindex));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -105,9 +105,9 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_bamboo_optim_b_rcpp", (DL_FUNC) &_bamboo_optim_b_rcpp, 5},
-    {"_bamboo_optim_thetaandb_rcpp", (DL_FUNC) &_bamboo_optim_thetaandb_rcpp, 5},
     {"_bamboo_em_theta", (DL_FUNC) &_bamboo_em_theta, 7},
     {"_bamboo_emWithL1", (DL_FUNC) &_bamboo_emWithL1, 6},
+    {"_bamboo_optim_thetaandb_rcpp", (DL_FUNC) &_bamboo_optim_thetaandb_rcpp, 5},
     {"_bamboo_emWithoutL1", (DL_FUNC) &_bamboo_emWithoutL1, 5},
     {"_bamboo_run_em", (DL_FUNC) &_bamboo_run_em, 8},
     {NULL, NULL, 0}

@@ -30,17 +30,6 @@ optim_b_rcpp <- function(theta, X, Y, lambda, b) {
     .Call(`_bamboo_optim_b_rcpp`, theta, X, Y, lambda, b)
 }
 
-#' Optimization function for bias parameters
-#'
-#' @param par A row vector of bias parameters for each read class
-#' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-#' @param Y observed number of reads for each read class j
-#' @param lambda, the tuning parameter for bias estimation
-#' @param theta estimates for isoform expression
-optim_thetaandb_rcpp <- function(est, X, Y, lambda, nzindex) {
-    .Call(`_bamboo_optim_thetaandb_rcpp`, est, X, Y, lambda, nzindex)
-}
-
 #' EM algorithm with L1-penalty
 #'
 #' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
@@ -61,6 +50,17 @@ em_theta <- function(X, Y, lambda, b, d, maxiter, conv) {
 #' @export
 emWithL1 <- function(X, Y, lambda, d, maxiter, conv) {
     .Call(`_bamboo_emWithL1`, X, Y, lambda, d, maxiter, conv)
+}
+
+#' Optimization function for bias parameters
+#'
+#' @param par A row vector of bias parameters for each read class
+#' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+#' @param Y observed number of reads for each read class j
+#' @param lambda, the tuning parameter for bias estimation
+#' @param theta estimates for isoform expression
+optim_thetaandb_rcpp <- function(est, X, Y, lambda, nzindex) {
+    .Call(`_bamboo_optim_thetaandb_rcpp`, est, X, Y, lambda, nzindex)
 }
 
 #' EM algorithm with L1-penalty

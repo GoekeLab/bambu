@@ -44,63 +44,7 @@ double obj_fun_b_rcpp(const arma::rowvec par,
 
 
 
-//' Create likelihood objective function to estimate bias parameters
-//'
-//' @param par A row vector of bias parameters for each read class
-//' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-//' @param Y observed number of reads for each read class j
-//' @param lambda, the tuning parameter for bias estimation
-//' @param nzindex estimates for isoform expression
-double obj_fun_rcpp(const arma::rowvec par,
-                       const arma::mat X,
-                       const arma::rowvec Y,
-                       const double lambda,
-                       const arma::rowvec nzindex
-){
-  int J = X.n_cols; //number of equivalent read class
-  int M = X.n_rows; //number of isoforms
-  int p = nzindex.size() ; // number of non-zero b estimates
-  // predefine adjusted sampling matrix to be the sampling matrix
-  arma::mat a_adj_mat = X;
 
-  // of the parameters inputed, the first M are theta estimates
-  // the rest are bias estimates
-  arma::rowvec theta = par.head(M);
-  arma::rowvec b = par.tail(p);
-
-  // for read class with non-zero bias estimates, adjust sampling matrix by bias parameter
-  for(int i = 0 ; i < p ; i++){
-    a_adj_mat.col(nzindex(i)) = X.col(nzindex(i)) * exp(b(i));
-  }
-
-  // obtain the rowsum of the adjusted sampling matrix
-  arma::rowvec a_adj_mat_rowSum = arma::sum(a_adj_mat.t(),0);
-
-  // for each row, divide the adjusted sampling matrix by rowsum and then multiply by theta estimates
-  for(int i = 0 ; i < M ; i++){
-    a_adj_mat.row(i) = a_adj_mat.row(i) / a_adj_mat_rowSum(i) * theta(i);
-  }
-
-  // calculate the column sum of the result obtained above
-  arma::rowvec column_agg = arma::sum(a_adj_mat,0);
-
-  // define log of column_agg
-  arma::rowvec log_column_agg(X.n_cols);
-
-  // for each obtain the log value of the column_agg
-  for(int i = 0 ; i < J ; i++){
-    log_column_agg(i) = std::log(column_agg(i));
-  }
-
-
-  //log_column_agg.replace(arma::datum::nan, 0); // replace each NaN with 0
-
-  double obj_val = -(sum(Y%log_column_agg-column_agg)); //define objective value
-
-  //Rcout << "obj_fun : 7 \n";
-  // Return a single value
-  return obj_val;
-}
 
 
 
@@ -138,40 +82,7 @@ List optim_b_rcpp(const arma::rowvec theta,
 }
 
 
-//' Optimization function for bias parameters
-//'
-//' @param par A row vector of bias parameters for each read class
-//' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-//' @param Y observed number of reads for each read class j
-//' @param lambda, the tuning parameter for bias estimation
-//' @param theta estimates for isoform expression
-// [[Rcpp::export]]
-List optim_thetaandb_rcpp(const arma::rowvec est,
-                      const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-                      const arma::rowvec Y, // observed number of reads for each read class j
-                      const double lambda,  // the tuning parameter for bias estimation, take as
-                      const arma::rowvec nzindex){
 
-  // Extract Rs optim function
-  Rcpp::Environment stats("package:stats");
-  Rcpp::Function optim = stats["optim"];
-  // arma::uvec lowervalue(est.size());
-  // lowervalue.fill(10^(-8));
-  // Call the optim function from R in C++
-  Rcpp::List opt_results = optim(Rcpp::_["par"]    = est,
-                                 // Make sure this function is not exported!
-                                 Rcpp::_["fn"]     = Rcpp::InternalFunction(&obj_fun_rcpp),
-                                 Rcpp::_["method"] = "SANN", // objective function is non-differentiable
-                                 Rcpp::_["hessian"] = "FALSE",
-                                 Rcpp::_["X"] = X,
-                                 Rcpp::_["Y"] = Y,
-                                 Rcpp::_["lambda"] = lambda,
-                                 Rcpp::_["nzindex"] = nzindex);
-
-
-  // Return estimated values
-  return opt_results;
-}
 
 
 //' EM algorithm with L1-penalty
@@ -360,7 +271,98 @@ List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
 }
 
 
+//' Create likelihood objective function to estimate bias parameters
+//'
+//' @param par A row vector of bias parameters for each read class
+//' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+//' @param Y observed number of reads for each read class j
+//' @param lambda, the tuning parameter for bias estimation
+//' @param nzindex estimates for isoform expression
+double obj_fun_rcpp(const arma::rowvec par,
+                    const arma::mat X,
+                    const arma::rowvec Y,
+                    const double lambda,
+                    const arma::rowvec nzindex
+){
+  int J = X.n_cols; //number of equivalent read class
+  int M = X.n_rows; //number of isoforms
+  int p = nzindex.size() ; // number of non-zero b estimates
+  // predefine adjusted sampling matrix to be the sampling matrix
+  arma::mat a_adj_mat = X;
 
+  // of the parameters inputed, the first M are theta estimates
+  // the rest are bias estimates
+  arma::rowvec theta = par.head(M);
+  arma::rowvec b = par.tail(p);
+
+  // for read class with non-zero bias estimates, adjust sampling matrix by bias parameter
+  for(int i = 0 ; i < p ; i++){
+    a_adj_mat.col(nzindex(i)) = X.col(nzindex(i)) * exp(b(i));
+  }
+
+  // obtain the rowsum of the adjusted sampling matrix
+  arma::rowvec a_adj_mat_rowSum = arma::sum(a_adj_mat.t(),0);
+
+  // for each row, divide the adjusted sampling matrix by rowsum and then multiply by theta estimates
+  for(int i = 0 ; i < M ; i++){
+    a_adj_mat.row(i) = a_adj_mat.row(i) / a_adj_mat_rowSum(i) * theta(i);
+  }
+
+  // calculate the column sum of the result obtained above
+  arma::rowvec column_agg = arma::sum(a_adj_mat,0);
+
+  // define log of column_agg
+  arma::rowvec log_column_agg(X.n_cols);
+
+  // for each obtain the log value of the column_agg
+  for(int i = 0 ; i < J ; i++){
+    log_column_agg(i) = std::log(column_agg(i));
+  }
+
+
+  //log_column_agg.replace(arma::datum::nan, 0); // replace each NaN with 0
+
+  double obj_val = -(sum(Y%log_column_agg-column_agg)); //define objective value
+
+  //Rcout << "obj_fun : 7 \n";
+  // Return a single value
+  return obj_val;
+}
+
+//' Optimization function for bias parameters
+//'
+//' @param par A row vector of bias parameters for each read class
+//' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+//' @param Y observed number of reads for each read class j
+//' @param lambda, the tuning parameter for bias estimation
+//' @param theta estimates for isoform expression
+// [[Rcpp::export]]
+List optim_thetaandb_rcpp(const arma::rowvec est,
+                          const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
+                          const arma::rowvec Y, // observed number of reads for each read class j
+                          const double lambda,  // the tuning parameter for bias estimation, take as
+                          const arma::rowvec nzindex){
+
+  // Extract Rs optim function
+  Rcpp::Environment stats("package:stats");
+  Rcpp::Function optim = stats["optim"];
+  // arma::uvec lowervalue(est.size());
+  // lowervalue.fill(10^(-8));
+  // Call the optim function from R in C++
+  Rcpp::List opt_results = optim(Rcpp::_["par"]    = est,
+                                 // Make sure this function is not exported!
+                                 Rcpp::_["fn"]     = Rcpp::InternalFunction(&obj_fun_rcpp),
+                                 Rcpp::_["method"] = "SANN", // objective function is non-differentiable
+                                 Rcpp::_["hessian"] = "FALSE",
+                                 Rcpp::_["X"] = X,
+                                 Rcpp::_["Y"] = Y,
+                                 Rcpp::_["lambda"] = lambda,
+                                 Rcpp::_["nzindex"] = nzindex);
+
+
+  // Return estimated values
+  return opt_results;
+}
 
 //' EM algorithm with L1-penalty
 //'
@@ -421,6 +423,8 @@ List emWithoutL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 i
 
 
 }
+
+
 
 
 
