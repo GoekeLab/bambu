@@ -150,7 +150,7 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
     adjP_Xb =  (Xb.t() * diagmat(theta)).t();
 
 
-    //
+
     summed_by_col_adjP_Xb = arma::sum(adjP_Xb,0);
 
     probMat = adjP_Xb * diagmat(Y / summed_by_col_adjP_Xb);
@@ -159,6 +159,7 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
     theta = arma::sum(probMat.t(),0);
 
     theta_trace.col(iter) = theta.t();
+
     deltaTheta = dot(theta_trace.col(iter) - theta_trace.col(iter-1), theta_trace.col(iter) - theta_trace.col(iter-1));
 
 
@@ -200,61 +201,72 @@ List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
   est.fill(1);
 
   arma::mat est_trace(M+J,maxiter);
+  arma::mat theta_trace(M,maxiter);
 
 
 
   int iter = 0; // iterator
   est_trace.col(iter) = est.t();
-  List theta_out(2); // create a empty list of size 5
+
+  List theta_out(3); // create a empty list of size 5
   arma::rowvec theta = est.head(M);
+  theta_trace.col(iter) = theta.t();
 
 
 
   List b_out(5); // create a empty list of size 5
-  arma::rowvec b = est.tail(J);
+  arma::rowvec b = Y;
+  est.tail(J) = b;
+
+  if(d){
+    int maxiter_b = 500;
+    double deltaTheta = 1;
+    // maxiter_em = 2;
+    // algorithm
+    while(deltaTheta > conv && iter < (maxiter_b-1)){
+
+      //update iterator
+      iter++;
+
+      theta = est.head(M) ;
+      b = est.tail(J) ;
 
 
+      // at each estimation, run EM one time
+      theta_out = em_theta(X, Y, lambda,b, d, maxiter, conv) ;
+      theta = Rcpp::as<arma::rowvec>(theta_out[0]) ;
+      est.head(M) = theta ;
 
-
-  double deltaEst = 1;
-
-  // algorithm
-  while(deltaEst > conv && iter < (maxiter-1)){
-
-    //update iterator
-    iter++;
-
-    theta = est.head(M) ;
-    b = est.tail(J) ;
-
-
-    // at each estimation, run EM one time
-    theta_out = em_theta(X, Y, lambda,b, d, maxiter, conv) ;
-    theta = Rcpp::as<arma::rowvec>(theta_out[0]) ;
-
-
-
-
-    est.head(M) = theta ;
-    if(d){
       b_out = optim_b_rcpp(theta,X, Y, lambda,b) ;
       b = Rcpp::as<arma::rowvec>(b_out[0]) ;
-      // to shink b so that it won't change theta estimates significantly
-      if(b.size()>2){
-        b = (b - mean(b))/max(abs(b)); // in case very different bs will produce very unstable estimates, normalized to N(0,0.1)
-      }
-      if(b.size()<=2){
-        b = (b - mean(b))/max(abs(b));
-      }
-      b.elem(find(b <= 0)).zeros();
+      // to shrink b so that it won't change theta estimates significantly
+      // if(b.size()>2){
+          b = (b - mean(b))/max(abs(b)); // in case very different bs will produce very unstable estimates, normalized to N(0,0.1)
+      // }
+      // if(b.size()<=2){
+      //     b = (b - mean(b))/abs(mean(b));
+      // }
+
+       b = b/double(20) ;
+      // b.elem(find(b <= 0)).zeros();
       est.tail(J) = b ;
+
+      est_trace.col(iter) = est.t();
+      theta_trace.col(iter) = theta.t();
+      deltaTheta = dot(theta_trace.col(iter) - theta_trace.col(iter-1), theta_trace.col(iter) - theta_trace.col(iter-1));
+
     }
-
-
-    est_trace.col(iter) = est.t();
-    deltaEst = dot(est_trace.col(iter) - est_trace.col(iter-1), est_trace.col(iter) - est_trace.col(iter-1));
-
   }
+  if(!d){
+    theta = est.head(M) ;
+    theta_out = em_theta(X, Y, lambda,b, d, maxiter, conv) ;
+
+    theta = Rcpp::as<arma::rowvec>(theta_out[0]) ;
+    est.head(M) = theta ;
+  }
+
+
+
   Rcout << "iter : " << iter << "\n" ;
   Rcout << "theta : " << theta << "\n" ;
   Rcout << "b : " << b << "\n" ;
