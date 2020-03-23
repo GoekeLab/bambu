@@ -50,7 +50,8 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
 
   close(bf)
   readGrglist <- readGrglist[GenomicRanges::width(readGrglist)>1]  # remove microexons Of width 1bp from list
-  readNames <- names(readGrglist)
+  #readNames <- names(readGrglist)
+  mcols(readGrglist)$qname = names(readGrglist)
   names(readGrglist) <- 1:length(readGrglist)  # names needed to be replaced as some reads are multiple times mapped (distinct parts of the read which are compatible)
 
   # readJunctions <- myGaps(readGrglist)
@@ -60,6 +61,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL) {
   # names(readIdToName) <- names(readJunctions)  ## requires a lot of memory, replace later
   # names(readAlignmentStrand) <- names(readJunctions)
 
-  return(list(readGrglist=readGrglist, readNames=readNames)) # startRanges=startRanges, endRanges=endRanges))
+  #return(list(readGrglist=readGrglist, readNames=readNames)) # startRanges=startRanges, endRanges=endRanges))
+  return(readGrglist) # startRanges=startRanges, endRanges=endRanges))
 }
 

@@ -5,7 +5,7 @@
 #' @param readGrglist
 #' @param readNames
 #' @importFrom unstrsplit getFromNamespace
-constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames){ #, startRanges, endRanges) {
+constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames, quickMode = FALSE){ #, startRanges, endRanges) {
   options(scipen = 999)
 
   show('### create transcript models ###')
@@ -82,7 +82,11 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   readTable[sum(is.na(junctionsByReadListCorrected[uniqueReadNames]))>0, 'confidenceType'] <- 'lowConfidenceJunctionReads'
 
   ## currently the 90% quantile is used to define the start and end ## this is the slowest part in the function.
-  readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+  if(quickMode==FALSE){
+    readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+  } else {
+    readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = min(start), end = max(end), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+  }
 
   #readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
 
@@ -113,8 +117,8 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   unlistData = unlist(exonsByReadClass, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
 
-  unlistData$exon_id <- paste0('exId.',1:length(unlistData))
-  unlistData$exon_name <- paste0('ex.',1:length(unlistData))
+  #unlistData$exon_id <- paste0('exId.',1:length(unlistData))
+  #unlistData$exon_name <- paste0('ex.',1:length(unlistData))
   exon_rank <- sapply(width((partitioning)),seq, from=1)
   exon_rank[which(readClassTable$strand=='-')] <- lapply(exon_rank[which(readClassTable$strand=='-')], rev)  # * assumes positive for exon ranking
   exon_endRank <- lapply(exon_rank, rev)
@@ -123,7 +127,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 
   exonsByReadClass <- relist(unlistData, partitioning)
 
-  readClassTable <- readClassTable %>% dplyr::select(chr, start, end, strand, readCount, confidenceType, readClassId)
+  readClassTable <- readClassTable %>% dplyr::select(chr, start, end, strand, intronStarts, intronEnds, confidenceType, readClassId, readCount)
 
   return(list(exonsByReadClass = exonsByReadClass, readClassTable = readClassTable, readTable = readTable))
 }
@@ -162,16 +166,18 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     mutate(readCount=n()) %>%
     distinct() %>%
     ungroup() %>%
-    mutate(confidenceType=confidenceType) %>%
-    dplyr::select(chr, start, end, strand, readCount, confidenceType, readClassId)
+    mutate(confidenceType=confidenceType,
+           intronStarts=NA,
+           intronEnds=NA) %>%
+    dplyr::select(chr, start, end, strand,intronStarts,intronEnds, confidenceType, readClassId, readCount)
 
   readTableUnspliced <-  dplyr::select(hitsDFGrouped, readClassId) %>%
     mutate(confidenceType=confidenceType, strand=as.character(strand(granges[hitsDFGrouped$queryHits])), readId=readNames[as.integer(names(granges[hitsDFGrouped$queryHits]))]) %>%
     dplyr::select(readId,  readClassId, confidenceType, strand)
 
   exByReadClassUnspliced <- GRanges(seqnames=readClassTableUnspliced$chr, ranges=IRanges(start=readClassTableUnspliced$start, end=readClassTableUnspliced$end), strand=readClassTableUnspliced$strand)
-  exByReadClassUnspliced$exon_id <- paste0('exId',prefix,'.',1:length(exByReadClassUnspliced))
-  exByReadClassUnspliced$exon_name <- paste0('ex',prefix,'.', 1:length(exByReadClassUnspliced))
+  #exByReadClassUnspliced$exon_id <- paste0('exId',prefix,'.',1:length(exByReadClassUnspliced))
+  #exByReadClassUnspliced$exon_name <- paste0('ex',prefix,'.', 1:length(exByReadClassUnspliced))
   exByReadClassUnspliced$exon_rank <- 1
   exByReadClassUnspliced$exon_endRank <- 1
   partitioning <- PartitioningByEnd(1:length(exByReadClassUnspliced))

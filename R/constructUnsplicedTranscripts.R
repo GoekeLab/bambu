@@ -37,8 +37,8 @@ constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, st
   reducedSingleExonReads <- reducedSingleExonReads[reducedSingleExonReads$readCount >=minReadCount]
 
   # add annotations to create exon granges list
-  reducedSingleExonReads$exon_id <- 1:length(reducedSingleExonReads)+max(combinedExonList$exon_id)
-  reducedSingleExonReads$exon_name <- paste0('exUnspliced.', reducedSingleExonReads$exon_id)
+  #reducedSingleExonReads$exon_id <- 1:length(reducedSingleExonReads)+max(combinedExonList$exon_id)
+  #reducedSingleExonReads$exon_name <- paste0('exUnspliced.', reducedSingleExonReads$exon_id)
   reducedSingleExonReads$exon_rank <- 1
   reducedSingleExonReads$exon_endRank <- 1
 
@@ -68,7 +68,7 @@ constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, st
   ##(2) Add to granges list object (exonsByTx)
 
   partitioning <- PartitioningByEnd(1:length(reducedSingleExonReads), names=NULL)
-  singleExonsGeneRangesList <- relist(reducedSingleExonReads[,c('exon_id','exon_name','exon_rank','exon_endRank')], partitioning)
+  singleExonsGeneRangesList <- relist(reducedSingleExonReads[,c('exon_rank','exon_endRank')], partitioning)
   names(singleExonsGeneRangesList) <- txTableSingleExon$combinedTxId  # avoid including names twice
 
   txList$exonsByTx <- c(txList$exonsByTx,singleExonsGeneRangesList)
