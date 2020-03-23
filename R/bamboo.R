@@ -39,7 +39,7 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   default.algo.control <- list(ncore = parallel::detectCores(),
                                method = "two-step",
                                bias_correction = TRUE,
-                               maxiter = 20000,
+                               maxiter = 10000,
                                convcontrol = 10^(-4))
 
   if(is.null(algo.control)){
