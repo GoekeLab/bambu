@@ -515,6 +515,7 @@ intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilte
       exonRangesCombined<- exonsByReadClass
       names(exonRangesCombined) <- 1:length(exonRangesCombined)
     }
+
     #assign gene IDs based on exon match
     exonMatchGene <- findOverlaps(exonRangesCombined,annotationGrangesList,select = 'arbitrary',minoverlap = min.exonOverlap)
     geneIdByExon <- rep(NA,length(exonRangesCombined))
@@ -528,7 +529,7 @@ intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilte
       exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],exonRangesCombined[!is.na(geneIdByExon)],select = 'arbitrary',minoverlap = min.exonOverlap)
     }
     mcols(seCombined)$GENEID[is.na(mcols(seCombined)$GENEID)] <- geneIdByExon[is.na(mcols(seCombined)$GENEID)]
-
+    show(dim(seCombined))
     #geneLoci <- mcols(seCombined)$GENEID ## will be used to annotate overlaping genes which do not share any exon or which are antisense
     #gene loci calculation
     #rangeOverlap <- findOverlaps(range(exonRangesCombined[is.na(geneLoci)]), annotationGrangesList, ignore.strand=TRUE, minoverlap = min.exonOverlap, select = 'arbitrary')
@@ -549,6 +550,7 @@ intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilte
    countsTBL <- as_tibble(assays(seCombined)$counts) %>%mutate(geneId = mcols(seCombined)$GENEID) %>% group_by(geneId) %>% mutate_at(vars(-geneId), .funs = sum) %>% ungroup() %>% dplyr::select(-geneId)
    relCounts <- assays(seCombined)$counts / countsTBL
    filterTxUsage=(rowSums(relCounts>=min.readFractionByGene, na.rm=T)>=min.sampleNumber)
+   show(dim(seCombined[filterTxUsage]))
    seCombinedFiltered <- seCombined[filterTxUsage]
    exonRangesCombinedFiltered <- exonRangesCombined[filterTxUsage]
 
@@ -570,7 +572,10 @@ intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilte
 
    extendedAnnotationRanges <- exonRangesCombinedFiltered
    mcols(extendedAnnotationRanges) <- mcols(seCombinedFiltered)[,c('GENEID','newTxClass')]
-   mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx', prefix,'.', 1:length(extendedAnnotationRanges))
+   if(length(extendedAnnotationRanges)>0){
+     mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx', prefix,'.', 1:length(extendedAnnotationRanges))
+   }
+
    names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
 
    annotationRangesToMerge <- annotationGrangesList
@@ -580,7 +585,7 @@ intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilte
    extendedAnnotationRanges<- c(extendedAnnotationRanges, annotationRangesToMerge)
    minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges)
    mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass[match(names(extendedAnnotationRanges),minEqClasses$queryTxId)]
-   mcols(annotationRangesToMerge) <- mcols(annotationRangesToMerge)[,c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
+   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
 
    return(extendedAnnotationRanges)
   } else {
