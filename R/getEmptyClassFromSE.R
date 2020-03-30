@@ -1,10 +1,13 @@
-
-
 getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL){
   distTable <- data.table(metadata(se)$distTable)[,.(readClassId, annotationTxId, readCount, GENEID)]
   distTable[, eqClass:=paste(sort(unique(annotationTxId)),collapse='.'), by = list(readClassId,GENEID)]
-  distTable[,eqClassReadCount:=sum(readCount), by = list(eqClass, GENEID)]
-  eqClassCountTable <- unique(distTable[,.(annotationTxId, GENEID, eqClass, eqClassReadCount)])
+
+  rcTable <- unique(distTable[,.(readClassId, GENEID, eqClass, readCount)])
+  rcTable[,eqClassReadCount:=sum(readCount), by = list(eqClass, GENEID)]
+  rcTable <- unique(rcTable[,.(eqClass,eqClassReadCount, GENEID)])
+
+  eqClassCountTable <- unique(distTable[,.(annotationTxId, GENEID, eqClass)][rcTable, on = c("GENEID","eqClass")])
+
   #eqClassCountTable[,list(readCount=sum(readCount)), by = list(eqClass, GENEID)]
   setnames(eqClassCountTable, c("annotationTxId"),c("TXNAME"))
   eqClassTable <- as.data.table(mcols(annotationGrangesList)[,c('GENEID','eqClass','TXNAME')])
