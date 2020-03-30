@@ -39,15 +39,9 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   }
 
   ## check quantification parameters
-  default.algo.control <- list(ncore = parallel::detectCores(),
-                               method = "two-step",
-<<<<<<< HEAD
-                               bias_correction = TRUE,
-                               maxiter = 10000,
-=======
+  default.algo.control <- list(ncore = 1,#parallel::detectCores(),
                                bias_correction = FALSE,
-                               maxiter = 20000,
->>>>>>> d9fa7b46a6916a94c7d8efb1367387956a279ccb
+                               maxiter = 10000,
                                convcontrol = 10^(-4))
 
   if(is.null(algo.control)){
@@ -55,13 +49,8 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   }else{
     if(is.null(algo.control[["ncore"]])){
       algo.control[["ncore"]] <- default.algo.control[["ncore"]]
-    }else if(as.numeric(algo.control[["ncore"]])>default.algo.control[["ncore"]]){
+    }else if(as.numeric(algo.control[["ncore"]])>parallel::detectCores()){
       algo.control[["ncore"]] <- default.algo.control[["ncore"]]
-    }
-    if(is.null(algo.control[["method"]])){
-      algo.control[["method"]] <- default.algo.control[["method"]]
-    }else if(!(algo.control[["method"]] %in% c("one-step","two-step"))){
-      algo.control[["method"]] <- default.algo.control[["method"]]
     }
     if(is.null(algo.control[["bias_correction"]])){
       algo.control[["bias_correction"]] <- default.algo.control[["bias_correction"]]
@@ -93,7 +82,6 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   start.time <- proc.time()
   outList <- abundance_quantification(dt,
                                       mc.cores = algo.control[["ncore"]],
-                                      method = algo.control[["method"]],
                                       bias_correction = algo.control[["bias_correction"]],
                                       maxiter = algo.control[["maxiter"]],
                                       conv.control = algo.control[["convcontrol"]])
@@ -105,20 +93,12 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   theta_est[, `:=`(tx_name = txVec[as.numeric(tx_sid)],
                    gene_name = geneVec[gene_sid] )]
   theta_est[,`:=`(tx_sid=NULL, gene_sid=NULL)]
-
+  theta_est <- theta_est[,.(tx_name, estimates)]
+  theta_est[,`:=`(CPM = estimates/sum(estimates)*(10^6))]
 
   b_est <- outList[[2]]
   b_est[, `:=`(gene_name = geneVec[gene_sid], eqClass = eqClassVec[as.numeric(read_class_sid)])]
   b_est[, `:=`(gene_sid = NULL,read_class_sid=NULL)]
-
-
-
-
-  theta_est <- theta_est[,.(tx_name, estimates)]
-  theta_est[,`:=`(CPM = estimates/sum(estimates)*(10^6))]
-
-
-
 
   est.list <- list(counts = theta_est, metadata = b_est)
   return(est.list)
@@ -128,17 +108,19 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
 
 
 
-bamboo.quantSE <- function(se, annotationGrangesList, algo.control = NULL){
+bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
   dt <- getEmptyClassFromSE(se, annotationGrangesList)
 
-  ## To do:
-  ## task1: optional: to implement filtering function
-  ## task2: to implement for multiple samples, when multiple samples are provided, run txdbtableslist for one time
   est <- bamboo.quantDT(dt,algo.control = algo.control)
+
   counts <- est$counts
   ColNames <- colnames(se)
-  counts <- merge(counts,data.table(tx_name = names(annotationGrangesList)), all = TRUE,  on = 'tx_name')
+  if(length(setdiff(counts$tx_name,names(annotationGrangesList)))>0){
+    stop("The provided annotation is incomplete!")
+  }
+  counts <- counts[data.table(tx_name = names(annotationGrangesList)),  on = 'tx_name']
+
   counts[is.na(estimates),`:=`(estimates = 0, CPM = 0) ]
   counts <- setDF(counts)
   seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(estimates = matrix(counts$estimates,ncol = length(ColNames), dimnames = list(counts$tx_name, ColNames)),
@@ -146,6 +128,7 @@ bamboo.quantSE <- function(se, annotationGrangesList, algo.control = NULL){
                                    rowRanges = annotationGrangesList[counts$tx_name],
                                    colData = colData(se),
                                    metadata = est$metadata) # transcript annotation with read class information
+
   return(seOutput)
 }
 
@@ -284,7 +267,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
                                                             annotationGrangesList=annotationGrangesList,
                                                             remove.subsetTx = ir.control[['remove.subsetTx']],
                                                             min.readCount = ir.control[['min.readCount']],
-                                                            min.readFractionByGene = ir.control[['min.sampleNumber']],
+                                                            min.readFractionByGene = ir.control[['min.readFractionByGene']],
                                                             min.sampleNumber = ir.control[['min.sampleNumber']],
                                                             min.exonDistance = ir.control[['min.exonDistance']],
                                                             min.exonOverlap = ir.control[['min.exonOverlap']],
@@ -329,8 +312,6 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
                                                             prefix = ir.control[['prefix']])
 
     for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
-
-
       seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = extendedAnnotationGRangesList, algo.control = algo.control)
       if(bam.file.index==1){
