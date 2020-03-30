@@ -185,7 +185,7 @@ isore.constructReadClasses <- function(readGrgList,
   colDataDf <- DataFrame(name=runName, row.names=runName)
   mcols(exonsByReadClass) <- dplyr::select(readClassTable, chr.rc = chr, strand.rc=strand, intronStarts, intronEnds, confidenceType)
   # readTable is currently not returned
-  se <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts),
+  se <- SummarizedExperiment(assays=SimpleList(counts=counts),
                                                    rowRanges = exonsByReadClass,
                                                    colData = colDataDf)
 
@@ -206,7 +206,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, 
     rowData$end <- rowMaxs(end)
     rowData <- rowData %>% dplyr::select(chr=chr.rc, start, end, strand=strand.rc, intronStarts, intronEnds, confidenceType)
 
-    readClassSeRef <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts, start=start, end=end),
+    readClassSeRef <- SummarizedExperiment(assays=SimpleList(counts=counts, start=start, end=end),
                                                                  rowData = rowData,
                                                                  colData = colData(readClassSe))
 
@@ -254,7 +254,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, 
   rowData.spliced <- select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds) %>%
                       mutate(confidenceType='highConfidenceJunctionReads')
 
-  se.spliced <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts.spliced, start=start.spliced, end=end.spliced),
+  se.spliced <- SummarizedExperiment(assays=SimpleList(counts=counts.spliced, start=start.spliced, end=end.spliced),
                                                                rowData = rowData.spliced,
                                                                colData = colDataCombined)
 
@@ -347,7 +347,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, 
                         mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
 
 
-  se.unspliced <- SummarizedExperiment::SummarizedExperiment(assays=SimpleList(counts=counts.unspliced, start=start.unspliced, end=end.unspliced),
+  se.unspliced <- SummarizedExperiment(assays=SimpleList(counts=counts.unspliced, start=start.unspliced, end=end.unspliced),
                                                                rowData = rowData.unspliced,
                                                                colData = colDataCombined)
 
