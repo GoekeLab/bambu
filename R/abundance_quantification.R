@@ -12,7 +12,6 @@
 #' abundance_quantification(example_data[[4]])
 #' }
 abundance_quantification <- function(read_classDT,mc.cores = 1,
-                                     method = 'two-step',
                                      bias_correction = TRUE,
                                      maxiter = 20000,
                                      conv.control = 10^(-8)){
@@ -24,31 +23,40 @@ abundance_quantification <- function(read_classDT,mc.cores = 1,
     format = "  Genes [:bar] :percent in :elapsed",
     total = n_chunk, clear = FALSE, width= 60)
   pb$tick(0)
+
   outData <- lapply(as.list(1:n_chunk), function(i){
     gene_sid_chunk <- gene_sidList[splitIndex[[i]]]
-    #print(i)
-    outData <- parallel::mclapply(gene_sid_chunk,run_parallel,method = method, conv.control = conv.control, bias_correction = bias_correction, maxiter = maxiter, read_classDT = read_classDT,
-                        mc.cores = mc.cores, mc.preschedule = TRUE)
-    outDataList <- list(do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[1]])),
-                        do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[2]])))
+    outData <- parallel::mclapply(gene_sid_chunk,run_parallel,
+                                  conv.control = conv.control,
+                                  bias_correction = bias_correction,
+                                  maxiter = maxiter, read_classDT = read_classDT,
+                                  mc.set.seed = TRUE,mc.preschedule = TRUE,
+                                  mc.silent = FALSE, mc.cores = mc.cores)
+
+    outData <- list(do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[1]])),
+                    do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[2]])))
     pb$tick()
-    return(outDataList)
+    return(outData)
   })
+
   estimates <- list(do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[1]])),
                     do.call('rbind',lapply(1:length(outData), function(x) outData[[x]][[2]])))
 
   return(estimates)
 }
 
-run_parallel <- function(g,method,conv.control,bias_correction,maxiter, read_classDT){
-  print(g)
+run_parallel <- function(g,conv.control,bias_correction,maxiter, read_classDT){
   tmp <- read_classDT[gene_sid==g]
-  if((nrow(tmp)==1)|(sum(tmp$nobs)==0)){
+  if((nrow(tmp)==1)){
     outData <- list(data.table(tx_sid = tmp$tx_sid,
                                estimates = tmp$nobs,
                                gene_sid = tmp$gene_sid,
-                               ntotal = tmp$nobs),
-                    NULL)
+                               ntotal = sum(tmp$nobs)),
+                    data.table(read_class_sid = tmp$read_class_sid,
+                               estimates = 0,
+                               n = tmp$nobs,
+                               gene_sid = g,
+                               ntotal = sum(tmp$nobs)))
   }else{
     tmp_wide <- dcast(tmp[order(nobs)], tx_sid~read_class_sid, fun.agg = length,
                       value.var = 'nobs')
@@ -62,38 +70,19 @@ run_parallel <- function(g,method,conv.control,bias_correction,maxiter, read_cla
 
     ## using the Jiang and Salzman suggested value
     lambda <- sqrt(max(n.obs))#,25)
-
-    ## two - step approach
-    ##===========================
-    ## Step 1 estimate with L1 penalty
-    ## EM with L1
     est_output <- emWithL1(X = as.matrix(a_mat),
                           Y = n.obs,
                           lambda = lambda,
                           d = bias_correction,
                           maxiter = maxiter,
                           conv = conv.control)
-
-
-    ##===========================
-    ## Step 2 estimate without L1 penalty
-    ## EM without L1
-    # if(method == 'two-step'){
-    #
-    #   est_output <-emWithoutL1(X = as.matrix(a_mat),
-    #                            Y = n.obs,
-    #                            nzindex = est_output[["nzindex"]],#rep(0.5,ncol(a_mat)),#
-    #                            lambda = lambda,
-    #                            conv = conv.control)
-    #
-    # }
     t_est <- as.numeric(t(est_output[["theta"]]))
+
     if(bias_correction){
       b_est <- as.numeric(t(est_output[["b"]]))
     }else{
-      b_est <- rep(NA,ncol(a_mat))
+      b_est <- rep(0,ncol(a_mat))
     }
-
     nobs <- sum(n.obs)
     outData <- list(data.table(tx_sid = rownames(a_mat),
                                estimates = t_est,
@@ -101,6 +90,7 @@ run_parallel <- function(g,method,conv.control,bias_correction,maxiter, read_cla
                                ntotal = nobs),
                     data.table(read_class_sid = colnames(a_mat),
                                estimates = b_est,
+                               n = n.obs,
                                gene_sid = g,
                                ntotal = nobs))
   }
