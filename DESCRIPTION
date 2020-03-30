@@ -5,7 +5,7 @@ Version: 0.1.0
 Author: c(person("Jonathan", "Developer", role = c("aut", "cre"),
                      email = ""),
               person("Ying Chen", "Developer", role = "aut"))
-Maintainer: Ying Chen <yourself@somewhere.net>
+Maintainer: Ying Chen <chen_ying@gis.a-star.edu.sg>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: GPL-3
@@ -15,6 +15,7 @@ Depends:
    R(>= 3.2.0),
    data.table(>= 1.1.8),
    dplyr,
+   SummarizedExperiment(>= 1.1.6),
    GenomicRanges
 Suggests: 
     knitr,
@@ -51,7 +52,6 @@ Imports:
     GenomicAlignments,
     glmnet,
     Rsamtools,
-    SummarizedExperiment(>= 1.1.6),
     parallel,
     Rcpp,
     RcppArmadillo,
