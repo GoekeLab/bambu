@@ -60,14 +60,8 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
                                     extendAnnotations = extendAnnotations))
     }else{
       #===# Check genome.fa file  #===#
-      if(is.null(fa.file)){
-        stop("GenomeFA file is missing.")
-      }else if(class(fa.file) != 'FaFile'){
-        if(!grepl('.fa',fa.file)){
-          stop("GenomeFA file is missing.")
-        }else{
-          fa.file <- Rsamtools::FaFile(fa.file)
-        }
+      if(is.null(genomeSequence)){
+        stop("genomeSequence is missing, please provde fasta file or BSgenome name")
       }
 
 
@@ -297,7 +291,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
                                                             annotationGrangesList=annotationGrangesList,
                                                             remove.subsetTx = ir.control[['remove.subsetTx']],
                                                             min.readCount = ir.control[['min.readCount']],
-                                                            min.readFractionByGene = ir.control[['min.sampleNumber']],
+                                                            min.readFractionByGene = ir.control[['min.readFractionByGene']],
                                                             min.sampleNumber = ir.control[['min.sampleNumber']],
                                                             min.exonDistance = ir.control[['min.exonDistance']],
                                                             min.exonOverlap = ir.control[['min.exonOverlap']],
@@ -320,7 +314,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
   return(seOutput)
 }
 
-bamboo.preprocess <- function(bam.file = bam.file,annotationGrangesList, fa.file=NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL){
+bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
