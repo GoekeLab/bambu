@@ -79,7 +79,7 @@
 # }
 
 prepareAnnotations <- function(txdb) {
-  exonsByTx  = exonsBy(txdb,by='tx', use.names=TRUE)
+  exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
   unlistedExons <- unlist(exonsByTx, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)), names=NULL)
   txIdForReorder <- togroup(PartitioningByWidth(exonsByTx))
