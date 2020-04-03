@@ -1,4 +1,4 @@
-bamboo <- function(bam.file = NULL, se = NULL, dt = NULL, txdb = NULL, annotationGrangesList = NULL, fa.file = NULL, algo.control = NULL, ir.control = NULL, extendAnnotations = FALSE){
+bamboo <- function(bam.file = NULL, se = NULL, dt = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, ir.control = NULL, extendAnnotations = FALSE){
 
   if(!is.null(dt)){
     return(bamboo.quantDT(dt = dt,algo.control = algo.control))
@@ -22,7 +22,7 @@ bamboo <- function(bam.file = NULL, se = NULL, dt = NULL, txdb = NULL, annotatio
     if(!is.null(bam.file)){
       return(bamboo.quantISORE(bam.file = bam.file,
                                algo.control = algo.control,
-                               fa.file = fa.file,
+                               genomeSequence = genomeSequence,
                                annotationGrangesList = annotationGrangesList,
                                ir.control = ir.control,
                                extendAnnotations = extendAnnotations))
@@ -134,23 +134,8 @@ bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
 
 
-bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file=NULL, algo.control = NULL,  ir.control = NULL, yieldSize = NULL, quickMode = FALSE, extendAnnotations=FALSE, outputReadClassToFolder = NULL){
+bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL, yieldSize = NULL, quickMode = FALSE, extendAnnotations=FALSE, outputReadClassToFolder = NULL){
 
-  if(is.null(fa.file)){
-    stop("GenomeFA file is missing.")
-  }else if(class(fa.file) != 'FaFile'){
-    if(!grepl('.fa',fa.file)){
-      stop("GenomeFA file is missing.")
-    }else{
-      fa.file <- Rsamtools::FaFile(fa.file)
-    }
-  }
-
-  if(!is.null(outputReadClassToFolder)) {
-    if(!dir.exists(outputReadClassToFolder)) {
-      stop("output folder does not exist")
-    }
-  }
 
 
   ir.control.default <- list(stranded = FALSE,
@@ -213,11 +198,11 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
   if(extendAnnotations==FALSE) {
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
-      readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
+      readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]])
       se  <- isore.constructReadClasses(readGrgList = readGrgList,
                                         runName =bam.file.basenames[bam.file.index],
                                         annotationGrangesList = annotationGrangesList,
-                                        genomeFA = fa.file,
+                                        genomeSequence = genomeSequence,
                                         stranded = ir.control[['stranded']],
                                         quickMode= quickMode)
       end.time <- proc.time()
@@ -243,11 +228,11 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
     combinedTxCandidates <- NULL
     for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
       start.time <- proc.time()
-      readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
+      readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]])
       se <- isore.constructReadClasses(readGrgList = readGrgList,
                                        runName = bam.file.basenames[bam.file.index],
                                        annotationGrangesList = annotationGrangesList,
-                                       genomeFA = fa.file,
+                                       genomeSequence = genomeSequence,
                                        stranded = ir.control[['stranded']],
                                        quickMode = quickMode)
       end.time <- proc.time()
@@ -289,11 +274,11 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
     combinedTxCandidates = NULL
     for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
       start.time <- proc.time()
-      readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
+      readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]])
       seList[[bam.file.index]]  <- isore.constructReadClasses(readGrgList = readGrgList,
                                                               runName = bam.file.basenames[bam.file.index],
                                                               annotationGrangesList = annotationGrangesList,
-                                                              genomeFA = fa.file,
+                                                              genomeSequence = genomeSequence,
                                                               stranded = ir.control[['stranded']],
                                                               quickMode= quickMode)
       end.time <- proc.time()
