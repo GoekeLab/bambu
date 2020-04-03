@@ -39,37 +39,13 @@
 #'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
 #'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = FaFile(fa.file))
 #'  }
-
-
-isore.preprocessBam <- function(bamFile, yieldSize = NULL){
-
-  cat('### load data ### \n')
-  start.ptm <- proc.time()
-  ## create BamFile object from character ##
-  if(class(bamFile)=='BamFile') {
-    if(!is.null(yieldSize)) {
-      yieldSize(bamFile) <- yieldSize
-    } else {
-      yieldSize <- Rsamtools::yieldSize(bamFile)
-    }
-  }else if(!grepl('.bam',bamFile)){
-    stop("Bam file is missing from arguments.")
-  }else{
-    if(is.null(yieldSize)) {
-      yieldSize <- NA
-    }
-
-  }
-
-  readData <- prepareDataFromBam(bamFile)
-  end.ptm <- proc.time()
-  cat(paste0('Finished loading data in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
-  return(readData)
-}
+#
+#
 
 isore.constructReadClasses <- function(readGrgList,
                                        runName='sample1',
                                        annotationGrangesList, ## has to be provided (function should be called through bamboo, so is optional through that main function)
+                                       genomeSequence=NULL,
                                        genomeDB=NULL, ## is required to avoid providing a fasta file with genome sequence, helpful for most users
                                        genomeFA=NULL, ## genome FA file, should be in .fa format
                                        stranded=FALSE,
@@ -83,7 +59,17 @@ isore.constructReadClasses <- function(readGrgList,
   unlisted_junctions <- unlist(myGaps(readGrgList))
   cat('### create junction list with splice motif ### \n')
   start.ptm <- proc.time()
-  uniqueJunctions <- createJunctionTable(unlisted_junctions, genomeDB = genomeDB, genomeFA=genomeFA)
+  uniqueJunctions <- createJunctionTable(unlisted_junctions,genomeSequence=genomeSequence, genomeDB = genomeDB, genomeFA=genomeFA)
+
+  if(!all(seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions))) {
+    warning("not all chromosomes present in reference, ranges are dropped")
+    unlisted_junctions <- keepSeqlevels(unlisted_junctions,
+                                        value = seqlevels(unlisted_junctions)[seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions)],
+                                        pruning.mode = 'coarse')
+    readGrgList <- keepSeqlevels(readGrgList,
+                                 value = seqlevels(readGrgList)[seqlevels(readGrgList) %in% seqlevels(uniqueJunctions)],
+                                 pruning.mode = 'coarse')
+  }
   end.ptm <- proc.time()
   cat(paste0('Finished creating junction list with splice motif in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
