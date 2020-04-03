@@ -7,6 +7,7 @@
 myGaps <- function(x, start=NA, end=NA)
 {
   # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
+  # License	Artistic-2.0
   # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
   if (!.isNumericOrNAs(start))
     stop("'start' must be an integer vector or NA")
@@ -162,14 +163,6 @@ spliceStrand <- function(motif){
 }
 
 
-#'@title EVALANNOTATIONOVERLAP
-#'@param intronRanges
-#'@param intronsByTx
-#'@param ignore.strand
-evalAnnotationOverlap <- function(intronRanges, intronsByTx, ignore.strand=FALSE)
-{
-  return(table(!is.na(GenomicRanges::match(intronRanges, unique(unlist(intronsByTx)),ignore.strand=ignore.strand))))
-}
 #'@title TRIMFIRSTLASTEXONS
 #'@description function returns exon granges list where the first and last exons are trimmed to width 2, all introns are preserved, requires exon_rank and exon_endRank
 #'@param grangesListWithExonRanks
