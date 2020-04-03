@@ -1,9 +1,6 @@
-bamboo <- function(bam.file = NULL, se = NULL, dt = NULL, txdb = NULL, annotationGrangesList = NULL, fa.file = NULL, algo.control = NULL, ir.control = NULL, extendAnnotations = FALSE){
+bamboo <- function(bam.file = NULL, se = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, fa.file = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE){
 
-  if(!is.null(dt)){
-    return(bamboo.quantDT(dt = dt,algo.control = algo.control))
-  }
-
+  #===# Check annotation inputs #===#
   if(is.null(annotationGrangesList)){
     if(!is.null(txdb)) # txdb object by reading txdb file
     {
@@ -16,19 +13,111 @@ bamboo <- function(bam.file = NULL, se = NULL, dt = NULL, txdb = NULL, annotatio
     }
   }
 
+  ## When SE object from bamboo.quantISORE is provided ##
     if(!is.null(se)){
       return(bamboo.quantSE(se = se, annotationGrangesList = annotationGrangesList, algo.control = algo.control))
-          }
-    if(!is.null(bam.file)){
-      return(bamboo.quantISORE(bam.file = bam.file,
-                               algo.control = algo.control,
-                               fa.file = fa.file,
-                               annotationGrangesList = annotationGrangesList,
-                               ir.control = ir.control,
-                               extendAnnotations = extendAnnotations))
     }
 
-  stop("At least bam.file or summarizedExperiment output from isore need to be provided.")
+    if(!is.null(bam.file) | (!is.null(outputReadClassDir))){
+      #===# set default controlling parameters for isoform reconstruction  #===#
+      ir.control.default <- list(stranded = FALSE,
+                                 prefix = '',
+                                 remove.subsetTx = TRUE, # filter to remove read classes which are a subset of known transcripts.
+                                 min.readCount = 2,  # minimun read count to consider a read class valid in a sample
+                                 min.readFractionByGene = 0.05,  ## minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered
+                                 min.sampleNumber = 1,  # minimum sample number with minimum read count
+                                 min.exonDistance = 35,  # minum distance to known transcript to be considered valid as new
+                                 min.exonOverlap = 10, # minimum number of bases shared with annotation to be assigned to the same gene id
+                                 prefix='')  ## prefix for new gene Ids (genePrefix.number)
+      if(!is.null(ir.control)){
+        for(i in names(ir.control)) {
+          ir.control.default[[i]] <- ir.control[[i]]
+        }
+      }
+      ir.control <- ir.control.default
+
+      #===# Check whether outputReadClassDir is provided  #===#
+      if(!is.null(outputReadClassDir)) {
+        if(!dir.exists(outputReadClassDir)) {
+          stop("output folder does not exist")
+        }
+      }
+
+      ## When only directory to readClass SE are provided
+      if(is.null(bam.file)){
+        return(bamboo.combineQuantify(outputReadClassDir = outputReadClassDir,
+                                      annotationGRangesList = annotationGRangesList,
+                                      min.exonDistance = ir.control[["min.exonDistance"]],
+                                      algo.control = algo.control,
+                                      extendAnnotations = extendAnnotations))
+      }else{
+        #===# Check genome.fa file  #===#
+        if(is.null(fa.file)){
+          stop("GenomeFA file is missing.")
+        }else if(class(fa.file) != 'FaFile'){
+          if(!grepl('.fa',fa.file)){
+            stop("GenomeFA file is missing.")
+          }else{
+            fa.file <- Rsamtools::FaFile(fa.file)
+          }
+        }
+
+
+
+        #===# create BamFileList object from character #===#
+        if(class(bam.file)=='BamFile') {
+          if(!is.null(yieldSize)) {
+            yieldSize(bam.file) <- yieldSize
+          } else {
+            yieldSize <- yieldSize(bam.file)
+          }
+          bam.file <- Rsamtools::BamFileList(bam.file)
+        }else if(class(bam.file)=='BamFileList') {
+          if(!is.null(yieldSize)) {
+            yieldSize(bam.file) <- yieldSize
+          } else {
+            yieldSize <- min(yieldSize(bam.file))
+          }
+        }else if(any(!grepl('\\.bam$',bam.file))){
+          stop("Bam file is missing from arguments.")
+        }else{
+          if(is.null(yieldSize)) {
+            yieldSize <- NA
+          }
+          bam.file <- Rsamtools::BamFileList(bam.file, yieldSize = yieldSize)
+        }
+
+        #===# When there are a lot number of samples, nSample > 10
+        if(length(bam.file)>10 &(is.null(outputReadClassDir))){
+          outputReadClassDir <- paste0(getwd(),"/tmpReadClassFolder")
+          tempfile(pattern = paste0(bam.file.basenames,"_readClassFolder"),
+                   tmpdir =  outputReadClassDir,
+                   fileext = ".rds")
+        }
+
+
+        ## When bam.file and are provided ##
+        if(is.null(outputReadClassDir)){
+          return(bamboo.quantISORE(bam.file = bam.file,
+                                   algo.control = algo.control,
+                                   fa.file = fa.file,
+                                   annotationGrangesList = annotationGrangesList,
+                                   ir.control = ir.control,
+                                   extendAnnotations = extendAnnotations))
+        }else{
+          return(bamboo.preprocess(bam.file = bam.file,
+                                   algo.control = algo.control,
+                                   fa.file = fa.file,
+                                   annotationGrangesList = annotationGrangesList,
+                                   ir.control = ir.control,
+                                   extendAnnotations = extendAnnotations,
+                                   outputReadClassDir = outputReadClassDir))
+        }
+      }
+
+    }
+
+  stop("At least bam.file, summarizedExperiment output from isore, or directory to saved readClass objects need to be provided.")
 }
 
 bamboo.quantDT <- function(dt = dt,algo.control = NULL){
@@ -134,83 +223,10 @@ bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
 
 
-bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file=NULL, algo.control = NULL,  ir.control = NULL, yieldSize = NULL, quickMode = FALSE, extendAnnotations=FALSE, outputReadClassToFolder = NULL){
-
-  if(is.null(fa.file)){
-    stop("GenomeFA file is missing.")
-  }else if(class(fa.file) != 'FaFile'){
-    if(!grepl('.fa',fa.file)){
-      stop("GenomeFA file is missing.")
-    }else{
-      fa.file <- Rsamtools::FaFile(fa.file)
-    }
-  }
-
-  if(!is.null(outputReadClassToFolder)) {
-    if(!dir.exists(outputReadClassToFolder)) {
-      stop("output folder does not exist")
-    }
-  }
-
-
-  ir.control.default <- list(stranded = FALSE,
-                             prefix = '',
-                             remove.subsetTx = TRUE, # filter to remove read classes which are a subset of known transcripts.
-                             min.readCount = 2,  # minimun read count to consider a read class valid in a sample
-                             min.readFractionByGene = 0.05,  ## minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered
-                             min.sampleNumber = 1,  # minimum sample number with minimum read count
-                             min.exonDistance = 35,  # minum distance to known transcript to be considered valid as new
-                             min.exonOverlap = 10, # minimum number of bases shared with annotation to be assigned to the same gene id
-                             prefix='')  ## prefix for new gene Ids (genePrefix.number)
-  if(!is.null(ir.control)){
-    for(i in names(ir.control)) {
-      ir.control.default[[i]] <- ir.control[[i]]
-    }
-  }
-  ir.control <- ir.control.default
-#
-#
-#   }else{
-#     if(is.null(ir.control[['stranded']])){
-#       ir.control[['stranded']] <- FALSE
-#     }
-#     if(is.null(ir.control[['prefix']])){
-#       ir.control[['prefix']] <- ''
-#     }
-#     if(is.null(ir.control[['remove.subsetTx']])){
-#       ir.control[['remove.subsetTx']] <- TRUE
-#     }
-#     if(ir.control[['minimumTxFraction']]){
-#       ir.control[['minimumTxFraction']] <- 0.02
-#     }
-#   }
-
-  ## create BamFileList object from character ##
-  if(class(bam.file)=='BamFile') {
-    if(!is.null(yieldSize)) {
-      yieldSize(bam.file) <- yieldSize
-    } else {
-      yieldSize <- yieldSize(bam.file)
-    }
-    bam.file <- Rsamtools::BamFileList(bam.file)
-  }else if(class(bam.file)=='BamFileList') {
-    if(!is.null(yieldSize)) {
-      yieldSize(bam.file) <- yieldSize
-    } else {
-      yieldSize <- min(yieldSize(bam.file))
-    }
-  }else if(any(!grepl('\\.bam$',bam.file))){
-    stop("Bam file is missing from arguments.")
-  }else{
-    if(is.null(yieldSize)) {
-      yieldSize <- NA
-    }
-    bam.file <- Rsamtools::BamFileList(bam.file, yieldSize = yieldSize)
-  }
-
+bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file=NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL){
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
-  if(extendAnnotations==FALSE) {
+  if(extendAnnotations==FALSE){
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
       readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
@@ -220,70 +236,30 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
                                         genomeFA = fa.file,
                                         stranded = ir.control[['stranded']],
                                         quickMode= quickMode)
+      rm(readGrgList)
+      gc()
       end.time <- proc.time()
       cat(paste0('Finished build read classes models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
-      start.time <- proc.time()
 
+      start.time <- proc.time()
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      rm(se)
+      gc()
       end.time <- proc.time()
       cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
-      start.time <- proc.time()
 
+      start.time <- proc.time()
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = annotationGrangesList, algo.control = algo.control)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
+      rm(list=c("se.quant","seWithDist"))
+      gc()
       end.time <- proc.time()
       cat(paste0('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
     }
-  }else if (!is.null(outputReadClassToFolder)){  # if data is written to output directory
-    readClassFiles <- fs::path(outputReadClassToFolder,paste0(bam.file.basenames,'_readClassSe'), ext='rds')
-    combinedTxCandidates <- NULL
-    for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
-      start.time <- proc.time()
-      readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
-      se <- isore.constructReadClasses(readGrgList = readGrgList,
-                                       runName = bam.file.basenames[bam.file.index],
-                                       annotationGrangesList = annotationGrangesList,
-                                       genomeFA = fa.file,
-                                       stranded = ir.control[['stranded']],
-                                       quickMode = quickMode)
-      end.time <- proc.time()
-      rm(readGrgList)
-      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
-      #readClassFile <-  fs::path(outputReadClassToFolder,paste0(bam.file.basenames[bam.file.index], '_readClassSe'), ext = 'rds')
-      if(file.exists(readClassFiles[bam.file.index])){
-        warning(paste(readClassFiles[bam.file.index], 'exists, will be overwritten'))
-      }
-      saveRDS(se, file=readClassFiles[bam.file.index])
-      combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates)
-      rm(se)
-      gc()
-    }
-
-    extendedAnnotationGRangesList = isore.extendAnnotations(se=combinedTxCandidates,
-                                                            annotationGrangesList=annotationGrangesList,
-                                                            remove.subsetTx = ir.control[['remove.subsetTx']],
-                                                            min.readCount = ir.control[['min.readCount']],
-                                                            min.readFractionByGene = ir.control[['min.readFractionByGene']],
-                                                            min.sampleNumber = ir.control[['min.sampleNumber']],
-                                                            min.exonDistance = ir.control[['min.exonDistance']],
-                                                            min.exonOverlap = ir.control[['min.exonOverlap']],
-                                                            prefix = ir.control[['prefix']])
-
-    for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
-      se <- readRDS(file=readClassFiles[bam.file.index])
-      seWithDist <- isore.estimateDistanceToAnnotations(se, extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
-      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList=extendedAnnotationGRangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
-      if(bam.file.index==1){
-        seOutput <- se.quant  # create se object
-      }else {
-        seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
-      }
-    }
-
   }else { # if computation is done in memory in a single session
     seList = list()
     combinedTxCandidates = NULL
@@ -296,11 +272,13 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
                                                               genomeFA = fa.file,
                                                               stranded = ir.control[['stranded']],
                                                               quickMode= quickMode)
+      rm(readGrgList)
+      gc()
       end.time <- proc.time()
       cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
       combinedTxCandidates <- isore.combineTranscriptCandidates(seList[[bam.file.index]], readClassSeRef = combinedTxCandidates)
     }
-
+    start.time <- proc.time()
     extendedAnnotationGRangesList = isore.extendAnnotations(se=combinedTxCandidates,
                                                             annotationGrangesList=annotationGrangesList,
                                                             remove.subsetTx = ir.control[['remove.subsetTx']],
@@ -310,6 +288,10 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
                                                             min.exonDistance = ir.control[['min.exonDistance']],
                                                             min.exonOverlap = ir.control[['min.exonOverlap']],
                                                             prefix = ir.control[['prefix']])
+    rm(annotationGrangesList)
+    gc()
+    end.time <- proc.time()
+    cat(paste0('Finished extending annotations in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
     for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
       seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
@@ -319,6 +301,101 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, fa.file
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
+    }
+  }
+  return(seOutput)
+}
+
+bamboo.preprocess <- function(bam.file = bam.file,annotationGrangesList, fa.file=NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL){
+
+    bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
+    seOutput = NULL
+
+    readClassFiles <- fs::path(outputReadClassDir,paste0(bam.file.basenames,'_readClassSe'), ext='rds')
+    noprint <- lapply(seq_along(bam.file), function(bam.file.index){  # first loop to reconstruct read classes
+      start.time <- proc.time()
+      readGrgList <- isore.preprocessBam(bam.file[[bam.file.index]])
+      se <- isore.constructReadClasses(readGrgList = readGrgList,
+                                       runName = bam.file.basenames[bam.file.index],
+                                       annotationGrangesList = annotationGrangesList,
+                                       genomeFA = fa.file,
+                                       stranded = ir.control[['stranded']],
+                                       quickMode = quickMode)
+      rm(readGrgList)
+      gc()
+      end.time <- proc.time()
+      cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+      if(file.exists(readClassFiles[bam.file.index])){
+        warning(paste(readClassFiles[bam.file.index], 'exists, will be overwritten'))
+      }
+      saveRDS(se, file=readClassFiles[bam.file.index])
+      rm(se)
+      gc()
+    })
+    seOutput <- bamboo.combineQuantify(outputReadClassDir = outputReadClassDir,
+                                       annotationGRangesList = annotationGRangesList,
+                                       min.exonDistance = ir.control[["min.exonDistance"]],
+                                       algo.control = algo.control,
+                                       extendAnnotations = extendAnnotations)
+
+    return(seOutput)
+}
+
+#' Combine readClass objects and perform quantification
+bamboo.combineQuantify <- function(outputReadClassDir, annotationGRangesList, min.exonDistance, algo.control, extendAnnotations){
+  readClassFiles <- dir(outputReadClassDir, full.names = TRUE)
+  seOutput <- NULL
+  if(extendAnnotations==FALSE){
+  for(readClassFile.index in seq_along(readClassFiles)){  # second loop after adding new gene annotations
+    se <- readRDS(file=readClassFiles[readClassFile.index])
+    seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']])
+    se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
+    if(bam.file.index==1){
+      seOutput <- se.quant  # create se object
+    }else {
+      seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+    }
+  }
+  }else{
+    start.time <- proc.time()
+    combinedTxCandidates <- NULL
+    for(readClassFile.index in seq_along(readClassFiles)){  # second loop after adding new gene annotations
+      se <- readRDS(file=readClassFiles[readClassFile.index])
+      combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates)
+      rm(se)
+      gc()
+    }
+    end.time <- proc.time()
+    cat(paste0('Finished combining transcript candidates across samples in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+
+
+    start.time <- proc.time()
+    extendedAnnotationGRangesList = isore.extendAnnotations(se=combinedTxCandidates,
+                                                            annotationGrangesList=annotationGrangesList,
+                                                            remove.subsetTx = ir.control[['remove.subsetTx']],
+                                                            min.readCount = ir.control[['min.readCount']],
+                                                            min.readFractionByGene = ir.control[['min.readFractionByGene']],
+                                                            min.sampleNumber = ir.control[['min.sampleNumber']],
+                                                            min.exonDistance = ir.control[['min.exonDistance']],
+                                                            min.exonOverlap = ir.control[['min.exonOverlap']],
+                                                            prefix = ir.control[['prefix']])
+    rm(list = c("combinedTxCandidates","annotationGrangesList"))
+    gc()
+    end.time <- proc.time()
+    cat(paste0('Finished extending annotations in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+
+
+    for(readClassFile.index in seq_along(readClassFiles)){  # second loop after adding new gene annotations
+      se <- readRDS(file=readClassFiles[readClassFile.index])
+      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
+      if(bam.file.index==1){
+        seOutput <- se.quant  # create se object
+      }else {
+        seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+      }
+      rm(list = c("seWithDist","se.quant"))
+      gc()
     }
   }
   return(seOutput)
