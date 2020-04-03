@@ -1,4 +1,3 @@
-
 bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE){
 
 
@@ -16,6 +15,7 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
   }
 
   ## When SE object from bamboo.quantISORE is provided ##
+
   if(!is.null(se)){
     return(bamboo.quantSE(se = se, annotationGrangesList = annotationGrangesList, algo.control = algo.control))
   }
@@ -120,7 +120,6 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
 
 
   }
-
   stop("At least bam.file, summarizedExperiment output from isore, or directory to saved readClass objects need to be provided.")
 }
 
@@ -280,6 +279,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
                                                               stranded = ir.control[['stranded']],
                                                               quickMode= quickMode)
 
+
       rm(readGrgList)
       gc()
       end.time <- proc.time()
@@ -291,7 +291,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
                                                             annotationGrangesList=annotationGrangesList,
                                                             remove.subsetTx = ir.control[['remove.subsetTx']],
                                                             min.readCount = ir.control[['min.readCount']],
-                                                            min.readFractionByGene = ir.control[['min.readFractionByGene']],
+                                                            min.readFractionByGene = ir.control[['min.sampleNumber']],
                                                             min.sampleNumber = ir.control[['min.sampleNumber']],
                                                             min.exonDistance = ir.control[['min.exonDistance']],
                                                             min.exonOverlap = ir.control[['min.exonOverlap']],
@@ -313,6 +313,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
   }
   return(seOutput)
 }
+
 
 bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL){
 
@@ -377,6 +378,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGRangesList, ir.con
     }
     end.time <- proc.time()
     cat(paste0('Finished combining transcript candidates across samples in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+
 
 
     start.time <- proc.time()
