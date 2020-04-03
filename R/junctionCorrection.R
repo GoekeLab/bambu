@@ -230,7 +230,6 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     predictions = myResults[[1]]
   }
   else{
-
     predictions= predict(junctionModel[['spliceSitePredictionStart.start']],newx=modelmatrix,s='lambda.min')
   }
   spliceSitePredictionStart.start <- rep(NA, length(annotatedJunctionsStart))

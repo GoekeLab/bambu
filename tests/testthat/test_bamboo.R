@@ -78,9 +78,9 @@ test_that("bamboo.preprocess (isoform quantification of bam file and save readCl
   #example_quantOutput <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/example_quantOutput.rds")) ## ToDo: should be updated
 
   # test case 1: bamboo with single bam file, only using annotations (default option)
-  se = bamboo(bam.file = test.bam,  txdb = txdb, fa.file = fa.file, algo.control=list(ncore = 1), extendAnnotations=F, outputReadClassDir = outputReadClassDir )
-  se = bamboo(bam.file = test.bam,  annotationGrangesList =  gr, fa.file = fa.file, algo.control=list(ncore = 1), extendAnnotations=F, outputReadClassDir = outputReadClassDir)
-  se = bamboo(bam.file = test.bam,  annotationGrangesList =  gr, fa.file = fa.file, algo.control=list(ncore = 1), extendAnnotations=T, outputReadClassDir = outputReadClassDir)
+  se = bamboo(bam.file = test.bam,  txdb = txdb, genomeSequence = fa.file, algo.control=list(ncore = 1), extendAnnotations=F, outputReadClassDir = outputReadClassDir )
+  se = bamboo(bam.file = test.bam,  annotationGrangesList =  gr, genomeSequence = fa.file, algo.control=list(ncore = 1), extendAnnotations=F, outputReadClassDir = outputReadClassDir)
+  se = bamboo(bam.file = test.bam,  annotationGrangesList =  gr, genomeSequence = fa.file, algo.control=list(ncore = 1), extendAnnotations=T, outputReadClassDir = outputReadClassDir)
 
 
   expect_s4_class(se, "SummarizedExperiment")
@@ -88,12 +88,12 @@ test_that("bamboo.preprocess (isoform quantification of bam file and save readCl
   # expect_equal(se,se.isore)
 
   # test case 2: bamboo with multiple bam file, only using annotations (default option), yieldSize lower than read count
-  se = bamboo(bam.file = BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotationGrangesList =  gr, fa.file = fa.file, algo.control=list(ncore = 1), extendAnnotations=FALSE,outputReadClassDir = outputReadClassDir)
+  se = bamboo(bam.file = BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotationGrangesList =  gr, genomeSequence = fa.file, algo.control=list(ncore = 1), extendAnnotations=FALSE,outputReadClassDir = outputReadClassDir)
   expect_s4_class(se, "SummarizedExperiment")
   #  expect_equal(assays(se)[,1],assays(example_quantOutput))
 
   # test case 3: bamboo with multiple bam file, extending annotations, yieldSize lower than read count
-  se = bamboo(bam.file = BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotationGrangesList =  gr, fa.file = fa.file, algo.control=list(ncore = 1), extendAnnotations=TRUE, outputReadClassDir = outputReadClassDir)
+  se = bamboo(bam.file = BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotationGrangesList =  gr, genomeSequence = fa.file, algo.control=list(ncore = 1), extendAnnotations=TRUE, outputReadClassDir = outputReadClassDir)
   expect_s4_class(se, "SummarizedExperiment")
   # expect_equal(assays(se)[,1],assays(example_quantOutput))
 
