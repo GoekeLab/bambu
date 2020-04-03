@@ -59,8 +59,9 @@ isore.constructReadClasses <- function(readGrgList,
   unlisted_junctions <- unlist(myGaps(readGrgList))
   cat('### create junction list with splice motif ### \n')
   start.ptm <- proc.time()
-  uniqueJunctions <- createJunctionTable(unlisted_junctions,genomeSequence=genomeSequence, genomeDB = genomeDB, genomeFA=genomeFA)
+  uniqueJunctions <- createJunctionTable(unlisted_junctions,genomeSequence=genomeSequence)
 
+  #make sure that all seqlevels are consistent, and drop those that are not in uniqueJunctions (possible dropped when BSgenome is used)
   if(!all(seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions))) {
     warning("not all chromosomes present in reference, ranges are dropped")
     unlisted_junctions <- keepSeqlevels(unlisted_junctions,
@@ -104,7 +105,7 @@ isore.constructReadClasses <- function(readGrgList,
 
   cat('### build model to predict true splice sites ### \n')
   start.ptm <- proc.time()
-  if(sum(uniqueJunctions$annotatedJunction)>4500 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## note: these are thresholds that should be adjusted, or changed. Also can look into the code to find out what is the issue, probably number of training data per strand?
+  if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
     predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = NULL)
     uniqueJunctions=predictSpliceSites[[1]]
     junctionModel=predictSpliceSites[[2]]
@@ -112,7 +113,7 @@ isore.constructReadClasses <- function(readGrgList,
     junctionModel = standardJunctionModels_temp
     predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = junctionModel)
     uniqueJunctions=predictSpliceSites[[1]]
-    show('Warning: junction correction with not enough data, precalculated model is used')
+    warning('Junction correction with not enough data, precalculated model is used')
   }
   rm(predictSpliceSites)  # clean up should be done more efficiently
   gc()
@@ -131,6 +132,7 @@ isore.constructReadClasses <- function(readGrgList,
   rm(junctionModel)
   gc()
 
+  ################### HERE #####################
   cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
   readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readGrgList, mcols(readGrgList)$qname, quickMode = quickMode)  ## speed up this function ##
