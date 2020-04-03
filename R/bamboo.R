@@ -47,7 +47,7 @@ bamboo <- function(bam.file = NULL, se = NULL, outputReadClassDir = NULL, txdb =
       if(is.null(bam.file)){
         return(bamboo.combineQuantify(outputReadClassDir = outputReadClassDir,
                                       annotationGRangesList = annotationGRangesList,
-                                      min.exonDistance = ir.control[["min.exonDistance"]],
+                                      ir.control = ir.control,
                                       algo.control = algo.control,
                                       extendAnnotations = extendAnnotations))
       }else{
@@ -334,7 +334,7 @@ bamboo.preprocess <- function(bam.file = bam.file,annotationGrangesList, fa.file
     })
     seOutput <- bamboo.combineQuantify(outputReadClassDir = outputReadClassDir,
                                        annotationGRangesList = annotationGRangesList,
-                                       min.exonDistance = ir.control[["min.exonDistance"]],
+                                       ir.control = ir.control,
                                        algo.control = algo.control,
                                        extendAnnotations = extendAnnotations)
 
@@ -342,7 +342,7 @@ bamboo.preprocess <- function(bam.file = bam.file,annotationGrangesList, fa.file
 }
 
 #' Combine readClass objects and perform quantification
-bamboo.combineQuantify <- function(outputReadClassDir, annotationGRangesList, min.exonDistance, algo.control, extendAnnotations){
+bamboo.combineQuantify <- function(outputReadClassDir, annotationGRangesList, ir.control, algo.control, extendAnnotations){
   readClassFiles <- dir(outputReadClassDir, full.names = TRUE)
   seOutput <- NULL
   if(extendAnnotations==FALSE){
