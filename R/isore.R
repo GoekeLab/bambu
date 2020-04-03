@@ -54,7 +54,7 @@ isore.constructReadClasses <- function(readGrgList,
 
 
  ## todo: which preprocessed junction correction model to use?
-  standardJunctionModels_temp
+  #standardJunctionModels_temp
 
   unlisted_junctions <- unlist(myGaps(readGrgList))
   cat('### create junction list with splice motif ### \n')
@@ -105,6 +105,8 @@ isore.constructReadClasses <- function(readGrgList,
 
   cat('### build model to predict true splice sites ### \n')
   start.ptm <- proc.time()
+
+
   if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
     predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = NULL)
     uniqueJunctions=predictSpliceSites[[1]]
