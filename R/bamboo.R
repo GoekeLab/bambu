@@ -1,4 +1,4 @@
-bamboo <- function(bam.file = NULL, se = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, fa.file = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE){
+bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, fa.file = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE){
 
   #===# Check annotation inputs #===#
   if(is.null(annotationGrangesList)){
@@ -18,7 +18,7 @@ bamboo <- function(bam.file = NULL, se = NULL, outputReadClassDir = NULL, txdb =
       return(bamboo.quantSE(se = se, annotationGrangesList = annotationGrangesList, algo.control = algo.control))
     }
 
-    if(!is.null(bam.file) | (!is.null(outputReadClassDir))){
+    if(!is.null(bam.file) | (!is.null(readclass.file))){
       #===# set default controlling parameters for isoform reconstruction  #===#
       ir.control.default <- list(stranded = FALSE,
                                  prefix = '',
@@ -43,9 +43,15 @@ bamboo <- function(bam.file = NULL, se = NULL, outputReadClassDir = NULL, txdb =
         }
       }
 
+      if(!is.null(readclass.file)){
+        if(!all(grepl(".rds", readclass.file))){
+          stop("Read class files should be provided in rds format.")
+        }
+      }
+
       ## When only directory to readClass SE are provided
       if(is.null(bam.file)){
-        return(bamboo.combineQuantify(outputReadClassDir = outputReadClassDir,
+        return(bamboo.combineQuantify(readclass.file = readclass.file,
                                       annotationGRangesList = annotationGRangesList,
                                       ir.control = ir.control,
                                       algo.control = algo.control,
@@ -332,7 +338,7 @@ bamboo.preprocess <- function(bam.file = bam.file,annotationGrangesList, fa.file
       rm(se)
       gc()
     })
-    seOutput <- bamboo.combineQuantify(outputReadClassDir = outputReadClassDir,
+    seOutput <- bamboo.combineQuantify(readclass.file = readClassFiles,
                                        annotationGRangesList = annotationGRangesList,
                                        ir.control = ir.control,
                                        algo.control = algo.control,
@@ -342,12 +348,12 @@ bamboo.preprocess <- function(bam.file = bam.file,annotationGrangesList, fa.file
 }
 
 #' Combine readClass objects and perform quantification
-bamboo.combineQuantify <- function(outputReadClassDir, annotationGRangesList, ir.control, algo.control, extendAnnotations){
-  readClassFiles <- dir(outputReadClassDir, full.names = TRUE)
+bamboo.combineQuantify <- function(readclass.file, annotationGRangesList, ir.control, algo.control, extendAnnotations){
+
   seOutput <- NULL
   if(extendAnnotations==FALSE){
-  for(readClassFile.index in seq_along(readClassFiles)){  # second loop after adding new gene annotations
-    se <- readRDS(file=readClassFiles[readClassFile.index])
+  for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
+    se <- readRDS(file=readclass.file[readclass.file.index])
     seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']])
     se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
     if(bam.file.index==1){
@@ -359,8 +365,8 @@ bamboo.combineQuantify <- function(outputReadClassDir, annotationGRangesList, ir
   }else{
     start.time <- proc.time()
     combinedTxCandidates <- NULL
-    for(readClassFile.index in seq_along(readClassFiles)){  # second loop after adding new gene annotations
-      se <- readRDS(file=readClassFiles[readClassFile.index])
+    for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
+      se <- readRDS(file=readclass.file[readclass.file.index])
       combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates)
       rm(se)
       gc()
@@ -385,8 +391,8 @@ bamboo.combineQuantify <- function(outputReadClassDir, annotationGRangesList, ir
     cat(paste0('Finished extending annotations in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
 
-    for(readClassFile.index in seq_along(readClassFiles)){  # second loop after adding new gene annotations
-      se <- readRDS(file=readClassFiles[readClassFile.index])
+    for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
+      se <- readRDS(file=readclass.file[readclass.file.index])
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
       if(bam.file.index==1){
