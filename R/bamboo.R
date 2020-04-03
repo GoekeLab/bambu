@@ -54,7 +54,7 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
     ## When only directory to readClass SE are provided
     if(is.null(bam.file)){
       return(bamboo.combineQuantify(readclass.file = readclass.file,
-                                    annotationGRangesList = annotationGRangesList,
+                                    annotationGrangesList = annotationGrangesList,
                                     ir.control = ir.control,
                                     algo.control = algo.control,
                                     extendAnnotations = extendAnnotations))
@@ -343,8 +343,9 @@ bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genome
     rm(se)
     gc()
   })
+
   seOutput <- bamboo.combineQuantify(readclass.file = readClassFiles,
-                                     annotationGRangesList = annotationGRangesList,
+                                     annotationGrangesList = annotationGrangesList,
                                      ir.control = ir.control,
                                      algo.control = algo.control,
                                      extendAnnotations = extendAnnotations)
@@ -353,7 +354,7 @@ bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genome
 }
 
 #' Combine readClass objects and perform quantification
-bamboo.combineQuantify <- function(readclass.file, annotationGRangesList, ir.control, algo.control, extendAnnotations){
+bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.control, algo.control, extendAnnotations){
 
   seOutput <- NULL
   if(extendAnnotations==FALSE){
@@ -361,7 +362,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGRangesList, ir.con
       se <- readRDS(file=readclass.file[readclass.file.index])
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']])
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
-      if(bam.file.index==1){
+      if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
@@ -401,7 +402,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGRangesList, ir.con
       se <- readRDS(file=readclass.file[readclass.file.index])
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
-      if(bam.file.index==1){
+      if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
