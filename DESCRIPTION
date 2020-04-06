@@ -16,7 +16,9 @@ Depends:
    data.table(>= 1.1.8),
    dplyr,
    SummarizedExperiment(>= 1.1.6),
-   GenomicRanges
+   GenomicRanges,
+   GenomicFeatures,
+   glmnet
 Suggests: 
     knitr,
     rmarkdown,
