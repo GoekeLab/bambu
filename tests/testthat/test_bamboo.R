@@ -29,6 +29,12 @@ test_that("bamboo.quantISORE (isoform quantification of bam file) produces expec
    ## ToDo: update data sets for comparison
   test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
   fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
+  samplefile <- "http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/Homo_sapiens.GRCh38.91.annotations-txdb.sqlite"
+  # download remote sqlite file as a temporary object
+  dbfile <- tempfile(fileext=".sqlite")
+  download.file(samplefile, dbfile)
+  txdb <- AnnotationDbi::loadDb(dbfile)
+
   gr <- prepareAnnotations(txdb) ## saveRDS(prepareAnnotations(txdb), file='annotationGranges.rds', compress = 'xz')
   stranded=FALSE
 
