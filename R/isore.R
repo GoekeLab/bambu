@@ -134,10 +134,13 @@ isore.constructReadClasses <- function(readGrgList,
   rm(junctionModel)
   gc()
 
-  ################### HERE #####################
   cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
-  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions, unlisted_junctions, readGrgList, mcols(readGrgList)$qname, quickMode = quickMode)  ## speed up this function ##
+  readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions = uniqueJunctions,
+                                                          unlisted_junctions = unlisted_junctions,
+                                                          readGrglist = readGrgList,
+                                                          readNames = mcols(readGrgList)$qname,
+                                                          quickMode = quickMode)  ## speed up this function, the slow part is using the quantiles for start/end calculation ##
   end.ptm <- proc.time()
   cat(paste0('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
   rm(list = c('uniqueJunctions','unlisted_junctions'))
@@ -147,43 +150,50 @@ isore.constructReadClasses <- function(readGrgList,
   start.ptm <- proc.time()
 
   singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1])
-  referenceExons<-unique(c(granges(unlist(readClassListSpliced[['exonsByReadClass']][readClassListSpliced$readClassTable$confidenceType=='highConfidenceJunctionReads' & readClassListSpliced$readClassTable$strand!='*'])), granges(unlist(annotationGrangesList))))
-  readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(singleExonReads,referenceExons, mcols(readGrgList)$qname, confidenceType = 'unsplicedWithin', prefix='unsplicedWithin',stranded=stranded) ### change txId OK
+  referenceExons <- unique(c(granges(unlist(readClassListSpliced[mcols(readClassListSpliced)$confidenceType=='highConfidenceJunctionReads' & mcols(readClassListSpliced)$strand.rc!='*'])), granges(unlist(annotationGrangesList))))
+  readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(granges = singleExonReads,
+                                                                        grangesReference = referenceExons,
+                                                                        readNames = mcols(readGrgList)$qname,
+                                                                        confidenceType = 'unsplicedWithin',
+                                                                        prefix = 'unsplicedWithin',
+                                                                        stranded = stranded) ### change txId OK
 
   singleExonReadsOutside <- singleExonReads[!(mcols(readGrgList)$qname[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readTable$readId)]
-  rm(list=c('singleExonReads'))
+  rm(list = c('singleExonReads'))
   gc()
 
-  combinedSingleExonRanges <- reduce(singleExonReadsOutside,ignore.strand=!stranded)
-  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(singleExonReadsOutside,combinedSingleExonRanges, mcols(readGrgList)$qname, confidenceType = 'unsplicedNew', prefix='unsplicedNew',stranded=stranded)
-  rm(list = c('singleExonReadsOutside','combinedSingleExonRanges','readGrgList'))
+  combinedSingleExonRanges <- reduce(singleExonReadsOutside, ignore.strand =! stranded)
+  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(granges = singleExonReadsOutside,
+                                                                 grangesReference =  combinedSingleExonRanges,
+                                                                 readNames = mcols(readGrgList)$qname,
+                                                                 confidenceType = 'unsplicedNew',
+                                                                 prefix = 'unsplicedNew',
+                                                                 stranded = stranded)
+  rm(list = c('singleExonReadsOutside', 'combinedSingleExonRanges', 'readGrgList'))
   gc()
 
   end.ptm <- proc.time()
   cat(paste0('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
 
-  exonsByReadClass = c(readClassListSpliced$exonsByReadClass, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
-  readClassTable = rbind(readClassListSpliced$readClassTable, readClassListUnsplicedWithAnnotation$readClassTable, readClassListUnsplicedReduced$readClassTable)
-  #readTable = rbind(readClassListSpliced$readTable, readClassListUnsplicedWithAnnotation$readTable, readClassListUnsplicedReduced$readTable)
-  rm(list=c('readClassListSpliced','readClassListUnsplicedWithAnnotation','readClassListUnsplicedReduced'))
+  exonsByReadClass <- c(readClassListSpliced, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
+
+  rm(list = c('readClassListSpliced', 'readClassListUnsplicedWithAnnotation', 'readClassListUnsplicedReduced'))
   gc()
 
-
-  #bamFile.basename <- tools::file_path_sans_ext(basename(BiocGenerics::path(bamFile)))
-  counts <- matrix(readClassTable$readCount, dimnames = list(names(exonsByReadClass), runName))
-  colDataDf <- DataFrame(name=runName, row.names=runName)
-  mcols(exonsByReadClass) <- dplyr::select(readClassTable, chr.rc = chr, strand.rc=strand, intronStarts, intronEnds, confidenceType)
-  # readTable is currently not returned
-  se <- SummarizedExperiment(assays=SimpleList(counts=counts),
-                                                   rowRanges = exonsByReadClass,
-                                                   colData = colDataDf)
+  counts <- matrix(mcols(exonsByReadClass)$readCount, dimnames = list(names(exonsByReadClass), runName))
+  colDataDf <- DataFrame(name = runName, row.names = runName)
+  mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c('chr.rc', 'strand.rc', 'intronStarts', 'intronEnds', 'confidenceType')]
+  se <- SummarizedExperiment(assays = SimpleList(counts = counts),
+                             rowRanges = exonsByReadClass,
+                             colData = colDataDf)
 
 
-  rm(list=c('counts','exonsByReadClass','readClassTable'))
+  rm(list=c('counts', 'exonsByReadClass'))
   return(se)
 }
 
+################### HERE #####################
 
 isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, stranded=FALSE){
   show('combine new transcript candidates')

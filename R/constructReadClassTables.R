@@ -5,75 +5,47 @@
 #' @param readGrglist
 #' @param readNames
 #' @importFrom unstrsplit getFromNamespace
-constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames, quickMode = FALSE){ #, startRanges, endRanges) {
+constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames, quickMode = FALSE, verbose = FALSE){
   options(scipen = 999)
 
-  show('### create transcript models ###')
-  allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions, uniqueJunctions,type='equal',ignore.strand=T)
+  allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
+                                                     uniqueJunctions,type = 'equal',
+                                                     ignore.strand = TRUE)
 
-  junctionsByReadListCorrected = splitAsList(uniqueJunctions$mergedHighConfJunctionId[subjectHits(allJunctionToUniqueJunctionOverlap)],names(unlisted_junctions))
+  junctionsByReadListCorrected <- splitAsList(uniqueJunctions$mergedHighConfJunctionId[subjectHits(allJunctionToUniqueJunctionOverlap)],names(unlisted_junctions))
 
-  #   intronStartCoordinates = splitAsList(start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[subjectHits(allJunctionToUniqueJunctionOverlap)]]),names(unlisted_junctions))
-  #   intronEndCoordinates = splitAsList(end(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[subjectHits(allJunctionToUniqueJunctionOverlap)]]),names(unlisted_junctions))
-  #
-
-  intronStartTMP=start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[subjectHits(allJunctionToUniqueJunctionOverlap)]])
-  intronEndTMP=end(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[subjectHits(allJunctionToUniqueJunctionOverlap)]])
-  exon_0size =  which(intronStartTMP[-1]<=intronEndTMP[-length(intronEndTMP)] & names(unlisted_junctions[-1])==names(unlisted_junctions[-length(unlisted_junctions)]))
-  if(length(exon_0size)>0) {
+  intronStartTMP <- start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[subjectHits(allJunctionToUniqueJunctionOverlap)]])
+  intronEndTMP <- end(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[subjectHits(allJunctionToUniqueJunctionOverlap)]])
+  exon_0size <- which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] & names(unlisted_junctions[-1]) == names(unlisted_junctions[-length(unlisted_junctions)]))
+  if(length(exon_0size) > 0) {
     intronStartTMP[-1][exon_0size] <- intronEndTMP[-length(intronEndTMP)][exon_0size]+1
   }
-  intronStartCoordinates = splitAsList(intronStartTMP,names(unlisted_junctions))
-  intronEndCoordinates = splitAsList(intronEndTMP,names(unlisted_junctions))
-
-
-  #for comparison, use uncorrected reads
-  #intronStartCoordinates = splitAsList(start(uniqueJunctions[subjectHits(allJunctionToUniqueJunctionOverlap)]),names(unlisted_junctions))
-  #intronEndCoordinates = splitAsList(end(uniqueJunctions[subjectHits(allJunctionToUniqueJunctionOverlap)]),names(unlisted_junctions))
-  #intronEndCoordinates = splitAsList(end(uniqueJunctions)[subjectHits(allJunctionToUniqueJunctionOverlap)],names(unlisted_junctions))
-
+  intronStartCoordinates <- splitAsList(intronStartTMP, names(unlisted_junctions))
+  intronEndCoordinates <- splitAsList(intronEndTMP, names(unlisted_junctions))
 
   #annotated strand of junctions for each read based on the infered read strand
-  #unlisted_junctions_strand <- as.character(strand(uniqueJunctions)[subjectHits(allJunctionToUniqueJunctionOverlap)])
   ## read strand assignment, is this necessary/helpful? Check again, add evaluation step?
   unlisted_junctions_strand <- uniqueJunctions$strand.mergedHighConfJunction[subjectHits(allJunctionToUniqueJunctionOverlap)]
-  unlisted_junctions_strandList = splitAsList(unlisted_junctions_strand,names(unlisted_junctions))
-  strandJunctionSum = sum(unlisted_junctions_strandList=='-')-sum(unlisted_junctions_strandList=='+')
+  unlisted_junctions_strandList <- splitAsList(unlisted_junctions_strand, names(unlisted_junctions))
+  strandJunctionSum <- sum(unlisted_junctions_strandList == '-') - sum(unlisted_junctions_strandList == '+')
 
   uniqueReadNames <- unique(names(unlisted_junctions))
-  readStrand <- rep('*',length(uniqueReadNames))
+  readStrand <- rep('*', length(uniqueReadNames))
   names(readStrand) <- uniqueReadNames
   readStrand[names(strandJunctionSum)][strandJunctionSum<0] <- '+'
   readStrand[names(strandJunctionSum)][strandJunctionSum>0] <- '-'
   strand(unlisted_junctions) <- readStrand[names(unlisted_junctions)]
 
-  #
-  #
-  #   readStrand <- rep('*',length(startRanges))
-  #   names(readStrand) <- names(startRanges)
-  #   readStrand[names(strandJunctionSum)][strandJunctionSum<0] <- '+'
-  #   readStrand[names(strandJunctionSum)][strandJunctionSum>0] <- '-'
-  #   strand(unlisted_junctions) <- readStrand[names(unlisted_junctions)]
-
-  # highConfReadSet <- sum(is.na(junctionsByReadListCorrected))>=0  # include all reads for transcript reconstruction, remove unnecessary ones later, or re-assign to other transcripts
-  ##### HERE: USE ALL READS, DEAL WITH READ ID, REMOVE START AND END RANGES ####
-  # show('number of reads with only high confidence junctions')
-  # show(table(highConfReadSet))
-
-  readTable <- tbl_df(data.frame(matrix(ncol=12,nrow=length(uniqueReadNames))))
-  colnames(readTable) <- c('chr','start','end','strand', 'blockCount','exonStarts','exonEnds','intronEnds','intronStarts','readClassId', 'readId','confidenceType')
+  readTable <- tbl_df(data.frame(matrix(ncol = 12, nrow = length(uniqueReadNames))))
+  colnames(readTable) <- c('chr', 'start', 'end', 'strand', 'blockCount', 'exonStarts', 'exonEnds', 'intronEnds', 'intronStarts', 'readClassId', 'readId', 'confidenceType')
 
   #uniqueReadNames <- names(which(highConfReadSet))
   readTable[, 'chr']    <-  as.character(unique(seqnames(readGrglist[uniqueReadNames])))  # as.character(unique(seqnames(readGrglist)))
   readTable[, 'start'] <- pmin(min(start(readGrglist[uniqueReadNames])),min(intronStartCoordinates[uniqueReadNames] -2))  # min(start(readGrglist))
   readTable[, 'end']   <- pmax(max(end(readGrglist[uniqueReadNames])),max(intronEndCoordinates[uniqueReadNames]+2))  # max(end(readGrglist))
-  readTable[, 'blockCount'] <- elementNROWS(junctionsByReadListCorrected[uniqueReadNames])
-  readTable[, 'exonStarts'] <- sapply(intronEndCoordinates[uniqueReadNames]+1,paste0, collapse=',') #### replace with unstrsplit function (should be faster)
-  readTable[, 'exonEnds'] <- sapply(intronStartCoordinates[uniqueReadNames]-1,paste0, collapse=',')
   readTable[, 'intronEnds'] <- sapply(intronEndCoordinates[uniqueReadNames],paste0, collapse=',') #### replace with unstrsplit function (should be faster)
   readTable[, 'intronStarts'] <- sapply(intronStartCoordinates[uniqueReadNames],paste0, collapse=',')
   readTable[, 'strand'] <- readStrand[uniqueReadNames]
-  readTable[, 'readId'] <- readNames[as.integer(uniqueReadNames)]
   readTable[, 'confidenceType'] <- 'highConfidenceJunctionReads'
   readTable[, 'readClassId'] <- NA
 
@@ -83,55 +55,54 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 
   ## currently the 90% quantile is used to define the start and end ## this is the slowest part in the function.
   if(quickMode==FALSE){
-    readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+    readClassTable <- readTable %>%
+      group_by(chr, strand, intronEnds, intronStarts) %>%
+      mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount = n()) %>%
+      distinct(chr, strand, intronEnds, intronStarts, .keep_all = TRUE) %>%
+      ungroup()
   } else {
-    readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = min(start), end = max(end), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
+    readClassTable <- readTable %>%
+      group_by(chr, strand, intronEnds, intronStarts) %>%
+      mutate(start = min(start), end = max(end), readCount = n()) %>%
+      distinct(chr, strand, intronEnds, intronStarts, .keep_all = TRUE) %>%
+      ungroup()
   }
 
-  #readClassTable <-readTable %>% group_by(chr, strand, intronEnds, intronStarts) %>% mutate(start = quantile(start, 0.1), end = quantile(end, 0.9), readCount=n())%>% distinct(chr, strand, intronEnds, intronStarts, .keep_all=TRUE) %>% ungroup()
-
-  # required to create exon ranges to build exon By Tx object
-  readClassTable <- readClassTable %>%  mutate(exonStarts = paste(as.integer(start), exonStarts,sep=','), exonEnds = paste(exonEnds, as.integer(end),sep=','))
-
-
-  ### todo here: create txTable after merging all idetnical intron-reads, then reconstruct transcrtipts, and compare with annoated transcripts (using intron ranges only). COmpare this approach to more naive approach, how many distinct RNAs are found, how many reads supprt them etc. It seem like correcting junctions greatly reduves the complexity of transcripts. This appraoch should be very fast in the end
-  readClassTable[,'readClassId'] <- paste('rc',1:nrow(readClassTable),sep='.')
-
-  readTable=left_join(dplyr::select(readTable,readId,chr,strand,intronEnds,intronStarts,confidenceType),dplyr::select(readClassTable,chr,strand,intronEnds,intronStarts,readClassId)) %>% dplyr::select(readId,readClassId,confidenceType, strand)
-
-  #remove unecessary information from readTable
-  #readTable <- readTable %>% select(readId,readClassId,confidenceType, strand)
+  readClassTable[,'readClassId'] <- paste('rc', 1:nrow(readClassTable), sep = '.')
   gc()
 
+  exonEndsShifted <- paste(readClassTable$intronStarts, as.integer(readClassTable$end) + 1, sep = ',')
+  exonStartsShifted <- paste(as.integer(readClassTable$start) - 1, readClassTable$intronEnds, sep = ',')
 
-
-  exonsByReadClass= with(readClassTable,makeGRangesListFromFeatureFragments(seqnames=chr,
-                                                                            fragmentStarts=exonStarts,
-                                                                            fragmentEnds=exonEnds,
-                                                                            strand=strand))
+  exonsByReadClass <- makeGRangesListFromFeatureFragments(seqnames = readClassTable$chr,
+                                                          fragmentStarts = exonStartsShifted,
+                                                          fragmentEnds = exonEndsShifted,
+                                                          strand = readClassTable$strand)
+  exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)  # correct junction to exon differences in coordinates
   names(exonsByReadClass) <- readClassTable$readClassId
 
   #add exon rank and exon_endRank
 
   ## combine new transcripts with annotated transcripts based on identical intron pattern
-  unlistData = unlist(exonsByReadClass, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
+  unlistData <- unlist(exonsByReadClass, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names = NULL)
 
-  #unlistData$exon_id <- paste0('exId.',1:length(unlistData))
-  #unlistData$exon_name <- paste0('ex.',1:length(unlistData))
-  exon_rank <- sapply(width((partitioning)),seq, from=1)
-  exon_rank[which(readClassTable$strand=='-')] <- lapply(exon_rank[which(readClassTable$strand=='-')], rev)  # * assumes positive for exon ranking
+  exon_rank <- sapply(width((partitioning)), seq, from = 1)
+  exon_rank[which(readClassTable$strand == '-')] <- lapply(exon_rank[which(readClassTable$strand == '-')], rev)  # * assumes positive for exon ranking
   exon_endRank <- lapply(exon_rank, rev)
   unlistData$exon_rank <- unlist(exon_rank)
   unlistData$exon_endRank <- unlist(exon_endRank)
 
   exonsByReadClass <- relist(unlistData, partitioning)
 
-  readClassTable <- readClassTable %>% dplyr::select(chr, start, end, strand, intronStarts, intronEnds, confidenceType, readClassId, readCount)
+  readClassTable <- readClassTable %>%
+    dplyr::select(chr.rc = chr, strand.rc = strand, intronStarts, intronEnds, confidenceType, readCount)
 
-  return(list(exonsByReadClass = exonsByReadClass, readClassTable = readClassTable, readTable = readTable))
+  mcols(exonsByReadClass) <- readClassTable
+  return(exonsByReadClass)
 }
 
+######## FROM HERE STILL HAVE TO GO THROUGH ##########
 #'@title CONSTRUCTUNSPLICEDREADCLASSES
 #'@description reconstruct read classes using unspliced reads that fall within exons from annotations
 #'@param granges
@@ -176,6 +147,8 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     dplyr::select(readId,  readClassId, confidenceType, strand)
 
   exByReadClassUnspliced <- GRanges(seqnames=readClassTableUnspliced$chr, ranges=IRanges(start=readClassTableUnspliced$start, end=readClassTableUnspliced$end), strand=readClassTableUnspliced$strand)
+
+
   #exByReadClassUnspliced$exon_id <- paste0('exId',prefix,'.',1:length(exByReadClassUnspliced))
   #exByReadClassUnspliced$exon_name <- paste0('ex',prefix,'.', 1:length(exByReadClassUnspliced))
   exByReadClassUnspliced$exon_rank <- 1
@@ -184,9 +157,13 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
   exByReadClassUnspliced <- relist(exByReadClassUnspliced,partitioning)
   names(exByReadClassUnspliced) <- readClassTableUnspliced$readClassId
 
+  readClassTableUnspliced <- readClassTableUnspliced %>% dplyr::select(chr.rc = chr, strand.rc = strand, intronStarts, intronEnds, confidenceType, readCount)#, readClassId, readCount)
+
+  mcols(exByReadClassUnspliced) <- readClassTableUnspliced
   return(list(exonsByReadClass = exByReadClassUnspliced, readClassTable = readClassTableUnspliced, readTable = readTableUnspliced))
 }
 
+##### UNTIL HERE #####
 
 #'@title COMBINEWITHANNOTATIONS
 #'@description function to add annotations to reconstructed transcripts, and replace identical transcripts with reference
