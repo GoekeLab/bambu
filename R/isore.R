@@ -202,9 +202,9 @@ isore.constructReadClasses <- function(readGrgList,
 
 ################### HERE #####################
 
-isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, stranded=FALSE){
+isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, stranded=FALSE, verbose = FALSE){
   show('combine new transcript candidates')
-  if(is.null(readClassSeRef)){  #if no reerence object is given, create one from a readClassSe object
+  if(is.null(readClassSeRef)){  #if no reference object is given, create one from a readClassSe object
     counts <- assays(readClassSe)$counts
     start <- matrix(min(start(rowRanges(readClassSe))), dimnames = dimnames(counts))
     end <- matrix(max(end(rowRanges(readClassSe))), dimnames = dimnames(counts))
