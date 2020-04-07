@@ -158,7 +158,7 @@ isore.constructReadClasses <- function(readGrgList,
                                                                         prefix = 'unsplicedWithin',
                                                                         stranded = stranded) ### change txId OK
 
-  singleExonReadsOutside <- singleExonReads[!(mcols(readGrgList)$qname[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readTable$readId)]
+  singleExonReadsOutside <- singleExonReads[!(mcols(readGrgList)$qname[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readIds)]
   rm(list = c('singleExonReads'))
   gc()
 
