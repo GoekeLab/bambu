@@ -1,4 +1,4 @@
-bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE){
+bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE, verbose = FALSE){
 
 
   #===# Check annotation inputs #===#
@@ -106,7 +106,8 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
                                  genomeSequence = genomeSequence,
                                  annotationGrangesList = annotationGrangesList,
                                  ir.control = ir.control,
-                                 extendAnnotations = extendAnnotations))
+                                 extendAnnotations = extendAnnotations,
+                                 verbose = verbose))
       }else{
         return(bamboo.preprocess(bam.file = bam.file,
                                  algo.control = algo.control,
@@ -227,7 +228,7 @@ bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
 
 
-bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL){
+bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
@@ -240,7 +241,8 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
                                         annotationGrangesList = annotationGrangesList,
                                         genomeSequence = genomeSequence,
                                         stranded = ir.control[['stranded']],
-                                        quickMode= quickMode)
+                                        quickMode= quickMode,
+                                        verbose = verbose)
       rm(readGrgList)
       gc()
       end.time <- proc.time()
@@ -277,7 +279,8 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
                                                               annotationGrangesList = annotationGrangesList,
                                                               genomeSequence = genomeSequence,
                                                               stranded = ir.control[['stranded']],
-                                                              quickMode= quickMode)
+                                                              quickMode = quickMode,
+                                                              verbose = verbose)
 
 
       rm(readGrgList)
@@ -330,7 +333,8 @@ bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genome
                                      annotationGrangesList = annotationGrangesList,
                                      genomeSequence = genomeSequence,
                                      stranded = ir.control[['stranded']],
-                                     quickMode = quickMode)
+                                     quickMode = quickMode,
+                                     verbose = verbose)
     rm(readGrgList)
     gc()
 
