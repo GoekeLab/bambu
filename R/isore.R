@@ -49,7 +49,8 @@ isore.constructReadClasses <- function(readGrgList,
                                        genomeDB=NULL, ## is required to avoid providing a fasta file with genome sequence, helpful for most users
                                        genomeFA=NULL, ## genome FA file, should be in .fa format
                                        stranded=FALSE,
-                                       quickMode = FALSE){
+                                       quickMode=FALSE,
+                                       verbose=FALSE){
 
 
 
@@ -78,7 +79,7 @@ isore.constructReadClasses <- function(readGrgList,
 
   cat('### infer strand/strand correction of junctions ### \n')
   intronsByTx <- myGaps(annotationGrangesList)
-  junctionTables <- junctionStrandCorrection(uniqueJunctions, unlisted_junctions, intronsByTx, stranded=stranded)
+  junctionTables <- junctionStrandCorrection(uniqueJunctions, unlisted_junctions, intronsByTx, stranded=stranded, verbose=verbose)
   uniqueJunctions <- junctionTables[[1]]
   unlisted_junctions <- junctionTables[[2]]
   rm(junctionTables)
@@ -108,12 +109,16 @@ isore.constructReadClasses <- function(readGrgList,
 
 
   if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
-    predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = NULL)
+    predictSpliceSites <- predictSpliceJunctions(annotatedJunctions = uniqueJunctions,
+                                                 junctionModel = NULL,
+                                                 verbose = verbose)
     uniqueJunctions=predictSpliceSites[[1]]
     junctionModel=predictSpliceSites[[2]]
   } else {
     junctionModel = standardJunctionModels_temp
-    predictSpliceSites <- predictSpliceJunctions(uniqueJunctions,junctionModel = junctionModel)
+    predictSpliceSites <- predictSpliceJunctions(annotatedJunctions = uniqueJunctions,
+                                                 junctionModel = junctionModel,
+                                                 verbose = verbose)
     uniqueJunctions=predictSpliceSites[[1]]
     warning('Junction correction with not enough data, precalculated model is used')
   }
@@ -125,7 +130,9 @@ isore.constructReadClasses <- function(readGrgList,
 
   cat('### correct junctions based on set of high confidence junctions ### \n')
   start.ptm <- proc.time()
-  uniqueJunctions <- findHighConfidenceJunctions(uniqueJunctions, junctionModel)
+  uniqueJunctions <- findHighConfidenceJunctions(junctions=uniqueJunctions,
+                                                 junctionModel=junctionModel,
+                                                 verbose=verbose)
   uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- uniqueJunctions$mergedHighConfJunctionId
   uniqueJunctions$mergedHighConfJunctionIdAll_noNA[is.na(uniqueJunctions$mergedHighConfJunctionId)] <- names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
   uniqueJunctions$strand.mergedHighConfJunction <- as.character(strand(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
