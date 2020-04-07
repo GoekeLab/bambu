@@ -294,3 +294,81 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
 
   olap
 }
+
+#'@title COMBINEWITHANNOTATIONS
+#'@description function to add annotations to reconstructed transcripts, and replace identical transcripts with reference
+#'@param txList
+#'@param txdbTablesList
+#'@param matchOnly
+combineWithAnnotations <- function(txList, txdbTablesList, matchOnly = T) {
+  txExonsByCut <- cutStartEndFromGrangesList(txList$exonsByTx)
+  annotationsExonsByCut <- cutStartEndFromGrangesList(txdbTablesList$exonsByTx)
+  spliceOverlaps <- findSpliceOverlapsQuick(txExonsByCut,annotationsExonsByCut)
+
+  annotatedTxId <- rep(NA, nrow(txList$txTable))
+
+  annotatedTxId[unique(queryHits(spliceOverlaps[mcols(spliceOverlaps)$equal==TRUE]))] <- txdbTablesList$txIdToGeneIdTable$referenceTXNAME[subjectHits(spliceOverlaps[mcols(spliceOverlaps)$equal==TRUE])[!duplicated(queryHits(spliceOverlaps[mcols(spliceOverlaps)$equal==TRUE]))]]
+
+  txList$txTable$isAnnotated <- !is.na(annotatedTxId)
+
+  combinedTxId <- txList$txTable$txId
+  combinedTxId[txList$txTable$isAnnotated] <- annotatedTxId[txList$txTable$isAnnotated]
+  # readTxTable include reference ids
+  txList$readTxTable$txId <- combinedTxId[match(txList$readTxTable$txId, txList$txTable$txId)]
+  #tableTx include reference Ids
+  txList$txTable$txId <- combinedTxId
+  #replace reconstructed transcripts with annotated transcripts when equal splice sites are used
+  txList$exonsByTx[txList$txTable$isAnnotated] <- txdbTablesList$exonsByTx[annotatedTxId[txList$txTable$isAnnotated]]
+  names(txList$exonsByTx) <- combinedTxId
+
+  #inlcude gene id
+  #(1) based on intron match
+  unlistedIntrons <- unlist(myGaps(txList$exonsByTx))
+  overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,txdbTablesList[['unlisted_introns']],type='equal',select='all', ignore.strand=FALSE)
+
+  maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],geneId=txdbTablesList[['unlisted_introns']]$geneId[subjectHits(overlapsNewIntronsAnnotatedIntrons)], stringsAsFactors=FALSE)) %>% group_by(txId, geneId) %>% mutate(geneCount = n()) %>% distinct() %>% group_by(txId) %>% filter(geneCount==max(geneCount)) %>% filter(!duplicated(txId)) %>% ungroup()
+
+  geneIdByIntron <- rep(NA,nrow(txList$txTable))
+  geneIdByIntron <- maxGeneCountPerNewTx$geneId[match(txList$txTable$txId, maxGeneCountPerNewTx$txId)]
+
+  #(2) based on exon match
+
+  exonMatchGene <- findOverlaps(txList$exonsByTx,txdbTablesList[['exonsByTx']],select = 'arbitrary',minoverlap = 20)
+  geneIdByExon <- rep(NA,nrow(txList$txTable))
+  geneIdByExon[!is.na(exonMatchGene)] <- txdbTablesList[['txIdToGeneIdTable']][exonMatchGene[!is.na(exonMatchGene)],'GENEID']
+  geneIdByExon[!is.na(geneIdByIntron)] <-  geneIdByIntron[!is.na(geneIdByIntron)]
+
+  exonMatchGene <- findOverlaps(txList$exonsByTx[is.na(geneIdByExon)],txList$exonsByTx[!is.na(geneIdByExon)],select = 'arbitrary',minoverlap = 20)
+  while(any(!is.na(exonMatchGene))) {
+    show('annoted new tx with existing gene id based on overlap with intermediate new tx')
+    geneIdByExon[is.na(geneIdByExon)][!is.na(exonMatchGene)] <- geneIdByExon[!is.na(geneIdByExon)][exonMatchGene[!is.na(exonMatchGene)]]
+    exonMatchGene <- findOverlaps(txList$exonsByTx[is.na(geneIdByExon)],txList$exonsByTx[!is.na(geneIdByExon)],select = 'arbitrary',minoverlap = 20)
+  }
+
+  geneLoci <- geneIdByExon ## will be used to annotate overlaping genes which do not share any exon or which are antisense
+
+  exonSelfOverlaps <- findOverlaps(txList$exonsByTx[is.na(geneIdByExon)],txList$exonsByTx[is.na(geneIdByExon)],select = 'all',minoverlap = 20)
+  hitObject = tbl_df(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
+  length_tmp = 1
+  while(nrow(hitObject)>length_tmp) {
+    show('annotated transcripts from unknown genes by new gene id')
+
+    length_tmp = nrow(hitObject)
+    show(length_tmp)
+    hitObject= inner_join(hitObject,hitObject,by=c("subjectHits"="queryHits")) %>% dplyr::select(queryHits,subjectHits.y) %>% distinct() %>%rename(subjectHits=subjectHits.y)
+  }
+
+  geneTxNames <- hitObject %>% group_by(queryHits) %>% mutate(geneId = paste('gene',first(subjectHits),sep='.')) %>% dplyr::select(queryHits, geneId) %>% distinct()
+  geneIdByExon[is.na(geneIdByExon)] <- geneTxNames$geneId
+  txList$txTable$geneId <- geneIdByExon
+
+  #gene loci calculation
+  rangeOverlap <- findOverlaps(range(txList$exonsByTx[is.na(geneLoci)]), txdbTablesList[['exonsByTx']], ignore.strand=TRUE, minoverlap = 20, select = 'arbitrary')
+  geneLoci[is.na(geneLoci)][!is.na(rangeOverlap)] <- txdbTablesList[['txIdToGeneIdTable']][rangeOverlap[!is.na(rangeOverlap)],'GENEID']
+  geneLoci[is.na(geneLoci)] <- geneIdByExon[is.na(geneLoci)]
+  txList$txTable$geneLoci <- geneLoci
+
+  # combine with annotated transcripts which are a superset transcript of reconstructed transcripts
+  txList$txTable$compatibleAnnotatedTranscripts <- countQueryHits(spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,])
+  return(txList)
+}
