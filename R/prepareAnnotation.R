@@ -50,6 +50,83 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
 
 
+assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
+  if(is.null(names(exByTx))){
+    names(exByTx) <- 1:length(exByTx)
+  }
+
+  exonSelfOverlaps <- findOverlaps(exByTx,
+                                   exByTx,
+                                   select='all',
+                                   minoverlap=minoverlap,
+                                   ignore.strand=ignore.strand)
+  hitObject <- tbl_df(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
+  candidateList <- hitObject %>%
+    group_by(queryHits) %>%
+    filter(queryHits <= min(subjectHits), queryHits != subjectHits) %>%
+    ungroup()
+
+  filteredOverlapList <- hitObject %>% filter(queryHits < subjectHits)
+
+  rm(list=c('exonSelfOverlaps','hitObject'))
+  gc()
+  length_tmp = 1
+  while(nrow(candidateList) > length_tmp) {  # loop to include overlapping read classes which are not in order
+    length_tmp <- nrow(candidateList)
+    temp <- left_join(candidateList, filteredOverlapList, by=c("subjectHits"="queryHits")) %>%
+      group_by(queryHits) %>%
+      filter(! subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
+      ungroup %>%
+      dplyr::select(queryHits, subjectHits.y) %>%
+      distinct() %>%
+      dplyr::rename(subjectHits=subjectHits.y)
+
+    candidateList <- rbind(temp, candidateList)
+    while(nrow(temp)>0) {
+      ## annotated transcripts from unknown genes by new gene id
+      temp= left_join(candidateList,filteredOverlapList,by=c("subjectHits"="queryHits")) %>%
+        group_by(queryHits) %>%
+        filter(! subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
+        ungroup %>%
+        dplyr::select(queryHits,subjectHits.y) %>%
+        distinct() %>%
+        dplyr::rename(subjectHits=subjectHits.y)
+
+      candidateList <- rbind(temp, candidateList)
+    }
+    ## second loop
+    tst <- candidateList %>%
+      group_by(subjectHits) %>%
+      mutate(subjectCount = n()) %>%
+      group_by(queryHits) %>%
+      filter(max(subjectCount)>1) %>%
+      ungroup()
+
+    temp2 <- inner_join(tst, tst, by=c("subjectHits"="subjectHits")) %>%
+      filter(queryHits.x!=queryHits.y)  %>%
+      mutate(queryHits = if_else(queryHits.x > queryHits.y, queryHits.y, queryHits.x),
+             subjectHits = if_else(queryHits.x > queryHits.y, queryHits.x, queryHits.y)) %>%
+      dplyr::select(queryHits,subjectHits) %>%
+      distinct()
+    candidateList <-  distinct(rbind(temp2, candidateList))
+  }
+
+  candidateList <- candidateList %>%
+    filter(! queryHits %in% subjectHits) %>%
+    arrange(queryHits, subjectHits)
+  idToAdd <- (which(!(1:length(exByTx) %in% unique(candidateList$subjectHits))))
+
+  candidateList <- rbind(candidateList, tibble(queryHits=idToAdd, subjectHits=idToAdd)) %>%
+    arrange(queryHits, subjectHits) %>%
+    mutate(geneId = paste('gene', prefix, '.', queryHits, sep='')) %>%
+    dplyr::select(subjectHits, geneId)
+  candidateList$readClassId <- names(exByTx)[candidateList$subjectHits]
+
+  candidateList <- dplyr::select(candidateList, readClassId, geneId)
+  return(candidateList)
+}
+
+
 
 
 
