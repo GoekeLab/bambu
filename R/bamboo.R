@@ -305,7 +305,11 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
     cat(paste0('Finished extending annotations in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
     for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
+      start.time <- proc.time()
       seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      end.time <- proc.time()
+      cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = extendedAnnotationGRangesList, algo.control = algo.control)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
@@ -363,8 +367,14 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
   seOutput <- NULL
   if(extendAnnotations==FALSE){
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
+
+      start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
+
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      end.time <- proc.time()
+      cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
@@ -403,8 +413,12 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
 
 
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
+      start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      end.time <- proc.time()
+      cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
+
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
