@@ -200,149 +200,205 @@ isore.constructReadClasses <- function(readGrgList,
   return(se)
 }
 
-################### HERE #####################
 
-isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, stranded=FALSE, verbose = FALSE){
-  show('combine new transcript candidates')
+
+isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL, stranded = FALSE, verbose = FALSE){
   if(is.null(readClassSeRef)){  #if no reference object is given, create one from a readClassSe object
     counts <- assays(readClassSe)$counts
-    start <- matrix(min(start(rowRanges(readClassSe))), dimnames = dimnames(counts))
-    end <- matrix(max(end(rowRanges(readClassSe))), dimnames = dimnames(counts))
+    start <- matrix(min(start(rowRanges(readClassSe))),
+                    dimnames = dimnames(counts))
+    end <- matrix(max(end(rowRanges(readClassSe))),
+                  dimnames = dimnames(counts))
     rowData <- as_tibble(rowData(readClassSe))
     rowData$start <- rowMins(start)
     rowData$end <- rowMaxs(end)
-    rowData <- rowData %>% dplyr::select(chr=chr.rc, start, end, strand=strand.rc, intronStarts, intronEnds, confidenceType)
+    rowData <- rowData %>% dplyr::select(chr=chr.rc,
+                                         start, end,
+                                         strand=strand.rc,
+                                         intronStarts,
+                                         intronEnds,
+                                         confidenceType)
 
-    readClassSeRef <- SummarizedExperiment(assays=SimpleList(counts=counts, start=start, end=end),
-                                                                 rowData = rowData,
-                                                                 colData = colData(readClassSe))
+    readClassSeRef <- SummarizedExperiment(assays = SimpleList(counts=counts,
+                                                             start=start,
+                                                             end=end),
+                                           rowData = rowData,
+                                           colData = colData(readClassSe))
+    return(readClassSeRef)
 
   }else {
+
     colDataCombined <- rbind(colData(readClassSeRef), colData(readClassSe))
 
     readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), rownames='id')
     readClassSeTBL <- as_tibble(rowData(readClassSe), rownames='id') %>%
-                                mutate(start=min(start(rowRanges(readClassSe))),
-                                       end=max(end(rowRanges(readClassSe))))
+      mutate(start=min(start(rowRanges(readClassSe))),
+             end=max(end(rowRanges(readClassSe))))
 
-  rowData.spliced <- full_join(filter(readClassSeRefTBL, confidenceType=='highConfidenceJunctionReads'),
-                          filter(readClassSeTBL, confidenceType=='highConfidenceJunctionReads'),
-                          by=c('chr'='chr.rc','strand'='strand.rc','intronStarts', 'intronEnds'), suffix=c('.ref','.new'))
+    rowData.spliced <- full_join(filter(readClassSeRefTBL, confidenceType=='highConfidenceJunctionReads'),
+                                 filter(readClassSeTBL, confidenceType=='highConfidenceJunctionReads'),
+                                 by=c('chr'='chr.rc','strand'='strand.rc','intronStarts', 'intronEnds'),
+                                 suffix=c('.ref','.new'))
 
-  #create first SE object for spliced Tx
-
-
-  counts.splicedRef <- matrix(0, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.spliced))
-  start.splicedRef <- matrix(NA, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.spliced))
-  end.splicedRef <- start.splicedRef
-
-  counts.splicedNew <- matrix(0, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.spliced))
-  start.splicedNew <- matrix(NA, dimnames=list(1:nrow(rowData.spliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.spliced))
-  end.splicedNew <- start.splicedNew
+    # (1) create first SE object for spliced Tx
 
 
-  counts.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$counts[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+    counts.splicedRef <- matrix(0,
+                                dimnames = list(1:nrow(rowData.spliced),
+                                                rownames(colData(readClassSeRef))),
+                                ncol = nrow(colData(readClassSeRef)),
+                                nrow = nrow(rowData.spliced))
+    start.splicedRef <- matrix(NA,
+                               dimnames = list(1:nrow(rowData.spliced),
+                                               rownames(colData(readClassSeRef))),
+                               ncol = nrow(colData(readClassSeRef)),
+                               nrow = nrow(rowData.spliced))
 
-  start.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$start[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
-  end.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$end[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+    end.splicedRef <- start.splicedRef
 
-
-  counts.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(assays(readClassSe)$counts[rowData.spliced$id.new[!is.na(rowData.spliced$id.new)],])
-  start.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'start.new'])
-  end.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'end.new'])
-
-
-
-  counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
-  start.spliced <- cbind(start.splicedRef, start.splicedNew)
-  end.spliced <- cbind(end.splicedRef, end.splicedNew)
-  rowData.spliced$start <- rowMins(start.spliced, na.rm=T)
-  rowData.spliced$end <- rowMaxs(end.spliced, na.rm=T)
-  rowData.spliced <- select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds) %>%
-                      mutate(confidenceType='highConfidenceJunctionReads')
-
-  se.spliced <- SummarizedExperiment(assays=SimpleList(counts=counts.spliced, start=start.spliced, end=end.spliced),
-                                                               rowData = rowData.spliced,
-                                                               colData = colDataCombined)
-
-
-
-  ## create second SE object for unspliced Tx
+    counts.splicedNew <- matrix(0,
+                                dimnames = list(1:nrow(rowData.spliced),
+                                                rownames(colData(readClassSe))),
+                                ncol = nrow(colData(readClassSe)),
+                                nrow = nrow(rowData.spliced))
+    start.splicedNew <- matrix(NA,
+                               dimnames = list(1:nrow(rowData.spliced),
+                                               rownames(colData(readClassSe))),
+                               ncol = nrow(colData(readClassSe)),
+                               nrow = nrow(rowData.spliced))
+    end.splicedNew <- start.splicedNew
 
 
-  readClassSeRefTBL.unspliced <- filter(readClassSeRefTBL, confidenceType=='unsplicedNew')
-  readClassSeTBL.unspliced <- filter(readClassSeTBL, confidenceType=='unsplicedNew')
-  unsplicedRangesRef=GRanges(seqnames=readClassSeRefTBL.unspliced$chr,
-                             ranges=IRanges(start=readClassSeRefTBL.unspliced$start,
-                                            end=readClassSeRefTBL.unspliced$end),
-                             strand=readClassSeRefTBL.unspliced$strand)
-  unsplicedRangesNew=GRanges(seqnames=readClassSeTBL.unspliced$chr.rc,
-                             ranges=IRanges(start=readClassSeTBL.unspliced$start,
-                                            end=readClassSeTBL.unspliced$end),
-                             strand=readClassSeTBL.unspliced$strand.rc)
+    counts.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$counts[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+
+    start.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$start[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+    end.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$end[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+
+
+    counts.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(assays(readClassSe)$counts[rowData.spliced$id.new[!is.na(rowData.spliced$id.new)],])
+    start.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'start.new'])
+    end.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'end.new'])
 
 
 
-  combinedSingleExonRanges <- reduce(c(unsplicedRangesRef,unsplicedRangesNew), ignore.strand=!stranded)
+    counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
+    start.spliced <- cbind(start.splicedRef, start.splicedNew)
+    end.spliced <- cbind(end.splicedRef, end.splicedNew)
+    rowData.spliced$start <- rowMins(start.spliced, na.rm=T)
+    rowData.spliced$end <- rowMaxs(end.spliced, na.rm=T)
+    rowData.spliced <- select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds) %>%
+      mutate(confidenceType = 'highConfidenceJunctionReads')
 
-  rowData.unspliced <- as_tibble(as.data.frame(combinedSingleExonRanges, stringsAsFactors = FALSE)) %>%
-    mutate_if(is.factor, as.character) %>%
-    select(chr=seqnames, start, end, strand=strand) %>%
-    mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
+    se.spliced <- SummarizedExperiment(assays = SimpleList(counts=counts.spliced,
+                                                           start=start.spliced,
+                                                           end=end.spliced),
+                                       rowData = rowData.spliced,
+                                       colData = colDataCombined)
 
-  overlapRefToCombined <-findOverlaps(unsplicedRangesRef,combinedSingleExonRanges, type='within', ignore.strand=!stranded, select='first')
-  overlapNewToCombined <-findOverlaps(unsplicedRangesNew,combinedSingleExonRanges, type='within', ignore.strand=!stranded, select='first')
+    rm(list=c('counts.spliced', 'start.spliced', 'end.spliced', 'rowData.spliced', 'counts.splicedRef', 'start.splicedRef', 'end.splicedRef', 'counts.splicedNew', 'start.splicedNew', 'end.splicedNew'))
 
-  countsRef.unspliced <- as_tibble(assays(readClassSeRef)[['counts']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
-                          mutate(index=overlapRefToCombined) %>%
-                          group_by(index) %>%
-                          summarise_all(sum, na.rm=T)
-
-  countsNew.unspliced <- as_tibble(assays(readClassSe)[['counts']])[rowData(readClassSe)$confidenceType=='unsplicedNew',] %>%
-                          mutate(index=overlapNewToCombined) %>%
-                          group_by(index) %>%
-                          summarise_all(sum, na.rm=T)
-
-  startRef.unspliced <- as_tibble(assays(readClassSeRef)[['start']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
-                          mutate(index=overlapRefToCombined) %>%
-                          group_by(index) %>%
-                          summarise_all(min, na.rm=T)
-
-  startNew.unspliced <- readClassSeTBL %>% filter(confidenceType=='unsplicedNew') %>%
-                                            select(start) %>%
-                                            mutate(index=overlapNewToCombined) %>%
-                                            group_by(index) %>%
-                                            summarise_all(min, na.rm=T)
-
-  endRef.unspliced <- as_tibble(assays(readClassSeRef)[['end']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
-                        mutate(index=overlapRefToCombined) %>%
-                        group_by(index) %>%
-                        summarise_all(max, na.rm=T)
-
-  endNew.unspliced <- readClassSeTBL %>% filter(confidenceType=='unsplicedNew') %>%
-                                          select(end) %>%
-                                          mutate(index=overlapNewToCombined) %>%
-                                          group_by(index) %>%
-                                          summarise_all(max, na.rm=T)
-
-  counts.unsplicedRef <- matrix(0, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.unspliced))
-  start.unsplicedRef <- matrix(NA, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSeRef))), ncol=nrow(colData(readClassSeRef)), nrow = nrow(rowData.unspliced))
-  end.unsplicedRef <- start.unsplicedRef
-
-  counts.unsplicedNew <- matrix(0, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.unspliced))
-  start.unsplicedNew <- matrix(NA, dimnames=list(1:nrow(rowData.unspliced),rownames(colData(readClassSe))), ncol=nrow(colData(readClassSe)), nrow = nrow(rowData.unspliced))
-  end.unsplicedNew <- start.unsplicedNew
+  ## (2) create second SE object for unspliced Tx
 
 
-  counts.unsplicedRef[countsRef.unspliced$index, ] <- as.matrix(countsRef.unspliced[,colnames(counts.unsplicedRef)])
-  start.unsplicedRef[countsRef.unspliced$index, ] <- as.matrix(startRef.unspliced[,colnames(start.unsplicedRef)])
-  end.unsplicedRef[countsRef.unspliced$index, ] <- as.matrix(endRef.unspliced[,colnames(end.unsplicedRef)])
-  counts.unsplicedNew[countsNew.unspliced$index, ] <- as.matrix(countsNew.unspliced[,colnames(counts.unsplicedNew)])
-  start.unsplicedNew[countsNew.unspliced$index, ] <- as.matrix(startNew.unspliced[,'start'])
-  end.unsplicedNew[countsNew.unspliced$index, ] <- as.matrix(endNew.unspliced[,'end'])
+    readClassSeRefTBL.unspliced <- filter(readClassSeRefTBL, confidenceType=='unsplicedNew')
+    readClassSeTBL.unspliced <- filter(readClassSeTBL, confidenceType=='unsplicedNew')
+    unsplicedRangesRef <- GRanges(seqnames=readClassSeRefTBL.unspliced$chr,
+                                  ranges=IRanges(start=readClassSeRefTBL.unspliced$start,
+                                                 end=readClassSeRefTBL.unspliced$end),
+                                  strand=readClassSeRefTBL.unspliced$strand)
+    unsplicedRangesNew <- GRanges(seqnames=readClassSeTBL.unspliced$chr.rc,
+                                  ranges=IRanges(start=readClassSeTBL.unspliced$start,
+                                                 end=readClassSeTBL.unspliced$end),
+                                  strand=readClassSeTBL.unspliced$strand.rc)
 
 
 
+    combinedSingleExonRanges <- reduce(c(unsplicedRangesRef,unsplicedRangesNew), ignore.strand=!stranded)
+
+    rowData.unspliced <- as_tibble(as.data.frame(combinedSingleExonRanges, stringsAsFactors = FALSE)) %>%
+      mutate_if(is.factor, as.character) %>%
+      select(chr=seqnames, start, end, strand=strand) %>%
+      mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
+
+    overlapRefToCombined <-findOverlaps(unsplicedRangesRef,
+                                        combinedSingleExonRanges,
+                                        type='within',
+                                        ignore.strand=!stranded,
+                                        select='first')
+    overlapNewToCombined <-findOverlaps(unsplicedRangesNew,
+                                        combinedSingleExonRanges,
+                                        type='within',
+                                        ignore.strand=!stranded,
+                                        select='first')
+
+    counts.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[['counts']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+      mutate(index=overlapRefToCombined) %>%
+      group_by(index) %>%
+      summarise_all(sum, na.rm=T)
+
+    counts.unsplicedNewSum <- as_tibble(assays(readClassSe)[['counts']])[rowData(readClassSe)$confidenceType=='unsplicedNew',] %>%
+      mutate(index=overlapNewToCombined) %>%
+      group_by(index) %>%
+      summarise_all(sum, na.rm=T)
+
+    start.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[['start']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+      mutate(index=overlapRefToCombined) %>%
+      group_by(index) %>%
+      summarise_all(min, na.rm=T)
+
+    start.unsplicedNewSum <- readClassSeTBL %>%
+      filter(confidenceType=='unsplicedNew') %>%
+      select(start) %>%
+      mutate(index=overlapNewToCombined) %>%
+      group_by(index) %>%
+      summarise_all(min, na.rm=T)
+
+    end.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[['end']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+      mutate(index=overlapRefToCombined) %>%
+      group_by(index) %>%
+      summarise_all(max, na.rm=T)
+
+    end.unsplicedNewSum <- readClassSeTBL %>%
+      filter(confidenceType=='unsplicedNew') %>%
+      select(end) %>%
+      mutate(index=overlapNewToCombined) %>%
+      group_by(index) %>%
+      summarise_all(max, na.rm=T)
+
+    counts.unsplicedRef <- matrix(0,
+                                  dimnames = list(1:nrow(rowData.unspliced),
+                                                  rownames(colData(readClassSeRef))),
+                                  ncol = nrow(colData(readClassSeRef)),
+                                  nrow = nrow(rowData.unspliced))
+    start.unsplicedRef <- matrix(NA,
+                                 dimnames = list(1:nrow(rowData.unspliced),
+                                                 rownames(colData(readClassSeRef))),
+                                 ncol = nrow(colData(readClassSeRef)),
+                                 nrow = nrow(rowData.unspliced))
+    end.unsplicedRef <- start.unsplicedRef
+
+    counts.unsplicedNew <- matrix(0,
+                                  dimnames = list(1:nrow(rowData.unspliced),
+                                                  rownames(colData(readClassSe))),
+                                  ncol = nrow(colData(readClassSe)),
+                                  nrow = nrow(rowData.unspliced))
+    start.unsplicedNew <- matrix(NA,
+                                 dimnames = list(1:nrow(rowData.unspliced),
+                                                 rownames(colData(readClassSe))),
+                                 ncol = nrow(colData(readClassSe)),
+                                 nrow = nrow(rowData.unspliced))
+    end.unsplicedNew <- start.unsplicedNew
+
+
+  counts.unsplicedRef[counts.unsplicedRefSum$index, ] <- as.matrix(counts.unsplicedRefSum[,colnames(counts.unsplicedRef)])
+  start.unsplicedRef[counts.unsplicedRefSum$index, ] <- as.matrix(start.unsplicedRefSum[,colnames(start.unsplicedRef)])
+  end.unsplicedRef[counts.unsplicedRefSum$index, ] <- as.matrix(end.unsplicedRefSum[,colnames(end.unsplicedRef)])
+  counts.unsplicedNew[counts.unsplicedNewSum$index, ] <- as.matrix(counts.unsplicedNewSum[,colnames(counts.unsplicedNew)])
+  start.unsplicedNew[counts.unsplicedNewSum$index, ] <- as.matrix(start.unsplicedNewSum[,'start'])
+  end.unsplicedNew[counts.unsplicedNewSum$index, ] <- as.matrix(end.unsplicedNewSum[,'end'])
+
+
+  ############ TODO: Speed up ###############
   counts.unspliced <- cbind(counts.unsplicedRef, counts.unsplicedNew)
   start.unspliced <- cbind(start.unsplicedRef, start.unsplicedNew)
   start.unspliced[which(is.infinite(start.unspliced))] <- NA  ## is slow, replace with more efficient method?
@@ -354,11 +410,13 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef=NULL, 
                         mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
 
 
-  se.unspliced <- SummarizedExperiment(assays=SimpleList(counts=counts.unspliced, start=start.unspliced, end=end.unspliced),
-                                                               rowData = rowData.unspliced,
-                                                               colData = colDataCombined)
+  se.unspliced <- SummarizedExperiment(assays = SimpleList(counts = counts.unspliced,
+                                                         start = start.unspliced,
+                                                         end = end.unspliced),
+                                       rowData = rowData.unspliced,
+                                       colData = colDataCombined)
 
-  se.combined <- SummarizedExperiment::rbind(se.spliced,se.unspliced)
+  se.combined <- SummarizedExperiment::rbind(se.spliced, se.unspliced)
   rownames(se.combined) <- 1:nrow(se.combined)
   rm(se.spliced, se.unspliced)
   return(se.combined)
@@ -378,123 +436,153 @@ isore.extendAnnotations <- function(se,
 {
   filterSet1 = FALSE
   if(nrow(se)>0){
-    filterSet1=(rowSums(assays(se)$counts>=min.readCount)>=min.sampleNumber)
+    filterSet1 <- rowSums(assays(se)$counts >= min.readCount) >= min.sampleNumber
   }
-  if(sum(filterSet1)>0){
-    if(any(rowData(se)$confidenceType=='highConfidenceJunctionReads' & filterSet1)){
+  if(sum(filterSet1) > 0){
+    if(any(rowData(se)$confidenceType == 'highConfidenceJunctionReads' & filterSet1)){
       ## (1) Spliced Reads
-      seFilteredSpliced <- se[rowData(se)$confidenceType=='highConfidenceJunctionReads' & filterSet1,]
-      mcols(seFilteredSpliced)$GENEID = NA
-      # show(head(rowData(seFilteredSpliced)))
+      seFilteredSpliced <- se[rowData(se)$confidenceType == 'highConfidenceJunctionReads' & filterSet1,]
+      mcols(seFilteredSpliced)$GENEID <- NA
+
       intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilteredSpliced)$chr,
                                                               fragmentStarts=rowData(seFilteredSpliced)$intronStarts,
                                                               fragmentEnds=rowData(seFilteredSpliced)$intronEnds,
                                                               strand=rowData(seFilteredSpliced)$strand)
-      # show(head(intronsByReadClass))
-      #     intronsByReadClass= with(rowData(seFilteredSpliced),
-      #                              makeGRangesListFromFeatureFragments(seqnames=chr,
-      #                                                                  fragmentStarts=intronStarts,
-      #                                                                  fragmentEnds=intronEnds,
-      #                                                                  strand=strand))
+
       names(intronsByReadClass) <- 1:length(intronsByReadClass)
 
-      exonEndsShifted=paste(rowData(seFilteredSpliced)$intronStarts, rowData(seFilteredSpliced)$end+1, sep=',')
-      exonStartsShifted=paste(rowData(seFilteredSpliced)$start-1, rowData(seFilteredSpliced)$intronEnds, sep=',')
+      exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts,
+                              rowData(seFilteredSpliced)$end + 1,
+                              sep=',')
+      exonStartsShifted <- paste(rowData(seFilteredSpliced)$start - 1,
+                                 rowData(seFilteredSpliced)$intronEnds,
+                                 sep=',')
 
-      exonsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilteredSpliced)$chr,
-                                                            fragmentStarts=exonStartsShifted,
-                                                            fragmentEnds=exonEndsShifted,
-                                                            strand=rowData(seFilteredSpliced)$strand)
-      exonsByReadClass <- narrow(exonsByReadClass,start=2,end = -2)  # correct junction to exon differences in coordinates
+      exonsByReadClass <- makeGRangesListFromFeatureFragments(seqnames=rowData(seFilteredSpliced)$chr,
+                                                              fragmentStarts=exonStartsShifted,
+                                                              fragmentEnds=exonEndsShifted,
+                                                              strand=rowData(seFilteredSpliced)$strand)
+      exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)  # correct junction to exon differences in coordinates
       names(exonsByReadClass) <- 1:length(exonsByReadClass)
 
       # add exon start and exon end rank
-      unlistData = unlist(exonsByReadClass, use.names = FALSE)
+      unlistData <- unlist(exonsByReadClass, use.names = FALSE)
       partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
 
-      exon_rank <- sapply(width((partitioning)),seq, from=1)
-      exon_rank[which(rowData(seFilteredSpliced)$strand=='-')] <- lapply(exon_rank[which(rowData(seFilteredSpliced)$strand=='-')], rev)  # * assumes positive for exon ranking
+      exon_rank <- sapply(width((partitioning)), seq, from=1)
+      exon_rank[which(rowData(seFilteredSpliced)$strand == '-')] <- lapply(exon_rank[which(rowData(seFilteredSpliced)$strand == '-')], rev)  # * assumes positive for exon ranking
       exon_endRank <- lapply(exon_rank, rev)
       unlistData$exon_rank <- unlist(exon_rank)
       unlistData$exon_endRank <- unlist(exon_endRank)
 
       exonsByReadClass <- relist(unlistData, partitioning)
 
-      ovExon = findSpliceOverlapsQuick(cutStartEndFromGrangesList(exonsByReadClass), cutStartEndFromGrangesList(annotationGrangesList))
+      ovExon <- findSpliceOverlapsQuick(cutStartEndFromGrangesList(exonsByReadClass),
+                                        cutStartEndFromGrangesList(annotationGrangesList))
 
       # classificationTable will contain the different classes of new transcripts that are discovered
-      classificationTable=data.frame(matrix('', nrow=length(seFilteredSpliced), ncol=9), stringsAsFactors = FALSE)
-      colnames(classificationTable) <- c('equal','compatible','newWithin','newLastJunction','newFirstJunction', 'newJunction', 'allNew','newFirstExon','newLastExon')
+      classificationTable <- data.frame(matrix('',
+                                               nrow=length(seFilteredSpliced),
+                                               ncol=9),
+                                        stringsAsFactors=FALSE)
+      colnames(classificationTable) <- c('equal',
+                                         'compatible',
+                                         'newWithin',
+                                         'newLastJunction',
+                                         'newFirstJunction',
+                                         'newJunction',
+                                         'allNew',
+                                         'newFirstExon',
+                                         'newLastExon')
 
-      classificationTable$equal[queryHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]] <-'equal' # annotate as identical,
+      classificationTable$equal[queryHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]] <- 'equal' # annotate as identical
 
-      classificationTable$compatible[queryHits(ovExon[mcols(ovExon)$compatible ])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]] <-'compatible' ##compatible, ( same last exon/ different last exon can be separated later)
+      classificationTable$compatible[queryHits(ovExon[mcols(ovExon)$compatible ])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]] <- 'compatible' ##compatible, ( same last exon/ different last exon can be separated later)
       classificationTable$compatible[classificationTable$equal=='equal'] <- ''
 
       ## annotate with transcript and gene Ids
-      mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$compatible][!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))])] <-mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$compatible])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]])$GENEID # annotate with compatible gene id,
-      mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$equal][!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))])] <-mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]])$GENEID # annotate as identical,
+      mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$compatible][!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))])] <- mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$compatible])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]])$GENEID # annotate with compatible gene id,
+      mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$equal][!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))])] <- mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]])$GENEID # annotate as identical,
 
-      ##using intron matches
-      unlistedIntrons = unlist(intronsByReadClass, use.names = TRUE)
+      ## using intron matches
+      unlistedIntrons <- unlist(intronsByReadClass, use.names=TRUE)
       partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)), names=NULL)
 
       unlistedIntronsAnnotations <- unlist(myGaps(annotationGrangesList))
-      mcols(unlistedIntronsAnnotations)$GENEID = mcols(annotationGrangesList)$GENEID[match(names(unlistedIntronsAnnotations), mcols(annotationGrangesList)$TXNAME)]
-      # show(granges(unlistedIntrons))
-      # show(granges(unique(unlistedIntronsAnnotations)))
-      intronMatches <- GenomicRanges::match(unlistedIntrons, unique(unlistedIntronsAnnotations), nomatch=0)>0
-      # intronMatches <- (unlistedIntrons %in% unique(unlistedIntronsAnnotations))
+      mcols(unlistedIntronsAnnotations)$GENEID <- mcols(annotationGrangesList)$GENEID[match(names(unlistedIntronsAnnotations), mcols(annotationGrangesList)$TXNAME)]
+
+      intronMatches <- GenomicRanges::match(unlistedIntrons, unique(unlistedIntronsAnnotations), nomatch=0) > 0
       intronMatchesList <- relist(intronMatches, partitioning)
 
       ## new within annotations (all junctions known)
-      classificationTable$newWithin[all(intronMatchesList) & ! (classificationTable$compatible=='compatible' | classificationTable$equal=='equal')] <- 'newWithin'
+      classificationTable$newWithin[all(intronMatchesList) & ! (classificationTable$compatible=='compatible' | classificationTable$equal == 'equal')] <- 'newWithin'
 
       ## new with new junction internal (new splice variant)
       ## new with new junction first (new TSS/first exons)
       ## new with new junction last (new last exon)
-      lastJunctionMatch <- unlist(endoapply(endoapply(intronMatchesList, rev),'[[',1))
-      firstJunctionMatch <- unlist(endoapply(intronMatchesList,'[[',1))
+      lastJunctionMatch <- unlist(endoapply(endoapply(intronMatchesList, rev), '[[', 1))
+      firstJunctionMatch <- unlist(endoapply(intronMatchesList, '[[', 1))
 
-      classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand=='+' & !lastJunctionMatch & any(intronMatchesList))] <- 'newLastJunction'
-      classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand=='-' & (!firstJunctionMatch & any(intronMatchesList)))] <- 'newLastJunction'
+      classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand == '+' & !lastJunctionMatch & any(intronMatchesList))] <- 'newLastJunction'
+      classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand == '-' & (!firstJunctionMatch & any(intronMatchesList)))] <- 'newLastJunction'
 
-      classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand=='+' & !firstJunctionMatch & any(intronMatchesList))] <- 'newFirstJunction'
-      classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand=='-' & (!lastJunctionMatch & any(intronMatchesList)))] <- 'newFirstJunction'
+      classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand == '+' & !firstJunctionMatch & any(intronMatchesList))] <- 'newFirstJunction'
+      classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand == '-' & (!lastJunctionMatch & any(intronMatchesList)))] <- 'newFirstJunction'
 
-      classificationTable$newJunction[ (sum(!intronMatchesList)> !firstJunctionMatch + !lastJunctionMatch) & any(intronMatchesList)] <- 'newJunction'
+      classificationTable$newJunction[ (sum(!intronMatchesList) > !firstJunctionMatch + !lastJunctionMatch) & any(intronMatchesList)] <- 'newJunction'
 
       classificationTable$allNew[!any(intronMatchesList)] <- 'allNew'
 
 
       ## assign gene ids based on the maximum number of matching introns/splice junctions
-      overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,unlistedIntronsAnnotations,type='equal',select='all', ignore.strand=FALSE)
-      maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)], stringsAsFactors=FALSE)) %>% group_by(txId, geneId) %>% summarise(geneCount=n()) %>% group_by(txId) %>% filter(geneCount==max(geneCount)) %>% filter(!duplicated(txId)) %>% ungroup()
+      overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,
+                                                         unlistedIntronsAnnotations,
+                                                         type='equal',
+                                                         select='all',
+                                                         ignore.strand=FALSE)
+      maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
+                                                geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)],
+                                                stringsAsFactors=FALSE)) %>%
+        group_by(txId, geneId) %>%
+        summarise(geneCount=n()) %>%
+        group_by(txId) %>%
+        filter(geneCount == max(geneCount)) %>%
+        filter(!duplicated(txId)) %>%
+        ungroup()
 
 
       geneIdByIntron <- rep(NA,length(exonsByReadClass))
       geneIdByIntron <- maxGeneCountPerNewTx$geneId[match(names(exonsByReadClass), maxGeneCountPerNewTx$txId)]
       mcols(seFilteredSpliced)$GENEID[is.na(mcols(seFilteredSpliced)$GENEID)] <- geneIdByIntron[is.na(mcols(seFilteredSpliced)$GENEID)]
 
-      distNewTx <- calculateDistToAnnotation(exonsByReadClass, annotationGrangesList, maxDist = min.exonDistance, primarySecondaryDist = 5, ignore.strand= FALSE)
-      distNewTxByQuery =distNewTx %>% group_by(queryHits) %>% summarise(minDist=min(dist), startMatch=any(startMatch), endMatch=any(endMatch), compatible=any(compatible))  ## note: here is more information that can be used to filter and annotate!
+      distNewTx <- calculateDistToAnnotation(exByTx=exonsByReadClass,
+                                             exByTxRef=annotationGrangesList,
+                                             maxDist=min.exonDistance,
+                                             primarySecondaryDist=5,
+                                             ignore.strand=FALSE)
+      distNewTxByQuery <- distNewTx %>%
+        group_by(queryHits) %>%
+        summarise(minDist=min(dist),
+                  startMatch=any(startMatch),
+                  endMatch=any(endMatch),
+                  compatible=any(compatible))  ## note: here is more information that can be used to filter and annotate!
 
-      classificationTable$compatible[distNewTxByQuery$queryHits[distNewTxByQuery$compatible]] <-'compatible'
+      classificationTable$compatible[distNewTxByQuery$queryHits[distNewTxByQuery$compatible]] <- 'compatible'
 
       classificationTable$newFirstExon[distNewTxByQuery$queryHits[!distNewTxByQuery$startMatch]] <- 'newFirstExon'
-      classificationTable$newFirstExon[classificationTable$newFirstJunction!='newFirstJunction'] <- ''
+      classificationTable$newFirstExon[classificationTable$newFirstJunction != 'newFirstJunction'] <- ''
 
       classificationTable$newLastExon[distNewTxByQuery$queryHits[!distNewTxByQuery$endMatch]] <- 'newLastExon'
-      classificationTable$newLastExon[classificationTable$newLastJunction!='newLastJunction'] <- ''
+      classificationTable$newLastExon[classificationTable$newLastJunction != 'newLastJunction'] <- ''
 
-      mcols(seFilteredSpliced)$readClassType <- apply(classificationTable,1, paste, collapse='')
+      mcols(seFilteredSpliced)$readClassType <- apply(classificationTable, 1, paste, collapse='')
 
 
     }
     ## unspliced transcripts
 
-    if(any(rowData(se)$confidenceType=='unsplicedNew' & filterSet1)) {
-      seFilteredUnspliced <- se[rowData(se)$confidenceType=='unsplicedNew' & filterSet1,]
+    if(any(rowData(se)$confidenceType == 'unsplicedNew' & filterSet1)) {
+      seFilteredUnspliced <- se[rowData(se)$confidenceType == 'unsplicedNew' & filterSet1, ]
       exonsByReadClassUnspliced= GRanges(seqnames=rowData(seFilteredUnspliced)$chr,
                                          ranges=IRanges(start=rowData(seFilteredUnspliced)$start,
                                                         end=rowData(seFilteredUnspliced)$end),
@@ -505,11 +593,14 @@ isore.extendAnnotations <- function(se,
       exonsByReadClassUnspliced$exon_endRank <- rep(1, length(exonsByReadClassUnspliced))
       exonsByReadClassUnspliced <- relist(exonsByReadClassUnspliced, partitioning)
 
-      mcols(seFilteredUnspliced)$GENEID=NA
-      mcols(seFilteredUnspliced)$readClassType='unsplicedNew'
+      mcols(seFilteredUnspliced)$GENEID <- NA
+      mcols(seFilteredUnspliced)$readClassType <- 'unsplicedNew'
 
       ## here: add filter to remove unspliced transcripts which overlap with known transcripts/high quality spliced transcripts
-      overlapUnspliced <- findOverlaps(exonsByReadClassUnspliced, annotationGrangesList, minoverlap = min.exonOverlap, select='first')
+      overlapUnspliced <- findOverlaps(exonsByReadClassUnspliced,
+                                       annotationGrangesList,
+                                       minoverlap=min.exonOverlap,
+                                       select='first')
       seFilteredUnspliced <- seFilteredUnspliced[is.na(overlapUnspliced)]
       exonsByReadClassUnspliced <- exonsByReadClassUnspliced[is.na(overlapUnspliced)]
 
@@ -524,86 +615,93 @@ isore.extendAnnotations <- function(se,
     }
 
     #assign gene IDs based on exon match
-    exonMatchGene <- findOverlaps(exonRangesCombined,annotationGrangesList,select = 'arbitrary',minoverlap = min.exonOverlap)
+    exonMatchGene <- findOverlaps(exonRangesCombined,
+                                  annotationGrangesList,
+                                  select='arbitrary',
+                                  minoverlap=min.exonOverlap)
     geneIdByExon <- rep(NA,length(exonRangesCombined))
     geneIdByExon[!is.na(exonMatchGene)] <- mcols(annotationGrangesList)$GENEID[exonMatchGene[!is.na(exonMatchGene)]]
     geneIdByExon[!is.na(mcols(seCombined)$GENEID)] <-  mcols(seCombined)$GENEID[!is.na(mcols(seCombined)$GENEID)]
 
-    exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],exonRangesCombined[!is.na(geneIdByExon)],select = 'arbitrary',minoverlap = min.exonOverlap)
+    exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
+                                  exonRangesCombined[!is.na(geneIdByExon)],
+                                  select = 'arbitrary',
+                                  minoverlap = min.exonOverlap)
     while(any(!is.na(exonMatchGene))) {
-      show('annoted new tx with existing gene id based on overlap with intermediate new tx')
       geneIdByExon[is.na(geneIdByExon)][!is.na(exonMatchGene)] <- geneIdByExon[!is.na(geneIdByExon)][exonMatchGene[!is.na(exonMatchGene)]]
-      exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],exonRangesCombined[!is.na(geneIdByExon)],select = 'arbitrary',minoverlap = min.exonOverlap)
+      exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
+                                    exonRangesCombined[!is.na(geneIdByExon)],
+                                    select = 'arbitrary',
+                                    minoverlap = min.exonOverlap)
     }
     mcols(seCombined)$GENEID[is.na(mcols(seCombined)$GENEID)] <- geneIdByExon[is.na(mcols(seCombined)$GENEID)]
-    #show(dim(seCombined))
-    #geneLoci <- mcols(seCombined)$GENEID ## will be used to annotate overlaping genes which do not share any exon or which are antisense
-    #gene loci calculation
-    #rangeOverlap <- findOverlaps(range(exonRangesCombined[is.na(geneLoci)]), annotationGrangesList, ignore.strand=TRUE, minoverlap = min.exonOverlap, select = 'arbitrary')
-    #geneLoci[is.na(geneLoci)][!is.na(rangeOverlap)] <-  mcols(annotationGrangesList)$GENEID[rangeOverlap[!is.na(rangeOverlap)]]
-    #mcols(seCombined)$GeneLoci <- geneLoci
 
     if(any(is.na(mcols(seCombined)$GENEID))){
+
       newGeneIds <- assignNewGeneIds(exonRangesCombined[is.na(mcols(seCombined)$GENEID)], prefix=prefix, minoverlap=5, ignore.strand=F)
+
       mcols(seCombined)$GENEID[as.integer(newGeneIds$readClassId)] <- newGeneIds$geneId
-      #mcols(seCombined)$GeneLoci[is.na(mcols(seCombined)$GeneLoci)] <- mcols(seCombined)$GENEID[is.na(mcols(seCombined)$GeneLoci)]
     }
 
 
 
-   ## filter out transcripts
+    ## filter out transcripts
 
-   # (1) based on transcript usage
-   countsTBL <- as_tibble(assays(seCombined)$counts) %>%mutate(geneId = mcols(seCombined)$GENEID) %>% group_by(geneId) %>% mutate_at(vars(-geneId), .funs = sum) %>% ungroup() %>% dplyr::select(-geneId)
-   relCounts <- assays(seCombined)$counts / countsTBL
-   filterTxUsage=(rowSums(relCounts>=min.readFractionByGene, na.rm=T)>=min.sampleNumber)
-  # show(dim(seCombined[filterTxUsage]))
-   seCombinedFiltered <- seCombined[filterTxUsage]
-   exonRangesCombinedFiltered <- exonRangesCombined[filterTxUsage]
+    # (1) based on transcript usage
+    countsTBL <- as_tibble(assays(seCombined)$counts) %>%
+      mutate(geneId = mcols(seCombined)$GENEID) %>%
+      group_by(geneId) %>%
+      mutate_at(vars(-geneId), .funs = sum) %>%
+      ungroup() %>%
+      dplyr::select(-geneId)
+    relCounts <- assays(seCombined)$counts / countsTBL
+    filterTxUsage <- rowSums(relCounts >= min.readFractionByGene, na.rm=T) >= min.sampleNumber
+    seCombinedFiltered <- seCombined[filterTxUsage]
+    exonRangesCombinedFiltered <- exonRangesCombined[filterTxUsage]
 
-   # (2) based on compatiblity with annotations
-   if(remove.subsetTx) {
-     exonRangesCombinedFiltered <- exonRangesCombinedFiltered[!grepl('compatible',mcols(seCombinedFiltered)$readClassType)]
-     seCombinedFiltered <- seCombinedFiltered[!grepl('compatible',mcols(seCombinedFiltered)$readClassType)]
+    # (2) based on compatiblity with annotations
+    if(remove.subsetTx) {
+      exonRangesCombinedFiltered <- exonRangesCombinedFiltered[!grepl('compatible', mcols(seCombinedFiltered)$readClassType)]
+      seCombinedFiltered <- seCombinedFiltered[!grepl('compatible', mcols(seCombinedFiltered)$readClassType)]
+    }
 
-   }
+    # (3) remove transcripts with identical junctions to annotations (all annotations will be added later)
+    exonRangesCombinedFiltered <- exonRangesCombinedFiltered[mcols(seCombinedFiltered)$readClassType != 'equal']
+    seCombinedFiltered <- seCombinedFiltered[mcols(seCombinedFiltered)$readClassType != 'equal']
 
-   # (3) remove transcripts with identical junctions to annotations (all annotations will be added later)
-   exonRangesCombinedFiltered <- exonRangesCombinedFiltered[mcols(seCombinedFiltered)$readClassType != 'equal']
-   seCombinedFiltered <- seCombinedFiltered[mcols(seCombinedFiltered)$readClassType != 'equal']
+    #simplified classification, can be further improved for readibility
+    mcols(seCombinedFiltered)$newTxClass <- mcols(seCombinedFiltered)$readClassType
+    mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType == 'unsplicedNew' &
+                                           grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-unspliced'
+    mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType=='allNew' &
+                                           grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-spliced'
 
-   #simplified classification, can be further improved for readibility
-   mcols(seCombinedFiltered)$newTxClass = mcols(seCombinedFiltered)$readClassType
-   mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType=='unsplicedNew' & grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-unspliced'
-   mcols(seCombinedFiltered)$newTxClass[mcols(seCombinedFiltered)$readClassType=='allNew' & grepl('gene', mcols(seCombinedFiltered)$GENEID)] <- 'newGene-spliced'
+    extendedAnnotationRanges <- exonRangesCombinedFiltered
+    mcols(extendedAnnotationRanges) <- mcols(seCombinedFiltered)[, c('GENEID', 'newTxClass')]
+    if(length(extendedAnnotationRanges) > 0){
+      mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx', prefix, '.', 1:length(extendedAnnotationRanges))
+    }
 
-   extendedAnnotationRanges <- exonRangesCombinedFiltered
-   mcols(extendedAnnotationRanges) <- mcols(seCombinedFiltered)[,c('GENEID','newTxClass')]
-   if(length(extendedAnnotationRanges)>0){
-     mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx', prefix,'.', 1:length(extendedAnnotationRanges))
-   }
+    names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
 
-   names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
-
-   annotationRangesToMerge <- annotationGrangesList
-   mcols(annotationRangesToMerge)$newTxClass <- rep('annotation', length(annotationRangesToMerge))
+    annotationRangesToMerge <- annotationGrangesList
+    mcols(annotationRangesToMerge)$newTxClass <- rep('annotation', length(annotationRangesToMerge))
 
 
-   extendedAnnotationRanges<- c(extendedAnnotationRanges, annotationRangesToMerge)
-   minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges)
-   mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass[match(names(extendedAnnotationRanges),minEqClasses$queryTxId)]
-   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
+    extendedAnnotationRanges<- c(extendedAnnotationRanges, annotationRangesToMerge)
+    minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges)
 
-   return(extendedAnnotationRanges)
+    mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass[match(names(extendedAnnotationRanges), minEqClasses$queryTxId)]
+    mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
+
+    return(extendedAnnotationRanges)
   } else {
     return(annotationGrangesList)
   }
 }
 
-
+############ HERE ###############
 isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35){
-  cat('### calculate distance of read classes to annotations, basic filter for read-tx assignments ### \n')
-  start.ptm <- proc.time()
 
   exonsByReadClass = rowRanges(seReadClass)
   readClassTable=as_tibble(rowData(seReadClass), rownames='readClassId')
@@ -613,28 +711,32 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
   distTable <- calculateDistToAnnotation(exonsByReadClass,annotationGrangesList,maxDist = min.exonDistance, primarySecondaryDist = 5, ignore.strand = FALSE)
 
   distTable$readCount = assays(seReadClass)$counts[distTable$readClassId,]  # should actually be stored in counts, but is here to  assign genes based on high read counts
-  distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, confidenceType)) %>% mutate(relativeReadCount=readCount/txNumberFiltered)
-  distTable <- left_join(distTable,  as_tibble(mcols(annotationGrangesList)[,c('TXNAME','GENEID')]), by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
-  end.ptm <- proc.time()
-  cat(paste0('Finished calculating distance of read classes to annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, confidenceType), by="readClassId") %>%
+    mutate(relativeReadCount=readCount/txNumberFiltered)
 
-  cat('### assign unmatched readClasses to new geneIds ### \n')
-  start.ptm <- proc.time()
+  distTable <- left_join(distTable,
+                         as_tibble(mcols(annotationGrangesList)[,c('TXNAME','GENEID')]),
+                         by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
 
-  readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%group_by(GENEID) %>% mutate(geneCount = sum(readCount)) %>% distinct() %>%group_by(readClassId) %>% filter(geneCount==max(geneCount)) %>%filter(row_number()==1) %>% dplyr::select(readClassId, geneId=GENEID) %>% ungroup()
+  readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%
+    group_by(GENEID) %>%
+    mutate(geneCount = sum(readCount)) %>%
+    distinct() %>%
+    group_by(readClassId) %>%
+    filter(geneCount==max(geneCount)) %>%
+    filter(row_number()==1) %>%
+    dplyr::select(readClassId, geneId=GENEID) %>%
+    ungroup()
 
 
   newGeneCandidates <- (!readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
   readClassToGeneIdTableNew <- assignNewGeneIds(exonsByReadClass[newGeneCandidates], prefix='.unassigned', minoverlap=5, ignore.strand=F)
-  readClassGeneTable <- rbind(readClassToGeneIdTable,readClassToGeneIdTableNew)
-  readClassTable <- left_join(readClassTable, readClassGeneTable)
-  end.ptm <- proc.time()
-  cat(paste0('Finished assigning unmatched readClasses to new geneIds in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  readClassGeneTable <- rbind(readClassToGeneIdTable, readClassToGeneIdTableNew)
+  readClassTable <- left_join(readClassTable, readClassGeneTable, by="readClassId")
 
   rm(list = c('newGeneCandidates','readClassGeneTable'))
   gc()
 
-  cat('### Create summarizedExperiment output ### \n')
   metadata(seReadClass)<-list(distTable=distTable)
   rowData(seReadClass) <- readClassTable
 
@@ -676,84 +778,6 @@ classifyReadClasses <- function(readClassList) {
 
 
 }
-
-
-assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
-  if(is.null(names(exByTx))){
-  names(exByTx) <- 1:length(exByTx)
-    }
-
-  exonSelfOverlaps <- findOverlaps(exByTx,exByTx,select = 'all',minoverlap = minoverlap, ignore.strand=ignore.strand)
-  hitObject = tbl_df(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
-  candidateList <- hitObject %>%
-                    group_by(queryHits) %>%
-                    filter( queryHits <= min(subjectHits), queryHits != subjectHits) %>%
-                    ungroup()
-
-  filteredOverlapList <- hitObject %>% filter(queryHits < subjectHits)
-
-  #temp <- candidateList  ## %>% filter(queryHits<= subjectHits) ## remove identical hits will lead to wrong results
-  #temp <- hitObject
-  rm(list=c('exonSelfOverlaps','hitObject'))
-  gc()
-  length_tmp = 1
-  while(nrow(candidateList)>length_tmp) {  # loop to include overlappng read classes which are not in order
-    length_tmp = nrow(candidateList)
-    temp <- left_join(candidateList,filteredOverlapList,by=c("subjectHits"="queryHits")) %>%
-            group_by(queryHits) %>% filter(! subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
-            ungroup %>%
-            dplyr::select(queryHits,subjectHits.y) %>%
-            distinct() %>%
-            dplyr::rename(subjectHits=subjectHits.y)
-    candidateList <- rbind(temp, candidateList)
-    while(nrow(temp)>0) {
-      show('annotated transcripts from unknown genes by new gene id')
-
-      show(nrow(candidateList))
-      temp= left_join(candidateList,filteredOverlapList,by=c("subjectHits"="queryHits")) %>%
-              group_by(queryHits) %>%
-              filter(! subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
-              ungroup %>%
-              dplyr::select(queryHits,subjectHits.y) %>%
-              distinct() %>%
-              dplyr::rename(subjectHits=subjectHits.y)
-
-      candidateList <- rbind(temp, candidateList)
-    }
-    #length_tmp = nrow(candidateList)
-    show('second loop')
-    show(length_tmp)
-    tst <- candidateList %>%
-            group_by(subjectHits) %>%
-            mutate(subjectCount = n()) %>%
-            group_by(queryHits) %>%
-            filter(max(subjectCount)>1) %>%
-            ungroup()
-
-    temp2= inner_join(tst,tst,by=c("subjectHits"="subjectHits")) %>%
-            filter(queryHits.x!=queryHits.y)  %>%
-            mutate(queryHits = if_else(queryHits.x > queryHits.y, queryHits.y, queryHits.x),
-                   subjectHits = if_else(queryHits.x > queryHits.y, queryHits.x, queryHits.y)) %>%
-            dplyr::select(queryHits,subjectHits) %>%
-            distinct()
-    candidateList <-  distinct(rbind(temp2, candidateList))
-  }
-
-  candidateList <- candidateList %>%
-                    filter(! queryHits %in% subjectHits) %>%
-                    arrange(queryHits, subjectHits)
-  idToAdd <- (which(!(1:length(exByTx) %in% unique(candidateList$subjectHits))))
-
-  candidateList <- rbind(candidateList, tibble(queryHits=idToAdd, subjectHits=idToAdd)) %>%
-                    arrange(queryHits, subjectHits) %>%
-                    mutate(geneId = paste('gene',prefix,'.',queryHits,sep='')) %>%
-                    dplyr::select(subjectHits, geneId)
-  candidateList$readClassId <- names(exByTx)[candidateList$subjectHits]
-
-  candidateList <- dplyr::select(candidateList, readClassId, geneId)
-  return(candidateList)
-}
-
 
 
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySecondaryDist = 5, ignore.strand=FALSE) {  #### HERE #### 2019-10-03: create table with read calss to transcript and read class to gene annotation. ANything iwhtout match is either new (annotated as new 5' exon, new 3' exon, new exon withmin 30bp threhsold(? etc) or discarded (?) (classificaiton has medium results... only in addition?)
