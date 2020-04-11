@@ -115,7 +115,8 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
                                  annotationGrangesList = annotationGrangesList,
                                  ir.control = ir.control,
                                  extendAnnotations = extendAnnotations,
-                                 outputReadClassDir = outputReadClassDir))
+                                 outputReadClassDir = outputReadClassDir,
+                                 verbose = verbose))
       }
     }
 
@@ -287,7 +288,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       gc()
       end.time <- proc.time()
       cat(paste0('Finished build transcript models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
-      combinedTxCandidates <- isore.combineTranscriptCandidates(seList[[bam.file.index]], readClassSeRef = combinedTxCandidates)
+      combinedTxCandidates <- isore.combineTranscriptCandidates(seList[[bam.file.index]], readClassSeRef = combinedTxCandidates, verbose = verbose)
     }
     start.time <- proc.time()
     extendedAnnotationGRangesList = isore.extendAnnotations(se=combinedTxCandidates,
@@ -322,7 +323,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
 }
 
 
-bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL){
+bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
@@ -356,13 +357,14 @@ bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genome
                                      annotationGrangesList = annotationGrangesList,
                                      ir.control = ir.control,
                                      algo.control = algo.control,
-                                     extendAnnotations = extendAnnotations)
+                                     extendAnnotations = extendAnnotations,
+                                     verbose = verbose)
 
   return(seOutput)
 }
 
 #' Combine readClass objects and perform quantification
-bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.control, algo.control, extendAnnotations){
+bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.control, algo.control, extendAnnotations, verbose = FALSE){
 
   seOutput <- NULL
   if(extendAnnotations==FALSE){
@@ -387,7 +389,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
     combinedTxCandidates <- NULL
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
       se <- readRDS(file=readclass.file[readclass.file.index])
-      combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates)
+      combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates, verbose = verbose)
       rm(se)
       gc()
     }
