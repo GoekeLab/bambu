@@ -718,8 +718,8 @@ isore.extendAnnotations <- function(se,
 }
 
 ############ HERE ###############
-isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35){
-
+isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, returnDistTable = TRUE, verbose = FALSE){
+  start.ptm <- proc.time()
   exonsByReadClass = rowRanges(seReadClass)
   readClassTable=as_tibble(rowData(seReadClass), rownames='readClassId')
 
@@ -734,6 +734,10 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
   distTable <- left_join(distTable,
                          as_tibble(mcols(annotationGrangesList)[,c('TXNAME','GENEID')]),
                          by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
+  end.ptm <- proc.time()
+  if(verbose)  cat(paste0('calculated distance table in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+  start.ptm <- proc.time()
 
   readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%
     group_by(GENEID) %>%
@@ -754,7 +758,10 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
   rm(list = c('newGeneCandidates','readClassGeneTable'))
   gc()
 
-  metadata(seReadClass) <- list(distTable=distTable)
+  end.ptm <- proc.time()
+  if(verbose)  cat(paste0('added gene Ids for each read class ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+
+  if(returnDistTable) metadata(seReadClass) <- list(distTable=distTable)
   rowData(seReadClass) <- readClassTable
 
   rm(list=c('distTable','exonsByReadClass','readClassTable'))
