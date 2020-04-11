@@ -133,6 +133,101 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
 
 
 
+calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySecondaryDist = 5, ignore.strand=FALSE) {
+
+  ########## TODO: go through filter rules: (are these correct/up to date?)
+  ## (1) select minimum distance match (note: allow for a few base pairs error?)
+  ## (2) select hits within (minimum unique query sequence, no start match)
+  ## (3) select hits with minimum unqiue start sequence/end sequence
+
+
+  #(1)  find overlaps of read classes with annotated transcripts, allow for maxDist [b] distance for each exon; exons with size less than 35bp are dropped to find overlaps, but counted towards distance and compatibility
+  spliceOverlaps <- findSpliceOverlapsByDist(exByTx,
+                                             exByTxRef,
+                                             maxDist=maxDist,
+                                             firstLastSeparate=T,
+                                             dropRangesByMinLength=T,
+                                             cutStartEnd=TRUE,
+                                             ignore.strand=ignore.strand)
+
+  txToAnTable <- tbl_df(spliceOverlaps) %>%
+    group_by(queryHits)  %>%
+    mutate(dist = uniqueLengthQuery + uniqueLengthSubject) %>%
+    mutate(txNumber = n())
+
+  # first round of filtering should only exclude obvious mismatches
+  txToAnTableFiltered <- txToAnTable %>%
+    group_by(queryHits)  %>%
+    arrange(queryHits, dist) %>%
+    filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+    filter(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist == min(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist)) %>%
+    filter((uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist) == max(uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist)) %>%
+    mutate(txNumberFiltered = n())
+
+  # (2) calculate splice overlap for any not in the list (all hits have a unique new exon of at least 35bp length, might be new candidates)
+  setTMP <- unique(txToAnTableFiltered$queryHits)
+  spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
+                                                  exByTxRef,
+                                                  maxDist=0,
+                                                  type='any',
+                                                  firstLastSeparate=T,
+                                                  dropRangesByMinLength=F,
+                                                  cutStartEnd=TRUE,
+                                                  ignore.strand=ignore.strand)
+
+  txToAnTableRest <- tbl_df(spliceOverlaps_rest) %>%
+    group_by(queryHits) %>%
+    mutate(dist=uniqueLengthQuery + uniqueLengthSubject) %>%
+    mutate(txNumber=n())
+
+  txToAnTableRest$queryHits <- (1:length(exByTx))[-setTMP][txToAnTableRest$queryHits]  # reassign IDs based on unfiltered list length
+
+  # todo: check filters, what happens to reads with only start and end match?
+  txToAnTableRest <- txToAnTableRest %>%
+    group_by(queryHits)  %>%
+    arrange(queryHits, dist) %>%
+    filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+    filter(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist == min(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist)) %>%
+    filter((uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist) == max(uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist)) %>%
+    mutate(txNumberFiltered = n())
+
+  # (3) find overlaps for remaining reads (reads which have start/end match, this time not cut and used to calculate distance)
+  setTMPRest <- unique(c(txToAnTableRest$queryHits, setTMP))
+  txToAnTableRestStartEnd <- NULL
+  if(length(exByTx[-setTMPRest]) > 0) {
+    spliceOverlaps_restStartEnd <- findSpliceOverlapsByDist(exByTx[-setTMPRest],
+                                                            exByTxRef,
+                                                            maxDist=0,
+                                                            type='any',
+                                                            firstLastSeparate=T,
+                                                            dropRangesByMinLength=F,
+                                                            cutStartEnd=F,
+                                                            ignore.strand=ignore.strand)
+
+    txToAnTableRestStartEnd <- tbl_df(spliceOverlaps_restStartEnd) %>%
+      group_by(queryHits) %>%
+      mutate(dist = uniqueLengthQuery + uniqueLengthSubject + uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
+      mutate(txNumber = n())
+
+    txToAnTableRestStartEnd$queryHits <- (1:length(exByTx))[-setTMPRest][txToAnTableRestStartEnd$queryHits]  # reassign IDs based on unfiltered list length
+
+    # todo: check filters, what happens to reads with only start and end match?
+    txToAnTableRestStartEnd <- txToAnTableRestStartEnd %>%
+      group_by(queryHits) %>%
+      arrange(queryHits, dist) %>%
+      filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+      mutate(txNumberFiltered = n())
+  }
+
+  txToAnTableFiltered <- rbind(txToAnTableFiltered, txToAnTableRest, txToAnTableRestStartEnd) %>% ungroup()
+
+  txToAnTableFiltered$readClassId <- names(exByTx)[txToAnTableFiltered$queryHits]
+  txToAnTableFiltered$annotationTxId <- names(exByTxRef)[txToAnTableFiltered$subjectHits]
+
+  return(txToAnTableFiltered)
+}
+
+
 
 
 
