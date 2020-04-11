@@ -57,7 +57,8 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
                                     annotationGrangesList = annotationGrangesList,
                                     ir.control = ir.control,
                                     algo.control = algo.control,
-                                    extendAnnotations = extendAnnotations))
+                                    extendAnnotations = extendAnnotations,
+                                    verbose = verbose))
     }else{
       #===# Check genome.fa file  #===#
       if(is.null(genomeSequence)){
@@ -250,7 +251,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       cat(paste0('Finished build read classes models in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
       start.time <- proc.time()
-      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       rm(se)
       gc()
       end.time <- proc.time()
@@ -274,7 +275,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
     for(bam.file.index in seq_along(bam.file)){  # first loop to reconstruct read classes
       start.time <- proc.time()
 
-      readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]])
+      readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]], verbose = verbose)
       seList[[bam.file.index]]  <- isore.constructReadClasses(readGrgList = readGrgList,
                                                               runName = bam.file.basenames[bam.file.index],
                                                               annotationGrangesList = annotationGrangesList,
@@ -299,7 +300,8 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
                                                             min.sampleNumber = ir.control[['min.sampleNumber']],
                                                             min.exonDistance = ir.control[['min.exonDistance']],
                                                             min.exonOverlap = ir.control[['min.exonOverlap']],
-                                                            prefix = ir.control[['prefix']])
+                                                            prefix = ir.control[['prefix']],
+                                                            verbose = verbose)
     rm(annotationGrangesList)
     gc()
     end.time <- proc.time()
@@ -307,7 +309,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
 
     for(bam.file.index in seq_along(bam.file)){  # second loop after adding new gene annotations
       start.time <- proc.time()
-      seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      seWithDist <- isore.estimateDistanceToAnnotations(seList[[bam.file.index]], extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       end.time <- proc.time()
       cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
@@ -373,7 +375,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
 
-      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       end.time <- proc.time()
       cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
@@ -407,7 +409,8 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
                                                             min.sampleNumber = ir.control[['min.sampleNumber']],
                                                             min.exonDistance = ir.control[['min.exonDistance']],
                                                             min.exonOverlap = ir.control[['min.exonOverlap']],
-                                                            prefix = ir.control[['prefix']])
+                                                            prefix = ir.control[['prefix']],
+                                                            verbose = verbose)
     rm(list = c("combinedTxCandidates","annotationGrangesList"))
     gc()
     end.time <- proc.time()
@@ -417,7 +420,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
       start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
-      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']])
+      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       end.time <- proc.time()
       cat(paste0('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
 
