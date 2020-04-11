@@ -1,3 +1,81 @@
+###########ALL FUNCTIONS HERE ARE NON ESSENTIAL #############
+
+#'@title PLOTGRANGESLISTBYNAMES
+#'@param grangesList
+plotGRangesListByNames<-function(grangesList)
+{
+
+  plotTrack = unlist(grangesList)
+  plotTrack$grouping <- names(plotTrack)
+  plotTrack=AnnotationTrack(plotTrack,group=plotTrack$grouping, id=plotTrack$grouping,fill=2,col.line=1,fontcolor.group=1,fontcolor.item=1)
+  plotTracks(list(plotTrack),showId=TRUE)
+}
+
+#' @describeIn plotGRangesListByNames
+makeTrackFromGrangesList <- function(grangesList)
+{
+
+  plotTrack = unlist(grangesList)
+  plotTrack$grouping <- names(plotTrack)
+  plotTrack=AnnotationTrack(plotTrack,group=plotTrack$grouping, id=plotTrack$grouping,fill=2,col.line=1,fontcolor.group=1,fontcolor.item=1)
+  return(plotTrack)
+}
+
+
+#' @title GRANGESLISTTOBED
+#' @param x
+grangesListToBed<-function(x) # note: 0 based coordinates
+{
+  # useful: generate UCSC custom track with the following steps
+
+
+  xUnlist <- unlist(range(x))
+
+  bedData = data.frame(as.character(seqnames(xUnlist)),start(xUnlist)-1,end(xUnlist),names(xUnlist),rep(1000,length(xUnlist)),as.character(strand(xUnlist)),start(xUnlist)-1,end(xUnlist),rep(0,length(xUnlist)),elementNROWS(x),unlist(lapply(width(x),paste,collapse=',')),unlist(lapply((start(x)-min(start(x))),paste,collapse=','))) #, stringsAsFactors=FALSE
+  colnames(bedData) <-  c('chrom','chromStart','chromEnd','name','score','strand','thickStart','thickEnd','itemRgb','blockCount','blockSizes','blockStarts')
+  return(bedData)
+}
+
+#'@title findOverlapsOverhang
+#'@description function to find ranges where the start or end is within another range (eg start/end overlaps)
+#'@param query
+#'@param subject
+#'@param fix
+#'@param select
+#'@param maxgap
+#'@param ignore.strand
+findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1, ignore.strand = TRUE) {  # type=c('start','end'); maxgap=distance to start/end
+  if(class(query)!='GRanges') {
+    stop("query has to be GRanges")
+  }
+  hits <- findOverlaps(resize(query,width = 1,fix = fix, ignore.strand=T), subject, type='any', select=select, maxgap = -1, ignore.strand=ignore.strand)
+  if(maxgap> (-1)) {
+    hits2 <- findOverlaps(resize(query,width = 1,fix = fix, ignore.strand=T), resize(subject,width = 1,fix = fix, ignore.strand=T), type='any', select=select, maxgap=maxgap, ignore.strand=ignore.strand)
+    if(select=='all') {
+      hits <- sort(unique(Hits(from=c(queryHits(hits), queryHits(hits2)), to=c(subjectHits(hits), subjectHits(hits2)), nLnode = queryLength(hits),subjectLength(hits))))
+    }
+  }
+  return(hits)
+}
+
+
+#'@title CUTGRANGESLISTELEMENTS
+#'@description function to reduce the start end end of all elements in a granges list objects to a single basepair
+#'@param grangesList
+#'@param by
+cutGrangesListElements <- function(grangesList, by=5) {
+  unlistedExons <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
+
+  start(unlistedExons) <-  pmin(start(unlistedExons)+by,end(unlistedExons))
+  end(unlistedExons) <-  pmax(start(unlistedExons),end(unlistedExons)-by)
+
+  return(relist(unlistedExons, partitioning))
+}
+
+
+
+######### ABOVE FUNCTIONS MIGHT BE USEFUL BUT ARE NOT USED IN THIS PACKAGE ######
 
 ##### TODO: Check if this might be useful to filter reads from new transcripts?
 classifyReadClasses <- function(readClassList) {
@@ -34,7 +112,6 @@ classifyReadClasses <- function(readClassList) {
 
 
 }
-
 
 #'@title CONSTRUCTUNSPLICEDTRANSCRIPTS
 #'@description function to construct unspliced transcripts which do not overlap with TSS/TES or fall in internal exons
@@ -124,214 +201,6 @@ constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, st
   return(txList)
 }
 
-#'@title findOverlapOverhang
-#'@description function to find ranges where the start or end is within another range (eg start/end overlaps)
-#'@param query
-#'@param subject
-#'@param fix
-#'@param select
-#'@param maxgap
-#'@param ignore.strand
-findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1, ignore.strand = TRUE) {  # type=c('start','end'); maxgap=distance to start/end
-  if(class(query)!='GRanges') {
-    stop("query has to be GRanges")
-  }
-  hits <- findOverlaps(resize(query,width = 1,fix = fix, ignore.strand=T), subject, type='any', select=select, maxgap = -1, ignore.strand=ignore.strand)
-  if(maxgap> (-1)) {
-    hits2 <- findOverlaps(resize(query,width = 1,fix = fix, ignore.strand=T), resize(subject,width = 1,fix = fix, ignore.strand=T), type='any', select=select, maxgap=maxgap, ignore.strand=ignore.strand)
-    if(select=='all') {
-      hits <- sort(unique(Hits(from=c(queryHits(hits), queryHits(hits2)), to=c(subjectHits(hits), subjectHits(hits2)), nLnode = queryLength(hits),subjectLength(hits))))
-    }
-  }
-  return(hits)
-}
-
-#'@title CUTSTARTENDFROMGRANGESLIST
-#'@description function to reduce the start end end of the first and last elements in a granges list objects to a single basepair, helper to identify overlaps based on splicing only (allow for flexible TSS/TES)
-#'@param grangesList
-cutStartEndFromGrangesList <- function(grangesList) {
-  unlistedExons <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
-  startExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))!='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))=='-')))
-  endExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))=='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))!='-')))
-
-  start(unlistedExons[startExonsSet]) <-  end(unlistedExons[startExonsSet])-1
-  end(unlistedExons[endExonsSet]) <-  start(unlistedExons[endExonsSet])+1
-
-  return(relist(unlistedExons, partitioning))
-}
-
-#'@title CUTGRANGESLISTELEMENTS
-#'@description function to reduce the start end end of all elements in a granges list objects to a single basepair
-#'@param grangesList
-#'@param by
-cutGrangesListElements <- function(grangesList, by=5) {
-  unlistedExons <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
-
-  start(unlistedExons) <-  pmin(start(unlistedExons)+by,end(unlistedExons))
-  end(unlistedExons) <-  pmax(start(unlistedExons),end(unlistedExons)-by)
-
-  return(relist(unlistedExons, partitioning))
-}
-
-#'@title EXTENDGRANGESLISTELEMENTS
-#'@param grangesList
-#'@param by
-extendGrangesListElements <- function(grangesList, by=5) {
-  unlistedExons <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
-  # unlistedExons
-  start(unlistedExons) <-  pmax(0,start(unlistedExons)-by)
-  end(unlistedExons) <-  end(unlistedExons)+by
-
-  return(relist(unlistedExons, partitioning))
-}
-
-#'@title DROPGRANGESLISTELEMENTSBYWIDTH
-#'@param grangesList
-#'@param minWidth
-#'@param cutStartEnd
-dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=FALSE) {
-  unlistedExons <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(sum(width(grangesList)>=minWidth)), names=NULL)
-  exonWidth <- width(unlistedExons)
-  if(cutStartEnd) {
-    startExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))!='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))=='-')))
-    endExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))=='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))!='-')))
-
-    start(unlistedExons[startExonsSet]) <-  end(unlistedExons[startExonsSet])-1
-    end(unlistedExons[endExonsSet]) <-  start(unlistedExons[endExonsSet])+1
-  }
-  unlistedExons <- unlistedExons[exonWidth>= minWidth]
-
-  return(relist(unlistedExons, partitioning))
-}
-
-#'@title SELECTSTARTEXONSFROMGRANGESLIST
-#'@description function that selects the first N exons from a grangeslist object (exon_rank is required)
-#'@param grangesList
-#'@param exonNumber
-selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
-  unlisted_granges <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
-  startExonsSet <- which(unlisted_granges$exon_rank<=exonNumber)
-  return(relist(unlisted_granges[startExonsSet], partitioning))
-}
-
-#'@title SELECTENDEXONSFROMGRANGESLIST
-#'@description function that selects the last N exons from a grangeslist object (exon_endRank is required)
-#'@param grangesList
-#'@param exonNumber
-selectEndExonsFromGrangesList <- function(grangesList, exonNumber=2) {
-  unlisted_granges <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
-  endExonsSet <- which(unlisted_granges$exon_endRank<=exonNumber)
-  return(relist(unlisted_granges[endExonsSet], partitioning))
-}
-
-
-### Todo: integrate into code above
-#'@title FINDSPLICEOVERLAPSBYDIST
-#'@description This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
-#'@param query
-#'@param subject
-#'@param ignore.strand
-#'@param maxDist
-#'@param type
-#'@param firstLastSeparate
-#'@param dropRangesByMinLength
-#'@param cutStartEnd
-findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist = 5, type='within', firstLastSeparate = T, dropRangesByMinLength=F, cutStartEnd = T) {
-
-  #  with this option the first and last exons are stored and the distance for each between query and subject hits is returned
-  if(firstLastSeparate) {
-    queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
-    queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
-    subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
-    subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
-    subjectFull <- subject
-  }
-
-
-  #this list is used to find candidate matches. allows ranges to be dropped from query (to find matches not strictly within). more matches>slower
-  if(dropRangesByMinLength) {
-    queryForOverlap <- dropGrangesListElementsByWidth(query, minWidth=maxDist, cutStartEnd=cutStartEnd)
-  } else if(cutStartEnd) {
-    queryForOverlap <- cutStartEndFromGrangesList(query)
-  } else {
-    queryForOverlap <- query
-  }
-
-
-  # first and last exons are reduced to 2bp, internal exon and splice matches are emphasised
-  query <- cutStartEndFromGrangesList(query)
-  #  subject <- cutStartEndFromGrangesList(subject)
-
-  #  queryExonsRemoved <- dropGrangesListElementsByWidth(query, minWidth=maxDist)
-  subjectExtend <- extendGrangesListElements(subject, by=maxDist)
-
-  olap <- findOverlaps(queryForOverlap, subjectExtend, ignore.strand=ignore.strand, type=type)
-  olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject), ignore.strand=ignore.strand, type='equal')
-
-  query <- query[queryHits(olap)]
-  subject <- subject[subjectHits(olap)]
-  splice <- myGaps(query)
-
-
-  compatible <- rangesDist(query, subject, splice, maxDist)
-  equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
-  unique <- myOneMatch(compatible$compatible, queryHits(olap))
-  strandSpecific <- all(strand(query) != "*")
-  strandedMatch <- ((all(strand(query)=='-') & all(strand(subject)=='-'))| (all(strand(query)=='+') & all(strand(subject)=='+')))
-  mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific, strandedMatch)
-
-  if(firstLastSeparate) { ##################### HERE IS AN ERROR WITH THE START SEQUENCE !!! ####
-    if(length(olap)>0) {
-      queryStart <- ranges(queryStart[queryHits(olap)])
-      subjectStart <- ranges(subjectStart[subjectHits(olap)])
-      queryEnd <- ranges(queryEnd[queryHits(olap)])
-      subjectEnd <- ranges(subjectEnd[subjectHits(olap)])
-      subjectFull <- ranges(subjectFull[subjectHits(olap)])
-      #queryFirstJunction <- ranges(selectStartExonsFromGrangesList(splice, exonNumber = 1))
-      #queryLastJunction <- ranges(selectEndExonsFromGrangesList(splice, exonNumber = 1))
-
-      startMatch <- poverlaps(unlist(queryStart), unlist(subjectStart))
-      endMatch <- poverlaps(unlist(queryEnd), unlist(subjectEnd))
-
-      #calculate distance between first and last exon matches:
-      # distances corresponds to length of unique sequences in all matching exons
-      # distance = width(element in query) + width(all matching elements in subject) - 2x width(intersection(query, subject)
-      subjectList <- unlist(subjectFull)
-      queryStartList <- rep(unlist(queryStart),elementNROWS(subjectFull))
-      myId <- rep(1:length(queryStart),elementNROWS(subjectFull))
-      byExonIntersect=pintersect(queryStartList,subjectList, resolve.empty='start.x')
-      startDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryStart)))
-      uniqueStartLengthQuery <-   sum(width(GenomicRanges::setdiff(queryStart, subjectFull)))
-      uniqueStartLengthSubject <-  startDist - uniqueStartLengthQuery
-
-
-
-      queryEndList <- rep(unlist(queryEnd),elementNROWS(subjectFull))
-      myId <- rep(1:length(queryEnd),elementNROWS(subjectFull))
-      byExonIntersect=pintersect(queryEndList,subjectList, resolve.empty='start.x')
-      endDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryEnd)))
-      uniqueEndLengthQuery <-   sum(width(GenomicRanges::setdiff(queryEnd, subjectFull)))
-      uniqueEndLengthSubject <-  endDist - uniqueEndLengthQuery
-    } else {
-      startMatch <- NULL
-      uniqueStartLengthQuery <- NULL
-      uniqueStartLengthSubject <- NULL
-      endMatch <- NULL
-      uniqueEndLengthQuery <- NULL
-      uniqueEndLengthSubject <- NULL
-    }
-
-    mcols(olap) <- DataFrame( mcols(olap), startMatch, uniqueStartLengthQuery,uniqueStartLengthSubject,endMatch, uniqueEndLengthQuery,uniqueEndLengthSubject)
-  }
-
-  olap
-}
 
 #'@title COMBINEWITHANNOTATIONS
 #'@description function to add annotations to reconstructed transcripts, and replace identical transcripts with reference
@@ -410,3 +279,5 @@ combineWithAnnotations <- function(txList, txdbTablesList, matchOnly = T) {
   txList$txTable$compatibleAnnotatedTranscripts <- countQueryHits(spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,])
   return(txList)
 }
+
+######### ABOVE FUNCTIONS HAVE USEFUL CODE CHUCNKS, LOOK THROUGH ######
