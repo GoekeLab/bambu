@@ -237,7 +237,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
   if(extendAnnotations==FALSE){
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
-      readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]])
+      readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]], verbose = verbose)
       se  <- isore.constructReadClasses(readGrgList = readGrgList,
                                         runName =bam.file.basenames[bam.file.index],
                                         annotationGrangesList = annotationGrangesList,
@@ -334,7 +334,7 @@ bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genome
   noprint <- lapply(seq_along(bam.file), function(bam.file.index){  # first loop to reconstruct read classes
     start.time <- proc.time()
 
-    readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]])
+    readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]], verbose = verbose)
     se <- isore.constructReadClasses(readGrgList = readGrgList,
                                      runName = bam.file.basenames[bam.file.index],
                                      annotationGrangesList = annotationGrangesList,
