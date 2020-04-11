@@ -89,7 +89,7 @@ test_that("isore.estimateDistanceToAnnotations completes successfully", {
 
   seReadClass1 <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seReadClassUnstranded.rds')
   extendedAnnotations <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/extendedAnnotations.rds')
-
+  seWithDistExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seWithDist.rds')
   seWithDist <- isore.estimateDistanceToAnnotations(seReadClass=seReadClass1,
                                       annotationGrangesList=extendedAnnotations,
                                       min.exonDistance = 35)
