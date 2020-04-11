@@ -19,9 +19,9 @@ prepareAnnotations <- function(txdb) {
   mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
   exonsByTx <- relist(unlistedExons, partitioning)
 
-  mcols(exonsByTx) <-  AnnotationDbi::select(txdb, names(exonsByTx),
+  mcols(exonsByTx) <-  suppressMessages(AnnotationDbi::select(txdb, names(exonsByTx),
                                              columns=c("TXNAME", "GENEID"),
-                                             keytype="TXNAME")
+                                             keytype="TXNAME"))
   minEqClasses <- getMinimumEqClassByTx(exonsByTx)
   mcols(exonsByTx)$eqClass <- minEqClasses$eqClass[match(names(exonsByTx),minEqClasses$queryTxId)]
   return(exonsByTx)
