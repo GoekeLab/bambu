@@ -1,3 +1,41 @@
+
+##### TODO: Check if this might be useful to filter reads from new transcripts?
+classifyReadClasses <- function(readClassList) {
+
+  exByTx_singleBpStartEnd <- cutStartEndFromGrangesList(readClassListFull$exonsByReadClass)
+  spliceOverlaps=findSpliceOverlapsQuick(exByTx_singleBpStartEnd,exByTx_singleBpStartEnd)
+  spliceOverlapsSelected =spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,]
+  txIsSubsetOf <- countQueryHits(spliceOverlapsSelected)-1
+  txHasSubsetIn <- countSubjectHits(spliceOverlapsSelected)-1
+
+  readClassListFull$readClassTable$txIsSubsetOf <- txIsSubsetOf
+
+
+  setIncompatible <- (readClassListFull$readClassTable$readClassId %in% distTable$readClassId[distTable$compatible==FALSE])
+  spliceOverlapsUnexplained=findSpliceOverlapsQuick(exByTx_singleBpStartEnd[setIncompatible],exByTx_singleBpStartEnd[setIncompatible])
+  spliceOverlapsSelected =spliceOverlapsUnexplained[mcols(spliceOverlapsUnexplained)$compatible==TRUE,]
+
+  #     txIsSubsetOfUnexplained <- rep(0, length(exByTx_singleBpStartEnd))
+  #     txIsSubsetOfUnexplained[setIncompatible] <- countQueryHits(spliceOverlapsSelected)-1
+  txHasSubsetInUnexplained <- rep(0, length(exByTx_singleBpStartEnd))
+  txHasSubsetInUnexplained[setIncompatible] <- countSubjectHits(spliceOverlapsSelected)-1
+
+  # readClassListFull$readClassTable$txIsSubsetOfUnexplained <- txIsSubsetOfUnexplained
+  readClassListFull$readClassTable$txHasSubsetInUnexplained <- txHasSubsetInUnexplained
+
+
+  distTableByGene <- left_join(distTable, dplyr::select(readClassListFull$readClassTable, readClassId,txIsSubsetOf, txHasSubsetInUnexplained)) %>% group_by(GENEID) %>% mutate(geneCount = sum(relativeReadCount), geneCountFractionCompatible = sum(relativeReadCount * compatible)/ geneCount)
+
+  ## here ##
+  ## here: add longest transcripts first, then validate with number of explained reads, predict tss/tes is separate task (?)
+  ## return only new transcripts/genes
+  ## add visualisation for new transcripts
+  ##as.data.frame(filter(distTableByGene, GENEID == 'ENSG00000107104', txIsSubsetOf==0, confidenceType=='highConfidenceJunctionReads', compatible==FALSE))
+
+
+}
+
+
 #'@title CONSTRUCTUNSPLICEDTRANSCRIPTS
 #'@description function to construct unspliced transcripts which do not overlap with TSS/TES or fall in internal exons
 #'@param txList
