@@ -717,7 +717,6 @@ isore.extendAnnotations <- function(se,
   }
 }
 
-############ HERE ###############
 isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, additionalFiltering = FALSE, verbose = FALSE){
   start.ptm <- proc.time()
   readClassTable <- as_tibble(rowData(seReadClass), rownames='readClassId') %>%
