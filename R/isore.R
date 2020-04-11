@@ -81,7 +81,7 @@ isore.constructReadClasses <- function(readGrgList,
   uniqueJunctions <- junctionTables[[1]]
   unlisted_junctions <- junctionTables[[2]]
   rm(junctionTables)
-  gc()
+ # gc()
 
  # cat('### find annotated introns ### \n')
   unlisted_introns <- unlist(intronsByTx)
@@ -94,13 +94,13 @@ isore.constructReadClasses <- function(readGrgList,
   annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
   uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
   rm(annotatedStart)
-  gc()
+#  gc()
 
   # Indicator: is the junction end annotated as a intron end?
   annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
   uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
   rm(annotatedEnd)
-  gc()
+#  gc()
 
 #  cat('### build model to predict true splice sites ### \n')
   start.ptm <- proc.time()
@@ -121,7 +121,7 @@ isore.constructReadClasses <- function(readGrgList,
     warning('Junction correction with not enough data, precalculated model is used')
   }
   rm(predictSpliceSites)  # clean up should be done more efficiently
-  gc()
+ # gc()
   end.ptm <- proc.time()
  if(verbose) cat(paste0('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
@@ -137,7 +137,7 @@ isore.constructReadClasses <- function(readGrgList,
   end.ptm <- proc.time()
  if(verbose) cat(paste0('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
   rm(junctionModel)
-  gc()
+#  gc()
 
 #  cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
@@ -165,7 +165,7 @@ if(verbose)  cat(paste0('Finished create transcript models (read classes) for re
 
   singleExonReadsOutside <- singleExonReads[!(mcols(readGrgList)$qname[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readIds)]
   rm(list = c('singleExonReads'))
-  gc()
+ # gc()
 
   combinedSingleExonRanges <- reduce(singleExonReadsOutside, ignore.strand =! stranded)
   readClassListUnsplicedReduced <- constructUnsplicedReadClasses(granges = singleExonReadsOutside,
@@ -184,7 +184,7 @@ if(verbose)  cat(paste0('Finished create transcript models (read classes) for re
   exonsByReadClass <- c(readClassListSpliced, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
 
   rm(list = c('readClassListSpliced', 'readClassListUnsplicedWithAnnotation', 'readClassListUnsplicedReduced'))
-  gc()
+#  gc()
 
   counts <- matrix(mcols(exonsByReadClass)$readCount, dimnames = list(names(exonsByReadClass), runName))
   colDataDf <- DataFrame(name = runName, row.names = runName)
@@ -718,53 +718,69 @@ isore.extendAnnotations <- function(se,
 }
 
 ############ HERE ###############
-isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, returnDistTable = TRUE, verbose = FALSE){
+isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, additionalFiltering = FALSE, verbose = FALSE){
   start.ptm <- proc.time()
-  exonsByReadClass = rowRanges(seReadClass)
-  readClassTable=as_tibble(rowData(seReadClass), rownames='readClassId')
+  readClassTable <- as_tibble(rowData(seReadClass), rownames='readClassId') %>%
+    dplyr::select(readClassId, confidenceType)
 
   ## note/todo: here the stranded mode should always be used as read classes are stranded as much as possible (* aligns with + and -).
   ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches (currently only stranded assignment possible)
-  distTable <- calculateDistToAnnotation(exonsByReadClass,annotationGrangesList,maxDist = min.exonDistance, primarySecondaryDist = 5, ignore.strand = FALSE)
+  distTable <- calculateDistToAnnotation(rowRanges(seReadClass),annotationGrangesList,maxDist = min.exonDistance, primarySecondaryDist = 5, ignore.strand = FALSE)
 
-  distTable$readCount = assays(seReadClass)$counts[distTable$readClassId,]  # should actually be stored in counts, but is here to  assign genes based on high read counts
-  distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, confidenceType), by="readClassId") %>%
-    mutate(relativeReadCount=readCount/txNumberFiltered)
+  distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId,]  # should actually be stored in counts, but is here to  assign genes based on high read counts
 
+  ##### TODO: include additional filtering criteria to minimise the number of transcrips that each read class is assigned to.
+
+  if(additionalFiltering) {
+    distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, confidenceType), by="readClassId") %>%
+      mutate(relativeReadCount=readCount/txNumberFiltered)
+  }
+
+  distTable <- dplyr::select(distTable, annotationTxId, readClassId, readCount, compatible, equal)
   distTable <- left_join(distTable,
                          as_tibble(mcols(annotationGrangesList)[,c('TXNAME','GENEID')]),
                          by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
   end.ptm <- proc.time()
   if(verbose)  cat(paste0('calculated distance table in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
-  start.ptm <- proc.time()
+  readClassTable$equal <- readClassTable$readClassId %in% unlist((filter(distTable, equal) %>%
+                                                                    dplyr::select(readClassId) %>%
+                                                                    distinct()))
+  readClassTable$compatible <- readClassTable$readClassId %in% unlist((filter(distTable, compatible) %>%
+                                                                         dplyr::select(readClassId) %>%
+                                                                         distinct()))
 
+  start.ptm <- proc.time()
+  # assign read classes to genes based on the highest read count per gene
   readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%
     group_by(GENEID) %>%
     mutate(geneCount = sum(readCount)) %>%
     distinct() %>%
     group_by(readClassId) %>%
-    filter(geneCount==max(geneCount)) %>%
-    filter(row_number()==1) %>%
+    filter(geneCount == max(geneCount)) %>%
+    filter(row_number() == 1) %>%
     dplyr::select(readClassId, geneId=GENEID) %>%
     ungroup()
 
 
   newGeneCandidates <- (!readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
-  readClassToGeneIdTableNew <- assignNewGeneIds(exonsByReadClass[newGeneCandidates], prefix='.unassigned', minoverlap=5, ignore.strand=F)
+  readClassToGeneIdTableNew <- assignNewGeneIds(rowRanges(seReadClass)[newGeneCandidates],
+                                                prefix='.unassigned',
+                                                minoverlap=5,
+                                                ignore.strand=F)
   readClassGeneTable <- rbind(readClassToGeneIdTable, readClassToGeneIdTableNew)
-  readClassTable <- left_join(readClassTable, readClassGeneTable, by="readClassId")
+  readClassTable <- left_join(readClassTable, readClassGeneTable, by="readClassId") %>%
+    dplyr::select(confidenceType, geneId, compatible, equal)
 
   rm(list = c('newGeneCandidates','readClassGeneTable'))
-  gc()
 
   end.ptm <- proc.time()
   if(verbose)  cat(paste0('added gene Ids for each read class ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
 
-  if(returnDistTable) metadata(seReadClass) <- list(distTable=distTable)
+  metadata(seReadClass) <- list(distTable=distTable)
   rowData(seReadClass) <- readClassTable
 
-  rm(list=c('distTable','exonsByReadClass','readClassTable'))
+  rm(list=c('distTable','readClassTable'))
   return(seReadClass)
 }
 
