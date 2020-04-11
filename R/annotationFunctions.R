@@ -31,16 +31,16 @@ prepareAnnotations <- function(txdb) {
 getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
   exByTxAnnotated_singleBpStartEnd <- cutStartEndFromGrangesList(exonsByTranscripts)  # estimate overlap only based on junctions
-  spliceOverlaps=findSpliceOverlapsQuick(exByTxAnnotated_singleBpStartEnd,exByTxAnnotated_singleBpStartEnd)  ## identify transcripts which are compatbile with other transcripts (subsets by splice sites)
-  spliceOverlapsSelected =spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,] ## select splicing compatible transcript matches
+  spliceOverlaps <- findSpliceOverlapsQuick(exByTxAnnotated_singleBpStartEnd,exByTxAnnotated_singleBpStartEnd)  ## identify transcripts which are compatible with other transcripts (subsets by splice sites)
+  spliceOverlapsSelected <- spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,] ## select splicing compatible transcript matches
 
   minReadClassTable <- as_tibble(spliceOverlapsSelected) %>%
     dplyr::select(queryHits, subjectHits)
   minReadClassTable$queryTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$queryHits]
   minReadClassTable$subjectTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$subjectHits]
   minReadClassTable <- minReadClassTable %>%
-    group_by(queryTxId) %>%
     arrange(queryTxId, subjectTxId) %>%
+    group_by(queryTxId) %>%
     mutate(eqClass = paste(subjectTxId, collapse='.'), minEqClassSize = n()) %>%
     dplyr::select(queryTxId, eqClass, minEqClassSize) %>%
     distinct()
