@@ -351,7 +351,7 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
     show('prediction accuracy (CV) (higher for splice donor than splice acceptor)')
 
     show( fisher.test(table(predictions>0,labels.train.cv.test)))
-    show(myPerformance(labels.train.cv.test==1,predictions)$AUC	)
+    show(evalutePerformance(labels.train.cv.test==1,predictions)$AUC)
   }
 
   cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial', ...)
@@ -454,4 +454,20 @@ findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALS
     show(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction])/sum(junctions$score))
   }
   return(junctions)
+}
+
+
+
+#'@title evalutePerformance
+#'@param labels
+#'@param scores
+#'@param descreasing
+evalutePerformance <- function(labels, scores, decreasing = TRUE){
+  labels <- labels[order(scores, decreasing = decreasing)]
+  results <- list()
+  results[['TPR']] <- cumsum(labels)/sum(labels)  # TP/(TP+FP); True Positive Rate;Sensitivity; recall
+  results[['FPR']] <- cumsum(!labels)/sum(!labels)  # FP/(FP+TN); False Positive Rate;1-Specificity
+  results[['precision']] <- cumsum(labels)/(1:length(labels))  # TP/(TP+FP); positive predictive value;precision
+  results[['AUC']] <- sum(results[['TPR']][!duplicated( results[['FPR']], fromLast=TRUE)]/sum(!duplicated( results[['FPR']], fromLast=TRUE)))
+  return(results)
 }
