@@ -1,3 +1,106 @@
+########TODO: LOOK THROUGH CODE, clean up, acknowledge source if functions can't be imported (GenomicAlignments) #######
+
+#'@title FINDSPLICEOVERLAPSBYDIST
+#'@description This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
+#'@param query
+#'@param subject
+#'@param ignore.strand
+#'@param maxDist
+#'@param type
+#'@param firstLastSeparate
+#'@param dropRangesByMinLength
+#'@param cutStartEnd
+findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist = 5, type='within', firstLastSeparate = T, dropRangesByMinLength=F, cutStartEnd = T) {
+
+  #  with this option the first and last exons are stored and the distance for each between query and subject hits is returned
+  if(firstLastSeparate) {
+    queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
+    queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
+    subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
+    subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
+    subjectFull <- subject
+  }
+
+
+  #this list is used to find candidate matches. allows ranges to be dropped from query (to find matches not strictly within). more matches>slower
+  if(dropRangesByMinLength) {
+    queryForOverlap <- dropGrangesListElementsByWidth(query, minWidth=maxDist, cutStartEnd=cutStartEnd)
+  } else if(cutStartEnd) {
+    queryForOverlap <- cutStartEndFromGrangesList(query)
+  } else {
+    queryForOverlap <- query
+  }
+
+
+  # first and last exons are reduced to 2bp, internal exon and splice matches are emphasised
+  query <- cutStartEndFromGrangesList(query)
+  #  subject <- cutStartEndFromGrangesList(subject)
+
+  #  queryExonsRemoved <- dropGrangesListElementsByWidth(query, minWidth=maxDist)
+  subjectExtend <- extendGrangesListElements(subject, by=maxDist)
+
+  olap <- findOverlaps(queryForOverlap, subjectExtend, ignore.strand=ignore.strand, type=type)
+  olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject), ignore.strand=ignore.strand, type='equal')
+
+  query <- query[queryHits(olap)]
+  subject <- subject[subjectHits(olap)]
+  splice <- myGaps(query)
+
+
+  compatible <- rangesDist(query, subject, splice, maxDist)
+  equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
+  unique <- myOneMatch(compatible$compatible, queryHits(olap))
+  strandSpecific <- all(strand(query) != "*")
+  strandedMatch <- ((all(strand(query)=='-') & all(strand(subject)=='-'))| (all(strand(query)=='+') & all(strand(subject)=='+')))
+  mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific, strandedMatch)
+
+  if(firstLastSeparate) { ##################### HERE IS AN ERROR WITH THE START SEQUENCE !!! ####
+    if(length(olap)>0) {
+      queryStart <- ranges(queryStart[queryHits(olap)])
+      subjectStart <- ranges(subjectStart[subjectHits(olap)])
+      queryEnd <- ranges(queryEnd[queryHits(olap)])
+      subjectEnd <- ranges(subjectEnd[subjectHits(olap)])
+      subjectFull <- ranges(subjectFull[subjectHits(olap)])
+      #queryFirstJunction <- ranges(selectStartExonsFromGrangesList(splice, exonNumber = 1))
+      #queryLastJunction <- ranges(selectEndExonsFromGrangesList(splice, exonNumber = 1))
+
+      startMatch <- poverlaps(unlist(queryStart), unlist(subjectStart))
+      endMatch <- poverlaps(unlist(queryEnd), unlist(subjectEnd))
+
+      #calculate distance between first and last exon matches:
+      # distances corresponds to length of unique sequences in all matching exons
+      # distance = width(element in query) + width(all matching elements in subject) - 2x width(intersection(query, subject)
+      subjectList <- unlist(subjectFull)
+      queryStartList <- rep(unlist(queryStart),elementNROWS(subjectFull))
+      myId <- rep(1:length(queryStart),elementNROWS(subjectFull))
+      byExonIntersect=pintersect(queryStartList,subjectList, resolve.empty='start.x')
+      startDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryStart)))
+      uniqueStartLengthQuery <-   sum(width(GenomicRanges::setdiff(queryStart, subjectFull)))
+      uniqueStartLengthSubject <-  startDist - uniqueStartLengthQuery
+
+
+
+      queryEndList <- rep(unlist(queryEnd),elementNROWS(subjectFull))
+      myId <- rep(1:length(queryEnd),elementNROWS(subjectFull))
+      byExonIntersect=pintersect(queryEndList,subjectList, resolve.empty='start.x')
+      endDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryEnd)))
+      uniqueEndLengthQuery <-   sum(width(GenomicRanges::setdiff(queryEnd, subjectFull)))
+      uniqueEndLengthSubject <-  endDist - uniqueEndLengthQuery
+    } else {
+      startMatch <- NULL
+      uniqueStartLengthQuery <- NULL
+      uniqueStartLengthSubject <- NULL
+      endMatch <- NULL
+      uniqueEndLengthQuery <- NULL
+      uniqueEndLengthSubject <- NULL
+    }
+
+    mcols(olap) <- DataFrame( mcols(olap), startMatch, uniqueStartLengthQuery,uniqueStartLengthSubject,endMatch, uniqueEndLengthQuery,uniqueEndLengthSubject)
+  }
+
+  olap
+}
+
 
 #'@title MYGAPS
 #'@param x
@@ -52,9 +155,6 @@ myGaps <- function(x, start=NA, end=NA)
 
 
 
-##### UNTIL HERE ##
-
-
 
 #'@title RANGEDIST
 #'@param query
@@ -75,8 +175,10 @@ rangesDist <- function(query, subject, splice, maxDist)
   queryElementsOutsideMaxDist <- sum(setDiffQ>=maxDist)
   subjectElementsOutsideMaxDist <-  sum(interesectS>=maxDist)
   compatible <- (queryElementsOutsideMaxDist == 0) & (subjectElementsOutsideMaxDist == 0)
-  DataFrame(uniqueLengthQuery,uniqueLengthSubject, compatible, queryElementsOutsideMaxDist, subjectElementsOutsideMaxDist) ##### HERE ####
+  DataFrame(uniqueLengthQuery,uniqueLengthSubject, compatible, queryElementsOutsideMaxDist, subjectElementsOutsideMaxDist)
 }
+
+
 
 #'@title FINDSPLICEOVERLAPSQUICK
 #'@description the following functions are implemented in R, I just included the within option to make them significantly faster+memorey friendly for this purpose (original code copied from https://rdrr.io/bioc/GenomicAlignments/src/R/findSpliceOverlaps-methods.R)
@@ -108,6 +210,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
   olap
 }
 
+
 #'@title MYCOMPATIBLETRANSCRIPTION
 #'@param splice
 #'@param query
@@ -137,20 +240,8 @@ myOneMatch <- function(x, idx)
 
 
 
-#'@title .EXTRACT_UNORIENTED_INTRON_MOTIF
-#'@param genome
-#'@param junctions
-.extract_unoriented_intron_motif <- function(genome, junctions)
-{
-  mcols(junctions) <- NULL
-  junctions_len <- length(junctions)
-  Ldinucl_gr <- Rdinucl_gr <- junctions
-  end(Ldinucl_gr) <- start(Ldinucl_gr) + 1L
-  start(Rdinucl_gr) <- end(Rdinucl_gr) - 1L
-  all_dinucl <- getSeq(genome, c(Ldinucl_gr, Rdinucl_gr))
-  Rdinucl <- tail(all_dinucl, n=junctions_len)
-  xscat(Ldinucl, "-", Rdinucl)
-}
+
+
 
 #'@title SPLICESTRAND
 #'@param motif
@@ -163,66 +254,80 @@ spliceStrand <- function(motif){
 }
 
 
-#'@title TRIMFIRSTLASTEXONS
-#'@description function returns exon granges list where the first and last exons are trimmed to width 2, all introns are preserved, requires exon_rank and exon_endRank
-#'@param grangesListWithExonRanks
-trimFirstLastExons <- function(grangesListWithExonRanks) {
-  unlistedGrangesList <- unlist(grangesListWithExonRanks, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesListWithExonRanks)), names=NULL)
-  startExonsSet <- (which((unlistedGrangesList$exon_rank==1 & as.character(strand(unlistedGrangesList))!='-')|(unlistedGrangesList$exon_endRank==1 & as.character(strand(unlistedGrangesList))=='-')))
-  endExonsSet <- (which((unlistedGrangesList$exon_rank==1 & as.character(strand(unlistedGrangesList))=='-')|(unlistedGrangesList$exon_endRank==1 & as.character(strand(unlistedGrangesList))!='-')))
-  start(unlistedGrangesList[startExonsSet]) <-  end(unlistedGrangesList[startExonsSet])-1
-  end(unlistedGrangesList[endExonsSet]) <-  start(unlistedGrangesList[endExonsSet])+1
-  return(relist(unlistedGrangesList, partitioning))
-}
-
-#'@title MYPERFORMANCE
-#'@param labels
-#'@param scores
-#'@param descreasing
-myPerformance <- function(labels, scores, decreasing = TRUE){
-  labels <- labels[order(scores, decreasing = decreasing)]
-  results <- list()
-  results[['TPR']] <- cumsum(labels)/sum(labels)  # TP/(TP+FP); True Positive Rate;Sensitivity; recall
-  results[['FPR']] <- cumsum(!labels)/sum(!labels)  # FP/(FP+TN); False Positive Rate;1-Specificity
-  results[['precision']] <- cumsum(labels)/(1:length(labels))  # TP/(TP+FP); positive predictive value;precision
-  results[['AUC']] <- sum(results[['TPR']][!duplicated( results[['FPR']],fromLast=TRUE)]/sum(!duplicated( results[['FPR']],fromLast=TRUE)))
-  return(results)
-}
-
-
-#'@title PLOTGRANGESLISTBYNAMES
+#'@title CUTSTARTENDFROMGRANGESLIST
+#'@description function to reduce the start end end of the first and last elements in a granges list objects to a single basepair, helper to identify overlaps based on splicing only (allow for flexible TSS/TES)
 #'@param grangesList
-plotGRangesListByNames<-function(grangesList)
-{
+cutStartEndFromGrangesList <- function(grangesList) {
+  unlistedExons <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
+  startExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))!='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))=='-')))
+  endExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))=='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))!='-')))
 
-  plotTrack = unlist(grangesList)
-  plotTrack$grouping <- names(plotTrack)
-  plotTrack=AnnotationTrack(plotTrack,group=plotTrack$grouping, id=plotTrack$grouping,fill=2,col.line=1,fontcolor.group=1,fontcolor.item=1)
-  plotTracks(list(plotTrack),showId=TRUE)
-}
+  start(unlistedExons[startExonsSet]) <-  end(unlistedExons[startExonsSet])-1
+  end(unlistedExons[endExonsSet]) <-  start(unlistedExons[endExonsSet])+1
 
-#' @describeIn plotGRangesListByNames
-makeTrackFromGrangesList <- function(grangesList)
-{
-
-  plotTrack = unlist(grangesList)
-  plotTrack$grouping <- names(plotTrack)
-  plotTrack=AnnotationTrack(plotTrack,group=plotTrack$grouping, id=plotTrack$grouping,fill=2,col.line=1,fontcolor.group=1,fontcolor.item=1)
-  return(plotTrack)
+  return(relist(unlistedExons, partitioning))
 }
 
 
-#' @title GRANGESLISTTOBED
-#' @param x
-grangesListToBed<-function(x) # note: 0 based coordinates
-{
-  # useful: generate UCSC custom track with the following steps
+#'@title EXTENDGRANGESLISTELEMENTS
+#'@param grangesList
+#'@param by
+extendGrangesListElements <- function(grangesList, by=5) {
+  unlistedExons <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
+  start(unlistedExons) <- pmax(0,start(unlistedExons)-by)
+  end(unlistedExons) <- end(unlistedExons)+by
 
-
-  xUnlist <- unlist(range(x))
-
-  bedData = data.frame(as.character(seqnames(xUnlist)),start(xUnlist)-1,end(xUnlist),names(xUnlist),rep(1000,length(xUnlist)),as.character(strand(xUnlist)),start(xUnlist)-1,end(xUnlist),rep(0,length(xUnlist)),elementNROWS(x),unlist(lapply(width(x),paste,collapse=',')),unlist(lapply((start(x)-min(start(x))),paste,collapse=','))) #, stringsAsFactors=FALSE
-  colnames(bedData) <-  c('chrom','chromStart','chromEnd','name','score','strand','thickStart','thickEnd','itemRgb','blockCount','blockSizes','blockStarts')
-  return(bedData)
+  return(relist(unlistedExons, partitioning))
 }
+
+
+
+#'@title DROPGRANGESLISTELEMENTSBYWIDTH
+#'@param grangesList
+#'@param minWidth
+#'@param cutStartEnd
+dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=FALSE) {
+  unlistedExons <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(sum(width(grangesList)>=minWidth)), names=NULL)
+  exonWidth <- width(unlistedExons)
+  if(cutStartEnd) {
+    startExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))!='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))=='-')))
+    endExonsSet <- (which((unlistedExons$exon_rank==1 & as.character(strand(unlistedExons))=='-')|(unlistedExons$exon_endRank==1 & as.character(strand(unlistedExons))!='-')))
+
+    start(unlistedExons[startExonsSet]) <-  end(unlistedExons[startExonsSet])-1
+    end(unlistedExons[endExonsSet]) <-  start(unlistedExons[endExonsSet])+1
+  }
+  unlistedExons <- unlistedExons[exonWidth>= minWidth]
+
+  return(relist(unlistedExons, partitioning))
+}
+
+
+
+
+
+#'@title SELECTSTARTEXONSFROMGRANGESLIST
+#'@description function that selects the first N exons from a grangeslist object (exon_rank is required)
+#'@param grangesList
+#'@param exonNumber
+selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
+  unlisted_granges <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
+  startExonsSet <- which(unlisted_granges$exon_rank<=exonNumber)
+  return(relist(unlisted_granges[startExonsSet], partitioning))
+}
+
+#'@title SELECTENDEXONSFROMGRANGESLIST
+#'@description function that selects the last N exons from a grangeslist object (exon_endRank is required)
+#'@param grangesList
+#'@param exonNumber
+selectEndExonsFromGrangesList <- function(grangesList, exonNumber=2) {
+  unlisted_granges <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
+  endExonsSet <- which(unlisted_granges$exon_endRank<=exonNumber)
+  return(relist(unlisted_granges[endExonsSet], partitioning))
+}
+
+
