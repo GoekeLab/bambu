@@ -1,7 +1,7 @@
 ###########ALL FUNCTIONS HERE ARE NON ESSENTIAL #############
 
-#'@title PLOTGRANGESLISTBYNAMES
-#'@param grangesList
+
+#' @noRd
 plotGRangesListByNames<-function(grangesList)
 {
 
@@ -11,7 +11,7 @@ plotGRangesListByNames<-function(grangesList)
   plotTracks(list(plotTrack),showId=TRUE)
 }
 
-#' @describeIn plotGRangesListByNames
+#' @noRd
 makeTrackFromGrangesList <- function(grangesList)
 {
 
@@ -22,8 +22,7 @@ makeTrackFromGrangesList <- function(grangesList)
 }
 
 
-#' @title GRANGESLISTTOBED
-#' @param x
+
 #' @noRd
 grangesListToBed<-function(x) # note: 0 based coordinates
 {
@@ -37,14 +36,8 @@ grangesListToBed<-function(x) # note: 0 based coordinates
   return(bedData)
 }
 
-#'@title findOverlapsOverhang
-#'@description function to find ranges where the start or end is within another range (eg start/end overlaps)
-#'@param query
-#'@param subject
-#'@param fix
-#'@param select
-#'@param maxgap
-#'@param ignore.strand
+#' Function to find ranges where the start or end is within another range (eg start/end overlaps)
+#' @noRd
 findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1, ignore.strand = TRUE) {  # type=c('start','end'); maxgap=distance to start/end
   if(class(query)!='GRanges') {
     stop("query has to be GRanges")
@@ -60,10 +53,8 @@ findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1,
 }
 
 
-#'@title CUTGRANGESLISTELEMENTS
-#'@description function to reduce the start end end of all elements in a granges list objects to a single basepair
-#'@param grangesList
-#'@param by
+#' Function to reduce the start end end of all elements in a granges list objects to a single basepair
+#' @noRd
 cutGrangesListElements <- function(grangesList, by=5) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
@@ -79,6 +70,8 @@ cutGrangesListElements <- function(grangesList, by=5) {
 ######### ABOVE FUNCTIONS MIGHT BE USEFUL BUT ARE NOT USED IN THIS PACKAGE ######
 
 ##### TODO: Check if this might be useful to filter reads from new transcripts?
+
+#' @noRd
 classifyReadClasses <- function(readClassList) {
 
   exByTx_singleBpStartEnd <- cutStartEndFromGrangesList(readClassListFull$exonsByReadClass)
@@ -114,14 +107,8 @@ classifyReadClasses <- function(readClassList) {
 
 }
 
-#'@title CONSTRUCTUNSPLICEDTRANSCRIPTS
-#'@description function to construct unspliced transcripts which do not overlap with TSS/TES or fall in internal exons
-#'@param txList
-#'@param txdbTablesList
-#'@param readGrglist
-#'@param stranded
-#'@param minReadCount
-#'@param maxOverhang
+#' Function to construct unspliced transcripts which do not overlap with TSS/TES or fall in internal exons
+#' @noRd
 constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, stranded=FALSE, minReadCount = 2, maxOverhang = 5) {
 
   unlistedExons <- unlist(txdbTablesList[['exonsByTx']])

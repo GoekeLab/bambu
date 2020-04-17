@@ -1,7 +1,5 @@
 #' CheckReadClassTxAssignmentUniqueness
-#'@title
-#'@param mapping
-#'@param nobs
+#' @noRd
 aggReadClass <- function(dt){
   dt[, eqClass:=paste(sort(unique(tx_sid)), collapse = '.'), by = list(read_class_sid,gene_sid)]
   dt[, read_class_sid_stored:=read_class_sid]

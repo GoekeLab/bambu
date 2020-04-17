@@ -1,9 +1,5 @@
-#'@title CREATEJUNCTIONTABLE
-#'@description This function creates a table of all junctions from a list grangeslist of junctions, it add strand and splice motif information
-#'@param unlisted_junction_granges
-#'@param genomeDB
-#'@param genomeFA
-#'@export
+#' Create Junction tables from unlisted junction granges
+#' @noRd
 createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) {
   # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
   # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
@@ -71,11 +67,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) 
 
 
 #' JUNCTIONSTRANDCORRECTION
-#' @title JUNCTIONSTRANDCORRECTION
-#' @param uniqueJunctions
-#' @param unlisted_junction_granges
-#' @param intronsByTx
-#' @param stranded
+#' @noRd
 junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges, intronsByTx, stranded, verbose = FALSE) {
   ##note: the strand is not always correctly infered based on motifs, it might introduce systematic errors due to alignment (which is biased towards splice motifs)
 
@@ -156,22 +148,16 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
 }
 
 
-
-#'@title EVALANNOTATIONOVERLAP
-#'@param intronRanges
-#'@param intronsByTx
-#'@param ignore.strand
+#' Evaluate annoation overlap
+#' @noRd
 evalAnnotationOverlap <- function(intronRanges, intronsByTx, ignore.strand=FALSE)
 {
   return(table(!is.na(GenomicRanges::match(intronRanges, unique(unlist(intronsByTx)),ignore.strand=ignore.strand))))
 }
 
 
-
-#'@title PREDICTSPLICEJUNCTIONS
-#'@description Function to predict splice site as true or false positive based on annotations, requires annotated junctions object, optional list of models learned on the data
-#'@param annotatedJunctions
-#'@param junctionModel
+#' Predict splicing junctions
+#' @noRd
 predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbose = FALSE)
 {
 
@@ -329,13 +315,8 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
 }
 
 
-
-#'@title FITBINOMIALMODEL
-#'@param labels.train
-#'@param data.train
-#'@param data.test
-#'@param show.cv
-#'@param maxSize.cv
+#' Fit binomial model
+#' @noRd
 fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, maxSize.cv=10000, ...)
 {
   if(show.cv)
@@ -362,11 +343,8 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
 
 
 
-
-#'@title FINDHIGHCONFIDENTJUNCTIONS
-#'@description this function adds "mergedHighConfJunctionId" to the junciton list which contains the ID of the most likely high confident junction that each junction originates from
-#'@param junctions
-#'@param junctionModel
+#'  this function adds "mergedHighConfJunctionId" to the junciton list which contains the ID of the most likely high confident junction that each junction originates from
+#' @noRd
 findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALSE) {
   if(verbose) {
     show('reads count for all annotated junctions')
@@ -457,11 +435,8 @@ findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALS
 }
 
 
-
-#'@title evalutePerformance
-#'@param labels
-#'@param scores
-#'@param descreasing
+#' Evaluate performance
+#' @noRd
 evalutePerformance <- function(labels, scores, decreasing = TRUE){
   labels <- labels[order(scores, decreasing = decreasing)]
   results <- list()

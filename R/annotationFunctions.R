@@ -27,7 +27,8 @@ prepareAnnotations <- function(txdb) {
   return(exonsByTx)
 }
 
-
+#' Get minimum equivalent class by Transcript
+#' @noRd
 getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
   exByTxAnnotated_singleBpStartEnd <- cutStartEndFromGrangesList(exonsByTranscripts)  # estimate overlap only based on junctions
@@ -47,9 +48,8 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
   return(minReadClassTable)
 }
 
-
-
-
+#' Assign New Gene with Gene Ids
+#' @noRd
 assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
   if(is.null(names(exByTx))){
     names(exByTx) <- 1:length(exByTx)
@@ -127,12 +127,8 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
 }
 
 
-
-
-
-
-
-
+#' Calculate distance from read class to annotation
+#' @noRd
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySecondaryDist = 5, ignore.strand=FALSE) {
 
   ########## TODO: go through filter rules: (are these correct/up to date?)
@@ -227,7 +223,8 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
   return(txToAnTableFiltered)
 }
 
-
+#' Get Empty Read Class From SE
+#' @noRd
 getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL){
   distTable <- data.table(metadata(se)$distTable)[,.(readClassId, annotationTxId, readCount, GENEID)]
   distTable[, eqClass:=paste(sort(unique(annotationTxId)),collapse='.'), by = list(readClassId,GENEID)]

@@ -3,7 +3,6 @@
 #' @param method A string variable indicates the whether a one-step or two-step approach will be used. See \code{Details}
 #' for details on one-step and two-step approach.
 #' @param read_classDT A \code{data.table} with columns
-#' @examples
 #' @noRd
 abundance_quantification <- function(read_classDT,mc.cores = 1,
                                      bias_correction = TRUE,

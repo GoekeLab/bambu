@@ -20,28 +20,7 @@
 
 #####
 #' Isoform reconstruction using genomic alignments
-#'@title ISOFORM RECONSTRUCTION
-#'@title ISOFORM RECONSTRUCTION
-#'@description
-#'
-#'@param bamFile A string variable that indicates the path to genome bam file.
-#'@param txdb txdb object.
-#'@param genomeFAFile A string variable that indicates the path to genome annotation .fa file.
-#'@param stranded A logical variable that indicates whether the experiment is a stranded run or non-stranded run (default to non-stranded).
-#'@export
-#'@examples
-#' \dontrun{
-#'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-#'  samplefile <- system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")
-#'  txdb <- loadDb(samplefile) #
-#'  test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
-#'  standardJunctionModelFile <- system.file("extdata", "standardJunctionModel-temp.rds", package = "bamboo")
-#'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-#'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = FaFile(fa.file))
-#'  }
-#
-#
-
+#'@noRd
 isore.constructReadClasses <- function(readGrgList,
                                        runName='sample1',
                                        annotationGrangesList, ## has to be provided (function should be called through bamboo, so is optional through that main function)
@@ -199,7 +178,8 @@ if(verbose)  cat(paste0('Finished create transcript models (read classes) for re
 }
 
 
-
+#' Combine transcript candidates across samples
+#'@noRd
 isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL, stranded = FALSE, verbose = FALSE){
   if(is.null(readClassSeRef)){  #if no reference object is given, create one from a readClassSe object
     counts <- assays(readClassSe)$counts
@@ -422,6 +402,8 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 }
 
 
+#' Extend annotations
+#' @noRd
 isore.extendAnnotations <- function(se,
                                     annotationGrangesList,
                                     remove.subsetTx = TRUE, # filter to remove read classes which are a subset of known transcripts. Also remove transcripts which are a subset of new transcripts (?)
@@ -717,6 +699,10 @@ isore.extendAnnotations <- function(se,
   }
 }
 
+
+
+#' Estimate distance between read class and annotations
+#' @noRd
 isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, additionalFiltering = FALSE, verbose = FALSE){
   start.ptm <- proc.time()
   readClassTable <- as_tibble(rowData(seReadClass), rownames='readClassId') %>%
