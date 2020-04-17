@@ -1,18 +1,44 @@
-#' Main function
+#' Main bamboo function
 #' @title bamboo: long read isoform reconstruction and quantification
-#' @description
-#' @param bam.file
-#' @param readclass.file
-#' @param outputReadClassDir
-#' @param txdb
-#' @param annotationGrangesList
-#' @param extendAnnotations
-#' @param genomeSequence
-#' @param alfo.control
-#' @param yieldSize
-#' @param ir.control
-#' @param verbose
+#' @description This function takes bam file of genomic alignments and performs isoform recontruction and gene and transcript expression quantification.
+#' It also allows saving of read class files of alignments, extending provided annotations, and quantification based on extended annotations.
+#' When multiple samples are provided, extended annotations will be combined across samples to allow comparison.
+#' @param bam.file A string or a vector of strings specifying the paths of bam files for genomic alignments, or a \code{BamFile} object or a \code{BamFileList}  object (see \code{Rsamtools}).
+#' @param readclass.file A string or a vector of strings specifying the read class files that are saved during previous run of \code{bamboo}.
+#' @param outputReadClassDir A string variable specifying the path to where read class files will be saved.
+#' @param txdb A \code{TxDb} object.
+#' @param annotationGrangesList A GRangesList object obtained by \code{prepareAnnotations}.
+#' @param extendAnnotations A logical variable indicating whether annotations are to be extended for quantification.
+#' @param genomeSequence A fasta file or a BSGenome object.
+#' @param alfo.control A list of controlling parameters for quantification algorithm estimation process:
+#' \itemize{
+#'   \item ncore specifying number of cores used when parallel processing is used, defaults to 1.
+#'   \item maxiter specifying maximum number of run interations, defaults to 10000.
+#'   \item bias_correction specifying whether to correct for bias, defaults to FALSE.
+#'   \item convcontrol specifying the covergence trheshold control, defaults to 0.0001.
+#' }
+#' @param yieldSize see \code{Rsamtools}
+#' @param ir.control A list of controlling parameters for isoform reconstruction process:
+#' \itemize{
+#'   \item whether stranded, defaults to FALSE
+#'   \item prefix specifying prefix for new gene Ids (genePrefix.number), defaults to empty
+#'   \item remove.subsetTx indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
+#'   \item min.readCount specifying minimun read count to consider a read class valid in a sample, defaults to 2
+#'   \item min.readFractionByGene specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05
+#'   \item min.sampleNumber specifying minimum sample number with minimum read count, defaults to 1
+#'   \item min.exonDistance specifying minum distance to known transcript to be considered valid as new, defaults to 35
+#'   \item min.exonOverlap specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults 10 base pairs
+#' }
+#' @param verbose A logical variable indicating whether processing messages will be printed.
 #' @details
+#' @return A list of two SummarizedExperiment object for transcript expression and gene expression.
+#' @examples
+#' \dontrun{
+#' ## =====================
+#' ## More stringent new gene/isoform discovery: new isoforms are identified with at least 5 read count in 1 sample
+#' ## Increase EM convergence threshold to 10^(-6)
+#' seOutput <- bamboo(bam.file, annotationGrangesList, genomeSequence, ir.control = list(min.readCount=5), algo.control = list(convcontrol = 10^(-6))
+#' }
 #' @export
 bamboo <- function(bam.file = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE, verbose = FALSE){
 
@@ -37,14 +63,13 @@ bamboo <- function(bam.file = NULL, readclass.file = NULL, outputReadClassDir = 
   if(!is.null(bam.file) | (!is.null(readclass.file))){
     #===# set default controlling parameters for isoform reconstruction  #===#
     ir.control.default <- list(stranded = FALSE,
-                               prefix = '',
-                               remove.subsetTx = TRUE, # filter to remove read classes which are a subset of known transcripts.
-                               min.readCount = 2,  # minimun read count to consider a read class valid in a sample
-                               min.readFractionByGene = 0.05,  ## minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered
-                               min.sampleNumber = 1,  # minimum sample number with minimum read count
-                               min.exonDistance = 35,  # minum distance to known transcript to be considered valid as new
-                               min.exonOverlap = 10, # minimum number of bases shared with annotation to be assigned to the same gene id
-                               prefix='')  ## prefix for new gene Ids (genePrefix.number)
+                               remove.subsetTx = TRUE, #
+                               min.readCount = 2,  #
+                               min.readFractionByGene = 0.05,  ##
+                               min.sampleNumber = 1,  #
+                               min.exonDistance = 35,  #
+                               min.exonOverlap = 10, #
+                               prefix='')  ##
     if(!is.null(ir.control)){
       for(i in names(ir.control)) {
         ir.control.default[[i]] <- ir.control[[i]]
