@@ -24,6 +24,7 @@ makeTrackFromGrangesList <- function(grangesList)
 
 #' @title GRANGESLISTTOBED
 #' @param x
+#' @noRd
 grangesListToBed<-function(x) # note: 0 based coordinates
 {
   # useful: generate UCSC custom track with the following steps
