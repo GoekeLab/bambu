@@ -1,6 +1,6 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 #' @title PREPAREANNOTATIONS
-#' @param txdb
+#' @param txdb a TxDb object
 #' @export
 #' @examples
 #' \dontrun{
@@ -28,6 +28,7 @@ prepareAnnotations <- function(txdb) {
 }
 
 #' Get minimum equivalent class by Transcript
+#' @param exonsByTranscripts exonsByTranscripts
 #' @noRd
 getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
@@ -49,6 +50,10 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
 }
 
 #' Assign New Gene with Gene Ids
+#' @param exByTx exByTx
+#' @param prefix prefix, defaults to empty
+#' @param minoverlap defaults to 5
+#' @param ignore.strand defaults to FALSE
 #' @noRd
 assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
   if(is.null(names(exByTx))){
@@ -128,6 +133,11 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
 
 
 #' Calculate distance from read class to annotation
+#' @param exByTx exByTx
+#' @param exByTxRef exByTxRef
+#' @param maxDist defaults to 35
+#' @param primarySecondaryDist defaults to 5
+#' @param ignore.strand defaults to FALSE
 #' @noRd
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySecondaryDist = 5, ignore.strand=FALSE) {
 
@@ -224,6 +234,8 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
 }
 
 #' Get Empty Read Class From SE
+#' @param se summarizedExperiment
+#' @param annotationGrangesList defaults to NULL
 #' @noRd
 getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL){
   distTable <- data.table(metadata(se)$distTable)[,.(readClassId, annotationTxId, readCount, GENEID)]

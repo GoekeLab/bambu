@@ -1,6 +1,7 @@
 ###########ALL FUNCTIONS HERE ARE NON ESSENTIAL #############
 
-
+#' @title plotGRangesListByNames
+#' @param grangesList A GrangesList object
 #' @noRd
 plotGRangesListByNames<-function(grangesList)
 {
@@ -11,6 +12,7 @@ plotGRangesListByNames<-function(grangesList)
   plotTracks(list(plotTrack),showId=TRUE)
 }
 
+#' @describeIn plotGrangesListByNames
 #' @noRd
 makeTrackFromGrangesList <- function(grangesList)
 {
@@ -22,7 +24,7 @@ makeTrackFromGrangesList <- function(grangesList)
 }
 
 
-
+#' @param x A grangesList
 #' @noRd
 grangesListToBed<-function(x) # note: 0 based coordinates
 {
@@ -37,6 +39,12 @@ grangesListToBed<-function(x) # note: 0 based coordinates
 }
 
 #' Function to find ranges where the start or end is within another range (eg start/end overlaps)
+#' @param query The query object of \code{\link{findOverlaps}}.
+#' @param subject The subject object of \code{\link{findOverlaps}}.
+#' @param fix fix
+#' @param select select
+#' @param maxgap defaults to -1
+#' @param ignore.strand defaults to TRUE
 #' @noRd
 findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1, ignore.strand = TRUE) {  # type=c('start','end'); maxgap=distance to start/end
   if(class(query)!='GRanges') {
@@ -54,6 +62,8 @@ findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1,
 
 
 #' Function to reduce the start end end of all elements in a granges list objects to a single basepair
+#' @inheritParams plotGRangesListByNames
+#' @param by defaults to 5
 #' @noRd
 cutGrangesListElements <- function(grangesList, by=5) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
@@ -71,6 +81,7 @@ cutGrangesListElements <- function(grangesList, by=5) {
 
 ##### TODO: Check if this might be useful to filter reads from new transcripts?
 
+#' @param readClassList readClassList
 #' @noRd
 classifyReadClasses <- function(readClassList) {
 
@@ -108,6 +119,12 @@ classifyReadClasses <- function(readClassList) {
 }
 
 #' Function to construct unspliced transcripts which do not overlap with TSS/TES or fall in internal exons
+#' @param txList txList
+#' @param txdbTablesList txdbTablesList
+#' @param readGrgList readGrgList
+#' @param stranded defaults to FALSE
+#' @param minReadCount defaults to 2
+#' @param maxOverhang defaults to 5
 #' @noRd
 constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, stranded=FALSE, minReadCount = 2, maxOverhang = 5) {
 
@@ -190,11 +207,11 @@ constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, st
 }
 
 
-#'@title COMBINEWITHANNOTATIONS
-#'@description function to add annotations to reconstructed transcripts, and replace identical transcripts with reference
-#'@param txList
-#'@param txdbTablesList
-#'@param matchOnly
+#' Function to add annotations to reconstructed transcripts, and replace identical transcripts with reference
+#' @param txList txList
+#' @param txdbTablesList txdbTablesList
+#' @param matchOnly defaults to TRUE
+#' @noRd
 combineWithAnnotations <- function(txList, txdbTablesList, matchOnly = T) {
   txExonsByCut <- cutStartEndFromGrangesList(txList$exonsByTx)
   annotationsExonsByCut <- cutStartEndFromGrangesList(txdbTablesList$exonsByTx)

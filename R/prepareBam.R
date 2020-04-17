@@ -1,4 +1,6 @@
 #' Function to prepare reads for processing from bam file
+#' @param bamFile bamFile
+#' @inheritParams bamboo
 #' @noRd
 prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
   ## don't use names for reads, use index instead? Names are require a lot of memory

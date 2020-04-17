@@ -20,6 +20,11 @@
 
 #####
 #' Isoform reconstruction using genomic alignments
+#' @param readGrgList readGrgList
+#' @param runName runName
+#' @param stranded stranded
+#' @param quickMode quickMode
+#' @inheritParams bamboo
 #'@noRd
 isore.constructReadClasses <- function(readGrgList,
                                        runName='sample1',
@@ -179,6 +184,10 @@ if(verbose)  cat(paste0('Finished create transcript models (read classes) for re
 
 
 #' Combine transcript candidates across samples
+#' @param readClassSe readClassSe
+#' @param readClassRef readClassRef
+#' @param stranded stranded
+#' @param verbose verbose
 #'@noRd
 isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL, stranded = FALSE, verbose = FALSE){
   if(is.null(readClassSeRef)){  #if no reference object is given, create one from a readClassSe object
@@ -403,6 +412,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 
 
 #' Extend annotations
+#' @inheritParams bamboo
 #' @noRd
 isore.extendAnnotations <- function(se,
                                     annotationGrangesList,
@@ -702,6 +712,8 @@ isore.extendAnnotations <- function(se,
 
 
 #' Estimate distance between read class and annotations
+#' @param seReadClass seReadClass
+#' @inheritParams bamboo
 #' @noRd
 isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, additionalFiltering = FALSE, verbose = FALSE){
   start.ptm <- proc.time()

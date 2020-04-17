@@ -189,7 +189,9 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
   olap
 }
 
-
+#' @param query query
+#' @param subject subject
+#' @param splice
 #' @noRd
 myCompatibleTranscription <- function(query, subject, splice)
 {
@@ -202,6 +204,8 @@ myCompatibleTranscription <- function(query, subject, splice)
   return(bnds & splc)
 }
 
+#' @param idx idx
+#' @param x x
 #' @noRd
 myOneMatch <- function(x, idx)
 {
@@ -212,7 +216,7 @@ myOneMatch <- function(x, idx)
   unname(x & oneMatch)
 }
 
-
+#' @param motif motif
 #' @noRd
 spliceStrand <- function(motif){
   NATURAL_INTRON_MOTIFS_RC <- as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
@@ -224,6 +228,7 @@ spliceStrand <- function(motif){
 
 
 #' Function to reduce the start end end of the first and last elements in a granges list objects to a single basepair, helper to identify overlaps based on splicing only (allow for flexible TSS/TES)
+#' @param grangesList grangesList
 #' @noRd
 cutStartEndFromGrangesList <- function(grangesList) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
@@ -237,7 +242,8 @@ cutStartEndFromGrangesList <- function(grangesList) {
   return(relist(unlistedExons, partitioning))
 }
 
-
+#' @param grangesList grangesList
+#' @param by defaults to 5
 #' @noRd
 extendGrangesListElements <- function(grangesList, by=5) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
@@ -249,7 +255,9 @@ extendGrangesListElements <- function(grangesList, by=5) {
 }
 
 
-
+#' @param grangesList grangesList
+#' @param minWidth defaults to 5
+#' @param cutStartEnd defaults to FALSE
 #' @noRd
 dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=FALSE) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
@@ -272,6 +280,8 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=
 
 
 #' Function that selects the first N exons from a grangeslist object (exon_rank is required)
+#' @param grangesList grangesList
+#' @param exonNumber defaults to 2
 #' @noRd
 selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
   unlisted_granges <- unlist(grangesList, use.names = FALSE)
@@ -281,6 +291,7 @@ selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
 }
 
 #' Function that selects the last N exons from a grangeslist object (exon_endRank is required)
+#' @describeIn selectStartExonsFromGrangesList
 #' @noRd
 selectEndExonsFromGrangesList <- function(grangesList, exonNumber=2) {
   unlisted_granges <- unlist(grangesList, use.names = FALSE)
