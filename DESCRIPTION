@@ -46,7 +46,7 @@ LinkingTo:
     RcppArmadillo,
     RcppProgress
 Imports:
-    S4Vectors(>= 0.23.18), 
+    S4Vectors(>= 0.22.1), 
     data.table,
     IRanges, 
     GenomicRanges, 
