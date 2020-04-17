@@ -74,7 +74,7 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
   filteredOverlapList <- hitObject %>% filter(queryHits < subjectHits)
 
   rm(list=c('exonSelfOverlaps','hitObject'))
-  gc()
+  gc(verbose = FALSE)
   length_tmp = 1
   while(nrow(candidateList) > length_tmp) {  # loop to include overlapping read classes which are not in order
     length_tmp <- nrow(candidateList)

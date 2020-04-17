@@ -65,7 +65,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   }
 
   readClassTable[,'readClassId'] <- paste('rc', 1:nrow(readClassTable), sep = '.')
-  gc()
+  gc(verbose = FALSE)
 
   exonEndsShifted <- paste(readClassTable$intronStarts, as.integer(readClassTable$end) + 1, sep = ',')
   exonStartsShifted <- paste(as.integer(readClassTable$start) - 1, readClassTable$intronEnds, sep = ',')
