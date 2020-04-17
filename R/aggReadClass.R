@@ -1,4 +1,5 @@
 #' CheckReadClassTxAssignmentUniqueness
+#' @param dt A data.table object
 #' @noRd
 aggReadClass <- function(dt){
   dt[, eqClass:=paste(sort(unique(tx_sid)), collapse = '.'), by = list(read_class_sid,gene_sid)]

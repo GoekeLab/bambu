@@ -2,23 +2,13 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' EM algorithm
-#'
-#' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-#' @param Y observed number of reads for each read class j
-#' @param lambda, the tuning parameter for bias estimation
-#' @param conv convergence threshold of likelihoods
-#' @export
+#' @noRd
 em_theta <- function(X, Y, lambda, b, d, maxiter, conv) {
     .Call(`_bamboo_em_theta`, X, Y, lambda, b, d, maxiter, conv)
 }
 
 #' L1-penalized likelihood estimation
-#'
-#' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-#' @param Y observed number of reads for each read class j
-#' @param lambda, the tuning parameter for bias estimation
-#' @param conv convergence threshold of likelihoods
-#' @export
+#' @noRd
 emWithL1 <- function(X, Y, lambda, d, maxiter, conv) {
     .Call(`_bamboo_emWithL1`, X, Y, lambda, d, maxiter, conv)
 }

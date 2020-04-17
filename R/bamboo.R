@@ -10,7 +10,7 @@
 #' @param annotationGrangesList A GRangesList object obtained by \code{prepareAnnotations}.
 #' @param extendAnnotations A logical variable indicating whether annotations are to be extended for quantification.
 #' @param genomeSequence A fasta file or a BSGenome object.
-#' @param alfo.control A list of controlling parameters for quantification algorithm estimation process:
+#' @param algo.control A list of controlling parameters for quantification algorithm estimation process:
 #' \itemize{
 #'   \item ncore specifying number of cores used when parallel processing is used, defaults to 1.
 #'   \item maxiter specifying maximum number of run interations, defaults to 10000.
@@ -167,6 +167,8 @@ bamboo <- function(bam.file = NULL, readclass.file = NULL, outputReadClassDir = 
 
 
 #' Process data.table object
+#' @param dt A data.table object
+#' @inheritParams bamboo
 #' @noRd
 bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   if(is.null(dt)){
@@ -249,6 +251,8 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
 
 
 #' Process SummarizedExperiment object
+#' @param se A summarizedExperiment object
+#' @inheritParams bamboo
 #' @noRd
 bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
@@ -276,6 +280,7 @@ bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
 
 #' Process bam files without saving to folders.
+#' @inheritParams bamboo
 #' @noRd
 bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
@@ -378,6 +383,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
 }
 
 #' Preprocess bam files and save read class files
+#' @inheritParams bamboo
 #' @noRd
 bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
@@ -420,7 +426,7 @@ bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genome
 }
 
 #' Combine readClass objects and perform quantification
-#' Internal function for bamboo quantification
+#' @inheritParams bamboo
 #' @noRd
 bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.control, algo.control, extendAnnotations, verbose = FALSE){
 
