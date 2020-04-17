@@ -1,4 +1,4 @@
-bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE, verbose = FALSE){
+bamboo <- function(bam.file = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE, verbose = FALSE){
 
 
   #===# Check annotation inputs #===#
@@ -16,9 +16,7 @@ bamboo <- function(bam.file = NULL, se = NULL, readclass.file = NULL, outputRead
 
   ## When SE object from bamboo.quantISORE is provided ##
 
-  if(!is.null(se)){
-    return(bamboo.quantSE(se = se, annotationGrangesList = annotationGrangesList, algo.control = algo.control))
-  }
+
 
   if(!is.null(bam.file) | (!is.null(readclass.file))){
     #===# set default controlling parameters for isoform reconstruction  #===#
