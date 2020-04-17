@@ -230,7 +230,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     predictions = myResults[[1]]
   }
   else{
-    predictions= predict(junctionModel[['spliceSitePredictionStart.start']],newx=modelmatrix,s='lambda.min')
+    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionStart.start']],newx=modelmatrix,s='lambda.min')
   }
   spliceSitePredictionStart.start <- rep(NA, length(annotatedJunctionsStart))
   names(spliceSitePredictionStart.start) <- annotatedJunctionsStart$junctionStartName
@@ -260,7 +260,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
   }
   else{
 
-    predictions= predict(junctionModel[['spliceSitePredictionStart.end']],newx=modelmatrix,s='lambda.min')
+    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionStart.end']],newx=modelmatrix,s='lambda.min')
   }
   spliceSitePredictionStart.end <- rep(NA, length(annotatedJunctionsStart))
   names(spliceSitePredictionStart.end) <- annotatedJunctionsStart$junctionStartName
@@ -289,7 +289,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
   }
   else{
 
-    predictions= predict(junctionModel[['spliceSitePredictionEnd.start']],newx=modelmatrix,s='lambda.min')
+    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionEnd.start']],newx=modelmatrix,s='lambda.min')
   }
   spliceSitePredictionEnd.start <- rep(NA, length(annotatedJunctionsEnd))
   names(spliceSitePredictionEnd.start) <- annotatedJunctionsEnd$junctionEndName
@@ -316,7 +316,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     predictions =myResults[[1]]
   }
   else{
-    predictions= predict(junctionModel[['spliceSitePredictionEnd.end']],newx=modelmatrix,s='lambda.min')
+    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionEnd.end']],newx=modelmatrix,s='lambda.min')
   }
   spliceSitePredictionEnd.end <- rep(NA, length(annotatedJunctionsEnd))
   names(spliceSitePredictionEnd.end) <- annotatedJunctionsEnd$junctionEndName
@@ -347,7 +347,7 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
     labels.train.cv.test=labels.train[-mySample]
 
     cv.fit=glmnet::cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial', ...)
-    predictions=predict(cv.fit,newx=data.train.cv.test,s='lambda.min')
+    predictions=glmnet:::predict.cv.glmnet(cv.fit,newx=data.train.cv.test,s='lambda.min')
     show('prediction accuracy (CV) (higher for splice donor than splice acceptor)')
 
     show( fisher.test(table(predictions>0,labels.train.cv.test)))
@@ -355,7 +355,7 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
   }
 
   cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial', ...)
-  predictions= predict(cv.fit,newx=data.test,s='lambda.min')
+  predictions= glmnet:::predict.cv.glmnet(cv.fit,newx=data.test,s='lambda.min')
   return(list(predictions,cv.fit))
 }
 
