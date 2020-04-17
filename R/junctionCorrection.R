@@ -77,9 +77,9 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
 
   annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions, intronsByTx, ignore.strand=F)['TRUE']
   if(verbose) {
-    show('before strand correction, annotated introns:')
-    show(annotatedIntronNumber)
-    show(annotatedIntronNumber/length(uniqueJunctions))
+    message('before strand correction, annotated introns:')
+    message(annotatedIntronNumber)
+    message(annotatedIntronNumber/length(uniqueJunctions))
   }
 
   #infer strand for each read based on strand of junctions
@@ -111,9 +111,9 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
       if(annotatedIntronNumberNew > annotatedIntronNumber & !is.na(annotatedIntronNumber)) # update junctions object if strand prediction improves overlap with annotations
       {
         if(verbose) {
-          show('after strand correction, annotated introns:')
-          show(annotatedIntronNumberNew)
-          show(annotatedIntronNumberNew/length(uniqueJunctionsUpdate))
+          message('after strand correction, annotated introns:')
+          message(annotatedIntronNumberNew)
+          message(annotatedIntronNumberNew/length(uniqueJunctionsUpdate))
         }
         annotatedIntronNumber <- annotatedIntronNumberNew
         uniqueJunctions <- uniqueJunctionsUpdate
@@ -132,9 +132,9 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
       if(annotatedIntronNumberNew > annotatedIntronNumber & !is.na(annotatedIntronNumber)) # update junctions object if strand prediction improves overlap with annotations
       {
         if(verbose) {
-          show('after strand correction, annotated introns:')
-          show(annotatedIntronNumberNew)
-          show(annotatedIntronNumberNew/length(uniqueJunctionsUpdate))
+          message('after strand correction, annotated introns:')
+          message(annotatedIntronNumberNew)
+          message(annotatedIntronNumberNew/length(uniqueJunctionsUpdate))
         }
         annotatedIntronNumber <- annotatedIntronNumberNew
         uniqueJunctions <- uniqueJunctionsUpdate
@@ -329,10 +329,10 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
 
     cv.fit=glmnet::cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial', ...)
     predictions=glmnet:::predict.cv.glmnet(cv.fit,newx=data.train.cv.test,s='lambda.min')
-    show('prediction accuracy (CV) (higher for splice donor than splice acceptor)')
+    message('prediction accuracy (CV) (higher for splice donor than splice acceptor)')
 
-    show( fisher.test(table(predictions>0,labels.train.cv.test)))
-    show(evalutePerformance(labels.train.cv.test==1,predictions)$AUC)
+    message( fisher.test(table(predictions>0,labels.train.cv.test)))
+    message(evalutePerformance(labels.train.cv.test==1,predictions)$AUC)
   }
 
   cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial', ...)
@@ -347,9 +347,9 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
 #' @noRd
 findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALSE) {
   if(verbose) {
-    show('reads count for all annotated junctions')
-    show(sum(junctions$score[junctions$annotatedJunction]))
-    show(sum(junctions$score[junctions$annotatedJunction])/ sum(junctions$score))
+    message('reads count for all annotated junctions')
+    message(sum(junctions$score[junctions$annotatedJunction]))
+    message(sum(junctions$score[junctions$annotatedJunction])/ sum(junctions$score))
   }
   ##note: the output can be visualised (bed/bigbed track)
   #calculation is based on distance and properties of next junctions
@@ -385,7 +385,7 @@ findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALS
     #here: assign reference junction to all junctions based on prediciton score
     for(maxDist in 0:10)
     {
-      if(verbose) show(maxDist)
+      if(verbose) message(maxDist)
       overlapByDistPlus=findOverlaps(candidateJunctionsPlus[is.na(mergedHighConfJunctionIdPlus)], candidateJunctionsPlus[candidateJunctionsPlus$highConfJunctionPrediction], maxgap=maxDist,type='equal')
       overlapByDistMinus=findOverlaps(candidateJunctionsMinus[is.na(mergedHighConfJunctionIdMinus)], candidateJunctionsMinus[candidateJunctionsMinus$highConfJunctionPrediction], maxgap=maxDist,type='equal')
 
@@ -426,10 +426,10 @@ findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALS
   rm(candidateJunctionsPlus, candidateJunctionsMinus, highConfJunctionsPlus, highConfJunctionsMinus)
 
   if(verbose) {
-    show('reads count for all annotated junctions after correction to reference junction')
+    message('reads count for all annotated junctions after correction to reference junction')
     sumByJuncId <- tapply(junctions$score, junctions$mergedHighConfJunctionId, sum)
-    show(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]))
-    show(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction])/sum(junctions$score))
+    message(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]))
+    message(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction])/sum(junctions$score))
   }
   return(junctions)
 }
