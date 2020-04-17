@@ -1,3 +1,19 @@
+#' Main function
+#' @title bamboo: long read isoform reconstruction and quantification
+#' @description
+#' @param bam.file
+#' @param readclass.file
+#' @param outputReadClassDir
+#' @param txdb
+#' @param annotationGrangesList
+#' @param extendAnnotations
+#' @param genomeSequence
+#' @param alfo.control
+#' @param yieldSize
+#' @param ir.control
+#' @param verbose
+#' @details
+#' @export
 bamboo <- function(bam.file = NULL, readclass.file = NULL, outputReadClassDir = NULL, txdb = NULL, annotationGrangesList = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = FALSE, verbose = FALSE){
 
 
@@ -124,6 +140,9 @@ bamboo <- function(bam.file = NULL, readclass.file = NULL, outputReadClassDir = 
   stop("At least bam.file, summarizedExperiment output from isore, or directory to saved readClass objects need to be provided.")
 }
 
+
+#' Process data.table object
+#' @noRd
 bamboo.quantDT <- function(dt = dt,algo.control = NULL){
   if(is.null(dt)){
     stop("Input object is missing.")
@@ -187,20 +206,25 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
                    gene_name = geneVec[gene_sid] )]
   theta_est[,`:=`(tx_sid=NULL, gene_sid=NULL)]
   theta_est <- theta_est[,.(tx_name, estimates)]
+
   theta_est[,`:=`(CPM = estimates/sum(estimates)*(10^6))]
+
+
 
   b_est <- outList[[2]]
   b_est[, `:=`(gene_name = geneVec[gene_sid], eqClass = eqClassVec[as.numeric(read_class_sid)])]
   b_est[, `:=`(gene_sid = NULL,read_class_sid=NULL)]
 
-  est.list <- list(counts = theta_est, metadata = b_est)
+  est.list <- list(counts = theta_est,
+                   metadata = b_est)
   return(est.list)
 }
 
 
 
 
-
+#' Process SummarizedExperiment object
+#' @noRd
 bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
   dt <- getEmptyClassFromSE(se, annotationGrangesList)
@@ -216,8 +240,8 @@ bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
   counts[is.na(estimates),`:=`(estimates = 0, CPM = 0) ]
   counts <- setDF(counts)
-  seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(estimates = matrix(counts$estimates,ncol = length(ColNames), dimnames = list(counts$tx_name, ColNames)),
-                                                                             normEstimates = matrix(counts$CPM, ncol =  length(ColNames), dimnames = list(counts$tx_name, ColNames))),
+  seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(counts = matrix(counts$counts,ncol = length(ColNames), dimnames = list(counts$tx_name, ColNames)),
+                                                                             CPM = matrix(counts$CPM, ncol =  length(ColNames), dimnames = list(counts$tx_name, ColNames))),
                                                          rowRanges = annotationGrangesList[counts$tx_name],
                                                          colData = colData(se),
                                                          metadata = est$metadata) # transcript annotation with read class information
@@ -226,8 +250,8 @@ bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 }
 
 
-
-
+#' Process bam files without saving to folders.
+#' @noRd
 bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
@@ -267,6 +291,8 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       end.time <- proc.time()
       cat(paste0('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins', ' \n'))
     }
+    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList)
+
   }else { # if computation is done in memory in a single session
     seList = list()
     combinedTxCandidates = NULL
@@ -318,11 +344,16 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
     }
+
+    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList = extendedAnnotationGRangesList)
   }
+  seOutput = list(seOutput,seOutputGene)
+
   return(seOutput)
 }
 
-
+#' Preprocess bam files and save read class files
+#' @noRd
 bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
@@ -364,6 +395,8 @@ bamboo.preprocess <- function(bam.file = bam.file, annotationGrangesList, genome
 }
 
 #' Combine readClass objects and perform quantification
+#' Internal function for bamboo quantification
+#' @noRd
 bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.control, algo.control, extendAnnotations, verbose = FALSE){
 
   seOutput <- NULL
@@ -384,6 +417,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
     }
+    seOutput_Gene <- transcriptToGeneExpression(seOutput,annotationGrangesList)
   }else{
     start.time <- proc.time()
     combinedTxCandidates <- NULL
@@ -431,7 +465,11 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       rm(list = c("seWithDist","se.quant"))
       gc()
     }
+
+    seOutput_Gene <- transcriptToGeneExpression(seOutput,annotationGrangesList =  extendedAnnotationGRangesList)
   }
+  seOutput = list(seOutput,seOutputGene)
+
   return(seOutput)
 }
 
