@@ -1,15 +1,7 @@
 ########TODO: LOOK THROUGH CODE, clean up, acknowledge source if functions can't be imported (GenomicAlignments) #######
 
-#'@title FINDSPLICEOVERLAPSBYDIST
-#'@description This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
-#'@param query
-#'@param subject
-#'@param ignore.strand
-#'@param maxDist
-#'@param type
-#'@param firstLastSeparate
-#'@param dropRangesByMinLength
-#'@param cutStartEnd
+#' This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
+#' @noRd
 findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist = 5, type='within', firstLastSeparate = T, dropRangesByMinLength=F, cutStartEnd = T) {
 
   #  with this option the first and last exons are stored and the distance for each between query and subject hits is returned
@@ -102,11 +94,8 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
 }
 
 
-#'@title MYGAPS
-#'@param x
-#'@param start
-#'@param end
-#'@importFrom GenomicRanges
+#' Get intron ranges from exon ranges list
+#' @noRd
 myGaps <- function(x, start=NA, end=NA)
 {
   # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
@@ -148,19 +137,12 @@ myGaps <- function(x, start=NA, end=NA)
 
 }
 
+#' @noRd
 .isNumericOrNAs <- S4Vectors:::isNumericOrNAs
 
 
 
-
-
-
-
-#'@title RANGEDIST
-#'@param query
-#'@param subject
-#'@param splice
-#'@param maxDist
+#' @noRd
 rangesDist <- function(query, subject, splice, maxDist)
 {
   qrng <- ranges(query)
@@ -180,11 +162,8 @@ rangesDist <- function(query, subject, splice, maxDist)
 
 
 
-#'@title FINDSPLICEOVERLAPSQUICK
-#'@description the following functions are implemented in R, I just included the within option to make them significantly faster+memorey friendly for this purpose (original code copied from https://rdrr.io/bioc/GenomicAlignments/src/R/findSpliceOverlaps-methods.R)
-#'@param query
-#'@param subject
-#'@param ignore.strand
+#' The following functions are implemented in R, I just included the within option to make them significantly faster+memorey friendly for this purpose (original code copied from https://rdrr.io/bioc/GenomicAlignments/src/R/findSpliceOverlaps-methods.R)
+#' @noRd
 findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
   olap <- findOverlaps(query, subject, ignore.strand=ignore.strand, type='within')
   olapEqual <- findOverlaps(query, subject, ignore.strand=ignore.strand, type='equal')
@@ -211,10 +190,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
 }
 
 
-#'@title MYCOMPATIBLETRANSCRIPTION
-#'@param splice
-#'@param query
-#'@param subject
+#' @noRd
 myCompatibleTranscription <- function(query, subject, splice)
 {
   qrng <- ranges(query)
@@ -226,9 +202,7 @@ myCompatibleTranscription <- function(query, subject, splice)
   return(bnds & splc)
 }
 
-#'@title MYONEMATCH
-#'@param x
-#'@param idx
+#' @noRd
 myOneMatch <- function(x, idx)
 {
   # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
@@ -239,12 +213,7 @@ myOneMatch <- function(x, idx)
 }
 
 
-
-
-
-
-#'@title SPLICESTRAND
-#'@param motif
+#' @noRd
 spliceStrand <- function(motif){
   NATURAL_INTRON_MOTIFS_RC <- as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
 
@@ -254,9 +223,8 @@ spliceStrand <- function(motif){
 }
 
 
-#'@title CUTSTARTENDFROMGRANGESLIST
-#'@description function to reduce the start end end of the first and last elements in a granges list objects to a single basepair, helper to identify overlaps based on splicing only (allow for flexible TSS/TES)
-#'@param grangesList
+#' Function to reduce the start end end of the first and last elements in a granges list objects to a single basepair, helper to identify overlaps based on splicing only (allow for flexible TSS/TES)
+#' @noRd
 cutStartEndFromGrangesList <- function(grangesList) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
@@ -270,9 +238,7 @@ cutStartEndFromGrangesList <- function(grangesList) {
 }
 
 
-#'@title EXTENDGRANGESLISTELEMENTS
-#'@param grangesList
-#'@param by
+#' @noRd
 extendGrangesListElements <- function(grangesList, by=5) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
@@ -284,10 +250,7 @@ extendGrangesListElements <- function(grangesList, by=5) {
 
 
 
-#'@title DROPGRANGESLISTELEMENTSBYWIDTH
-#'@param grangesList
-#'@param minWidth
-#'@param cutStartEnd
+#' @noRd
 dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=FALSE) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(sum(width(grangesList)>=minWidth)), names=NULL)
@@ -308,10 +271,8 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=
 
 
 
-#'@title SELECTSTARTEXONSFROMGRANGESLIST
-#'@description function that selects the first N exons from a grangeslist object (exon_rank is required)
-#'@param grangesList
-#'@param exonNumber
+#' Function that selects the first N exons from a grangeslist object (exon_rank is required)
+#' @noRd
 selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
   unlisted_granges <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
@@ -319,10 +280,8 @@ selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
   return(relist(unlisted_granges[startExonsSet], partitioning))
 }
 
-#'@title SELECTENDEXONSFROMGRANGESLIST
-#'@description function that selects the last N exons from a grangeslist object (exon_endRank is required)
-#'@param grangesList
-#'@param exonNumber
+#' Function that selects the last N exons from a grangeslist object (exon_endRank is required)
+#' @noRd
 selectEndExonsFromGrangesList <- function(grangesList, exonNumber=2) {
   unlisted_granges <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)

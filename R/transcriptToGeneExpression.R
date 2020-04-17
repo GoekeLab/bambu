@@ -1,3 +1,4 @@
+#' Reduce transcript expression to gene expression
 #' @noRd
 transcriptToGeneExpression<- function(se, annotationGrangesList){
   counts <- as.data.table(assays(se)$estimates,keep.rownames = TRUE)

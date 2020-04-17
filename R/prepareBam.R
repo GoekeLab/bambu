@@ -1,8 +1,5 @@
 #' Function to prepare reads for processing from bam file
-#'@title PREPAREDATAFROMBAM
-#'@param bamFile
-#'@param yieldSize
-#'@export
+#' @noRd
 prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
   ## don't use names for reads, use index instead? Names are require a lot of memory
 
