@@ -1,10 +1,6 @@
 #' reconstruct spliced transripts
-#' @title CONSTRUCTSPLICEDREADCLASSTABLES
-#' @param uniqueJunctions
-#' @param unlisted_junctions
-#' @param readGrglist
-#' @param readNames
 #' @importFrom unstrsplit getFromNamespace
+#' @noRd
 constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrglist, readNames, quickMode = FALSE){
   options(scipen = 999)
 
@@ -69,7 +65,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   }
 
   readClassTable[,'readClassId'] <- paste('rc', 1:nrow(readClassTable), sep = '.')
-  gc()
+  gc(verbose = FALSE)
 
   exonEndsShifted <- paste(readClassTable$intronStarts, as.integer(readClassTable$end) + 1, sep = ',')
   exonStartsShifted <- paste(as.integer(readClassTable$start) - 1, readClassTable$intronEnds, sep = ',')
@@ -103,14 +99,8 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 }
 
 
-#'@title CONSTRUCTUNSPLICEDREADCLASSES
-#'@description reconstruct read classes using unspliced reads that fall within exons from annotations
-#'@param granges
-#'@param grangesReference
-#'@param readNames
-#'@param confidenceType
-#'@param prefix
-#'@param stranded
+#' reconstruct read classes using unspliced reads that fall within exons from annotations
+#' @noRd
 constructUnsplicedReadClasses <- function(granges, grangesReference,
                                           readNames, confidenceType='unspliced',
                                           prefix='unspliced', stranded=TRUE) {

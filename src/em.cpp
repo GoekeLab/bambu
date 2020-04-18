@@ -4,12 +4,7 @@ using namespace Rcpp ;
 
 
 //' EM algorithm
-//'
-//' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-//' @param Y observed number of reads for each read class j
-//' @param lambda, the tuning parameter for bias estimation
-//' @param conv convergence threshold of likelihoods
-//' @export
+//' @noRd
 // [[Rcpp::export]]
 List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
                const arma::rowvec Y, // observed number of reads for each read class j
@@ -77,12 +72,7 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
 
 
 //' L1-penalized likelihood estimation
-//'
-//' @param X sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
-//' @param Y observed number of reads for each read class j
-//' @param lambda, the tuning parameter for bias estimation
-//' @param conv convergence threshold of likelihoods
-//' @export
+//' @noRd
 // [[Rcpp::export]]
 List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
                const arma::rowvec Y, // observed number of reads for each read class j
