@@ -316,14 +316,15 @@ txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map){
   orderUnlistData$exon_rank <- NULL
   orderUnlistData$exon_endRank <- NULL
 
-  exByGene <- split(orderUnlistData, names(orderUnlistData))
+  exByGene <- splitAsList(orderUnlistData, names(orderUnlistData))
 
-  exByGene <- reduce(exByGene)
+  exByGene <- GenomicRanges::reduce(exByGene)
 
   # add exon_rank and endRank
-  unlistData <- unlist(exBygene, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(exBygene)), names=NULL)
-  geneStrand <- as.character(strand(unlistData))[cumsum(elementNROWS(exBygene))]
+  unlistData <- unlist(exByGene, use.names = FALSE)
+  partitionDesign <- cumsum(elementNROWS(exByGene))
+  partitioning <- PartitioningByEnd(partitionDesign, names=NULL)
+  geneStrand <- as.character(strand(unlistData))[partitionDesign]
   exon_rank <- sapply(width((partitioning)), seq, from=1)
   exon_rank[which(geneStrand == '-')] <- lapply(exon_rank[which(geneStrand == '-')], rev)  # * assumes positive for exon ranking
   exon_endRank <- lapply(exon_rank, rev)

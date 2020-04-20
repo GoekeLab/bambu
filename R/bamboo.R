@@ -376,9 +376,10 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
     }
 
   }
-  seOutput = list(transcript=seOutput,gene=transcriptToGeneExpression(seOutput))
-
-  return(seOutput)
+  seOutputGene=transcriptToGeneExpression(seOutput)
+  out <- list(seOutput,seOutputGene)
+  names(out) <- c("Transcript","Gene")
+  return(out)
 }
 
 #' Preprocess bam files and save read class files
@@ -498,9 +499,10 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
 
 
   }
-  seOutput = list(transcript=seOutput,gene=transcriptToGeneExpression(seOutput))
-
-  return(seOutput)
+  seOutputGene=transcriptToGeneExpression(seOutput)
+  out <- list(seOutput,seOutputGene)
+  names(out) <- c("Transcript","Gene")
+  return(out)
 }
 
 
