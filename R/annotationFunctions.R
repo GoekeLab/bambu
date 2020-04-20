@@ -27,6 +27,40 @@ prepareAnnotations <- function(txdb) {
   return(exonsByTx)
 }
 
+
+#' Prepare annotations from gtf
+#' @param gtf.file A string variable indicates the path to a gtf file.
+#' @param organism as described in \code{\link{makeTxDbFromGFF}}.
+#' @param dataSource as described in \code{\link{makeTxDbFromGFF}}.
+#' @param taxonomyId as described in \code{\link{makeTxDbFromGFF}}.
+#' @param circ_seqs as described in \code{\link{makeTxDbFromGFF}}.
+#' @param chrominfo	as described in \code{\link{makeTxDbFromGFF}}.
+#' @param miRBaseBuild as described in \code{\link{makeTxDbFromGFF}}.
+#' @param metadata as described in \code{\link{makeTxDbFromGFF}}.
+#' @param dbxrefTag as described in \code{\link{makeTxDbFromGFF}}.
+#' @noRd
+prepareAnnotationsFromGTF <- function(gtf.file, dataSource=NA,
+                                     organism="Homo sapiens",
+                                     taxonomyId=NA,
+                                     circ_seqs=DEFAULT_CIRC_SEQS,
+                                     chrominfo=NULL,
+                                     miRBaseBuild=NA,
+                                     metadata=NULL,
+                                     dbxrefTag){
+  return(prepareAnnotations(GenomicFeatures::makeTxDbFromGFF(gtf.file, format = "gtf",
+                                                             organism = organism,
+                                                             dataSource = dataSource,
+                                                             taxonomyId = taxonomyId,
+                                                             circ_seqs = circ_seqs,
+                                                             chrominfo = chrominfo,
+                                                             miRBaseBuild = miRBaseBuild,
+                                                             metadata = metadata,
+                                                             dbxrefTag = dbxrefTag
+  )))
+}
+
+
+
 #' Get minimum equivalent class by Transcript
 #' @param exonsByTranscripts exonsByTranscripts
 #' @noRd
