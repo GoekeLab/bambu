@@ -321,7 +321,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       end.time <- proc.time()
       if(verbose)   message('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins.')
     }
-    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList, extendAnnotations = extendAnnotations)
+
 
   }else { # if computation is done in memory in a single session
     seList = list()
@@ -375,9 +375,8 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       }
     }
 
-    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList = extendedAnnotationGRangesList, extendAnnotations = extendAnnotations)
   }
-  seOutput = list(seOutput,seOutputGene)
+  seOutput = list(transcript=seOutput,gene=transcriptToGeneExpression(seOutput))
 
   return(seOutput)
 }
@@ -448,7 +447,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
     }
-    seOutputGene <- transcriptToGeneExpression(seOutput,annotationGrangesList, extendAnnotations = extendAnnotations)
+
   }else{
     start.time <- proc.time()
     combinedTxCandidates <- NULL
@@ -497,9 +496,9 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       gc(verbose = FALSE)
     }
 
-    seOutputGene <- transcriptToGeneExpression(seOutput,annotationGrangesList =  extendedAnnotationGRangesList, extendAnnotations = extendAnnotations)
+
   }
-  seOutput = list(seOutput,seOutputGene)
+  seOutput = list(transcript=seOutput,gene=transcriptToGeneExpression(seOutput))
 
   return(seOutput)
 }
