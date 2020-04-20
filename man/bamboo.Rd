@@ -31,6 +31,14 @@ bamboo(
 
 \item{genomeSequence}{A fasta file or a BSGenome object.}
 
+\item{algo.control}{A list of controlling parameters for quantification algorithm estimation process:
+\itemize{
+  \item ncore specifying number of cores used when parallel processing is used, defaults to 1.
+  \item maxiter specifying maximum number of run interations, defaults to 10000.
+  \item bias_correction specifying whether to correct for bias, defaults to FALSE.
+  \item convcontrol specifying the covergence trheshold control, defaults to 0.0001.
+}}
+
 \item{yieldSize}{see \code{Rsamtools}}
 
 \item{ir.control}{A list of controlling parameters for isoform reconstruction process:
@@ -48,14 +56,6 @@ bamboo(
 \item{extendAnnotations}{A logical variable indicating whether annotations are to be extended for quantification.}
 
 \item{verbose}{A logical variable indicating whether processing messages will be printed.}
-
-\item{alfo.control}{A list of controlling parameters for quantification algorithm estimation process:
-\itemize{
-  \item ncore specifying number of cores used when parallel processing is used, defaults to 1.
-  \item maxiter specifying maximum number of run interations, defaults to 10000.
-  \item bias_correction specifying whether to correct for bias, defaults to FALSE.
-  \item convcontrol specifying the covergence trheshold control, defaults to 0.0001.
-}}
 }
 \value{
 A list of two SummarizedExperiment object for transcript expression and gene expression.

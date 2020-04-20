@@ -170,7 +170,7 @@ bamboo <- function(bam.file = NULL, readclass.file = NULL, outputReadClassDir = 
 #' @param dt A data.table object
 #' @inheritParams bamboo
 #' @noRd
-bamboo.quantDT <- function(dt = dt,algo.control = NULL){
+bamboo.quantDT <- function(dt = dt,algo.control = NULL, verbose = FALSE){
   if(is.null(dt)){
     stop("Input object is missing.")
   }else if(any(!(c('gene_id','tx_id','read_class_id','nobs') %in% colnames(dt)))){
@@ -254,11 +254,11 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL){
 #' @param se A summarizedExperiment object
 #' @inheritParams bamboo
 #' @noRd
-bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
+bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL, verbose = FALSE){
 
   dt <- getEmptyClassFromSE(se, annotationGrangesList)
 
-  est <- bamboo.quantDT(dt,algo.control = algo.control)
+  est <- bamboo.quantDT(dt,algo.control = algo.control, verbose = verbose)
 
   counts <- est$counts
   ColNames <- colnames(se)
@@ -269,7 +269,7 @@ bamboo.quantSE <- function(se, annotationGrangesList , algo.control = NULL){
 
   counts[is.na(estimates),`:=`(estimates = 0, CPM = 0) ]
   counts <- setDF(counts)
-  seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(counts = matrix(counts$counts,ncol = length(ColNames), dimnames = list(counts$tx_name, ColNames)),
+  seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(counts = matrix(counts$estimates,ncol = length(ColNames), dimnames = list(counts$tx_name, ColNames)),
                                                                              CPM = matrix(counts$CPM, ncol =  length(ColNames), dimnames = list(counts$tx_name, ColNames))),
                                                          rowRanges = annotationGrangesList[counts$tx_name],
                                                          colData = colData(se),
@@ -310,7 +310,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
       start.time <- proc.time()
-      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = annotationGrangesList, algo.control = algo.control)
+      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = annotationGrangesList, algo.control = algo.control, verbose = verbose)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
@@ -321,7 +321,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       end.time <- proc.time()
       if(verbose)   message('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins.')
     }
-    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList)
+    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList, extendAnnotations = extendAnnotations)
 
   }else { # if computation is done in memory in a single session
     seList = list()
@@ -367,7 +367,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       end.time <- proc.time()
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
-      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = extendedAnnotationGRangesList, algo.control = algo.control)
+      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = extendedAnnotationGRangesList, algo.control = algo.control, verbose = verbose)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
@@ -375,7 +375,7 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       }
     }
 
-    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList = extendedAnnotationGRangesList)
+    seOutputGene <- transcriptToGeneExpression(seOutput, annotationGrangesList = extendedAnnotationGRangesList, extendAnnotations = extendAnnotations)
   }
   seOutput = list(seOutput,seOutputGene)
 
@@ -441,14 +441,14 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       end.time <- proc.time()
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
-      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
+      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
     }
-    seOutput_Gene <- transcriptToGeneExpression(seOutput,annotationGrangesList)
+    seOutputGene <- transcriptToGeneExpression(seOutput,annotationGrangesList, extendAnnotations = extendAnnotations)
   }else{
     start.time <- proc.time()
     combinedTxCandidates <- NULL
@@ -487,7 +487,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       end.time <- proc.time()
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
-      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control) ## NOTE: replace txdbTableList with new annotation table list
+      se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
       }else {
@@ -497,7 +497,7 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       gc(verbose = FALSE)
     }
 
-    seOutput_Gene <- transcriptToGeneExpression(seOutput,annotationGrangesList =  extendedAnnotationGRangesList)
+    seOutputGene <- transcriptToGeneExpression(seOutput,annotationGrangesList =  extendedAnnotationGRangesList, extendAnnotations = extendAnnotations)
   }
   seOutput = list(seOutput,seOutputGene)
 
