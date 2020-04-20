@@ -11,4 +11,5 @@
 #'   \item{5}{A real example of observed counts with complex overlapping scenario}
 #' }
 #' @source Randomly created, except for the last example
+#' @noRd
 "example_data"
