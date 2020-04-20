@@ -1,7 +1,7 @@
 #' Reduce transcript expression to gene expression
 #' @noRd
-transcriptToGeneExpression<- function(se, annotationGrangesList){
-  counts <- as.data.table(assays(se)$estimates,keep.rownames = TRUE)
+transcriptToGeneExpression<- function(se, annotationGrangesList, extendAnnotations){
+  counts <- as.data.table(assays(se)$counts,keep.rownames = TRUE)
   counts <- melt(counts, id.vars = "rn", measure.vars = colnames(counts)[-1])
   setnames(counts, "rn","TXNAME")
 
@@ -16,25 +16,41 @@ transcriptToGeneExpression<- function(se, annotationGrangesList){
 
   ## geneRanges
   gene_tx_map <- unlist(annotationGrangesList)
-  elementData <- as.data.table(elementMetadata(annotationGrangesList))[,.(TXNAME,GENEID,newTxClass)]
-  elementData[, newGeneClass := ifelse(grepl("ENSG",GENEID),"annotation",unique(newTxClass)), by = GENEID]
+  if(extendAnnotations){
+    elementData <- as.data.table(elementMetadata(annotationGrangesList))[,.(TXNAME,GENEID,newTxClass)]
+    elementData[, newGeneClass := ifelse(grepl("ENSG",GENEID),"annotation",unique(newTxClass)), by = GENEID]
+  }else{
+    elementData <- as.data.table(elementMetadata(annotationGrangesList))[,.(TXNAME,GENEID)]
+  }
 
   tmp <- data.table(TXNAME = names(gene_tx_map),
                     start = start(gene_tx_map),
                     end = end(gene_tx_map),
                     strand = as.character(strand(gene_tx_map)),
                     seqnames = as.character(seqnames(gene_tx_map)))
-  tmp <- elementData[,.(TXNAME,GENEID,newGeneClass)][tmp, on = "TXNAME"]
+  tmp <- elementData[tmp, on = "TXNAME"]
 
-  gene_tmp <- tmp[, list(seqnames = unique(seqnames),
-                         start = min(start),
-                         end = max(end),
-                         strand = unique(strand)), by = list(GENEID, newGeneClass)]
+  if(extendAnnotations){
+    gene_tmp <- tmp[, list(seqnames = unique(seqnames),
+                           start = min(start),
+                           end = max(end),
+                           strand = unique(strand)), by = list(GENEID, newGeneClass)]
+  }else{
+    gene_tmp <- tmp[, list(seqnames = unique(seqnames),
+                           start = min(start),
+                           end = max(end),
+                           strand = unique(strand)), by = list(GENEID)]
+  }
+
 
   gene_ranges <- GRanges(seqnames = Rle(gene_tmp$seqnames),
                          ranges = IRanges(gene_tmp$start, end = gene_tmp$end, names = gene_tmp$GENEID),
                          strand = Rle(strand(gene_tmp$strand)))
-  mcols(gene_ranges)$newGeneClass <- gene_tmp$newGeneClass
+
+  if(extendAnnotations){
+    mcols(gene_ranges)$newGeneClass <- gene_tmp$newGeneClass
+  }
+
 
 
 
