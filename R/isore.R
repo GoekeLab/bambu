@@ -20,28 +20,12 @@
 
 #####
 #' Isoform reconstruction using genomic alignments
-#'@title ISOFORM RECONSTRUCTION
-#'@title ISOFORM RECONSTRUCTION
-#'@description
-#'
-#'@param bamFile A string variable that indicates the path to genome bam file.
-#'@param txdb txdb object.
-#'@param genomeFAFile A string variable that indicates the path to genome annotation .fa file.
-#'@param stranded A logical variable that indicates whether the experiment is a stranded run or non-stranded run (default to non-stranded).
-#'@export
-#'@examples
-#' \dontrun{
-#'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-#'  samplefile <- system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")
-#'  txdb <- loadDb(samplefile) #
-#'  test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
-#'  standardJunctionModelFile <- system.file("extdata", "standardJunctionModel-temp.rds", package = "bamboo")
-#'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-#'  isore(bamFile = test.bam,  txdb = txdb,genomeFA = FaFile(fa.file))
-#'  }
-#
-#
-
+#' @param readGrgList readGrgList
+#' @param runName runName
+#' @param stranded stranded
+#' @param quickMode quickMode
+#' @inheritParams bamboo
+#'@noRd
 isore.constructReadClasses <- function(readGrgList,
                                        runName='sample1',
                                        annotationGrangesList, ## has to be provided (function should be called through bamboo, so is optional through that main function)
@@ -56,7 +40,7 @@ isore.constructReadClasses <- function(readGrgList,
   #standardJunctionModels_temp
 
   unlisted_junctions <- unlist(myGaps(readGrgList))
-  #  cat('### create junction list with splice motif ### \n')
+  # cat('### create junction list with splice motif ### \n')
   start.ptm <- proc.time()
   uniqueJunctions <- createJunctionTable(unlisted_junctions,genomeSequence=genomeSequence)
 
@@ -71,7 +55,7 @@ isore.constructReadClasses <- function(readGrgList,
                                  pruning.mode = 'coarse')
   }
   end.ptm <- proc.time()
-  if(verbose)  cat(paste0('Finished creating junction list with splice motif in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  if(verbose)  message('Finished creating junction list with splice motif in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
 
 
@@ -81,7 +65,7 @@ isore.constructReadClasses <- function(readGrgList,
   uniqueJunctions <- junctionTables[[1]]
   unlisted_junctions <- junctionTables[[2]]
   rm(junctionTables)
- # gc()
+  gc(verbose = FALSE)
 
  # cat('### find annotated introns ### \n')
   unlisted_introns <- unlist(intronsByTx)
@@ -94,13 +78,13 @@ isore.constructReadClasses <- function(readGrgList,
   annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
   uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
   rm(annotatedStart)
-#  gc()
+  gc(verbose = FALSE)
 
   # Indicator: is the junction end annotated as a intron end?
   annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
   uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
   rm(annotatedEnd)
-#  gc()
+  gc(verbose = FALSE)
 
 #  cat('### build model to predict true splice sites ### \n')
   start.ptm <- proc.time()
@@ -121,9 +105,9 @@ isore.constructReadClasses <- function(readGrgList,
     warning('Junction correction with not enough data, precalculated model is used')
   }
   rm(predictSpliceSites)  # clean up should be done more efficiently
- # gc()
+  gc(verbose = FALSE)
   end.ptm <- proc.time()
- if(verbose) cat(paste0('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+ if(verbose) message('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
 
 #  cat('### correct junctions based on set of high confidence junctions ### \n')
@@ -135,9 +119,9 @@ isore.constructReadClasses <- function(readGrgList,
   uniqueJunctions$mergedHighConfJunctionIdAll_noNA[is.na(uniqueJunctions$mergedHighConfJunctionId)] <- names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
   uniqueJunctions$strand.mergedHighConfJunction <- as.character(strand(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
   end.ptm <- proc.time()
- if(verbose) cat(paste0('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+ if(verbose) message('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   rm(junctionModel)
-#  gc()
+  gc(verbose = FALSE)
 
 #  cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
@@ -147,9 +131,9 @@ isore.constructReadClasses <- function(readGrgList,
                                                           readNames = mcols(readGrgList)$qname,
                                                           quickMode = quickMode)  ## speed up this function, the slow part is using the quantiles for start/end calculation ##
   end.ptm <- proc.time()
-if(verbose)  cat(paste0('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+if(verbose)  message('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   rm(list = c('uniqueJunctions','unlisted_junctions'))
-  gc()
+  gc(verbose = FALSE)
 
 #  cat('### create single exon transcript models (read classes) ### \n')
   start.ptm <- proc.time()
@@ -165,7 +149,7 @@ if(verbose)  cat(paste0('Finished create transcript models (read classes) for re
 
   singleExonReadsOutside <- singleExonReads[!(mcols(readGrgList)$qname[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readIds)]
   rm(list = c('singleExonReads'))
- # gc()
+  gc(verbose = FALSE)
 
   combinedSingleExonRanges <- reduce(singleExonReadsOutside, ignore.strand =! stranded)
   readClassListUnsplicedReduced <- constructUnsplicedReadClasses(granges = singleExonReadsOutside,
@@ -175,16 +159,16 @@ if(verbose)  cat(paste0('Finished create transcript models (read classes) for re
                                                                  prefix = 'unsplicedNew',
                                                                  stranded = stranded)
   rm(list = c('singleExonReadsOutside', 'combinedSingleExonRanges', 'readGrgList'))
-  gc()
+  gc(verbose = FALSE)
 
   end.ptm <- proc.time()
- if(verbose)  cat(paste0('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+ if(verbose)  message('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
 
   exonsByReadClass <- c(readClassListSpliced, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
 
   rm(list = c('readClassListSpliced', 'readClassListUnsplicedWithAnnotation', 'readClassListUnsplicedReduced'))
-#  gc()
+  gc(verbose = FALSE)
 
   counts <- matrix(mcols(exonsByReadClass)$readCount, dimnames = list(names(exonsByReadClass), runName))
   colDataDf <- DataFrame(name = runName, row.names = runName)
@@ -195,11 +179,17 @@ if(verbose)  cat(paste0('Finished create transcript models (read classes) for re
 
 
   rm(list=c('counts', 'exonsByReadClass'))
+  gc(verbose = FALSE)
   return(se)
 }
 
 
-
+#' Combine transcript candidates across samples
+#' @param readClassSe readClassSe
+#' @param readClassRef readClassRef
+#' @param stranded stranded
+#' @param verbose verbose
+#'@noRd
 isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL, stranded = FALSE, verbose = FALSE){
   if(is.null(readClassSeRef)){  #if no reference object is given, create one from a readClassSe object
     counts <- assays(readClassSe)$counts
@@ -294,6 +284,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                        colData = colDataCombined)
 
     rm(list=c('counts.spliced', 'start.spliced', 'end.spliced', 'rowData.spliced', 'counts.splicedRef', 'start.splicedRef', 'end.splicedRef', 'counts.splicedNew', 'start.splicedNew', 'end.splicedNew'))
+    gc(verbose = FALSE)
 
   ## (2) create second SE object for unspliced Tx
 
@@ -416,12 +407,16 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 
   se.combined <- SummarizedExperiment::rbind(se.spliced, se.unspliced)
   rownames(se.combined) <- 1:nrow(se.combined)
-  rm(se.spliced, se.unspliced)
+  rm(list = c("se.spliced", "se.unspliced"))
+  gc(verbose = FALSE)
   return(se.combined)
   }
 }
 
 
+#' Extend annotations
+#' @inheritParams bamboo
+#' @noRd
 isore.extendAnnotations <- function(se,
                                     annotationGrangesList,
                                     remove.subsetTx = TRUE, # filter to remove read classes which are a subset of known transcripts. Also remove transcripts which are a subset of new transcripts (?)
@@ -581,7 +576,7 @@ isore.extendAnnotations <- function(se,
 
     }
     end.ptm <- proc.time()
-    if(verbose)  cat(paste0('extended annotations for spliced reads in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+    if(verbose)  message('extended annotations for spliced reads in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
     ## unspliced transcripts
     start.ptm <- proc.time()
@@ -619,7 +614,7 @@ isore.extendAnnotations <- function(se,
       names(exonRangesCombined) <- 1:length(exonRangesCombined)
     }
     end.ptm <- proc.time()
-    if(verbose)  cat(paste0('extended annotations for unspliced reads in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+    if(verbose)  message('extended annotations for unspliced reads in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
     #assign gene IDs based on exon match
     start.ptm <- proc.time()
@@ -652,7 +647,7 @@ isore.extendAnnotations <- function(se,
       mcols(seCombined)$GENEID[as.integer(newGeneIds$readClassId)] <- newGeneIds$geneId
     }
     end.ptm <- proc.time()
-    if(verbose)  cat(paste0('assigned read classes to annotated and new gene IDs in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+    if(verbose)  message('assigned read classes to annotated and new gene IDs in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
     ## filter out transcripts
     start.ptm <- proc.time()
@@ -700,13 +695,13 @@ isore.extendAnnotations <- function(se,
 
     extendedAnnotationRanges<- c(extendedAnnotationRanges, annotationRangesToMerge)
     end.ptm <- proc.time()
-    if(verbose)  cat(paste0('transcript filtering in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+    if(verbose)  message('transcript filtering in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
     start.ptm <- proc.time()
 
     minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges)
     end.ptm <- proc.time()
-    if(verbose)  cat(paste0('calculated minimum equivalent classes for extended annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+    if(verbose)  message('calculated minimum equivalent classes for extended annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
     mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass[match(names(extendedAnnotationRanges), minEqClasses$queryTxId)]
     mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
@@ -717,6 +712,12 @@ isore.extendAnnotations <- function(se,
   }
 }
 
+
+
+#' Estimate distance between read class and annotations
+#' @param seReadClass seReadClass
+#' @inheritParams bamboo
+#' @noRd
 isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, additionalFiltering = FALSE, verbose = FALSE){
   start.ptm <- proc.time()
   readClassTable <- as_tibble(rowData(seReadClass), rownames='readClassId') %>%
@@ -740,7 +741,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
                          as_tibble(mcols(annotationGrangesList)[,c('TXNAME','GENEID')]),
                          by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
   end.ptm <- proc.time()
-  if(verbose)  cat(paste0('calculated distance table in ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  if(verbose)  message('calculated distance table in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
   readClassTable$equal <- readClassTable$readClassId %in% unlist((filter(distTable, equal) %>%
                                                                     dplyr::select(readClassId) %>%
@@ -774,7 +775,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
   rm(list = c('newGeneCandidates','readClassGeneTable'))
 
   end.ptm <- proc.time()
-  if(verbose)  cat(paste0('added gene Ids for each read class ', round((end.ptm-start.ptm)[3]/60,1), ' mins. \n'))
+  if(verbose)  message('added gene Ids for each read class ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
   metadata(seReadClass) <- list(distTable=distTable)
   rowData(seReadClass) <- readClassTable

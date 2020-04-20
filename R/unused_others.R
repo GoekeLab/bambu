@@ -1,7 +1,8 @@
 ###########ALL FUNCTIONS HERE ARE NON ESSENTIAL #############
 
-#'@title PLOTGRANGESLISTBYNAMES
-#'@param grangesList
+#' @title plotGRangesListByNames
+#' @param grangesList A GrangesList object
+#' @noRd
 plotGRangesListByNames<-function(grangesList)
 {
 
@@ -11,7 +12,8 @@ plotGRangesListByNames<-function(grangesList)
   plotTracks(list(plotTrack),showId=TRUE)
 }
 
-#' @describeIn plotGRangesListByNames
+#' @describeIn plotGrangesListByNames
+#' @noRd
 makeTrackFromGrangesList <- function(grangesList)
 {
 
@@ -22,8 +24,8 @@ makeTrackFromGrangesList <- function(grangesList)
 }
 
 
-#' @title GRANGESLISTTOBED
-#' @param x
+#' @param x A grangesList
+#' @noRd
 grangesListToBed<-function(x) # note: 0 based coordinates
 {
   # useful: generate UCSC custom track with the following steps
@@ -36,14 +38,14 @@ grangesListToBed<-function(x) # note: 0 based coordinates
   return(bedData)
 }
 
-#'@title findOverlapsOverhang
-#'@description function to find ranges where the start or end is within another range (eg start/end overlaps)
-#'@param query
-#'@param subject
-#'@param fix
-#'@param select
-#'@param maxgap
-#'@param ignore.strand
+#' Function to find ranges where the start or end is within another range (eg start/end overlaps)
+#' @param query The query object of \code{\link{findOverlaps}}.
+#' @param subject The subject object of \code{\link{findOverlaps}}.
+#' @param fix fix
+#' @param select select
+#' @param maxgap defaults to -1
+#' @param ignore.strand defaults to TRUE
+#' @noRd
 findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1, ignore.strand = TRUE) {  # type=c('start','end'); maxgap=distance to start/end
   if(class(query)!='GRanges') {
     stop("query has to be GRanges")
@@ -59,10 +61,10 @@ findOverlapsOverhang <- function(query, subject, fix, select='all', maxgap = -1,
 }
 
 
-#'@title CUTGRANGESLISTELEMENTS
-#'@description function to reduce the start end end of all elements in a granges list objects to a single basepair
-#'@param grangesList
-#'@param by
+#' Function to reduce the start end end of all elements in a granges list objects to a single basepair
+#' @inheritParams plotGRangesListByNames
+#' @param by defaults to 5
+#' @noRd
 cutGrangesListElements <- function(grangesList, by=5) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
@@ -78,6 +80,9 @@ cutGrangesListElements <- function(grangesList, by=5) {
 ######### ABOVE FUNCTIONS MIGHT BE USEFUL BUT ARE NOT USED IN THIS PACKAGE ######
 
 ##### TODO: Check if this might be useful to filter reads from new transcripts?
+
+#' @param readClassList readClassList
+#' @noRd
 classifyReadClasses <- function(readClassList) {
 
   exByTx_singleBpStartEnd <- cutStartEndFromGrangesList(readClassListFull$exonsByReadClass)
@@ -113,14 +118,14 @@ classifyReadClasses <- function(readClassList) {
 
 }
 
-#'@title CONSTRUCTUNSPLICEDTRANSCRIPTS
-#'@description function to construct unspliced transcripts which do not overlap with TSS/TES or fall in internal exons
-#'@param txList
-#'@param txdbTablesList
-#'@param readGrglist
-#'@param stranded
-#'@param minReadCount
-#'@param maxOverhang
+#' Function to construct unspliced transcripts which do not overlap with TSS/TES or fall in internal exons
+#' @param txList txList
+#' @param txdbTablesList txdbTablesList
+#' @param readGrgList readGrgList
+#' @param stranded defaults to FALSE
+#' @param minReadCount defaults to 2
+#' @param maxOverhang defaults to 5
+#' @noRd
 constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, stranded=FALSE, minReadCount = 2, maxOverhang = 5) {
 
   unlistedExons <- unlist(txdbTablesList[['exonsByTx']])
@@ -202,11 +207,11 @@ constructUnsplicedTranscripts <- function(txList, txdbTablesList,readGrglist, st
 }
 
 
-#'@title COMBINEWITHANNOTATIONS
-#'@description function to add annotations to reconstructed transcripts, and replace identical transcripts with reference
-#'@param txList
-#'@param txdbTablesList
-#'@param matchOnly
+#' Function to add annotations to reconstructed transcripts, and replace identical transcripts with reference
+#' @param txList txList
+#' @param txdbTablesList txdbTablesList
+#' @param matchOnly defaults to TRUE
+#' @noRd
 combineWithAnnotations <- function(txList, txdbTablesList, matchOnly = T) {
   txExonsByCut <- cutStartEndFromGrangesList(txList$exonsByTx)
   annotationsExonsByCut <- cutStartEndFromGrangesList(txdbTablesList$exonsByTx)
