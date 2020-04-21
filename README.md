@@ -78,13 +78,13 @@ annotations <- prepareAnnotations(txdb)
 ```
 
 You can also download annotations for recent genome releases here:
--  hg38:ftp://ftp.ensembl.org/pub/release-99/gtf/homo_sapiens          
--  mm10:ftp://ftp.ensembl.org/pub/release-99/gtf/mus_musculus     
+-  hg38:  ftp://ftp.ensembl.org/pub/release-99/gtf/homo_sapiens          
+-  mm10:  ftp://ftp.ensembl.org/pub/release-99/gtf/mus_musculus     
 
 **Quantification of annotated transcripts and genes only (no transcript/gene discovery)**
 
 ```rscript
-bamboo(bam.file = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnnotations = FALSE)
+bamboo(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnnotations = FALSE)
 ```
 
 **Large sample number/ limited memory**     
