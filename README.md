@@ -104,13 +104,13 @@ bamboo(reads, outputReadClassFolder, genomeSequence, annotations)
 bamboo(reads, genomeSequence, annotations, ir.control = list(min.readCount = 5))
 ```
 
-> Keep novel transcripts with min 5 samples having 2 counts:
+> Keep novel transcripts with min 5 samples having at least 2 counts:
 
 ```rscript
 bamboo(reads, genomeSequence, annotations, ir.control = list(min.sampleNumber = 5))
 ```
 
-> Filter out transcripts with relative abundance within gene lower than 10% 
+> Filter out transcripts with relative abundance within gene lower than 10%: 
 ```rscript
 bamboo(reads, genomeSequence, annotations, ir.control = list(min.sampleNumber = 5))
 ```
@@ -118,13 +118,13 @@ bamboo(reads, genomeSequence, annotations, ir.control = list(min.sampleNumber = 
 See more details in the manual.
 
 **Quantification without bias correction**     
-The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
+> The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.    
 ```rscript
 bamboo(reads, genomeSequence, annotations, algo.control(bias_correction = FALSE))
 ```
 
-**Parallel computation**
-bamboo also allows parallel computation for EM.
+**Parallel computation**      
+> bamboo also allows parallel computation for EM.    
 ```rscript
 bamboo(reads, genomeSequence, annotations, algo.control(ncore = 8))
 ```
