@@ -1,43 +1,58 @@
-## code to prepare `example_data` dataset goes here
-library(data.table)
-
-example_data <- list()
+## code to prepare `sysdata.rda` dataset goes here
 
 a <- 500
 
-example_data[[1]] <-  data.table(tx_id = c(1,2,3,1,2,1,2,3),
+data1 <-  data.frame(tx_id = c(1,2,3,1,2,1,2,3),
                                  read_class_id = c(1,2,3,rep(4,2),rep(5,3)),
                                  nobs = c(0,0,0,rep(10,2),rep(a,3)),
                                  gene_id = 1)
 
-example_data[[2]] <- data.table(tx_id = c(1,2,1,2,3),
+data2 <- data.frame(tx_id = c(1,2,1,2,3),
                                 read_class_id = c(rep(4,2),rep(5,3)),
                                 nobs = c(rep(10,2),rep(a,3)),
                                 gene_id = 2)
 
-example_data[[3]] <- data.table(tx_id = c(1,2),
+data3 <- data.frame(tx_id = c(1,2),
                                 read_class_id = c(1,2),
                                 nobs = c(5,10),
                                 gene_id = 3)
 
-example_data[[4]] <- data.table(tx_id = c(1,2,3,1,2,1,2,3),
+data4 <- data.frame(tx_id = c(1,2,3,1,2,1,2,3),
                                 read_class_id = c(1,2,3,rep(4,2),rep(5,3)),
                                 nobs = c(100,5,500,rep(20,2),rep(5,3)),
                                 gene_id = 4)
 
-example_data[[5]] <- data.table(tx_id = c(1:6,2,3,1,2,5,1,2,3,5,1:5),
+data5 <- data.frame(tx_id = c(1:6,2,3,1,2,5,1,2,3,5,1:5),
                                 read_class_id = c(1:6,rep(7,2),rep(8,3),rep(9,4),rep(10,5)),
                                 nobs = c(2,0,1,0,0,1,rep(2,2),rep(282,3),rep(64,4),rep(5,5)),
                                 gene_id = 5)
 
-samplefile <- system.file("extdata","Homo_sapiens.GRCh38.91.annotations-txdb.sqlite", package = "bamboo")
-txdb <- AnnotationDbi::loadDb(samplefile)
-example_txdbTablesList <- prepareAnnotations(txdb)
 
-example_se <- isore(bamFile = test.bam,  txdbTablesList = example_txdbTablesList,genomeFA = fa.file)
 
-test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
+estOutput_woBC <- lapply(1:5, function(s){
+  est <- bamboo.quantDT(dt = get(paste0("data",s)),  algo.control=list(bias_correction = FALSE,ncore = 1))
+})
+
+estOutput_wBC <- lapply(1:5, function(s){
+  est <- bamboo.quantDT(dt = get(paste0("data",s)),  algo.control=list(ncore = 1))
+})
+
+standardJunctionModels_temp <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/standardJunctionModel_temp.rds"))
+
+
+test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bamboo")
 fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-example_quantOutput <- bamboo(test.bam, fa.file = fa.file, txdbTablesList = example_txdbTablesList,algo.control=list(ncore = 1))
+gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9.rds", package = "bamboo"))
+expectedSE = bamboo(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=F)
+expectedSE_extended = bamboo(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=T)
 
-usethis::use_data("example_data","example_txdbTablesList","example_se","example_quantOutput")
+
+
+
+
+usethis::use_data(data1,data2,data3,data4,data5,
+                  estOutput_woBC,
+                  estOutput_wBC,
+                  standardJunctionModels_temp,
+                  expectedSE, expectedSE_extended,
+                  internal = TRUE,overwrite = TRUE)
