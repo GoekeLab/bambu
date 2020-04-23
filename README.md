@@ -112,10 +112,8 @@ bamboo(reads, genomeSequence, annotations, ir.control = list(min.sampleNumber = 
 
 > Filter out transcripts with relative abundance within gene lower than 10%: 
 ```rscript
-bamboo(reads, genomeSequence, annotations, ir.control = list(min.sampleNumber = 5))
+bamboo(reads, genomeSequence, annotations, ir.control = list(min.readFractionByGene = 0.1))
 ```
-
-See more details in the manual.
 
 **Quantification without bias correction**     
 > The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.    
@@ -128,6 +126,9 @@ bamboo(reads, genomeSequence, annotations, algo.control(bias_correction = FALSE)
 ```rscript
 bamboo(reads, genomeSequence, annotations, algo.control(ncore = 8))
 ```
+
+See manual for details to customize other conditions.
+
 ---
 
 ## Contributors
