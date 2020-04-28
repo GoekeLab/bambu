@@ -109,8 +109,8 @@ test_that("bamboo.preprocess (isoform quantification of bam file and save readCl
   set.seed(1234)
   se = bamboo(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE, outputReadClassDir = outputReadClassDir)
   expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extendedSave[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extendedSave[["Gene"]]))
+  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
+  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
 
 
 
@@ -127,8 +127,8 @@ test_that("bamboo.preprocess (isoform quantification of bam file and save readCl
   set.seed(1234)
   se = bamboo(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE, outputReadClassDir = outputReadClassDir)
   expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extendedSave[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extendedSave[["Gene"]]))
+  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
+  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
 
 
 })
@@ -152,8 +152,8 @@ test_that("bamboo.combineQuantify (isoform quantification of saved readClassFile
   set.seed(1234)
   se = bamboo(readclass.file = readclass.file,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
   expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extendedSave[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extendedSave[["Gene"]]))
+  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
+  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
 
 
   # test case 2: bamboo with multiple bam file, only using annotations (default option), yieldSize lower than read count
@@ -169,8 +169,8 @@ test_that("bamboo.combineQuantify (isoform quantification of saved readClassFile
   set.seed(1234)
   se = bamboo(readclass.file = c(readclass.file, readclass.file), annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
   expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extendedSave[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extendedSave[["Gene"]]))
+  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
+  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
 
 
 })
