@@ -49,10 +49,6 @@ set.seed(1234)
 expectedSE_extended = bamboo(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=T)
 
 
-readclass.file <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097_readClassSe.rds", package = "bamboo")
-set.seed(1234)
-expectedSE_extendedSave = bamboo(readclass.file = readclass.file,  annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
-
 
 
 
@@ -61,7 +57,7 @@ usethis::use_data(data1,data2,data3,data4,data5,
                   estOutput_woBC,
                   estOutput_wBC,
                   standardJunctionModels_temp,
-                  expectedSE, expectedSE_extended,expectedSE_extendedSave,
+                  expectedSE, expectedSE_extended,
                   internal = TRUE,overwrite = TRUE)
 
 ## save ReadClass.file
