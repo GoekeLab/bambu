@@ -42,9 +42,16 @@ standardJunctionModels_temp <- readRDS(url("http://s3.ap-southeast-1.amazonaws.c
 
 test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bamboo")
 fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9.rds", package = "bamboo"))
+gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bamboo"))
+set.seed(1234)
 expectedSE = bamboo(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=F)
+set.seed(1234)
 expectedSE_extended = bamboo(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=T)
+
+
+readclass.file <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097_readClassSe.rds", package = "bamboo")
+set.seed(1234)
+expectedSE_extendedSave = bamboo(readclass.file = readclass.file,  annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
 
 
 
@@ -54,5 +61,37 @@ usethis::use_data(data1,data2,data3,data4,data5,
                   estOutput_woBC,
                   estOutput_wBC,
                   standardJunctionModels_temp,
-                  expectedSE, expectedSE_extended,
+                  expectedSE, expectedSE_extended,expectedSE_extendedSave,
                   internal = TRUE,overwrite = TRUE)
+
+## save ReadClass.file
+outputReadClassDir = "./inst/extdata/"
+se = bamboo(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.control = list(ncore = 1), extendAnnotations = FALSE, outputReadClassDir = outputReadClassDir)
+
+
+## make txdb for chr9
+# gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_108865774_109014097.gtf", package = "bamboo")
+# txdb <- makeTxDbFromGFF(gtf.file, format = "gtf",
+# dataSource=NA,
+# organism="Homo sapiens",
+# taxonomyId=NA,
+# circ_seqs=DEFAULT_CIRC_SEQS,
+# chrominfo=NULL,
+# miRBaseBuild=NA,
+# metadata=NULL
+# )
+# saveDb(txdb, file="./inst/extdata/Homo_sapiens.GRCh38.91.annotations-txdb_chr9_108865774_109014097.sqlite")
+
+
+## cut gtf
+# grep ^9 your_file.gtf > chr9.gff
+# specific ranges
+# txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9.sqlite", package = "bamboo"))
+# q=GRanges(seqnames="9",ranges=IRanges(start = 108865774, end = 109014097),strand="+")
+# expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9.rds", package = "bamboo"))
+# ovGr <- subsetByOverlaps(expectedGR, q, ignore.strand = TRUE)
+# geneList <- unique(mcols(ovGr)$GENEID)
+# write.table(geneList, file = "chr9_108865774_109014097_geneList.txt", sep = "\t", row.names = FALSE, col.names = FALSE)
+
+# grep -f chr9_108865774_109014097_geneList.txt Homo_sapiens.GRCh38.91_chr9.gtf > Homo_sapiens.GRCh38.91_chr9_108865774_109014097.gtf
+
