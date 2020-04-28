@@ -1,4 +1,4 @@
-<a href="https://raw.githubusercontent.com/GoekeLab/bamboo/master/figures/transparent-bamboo.png?token=AGA7DTCYEJWLSUX5XFFRHCS6UZYAE"><img src="https://raw.githubusercontent.com/GoekeLab/bamboo/master/figures/transparent-bamboo.png?token=AGA7DTCYEJWLSUX5XFFRHCS6UZYAE" title="Bamboo" alt="Bamboo"></a>
+<a href="https://raw.githubusercontent.com/GoekeLab/bamboo/master/figures/transparent-bamboo.png?token=AGA7DTAE4YGTLMQHDP7NZMC6WETSQ"><img src="https://raw.githubusercontent.com/GoekeLab/bamboo/master/figures/transparent-bamboo.png?token=AGA7DTAE4YGTLMQHDP7NZMC6WETSQ" title="Bamboo" alt="Bamboo"></a>
 
 # bamboo: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
