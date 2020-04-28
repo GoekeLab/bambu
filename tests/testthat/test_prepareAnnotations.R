@@ -1,17 +1,12 @@
 context("Prepare annotations")
 library(bamboo)
 library(RSQLite)
+library(testthat)
 
 test_that("prepareAnnotations of txdb object is a GRangesList",{
-  samplefile <- "http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/Homo_sapiens.GRCh38.91.annotations-txdb.sqlite"
-  # download remote sqlite file as a temporary object
-  dbfile <- tempfile(fileext=".sqlite")
-  download.file(samplefile, dbfile)
-  txdb <- AnnotationDbi::loadDb(dbfile)
+  txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_108865774_109014097.sqlite", package = "bamboo"))
 
-
-  expectedGR <- readRDS(system.file("extdata", "annotationGrangesList_txdbGrch38_91.rds", package = "bamboo"))
-
+  expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bamboo"))
 
   gr <- prepareAnnotations(txdb)
 
@@ -33,9 +28,9 @@ test_that("prepareAnnotations of genome library is a GRangesList",{
 
 
 test_that("prepareAnnotationsFromGTF is GRangesList",{
-  gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9.gtf", package = "bamboo")
+  gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_108865774_109014097.gtf", package = "bamboo")
 
-  expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9.rds", package = "bamboo"))
+  expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bamboo"))
 
   gr <- prepareAnnotationsFromGTF(gtf.file)
 
@@ -43,3 +38,5 @@ test_that("prepareAnnotationsFromGTF is GRangesList",{
   expect_s4_class(gr, class = 'CompressedGRangesList')
   expect_named(mcols(gr), c("TXNAME", "GENEID","eqClass"))
 })
+
+
