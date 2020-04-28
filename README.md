@@ -31,7 +31,9 @@ The default mode to run bamboo is using a set of aligned reads (bam files), refe
 bamboo(reads, annotations, genomeSequence,...)
 
 library(bamboo)
-test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
+
+test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bamboo")
+  
 
 se <- bamboo(reads = test.bam, annotations = "TxDb.Hsapiens.UCSC.hg38.knownGene", genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38")
        
@@ -41,11 +43,14 @@ se <- bamboo(reads = test.bam, annotations = "TxDb.Hsapiens.UCSC.hg38.knownGene"
 We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run bamboo with the following options:
 
 ```rscript
-test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
+test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bamboo")
+  
+fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
 
- fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-gtf.file <- [...]
-bambooAnnotations <- prepareAnnotationsFromGtf(gtf file)
+gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_108865774_109014097.gtf", package = "bamboo")
+
+bambooAnnotations <- prepareAnnotationsFromGtf(gtf.file)
+
 se <- bamboo(reads = test.bam, annotations=bambooAnnotations, genomeSequence ="BSgenome.Hsapiens.NCBI.GRCh38")
 
 ```
@@ -59,11 +64,13 @@ If you plan to run bamboo more frequently, you can store a bambooAnnotations obj
 
 ```rscript
 library(bamboo)
-test.bam <- system.file("extdata", "GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.bam", package = "bamboo")
+test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bamboo")
 
-hg38 <- readRDS(url(‘...’))
+gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bamboo"))
 
-se <- bamboo(reads = test.bam, annotations=hg38, genomeSequence = fa.file)
+# or hg38 <- readRDS(url(‘...’))
+
+se <- bamboo(reads = test.bam, annotations = gr, genomeSequence = fa.file)
 
 ```
 
