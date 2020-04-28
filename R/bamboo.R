@@ -114,16 +114,16 @@ bamboo <- function(reads = NULL, readclass.file = NULL, outputReadClassDir = NUL
       #===# create BamFileList object from character #===#
       if(class(bam.file)=='BamFile') {
         if(!is.null(yieldSize)) {
-          yieldSize(bam.file) <- yieldSize
+          Rsamtools::yieldSize(bam.file) <- yieldSize
         } else {
-          yieldSize <- yieldSize(bam.file)
+          yieldSize <- Rsamtools::yieldSize(bam.file)
         }
         bam.file<- Rsamtools::BamFileList(bam.file)
       }else if(class(bam.file)=='BamFileList') {
         if(!is.null(yieldSize)) {
-          yieldSize(bam.file) <- yieldSize
+          Rsamtools::yieldSize(bam.file) <- yieldSize
         } else {
-          yieldSize <- min(yieldSize(bam.file))
+          yieldSize <- min(Rsamtools::yieldSize(bam.file))
         }
       }else if(any(!grepl('\\.bam$',bam.file))){
         stop("Bam file is missing from arguments.")
@@ -306,12 +306,15 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
 
       start.time <- proc.time()
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = annotationGrangesList, algo.control = algo.control, verbose = verbose)
+      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
+        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
-      rm(list=c("se.quant","seWithDist"))
+      rm(list=c("se.quant","se.quantGene","seWithDist"))
       gc(verbose = FALSE)
       end.time <- proc.time()
       if(verbose)   message('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins.')
@@ -363,15 +366,19 @@ bamboo.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeS
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList = extendedAnnotationGRangesList, algo.control = algo.control, verbose = verbose)
+      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
+        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
+      rm(list = c("seWithDist","se.quant","se.quantGene"))
+      gc(verbose = FALSE)
     }
 
   }
-  seOutputGene=transcriptToGeneExpression(seOutput)
   out <- list(seOutput,seOutputGene)
   names(out) <- c("Transcript","Gene")
   return(out)
@@ -405,7 +412,7 @@ bamboo.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeS
     if(file.exists(readClassFiles[bam.file.index])){
       warning(paste(readClassFiles[bam.file.index], 'exists, will be overwritten'))
     }
-    saveRDS(se, file=readClassFiles[bam.file.index])
+    saveRDS(se, file=readClassFiles[bam.file.index], compress = "xz")
     rm(se)
     gc(verbose = FALSE)
   })
@@ -437,11 +444,16 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
+      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
+        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
+      rm(list = c("seWithDist","se.quant","se.quantGene"))
+      gc(verbose = FALSE)
     }
 
   }else{
@@ -483,18 +495,21 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
       se.quant <- bamboo.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
+      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
+        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
+        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
-      rm(list = c("seWithDist","se.quant"))
+      rm(list = c("seWithDist","se.quant","se.quantGene"))
       gc(verbose = FALSE)
     }
 
 
   }
-  seOutputGene=transcriptToGeneExpression(seOutput)
+
   out <- list(seOutput,seOutputGene)
   names(out) <- c("Transcript","Gene")
   return(out)
