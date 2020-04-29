@@ -10,6 +10,11 @@
 #'  }
 prepareAnnotations <- function(txdb) {
   exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
+  if(any(duplicated(names(exonsByTx)))) {
+    warning('transcript names are not unique, only one transcript per ID will be kept')
+    exonsByTx <- exonsByTx[!duplicated(exonsByTx)]
+  }
+
   unlistedExons <- unlist(exonsByTx, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)), names=NULL)
   txIdForReorder <- togroup(PartitioningByWidth(exonsByTx))
