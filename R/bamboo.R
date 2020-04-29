@@ -412,7 +412,7 @@ bamboo.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeS
     if(file.exists(readClassFiles[bam.file.index])){
       warning(paste(readClassFiles[bam.file.index], 'exists, will be overwritten'))
     }
-    saveRDS(se, file=readClassFiles[bam.file.index], compress = "xz")
+    saveRDS(se, file=readClassFiles[bam.file.index])
     rm(se)
     gc(verbose = FALSE)
   })
@@ -514,6 +514,5 @@ bamboo.combineQuantify <- function(readclass.file, annotationGrangesList, ir.con
   names(out) <- c("Transcript","Gene")
   return(out)
 }
-
 
 
