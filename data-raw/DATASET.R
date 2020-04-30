@@ -30,23 +30,23 @@ data5 <- data.frame(tx_id = c(1:6,2,3,1,2,5,1,2,3,5,1:5),
 
 
 estOutput_woBC <- lapply(1:5, function(s){
-  est <- bamboo.quantDT(dt = get(paste0("data",s)),  algo.control=list(bias_correction = FALSE,ncore = 1))
+  est <- bambu.quantDT(dt = get(paste0("data",s)),  algo.control=list(bias_correction = FALSE,ncore = 1))
 })
 
 estOutput_wBC <- lapply(1:5, function(s){
-  est <- bamboo.quantDT(dt = get(paste0("data",s)),  algo.control=list(ncore = 1))
+  est <- bambu.quantDT(dt = get(paste0("data",s)),  algo.control=list(ncore = 1))
 })
 
-standardJunctionModels_temp <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/standardJunctionModel_temp.rds"))
+standardJunctionModels_temp <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bambu_exampleDataset/standardJunctionModel_temp.rds"))
 
 
-test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bamboo")
-fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo")
-gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bamboo"))
+test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bambu")
+fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bambu")
+gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bambu"))
 set.seed(1234)
-expectedSE = bamboo(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=F)
+expectedSE = bambu(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=F)
 set.seed(1234)
-expectedSE_extended = bamboo(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=T)
+expectedSE_extended = bambu(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=T)
 
 
 
@@ -62,11 +62,11 @@ usethis::use_data(data1,data2,data3,data4,data5,
 
 ## save ReadClass.file
 outputReadClassDir = "./inst/extdata/"
-se = bamboo(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.control = list(ncore = 1), extendAnnotations = FALSE, outputReadClassDir = outputReadClassDir)
+se = bambu(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.control = list(ncore = 1), extendAnnotations = FALSE, outputReadClassDir = outputReadClassDir)
 
 
 ## make txdb for chr9
-# gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_108865774_109014097.gtf", package = "bamboo")
+# gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_108865774_109014097.gtf", package = "bambu")
 # txdb <- makeTxDbFromGFF(gtf.file, format = "gtf",
 # dataSource=NA,
 # organism="Homo sapiens",
@@ -82,9 +82,9 @@ se = bamboo(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.
 ## cut gtf
 # grep ^9 your_file.gtf > chr9.gff
 # specific ranges
-# txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9.sqlite", package = "bamboo"))
+# txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9.sqlite", package = "bambu"))
 # q=GRanges(seqnames="9",ranges=IRanges(start = 108865774, end = 109014097),strand="+")
-# expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9.rds", package = "bamboo"))
+# expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9.rds", package = "bambu"))
 # ovGr <- subsetByOverlaps(expectedGR, q, ignore.strand = TRUE)
 # geneList <- unique(mcols(ovGr)$GENEID)
 # write.table(geneList, file = "chr9_108865774_109014097_geneList.txt", sep = "\t", row.names = FALSE, col.names = FALSE)

@@ -1,14 +1,14 @@
 context("Isoform reconstruction")
-library(bamboo)
+library(bambu)
 
 test_that("isore.constructReadClasses completes successfully", {
 
-  readGrgList <- readRDS('/mnt/ont/github/testdata/testthat_bamboo/readGrgList_GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.rds')
-  annotationGrangesList <- readRDS('/mnt/ont/github/testdata/testthat_bamboo/annotationGranges_txdbGrch38_91.rds')
-  genomeSequence <- Rsamtools::FaFile(system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bamboo"))
+  readGrgList <- readRDS('/mnt/ont/github/testdata/testthat_bambu/readGrgList_GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.rds')
+  annotationGrangesList <- readRDS('/mnt/ont/github/testdata/testthat_bambu/annotationGranges_txdbGrch38_91.rds')
+  genomeSequence <- Rsamtools::FaFile(system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bambu"))
 
-  seReadClassUnstrandedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seReadClassUnstranded.rds')
-  seReadClassStrandedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seReadClassStranded.rds')
+  seReadClassUnstrandedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassUnstranded.rds')
+  seReadClassStrandedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassStranded.rds')
 
   seReadClassUnstranded <- isore.constructReadClasses(readGrgList=readGrgList,
                                                       runName='GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097_unstranded',
@@ -42,11 +42,11 @@ test_that("isore.constructReadClasses completes successfully", {
 
 test_that("isore.combineTranscriptCandidates completes successfully", {
 
-  seReadClass1 <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seReadClassUnstranded.rds')
-  seReadClass2 <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seReadClassStranded.rds')
+  seReadClass1 <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassUnstranded.rds')
+  seReadClass2 <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassStranded.rds')
 
-  seIsoReRefExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seIsoReRef.rds')
-  seIsoReCombinedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seIsoReCombined.rds')
+  seIsoReRefExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seIsoReRef.rds')
+  seIsoReCombinedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seIsoReCombined.rds')
 
   seIsoReRef <- isore.combineTranscriptCandidates(readClassSe=seReadClass1,
                                                   readClassSeRef = NULL,
@@ -67,9 +67,9 @@ test_that("isore.combineTranscriptCandidates completes successfully", {
 
 test_that("isore.extendAnnotations completes successfully", {
 
-  seIsoReCombined <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seIsoReCombined.rds')
-  annotationGrangesList <- readRDS('/mnt/ont/github/testdata/testthat_bamboo/annotationGranges_txdbGrch38_91.rds')
-  extendedAnnotationsExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/extendedAnnotations.rds')
+  seIsoReCombined <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seIsoReCombined.rds')
+  annotationGrangesList <- readRDS('/mnt/ont/github/testdata/testthat_bambu/annotationGranges_txdbGrch38_91.rds')
+  extendedAnnotationsExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/extendedAnnotations.rds')
 
   extendedAnnotations <- isore.extendAnnotations(se=seIsoReCombined,
                                                  annotationGrangesList=annotationGrangesList,
@@ -87,9 +87,9 @@ test_that("isore.extendAnnotations completes successfully", {
 
 test_that("isore.estimateDistanceToAnnotations completes successfully", {
 
-  seReadClass1 <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seReadClassUnstranded.rds')
-  extendedAnnotations <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/extendedAnnotations.rds')
-  seWithDistExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bamboo/seWithDist.rds')
+  seReadClass1 <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassUnstranded.rds')
+  extendedAnnotations <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/extendedAnnotations.rds')
+  seWithDistExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seWithDist.rds')
   seWithDist <- isore.estimateDistanceToAnnotations(seReadClass=seReadClass1,
                                       annotationGrangesList=extendedAnnotations,
                                       min.exonDistance = 35)

@@ -4,12 +4,12 @@
 #' EM algorithm
 #' @noRd
 em_theta <- function(X, Y, lambda, b, d, maxiter, conv) {
-    .Call(`_bamboo_em_theta`, X, Y, lambda, b, d, maxiter, conv)
+    .Call(`_bambu_em_theta`, X, Y, lambda, b, d, maxiter, conv)
 }
 
 #' L1-penalized likelihood estimation
 #' @noRd
 emWithL1 <- function(X, Y, lambda, d, maxiter, conv) {
-    .Call(`_bamboo_emWithL1`, X, Y, lambda, d, maxiter, conv)
+    .Call(`_bambu_emWithL1`, X, Y, lambda, d, maxiter, conv)
 }
 
