@@ -1,8 +1,8 @@
 ---
-title: "bamboo"
+title: "bambu"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{bamboo}
+  %\VignetteIndexEntry{bambu}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -15,5 +15,5 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(bamboo)
+library(bambu)
 ```

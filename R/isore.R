@@ -3,7 +3,7 @@
 
 ## 1) assign read classes to genes (read classes might be assigned to a gene but not to a transcript, for example very low quality reads)
 ## 2) add eqClass to mcols, and don't return distance table (only used for internal filtering?) then the gene Id can also be returned for read classes that don't match any transcript but that match a gene
-## 3) add filter options to bamboo parameters
+## 3) add filter options to bambu parameters
 ##    currently some filters are still missing: a) new transcripts which are a subset of a new transcript
 ##                                              b) single exon transcripts which overlap with new genes
 ##                                              c) some filters might be too strict
@@ -24,11 +24,11 @@
 #' @param runName runName
 #' @param stranded stranded
 #' @param quickMode quickMode
-#' @inheritParams bamboo
+#' @inheritParams bambu
 #'@noRd
 isore.constructReadClasses <- function(readGrgList,
                                        runName='sample1',
-                                       annotationGrangesList, ## has to be provided (function should be called through bamboo, so is optional through that main function)
+                                       annotationGrangesList, ## has to be provided (function should be called through bambu, so is optional through that main function)
                                        genomeSequence=NULL,
                                        stranded=FALSE,
                                        quickMode=FALSE,
@@ -415,7 +415,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 
 
 #' Extend annotations
-#' @inheritParams bamboo
+#' @inheritParams bambu
 #' @noRd
 isore.extendAnnotations <- function(se,
                                     annotationGrangesList,
@@ -716,7 +716,7 @@ isore.extendAnnotations <- function(se,
 
 #' Estimate distance between read class and annotations
 #' @param seReadClass seReadClass
-#' @inheritParams bamboo
+#' @inheritParams bambu
 #' @noRd
 isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, additionalFiltering = FALSE, verbose = FALSE){
   start.ptm <- proc.time()
