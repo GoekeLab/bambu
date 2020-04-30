@@ -184,7 +184,7 @@ bamboo.quantDT <- function(dt = dt,algo.control = NULL, verbose = FALSE){
 
   ## check quantification parameters
   algo.control.default <- list(ncore = 1,#parallel::detectCores(),
-                               bias_correction = FALSE,
+                               bias_correction = TRUE,
                                maxiter = 10000,
                                convcontrol = 10^(-4))
 
