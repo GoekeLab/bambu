@@ -1,7 +1,7 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 #' @title PREPAREANNOTATIONS
 #' @param txdb a \code{\link{TxDb}} object
-#' @return A \code{\link{bambooAnnotations}} object
+#' @return A \code{\link{summarizedExperiment}} object
 #' @export
 #' @examples
 #' \dontrun{
@@ -44,7 +44,7 @@ prepareAnnotations <- function(txdb) {
 #' @param miRBaseBuild as described in \code{\link{makeTxDbFromGFF}}.
 #' @param metadata as described in \code{\link{makeTxDbFromGFF}}.
 #' @param dbxrefTag as described in \code{\link{makeTxDbFromGFF}}.
-#' @return A bambooAnnotations object
+#' @return A \code{\link{summarizedExperiment}} object
 #' @export
 prepareAnnotationsFromGTF <- function(gtf.file, dataSource=NA,
                                      organism="Homo sapiens",
