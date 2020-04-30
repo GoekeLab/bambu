@@ -1,3 +1,3 @@
-useDynLib(bamboo, .registration=TRUE)
+useDynLib(bambu, .registration=TRUE)
 exportPattern("^[[:alpha:]]+")
 importFrom(Rcpp, evalCpp)
