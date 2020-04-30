@@ -1,6 +1,7 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 #' @title PREPAREANNOTATIONS
-#' @param txdb a TxDb object
+#' @param txdb a \code{\link{TxDb}} object
+#' @return A \code{\link{bambooAnnotations}} object
 #' @export
 #' @examples
 #' \dontrun{
@@ -31,6 +32,41 @@ prepareAnnotations <- function(txdb) {
   mcols(exonsByTx)$eqClass <- minEqClasses$eqClass[match(names(exonsByTx),minEqClasses$queryTxId)]
   return(exonsByTx)
 }
+
+
+#' Prepare annotations from gtf
+#' @param gtf.file A string variable indicates the path to a gtf file.
+#' @param organism as described in \code{\link{makeTxDbFromGFF}}.
+#' @param dataSource as described in \code{\link{makeTxDbFromGFF}}.
+#' @param taxonomyId as described in \code{\link{makeTxDbFromGFF}}.
+#' @param circ_seqs as described in \code{\link{makeTxDbFromGFF}}.
+#' @param chrominfo	as described in \code{\link{makeTxDbFromGFF}}.
+#' @param miRBaseBuild as described in \code{\link{makeTxDbFromGFF}}.
+#' @param metadata as described in \code{\link{makeTxDbFromGFF}}.
+#' @param dbxrefTag as described in \code{\link{makeTxDbFromGFF}}.
+#' @return A bambooAnnotations object
+#' @export
+prepareAnnotationsFromGTF <- function(gtf.file, dataSource=NA,
+                                     organism="Homo sapiens",
+                                     taxonomyId=NA,
+                                     circ_seqs=DEFAULT_CIRC_SEQS,
+                                     chrominfo=NULL,
+                                     miRBaseBuild=NA,
+                                     metadata=NULL,
+                                     dbxrefTag){
+  return(prepareAnnotations(GenomicFeatures::makeTxDbFromGFF(gtf.file, format = "gtf",
+                                                             organism = organism,
+                                                             dataSource = dataSource,
+                                                             taxonomyId = taxonomyId,
+                                                             circ_seqs = circ_seqs,
+                                                             chrominfo = chrominfo,
+                                                             miRBaseBuild = miRBaseBuild,
+                                                             metadata = metadata,
+                                                             dbxrefTag = dbxrefTag
+  )))
+}
+
+
 
 #' Get minimum equivalent class by Transcript
 #' @param exonsByTranscripts exonsByTranscripts
@@ -273,5 +309,40 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL){
   return(eqClassCountTable)
 
 }
+
+#' From tx ranges to gene ranges
+#' @noRd
+txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map){
+  # rename names to geneIDs
+  names(exByTx) <- as.data.table(TXNAMEGENEID_Map)[match(names(exByTx),TXNAME)]$GENEID
+
+  # combine gene exon ranges and reduce overlapping ones
+  unlistData <- unlist(exByTx, use.names = TRUE)
+  orderUnlistData <- unlistData[order(names(unlistData))]
+
+  orderUnlistData$exon_rank <- NULL
+  orderUnlistData$exon_endRank <- NULL
+
+  exByGene <- splitAsList(orderUnlistData, names(orderUnlistData))
+
+  exByGene <- GenomicRanges::reduce(exByGene)
+
+  # add exon_rank and endRank
+  unlistData <- unlist(exByGene, use.names = FALSE)
+  partitionDesign <- cumsum(elementNROWS(exByGene))
+  partitioning <- PartitioningByEnd(partitionDesign, names=NULL)
+  geneStrand <- as.character(strand(unlistData))[partitionDesign]
+  exon_rank <- sapply(width((partitioning)), seq, from=1)
+  exon_rank[which(geneStrand == '-')] <- lapply(exon_rank[which(geneStrand == '-')], rev)  # * assumes positive for exon ranking
+  exon_endRank <- lapply(exon_rank, rev)
+  unlistData$exon_rank <- unlist(exon_rank)
+  unlistData$exon_endRank <- unlist(exon_endRank)
+  exByGene <- relist(unlistData, partitioning)
+
+  return(exByGene)
+
+}
+
+
 
 
