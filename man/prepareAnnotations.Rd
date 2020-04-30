@@ -7,7 +7,10 @@
 prepareAnnotations(txdb)
 }
 \arguments{
-\item{txdb}{a TxDb object}
+\item{txdb}{a \code{\link{TxDb}} object}
+}
+\value{
+A \code{\link{summarizedExperiment}} object
 }
 \description{
 Function to prepare tables and genomic ranges for transript reconstruction using a txdb object

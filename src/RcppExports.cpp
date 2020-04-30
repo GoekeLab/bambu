@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // em_theta
 List em_theta(const arma::mat X, const arma::rowvec Y, const double lambda, const arma::rowvec b, const bool d, const int maxiter, const double conv);
-RcppExport SEXP _bamboo_em_theta(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP bSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
+RcppExport SEXP _bambu_em_theta(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP bSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -25,7 +25,7 @@ END_RCPP
 }
 // emWithL1
 List emWithL1(const arma::mat X, const arma::rowvec Y, const double lambda, const bool d, const int maxiter, const double conv);
-RcppExport SEXP _bamboo_emWithL1(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
+RcppExport SEXP _bambu_emWithL1(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -41,12 +41,12 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_bamboo_em_theta", (DL_FUNC) &_bamboo_em_theta, 7},
-    {"_bamboo_emWithL1", (DL_FUNC) &_bamboo_emWithL1, 6},
+    {"_bambu_em_theta", (DL_FUNC) &_bambu_em_theta, 7},
+    {"_bambu_emWithL1", (DL_FUNC) &_bambu_emWithL1, 6},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_bamboo(DllInfo *dll) {
+RcppExport void R_init_bambu(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }
