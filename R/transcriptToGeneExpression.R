@@ -1,11 +1,13 @@
 #' Reduce transcript expression to gene expression
 #' @noRd
-transcriptToGeneExpression<- function(se, annotationGrangesList){
-  counts <- as.data.table(assays(se)$estimates,keep.rownames = TRUE)
+transcriptToGeneExpression<- function(se){
+  counts <- as.data.table(assays(se)$counts,keep.rownames = TRUE)
   counts <- melt(counts, id.vars = "rn", measure.vars = colnames(counts)[-1])
   setnames(counts, "rn","TXNAME")
 
-  counts <- as.data.table(rowData(se))[,.(TXNAME,GENEID)][counts, on = "TXNAME"]
+  rowDataSe <- as.data.table(rowData(se))
+
+  counts <- rowDataSe[,.(TXNAME,GENEID)][counts, on = "TXNAME"]
 
   counts[, valueGene:=sum(value), by = list(variable, GENEID)]
   counts[, valueGeneCPM:=valueGene/sum(value)*10^6, by = list(variable)]
@@ -15,26 +17,15 @@ transcriptToGeneExpression<- function(se, annotationGrangesList){
   counts_gene_CPM <- dcast(unique(counts[,.(GENEID, variable, valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
 
   ## geneRanges
-  gene_tx_map <- unlist(annotationGrangesList)
-  elementData <- as.data.table(elementMetadata(annotationGrangesList))[,.(TXNAME,GENEID,newTxClass)]
-  elementData[, newGeneClass := ifelse(grepl("ENSG",GENEID),"annotation",unique(newTxClass)), by = GENEID]
+  exByGene <- txRangesToGeneRanges(rowRanges(se),TXNAMEGENEID_Map = rowDataSe[,.(TXNAME,GENEID)])
 
-  tmp <- data.table(TXNAME = names(gene_tx_map),
-                    start = start(gene_tx_map),
-                    end = end(gene_tx_map),
-                    strand = as.character(strand(gene_tx_map)),
-                    seqnames = as.character(seqnames(gene_tx_map)))
-  tmp <- elementData[,.(TXNAME,GENEID,newGeneClass)][tmp, on = "TXNAME"]
 
-  gene_tmp <- tmp[, list(seqnames = unique(seqnames),
-                         start = min(start),
-                         end = max(end),
-                         strand = unique(strand)), by = list(GENEID, newGeneClass)]
+  if("newTxClass" %in% colnames(rowDataSe)){
+    rowDataSe <- rowDataSe[,.(TXNAME,GENEID,newTxClass)]
+    rowDataSe[, newGeneClass := ifelse(grepl("ENSG",GENEID),"annotation",unique(newTxClass)), by = GENEID]
+    mcols(exByGene) <- unique(rowDataSe[,.(GENEID,newGeneClass)])[match(names(exByGene),GENEID)]
+  }
 
-  gene_ranges <- GRanges(seqnames = Rle(gene_tmp$seqnames),
-                         ranges = IRanges(gene_tmp$start, end = gene_tmp$end, names = gene_tmp$GENEID),
-                         strand = Rle(strand(gene_tmp$strand)))
-  mcols(gene_ranges)$newGeneClass <- gene_tmp$newGeneClass
 
 
 
@@ -52,7 +43,7 @@ transcriptToGeneExpression<- function(se, annotationGrangesList){
                                                       CPM = as.matrix(counts_gene_CPM[match(RowNames, counts_gene_CPM$GENEID),-1],
                                                             ncol =  length(ColNames),
                                                             dimnames = list(RowNames, ColNames))),
-                                                     rowRanges = gene_ranges[RowNames],
+                                                     rowRanges = exByGene[RowNames],
                                                      colData = colData(se))
   return(seOutput)
 }
