@@ -1,6 +1,6 @@
-Package: bamboo
+Package: bambu
 Type: Package
-Title: ISOFORM RECONSTRUCTION AND QUANTIFICATION FOR LONG READ
+Title: Reference-guided isoform reconstruction and quantification for long read RNA-Seq data
 Version: 0.1.0
 Author: c(person("Jonathan", "Developer", role = c("aut", "cre"),
                      email = ""),
