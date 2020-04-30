@@ -35,7 +35,6 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
     Xb = X * diagmat(exp(b));
   }
 
-
   arma::rowvec summed_by_row_Xb = arma::sum(Xb.t(),0);
 
   Xb = (Xb.t() * diagmat(1.0/summed_by_row_Xb)).t();
@@ -57,7 +56,6 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
 
     deltaTheta = dot(theta_trace.col(iter) - theta_trace.col(iter-1), theta_trace.col(iter) - theta_trace.col(iter-1));
 
-
   }
 
   // returns
@@ -67,8 +65,6 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
   ret["iter"] = iter;
   return(ret) ;
 }
-
-
 
 
 //' L1-penalized likelihood estimation
@@ -86,13 +82,11 @@ List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
   int J = X.n_cols; //number of equivalent read class
   int M = X.n_rows; //number of isoforms
 
-
   arma::rowvec est(M+J); // bias parameter
   est.fill(1);
 
   arma::mat est_trace(M+J,maxiter);
   //arma::mat theta_trace(M,maxiter);
-
 
 
   int iter = 0; // iterator
@@ -106,13 +100,10 @@ List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
   arma::rowvec b(J);
   b.fill(1);
 
-
   if(d){
-
     arma::mat Xb = X * arma::diagmat(exp(b));
     arma::rowvec summed_by_col_Xb = arma::sum(Xb,0);
     arma::rowvec log_column_sum_Xb(J);
-
 
     arma::rowvec summed_by_col_adjP_X = arma::sum(X,0);
     arma::rowvec signvec(J);
@@ -137,7 +128,6 @@ List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
       theta_out = em_theta(X, Y, lambda,b, d, maxiter, conv) ;
       theta = Rcpp::as<arma::rowvec>(theta_out[0]) ;
       est.head(M) = theta ;
-
 
       // at each estimation, update b with new theta
       summed_by_col_adjP_X = arma::sum((X.t() * diagmat(theta)).t(),0);
