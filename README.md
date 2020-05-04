@@ -3,7 +3,7 @@
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
 
-bambu is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use bambu after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from bambu can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.
+***bambu*** is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use bambu after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from ***bambu*** can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.
 
 
 
@@ -15,7 +15,7 @@ bambu is a R package for multi-sample transcript discovery and quantification us
 
 ## Installation
 
-You can install bambu from github:
+You can install ***bambu*** from github:
 
 ```rscript
 install.packages("devtools")
@@ -25,7 +25,7 @@ devtools::install_github("GoekeLab/bambu")
 
 ## General Usage 
 
-The default mode to run bambu is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). Bamboo will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and genes and with the transcript expression estimates: 
+The default mode to run ***bambu*** is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). ***bambu*** will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and genes and with the transcript expression estimates: 
  ```rscript
  
 bambu(reads, annotations, genomeSequence,...)
@@ -40,7 +40,7 @@ se <- bambu(reads = test.bam, annotations = "TxDb.Hsapiens.UCSC.hg38.knownGene",
 ```
 
 
-We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run bambu with the following options:
+We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run ***bambu*** with the following options:
 
 ```rscript
 test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bambu")
@@ -60,7 +60,7 @@ se <- bambu(reads = test.bam, annotations=bambuAnnotations, genomeSequence ="BSg
 ## Other Use Cases
 **Use precalculated annotation objects**
 
-If you plan to run bambu more frequently, you can store a bambuAnnotations object.
+If you plan to run ***bambu*** more frequently, you can store a bambuAnnotations object.
 
 ```rscript
 library(bambu)
@@ -129,7 +129,7 @@ bambu(reads, genomeSequence, annotations, algo.control(bias_correction = FALSE))
 ```
 
 **Parallel computation**      
-> bambu also allows parallel computation for EM.    
+> ***bambu*** also allows parallel computation for EM.    
 ```rscript
 bambu(reads, genomeSequence, annotations, algo.control(ncore = 8))
 ```
