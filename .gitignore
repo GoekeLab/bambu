@@ -36,9 +36,6 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
-# Readme object
-README.md
-
 # R Environment Variables
 .Renviron
 packrat/lib*/
