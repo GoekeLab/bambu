@@ -2,4 +2,4 @@
 
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
-The code is still under development
+The code is still under development.
