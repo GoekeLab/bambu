@@ -9,11 +9,11 @@ prepareAnnotationsFromGTF(
   dataSource = NA,
   organism = "Homo sapiens",
   taxonomyId = NA,
-  circ_seqs = DEFAULT_CIRC_SEQS,
   chrominfo = NULL,
   miRBaseBuild = NA,
   metadata = NULL,
-  dbxrefTag
+  dbxrefTag,
+  ...
 )
 }
 \arguments{
@@ -25,8 +25,6 @@ prepareAnnotationsFromGTF(
 
 \item{taxonomyId}{as described in \code{\link{makeTxDbFromGFF}}.}
 
-\item{circ_seqs}{as described in \code{\link{makeTxDbFromGFF}}.}
-
 \item{chrominfo}{as described in \code{\link{makeTxDbFromGFF}}.}
 
 \item{miRBaseBuild}{as described in \code{\link{makeTxDbFromGFF}}.}
@@ -34,6 +32,8 @@ prepareAnnotationsFromGTF(
 \item{metadata}{as described in \code{\link{makeTxDbFromGFF}}.}
 
 \item{dbxrefTag}{as described in \code{\link{makeTxDbFromGFF}}.}
+
+\item{...}{see \code{\link{makeTxDbFromGFF}}.}
 }
 \value{
 A \code{\link{summarizedExperiment}} object
