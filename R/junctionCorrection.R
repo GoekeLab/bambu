@@ -10,9 +10,6 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) 
     if(grepl('.fa',genomeSequence)){
       genomeSequence <- Rsamtools::FaFile(genomeSequence)
     }else {
-      if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
-        stop("Please install the BSgenome package")
-
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
       if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
