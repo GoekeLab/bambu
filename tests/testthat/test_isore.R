@@ -1,18 +1,19 @@
 context("Isoform reconstruction")
-library(bambu)
 
 test_that("isore.constructReadClasses completes successfully", {
 
-  readGrgList <- readRDS('/mnt/ont/github/testdata/testthat_bambu/readGrgList_GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097.rds')
-  annotationGrangesList <- readRDS('/mnt/ont/github/testdata/testthat_bambu/annotationGranges_txdbGrch38_91.rds')
-  genomeSequence <- Rsamtools::FaFile(system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bambu"))
+  readGrgList <- readRDS(system.file("extdata", "readGrgList_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+  genomeSequence <- Rsamtools::FaFile(system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu"))
 
-  seReadClassUnstrandedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassUnstranded.rds')
-  seReadClassStrandedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassStranded.rds')
+
+  seReadClassUnstrandedExpected <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seReadClassStrandedExpected <- readRDS(system.file("extdata", "seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+
 
   seReadClassUnstranded <- isore.constructReadClasses(readGrgList=readGrgList,
-                                                      runName='GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097_unstranded',
-                                                      annotationGrangesList=annotationGrangesList,
+                                                      runName='SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_unstranded',
+                                                      annotationGrangesList = gr,
                                                       genomeSequence=genomeSequence,
                                                       stranded=FALSE,
                                                       quickMode=FALSE,
@@ -21,8 +22,8 @@ test_that("isore.constructReadClasses completes successfully", {
 
 
   seReadClassStranded <- isore.constructReadClasses(readGrgList=readGrgList,
-                                                    runName='GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097_stranded',
-                                                    annotationGrangesList=annotationGrangesList,
+                                                    runName='SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_stranded',
+                                                    annotationGrangesList = gr,
                                                     genomeSequence=genomeSequence,
                                                     stranded=TRUE,
                                                     quickMode=FALSE,
@@ -30,23 +31,24 @@ test_that("isore.constructReadClasses completes successfully", {
   expect_equal(seReadClassStranded, seReadClassStrandedExpected)
 
   seReadClassFromBsgenome <- isore.constructReadClasses(readGrgList=readGrgList,
-                                                        runName='GIS_HepG2_cDNAStranded_Rep5-Run4_chr9_108865774_109014097_stranded',
-                                                        annotationGrangesList=annotationGrangesList,
+                                                        runName='SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_stranded',
+                                                        annotationGrangesList = gr,
                                                         genomeSequence="BSgenome.Hsapiens.NCBI.GRCh38",
                                                         stranded=TRUE,
                                                         quickMode=FALSE,
                                                         verbose=FALSE)
 
-  expect_equal(seReadClassStranded, seReadClassFromBsgenome)
+  expect_equal(seReadClassFromBsgenome,seReadClassStrandedExpected)
+
 })
 
 test_that("isore.combineTranscriptCandidates completes successfully", {
 
-  seReadClass1 <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassUnstranded.rds')
-  seReadClass2 <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassStranded.rds')
+  seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seReadClass2 <- readRDS(system.file("extdata", "seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 
-  seIsoReRefExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seIsoReRef.rds')
-  seIsoReCombinedExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seIsoReCombined.rds')
+  seIsoReRefExpected <- readRDS(system.file("extdata", "seIsoReRef_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seIsoReCombinedExpected <- readRDS(system.file("extdata", "seIsoReCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 
   seIsoReRef <- isore.combineTranscriptCandidates(readClassSe=seReadClass1,
                                                   readClassSeRef = NULL,
@@ -67,12 +69,13 @@ test_that("isore.combineTranscriptCandidates completes successfully", {
 
 test_that("isore.extendAnnotations completes successfully", {
 
-  seIsoReCombined <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seIsoReCombined.rds')
-  annotationGrangesList <- readRDS('/mnt/ont/github/testdata/testthat_bambu/annotationGranges_txdbGrch38_91.rds')
-  extendedAnnotationsExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/extendedAnnotations.rds')
+  seIsoReCombined <- readRDS(system.file("extdata", "seIsoReCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+
+  extendedAnnotationsExpected <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
   extendedAnnotations <- isore.extendAnnotations(se=seIsoReCombined,
-                                                 annotationGrangesList=annotationGrangesList,
+                                                 annotationGrangesList=gr,
                                                  remove.subsetTx=TRUE,
                                                  min.readCount=2,
                                                  min.readFractionByGene=0.05,
@@ -87,9 +90,9 @@ test_that("isore.extendAnnotations completes successfully", {
 
 test_that("isore.estimateDistanceToAnnotations completes successfully", {
 
-  seReadClass1 <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seReadClassUnstranded.rds')
-  extendedAnnotations <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/extendedAnnotations.rds')
-  seWithDistExpected <- readRDS(file='/mnt/ont/github/testdata/testthat_bambu/seWithDist.rds')
+  seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  extendedAnnotations <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+
   seWithDist <- isore.estimateDistanceToAnnotations(seReadClass=seReadClass1,
                                       annotationGrangesList=extendedAnnotations,
                                       min.exonDistance = 35)

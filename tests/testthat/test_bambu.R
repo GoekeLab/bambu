@@ -1,7 +1,4 @@
 context("Isoform quantification")
-library(bambu)
-library(testthat)
-
 
 # bambu.quantDT
 test_that("generic function of isoform quantification of data.table is list of 2",{
@@ -33,13 +30,12 @@ test_that("generic function of isoform quantification of data.table is list of 2
 # bambu.quantISORE
 test_that("bambu.quantISORE (isoform quantification of bam file) produces expected output",{
 
-  test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bambu")
-  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bambu")
+  test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
 
 
-  txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_108865774_109014097.sqlite", package = "bambu"))
-
-  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bambu"))
+  txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
+  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
   # test case 1: bambu with single bam file, only using annotations (default option)
   set.seed(1234)
@@ -84,11 +80,11 @@ test_that("bambu.quantISORE (isoform quantification of bam file) produces expect
 test_that("bambu.preprocess (isoform quantification of bam file and save readClassFiles) produces expected output",{
   ## ToDo: update data sets for comparison
 
-  test.bam <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097.bam", package = "bambu")
-  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz", package = "bambu")
+  test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
 
-  txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_108865774_109014097.sqlite", package = "bambu"))
-  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bambu"))
+  txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
+  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
   outputReadClassDir = tempdir()
 
   # test case 1: bambu with single bam file, only using annotations (default option)
@@ -138,19 +134,19 @@ test_that("bambu.preprocess (isoform quantification of bam file and save readCla
 
 test_that("bambu.combineQuantify (isoform quantification of saved readClassFiles) produces expected output",{
   ## ToDo: update data sets for comparison
-  readclass.file <- system.file("extdata", "SGNex_HepG2_cDNAStranded_replicate5_run4_chr9_108865774_109014097_readClassSe.rds", package = "bambu")
-  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_108865774_109014097.rds", package = "bambu"))
+  seReadClass1 <- system.file("extdata", "seReadClass_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
+  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
 
   # test case 1: bambu with single bam file, only using annotations (default option)
   set.seed(1234)
-  se = bambu(readclass.file = readclass.file,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = FALSE)
+  se = bambu(readclass.file = seReadClass1,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = FALSE)
   expect_type(se, "list")
   expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
   expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
 
   set.seed(1234)
-  se = bambu(readclass.file = readclass.file,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
+  se = bambu(readclass.file = seReadClass1,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
   expect_type(se, "list")
   expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
   expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
@@ -158,7 +154,7 @@ test_that("bambu.combineQuantify (isoform quantification of saved readClassFiles
 
   # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
   set.seed(1234)
-  se = bambu(readclass.file = c(readclass.file, readclass.file),  annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = FALSE)
+  se = bambu(readclass.file = c(seReadClass1, seReadClass1),  annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = FALSE)
   expect_type(se, "list")
   expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
   expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
@@ -167,7 +163,7 @@ test_that("bambu.combineQuantify (isoform quantification of saved readClassFiles
 
   # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
   set.seed(1234)
-  se = bambu(readclass.file = c(readclass.file, readclass.file), annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
+  se = bambu(readclass.file = c(seReadClass1, seReadClass1), annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
   expect_type(se, "list")
   expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
   expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
