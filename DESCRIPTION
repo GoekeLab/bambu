@@ -1,10 +1,10 @@
 Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read RNA-Seq data
-Version: 1.0.0
-Author: c(person("Jonathan", "Developer", role = c("aut", "cre"),
+Version: 0.9.0
+Author: c(person("Jonathan Goeke", "Developer", role = c("aut", "cre"),
                      email = "gokej@gis.a-star.edu.sg"),
-              person("Ying Chen", "Developer", role = "aut"))
+              person("Ying Chen", "Developer", role = c("aut","cre"))
 Maintainer: Ying Chen <chen_ying@gis.a-star.edu.sg>
 Description: Multi-sample transcript discovery and quantification using long read RNA-Seq data. 
 License: GPL-3 
@@ -51,7 +51,6 @@ Imports:
     GenomicAlignments,
     glmnet,
     Rsamtools,
-    BSgenome,
     Rcpp,
     RcppArmadillo,
     RcppProgress,
