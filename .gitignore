@@ -19,6 +19,7 @@
 
 # RStudio files
 .Rproj.user/
+*.Rproj
 
 # produced vignettes
 vignettes/*.html
@@ -39,6 +40,3 @@ vignettes/*.pdf
 .Renviron
 packrat/lib*/
 .Rproj.user
-
-# R project varaible
-bamboo.Rproj
