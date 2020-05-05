@@ -37,8 +37,6 @@ estOutput_wBC <- lapply(1:5, function(s){
   est <- bambu.quantDT(dt = get(paste0("data",s)),  algo.control=list(ncore = 1))
 })
 
-standardJunctionModels_temp <- readRDS(url("http://s3.ap-southeast-1.amazonaws.com/ucsc-trackdata.store.genome.sg/chenying/bamboo_exampleDataset/standardJunctionModel_temp.rds"))
-
 
 ## expected output for test bam
 test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
