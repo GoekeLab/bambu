@@ -1,14 +1,13 @@
 Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read RNA-Seq data
-Version: 0.1.0
+Version: 1.0.0
 Author: c(person("Jonathan", "Developer", role = c("aut", "cre"),
-                     email = ""),
+                     email = "gokej@gis.a-star.edu.sg"),
               person("Ying Chen", "Developer", role = "aut"))
 Maintainer: Ying Chen <chen_ying@gis.a-star.edu.sg>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: GPL-3
+Description: Multi-sample transcript discovery and quantification using long read RNA-Seq data. 
+License: GPL-3 
 Encoding: UTF-8
 LazyData: true
 Depends: 
@@ -21,7 +20,7 @@ Depends:
 Suggests: 
     knitr,
     rmarkdown,
-    TxDb.Hsapiens.UCSC.hg38.knownGene,
+    fs,
     testthat
 Enhances: parallel
 SystemRequirements:
@@ -29,7 +28,7 @@ biocViews:
      FeatureExtraction, 
      GeneExpression, 
      GeneExpressionWorkflow, 
-     GenomeAnnotation, 
+     GenomeAnnotation,
      ImmunoOncology, 
      Normalization, 
      RNASeq, 
@@ -37,25 +36,26 @@ biocViews:
      Sequencing, 
      Software, 
      Transcription, 
-     Transctiptomics
-bugReports: https://github.com/GoekeLab/bamboo/issues
-URL: https://github.com/GoekeLab/bamboo
-RoxygenNote: 7.0.2
+     Transctiptomics,
+     TxDb.Hsapiens.UCSC.hg38.knownGene
+bugReports: https://github.com/GoekeLab/bambu/issues
+URL: https://github.com/GoekeLab/bambu
+RoxygenNote: 7.1.0
 LinkingTo: 
     Rcpp,
     RcppArmadillo,
     RcppProgress
 Imports:
     S4Vectors(>= 0.22.1), 
-    data.table,
     IRanges, 
-    GenomicRanges, 
     GenomicAlignments,
     glmnet,
     Rsamtools,
-    parallel,
+    BSgenome,
     Rcpp,
     RcppArmadillo,
     RcppProgress,
     progress
-VignetteBuilder: knitr
+VignetteBuilder: 
+    knitr,
+    rmarkdown
