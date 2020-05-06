@@ -31,7 +31,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
                           param=Rsamtools::ScanBamParam(flag=Rsamtools::scanBamFlag(isSecondaryAlignment=FALSE)),
                           use.names=TRUE)
     readGrglist<-c(readGrglist,GenomicAlignments::grglist(reads))
-    if(verbose) show(min(length(reads), counter* yieldSize, na.rm=T))
+    if(verbose) show(min(length(readGrglist), counter* yieldSize, na.rm=T))
     counter <- counter + 1
   }
 
@@ -41,4 +41,3 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
   names(readGrglist) <- 1:length(readGrglist)  # names needed to be replaced as some reads are multiple times mapped (distinct parts of the read which are compatible)
   return(readGrglist)
 }
-
