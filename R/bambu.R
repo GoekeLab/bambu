@@ -1,5 +1,5 @@
 #' Main function
-#' @title bambu: long read isoform reconstruction and quantification
+#' @title long read isoform reconstruction and quantification
 #' @description This function takes bam file of genomic alignments and performs isoform recontruction and gene and transcript expression quantification.
 #' It also allows saving of read class files of alignments, extending provided annotations, and quantification based on extended annotations.
 #' When multiple samples are provided, extended annotations will be combined across samples to allow comparison.
@@ -36,7 +36,9 @@
 #' ## =====================
 #' ## More stringent new gene/isoform discovery: new isoforms are identified with at least 5 read count in 1 sample
 #' ## Increase EM convergence threshold to 10^(-6)
-#' seOutput <- bambu(reads, annotationGrangesList, genomeSequence, ir.control = list(min.readCount=5), algo.control = list(convcontrol = 10^(-6))
+#' seOutput <- bambu(reads, annotationGrangesList,
+#' genomeSequence, ir.control = list(min.readCount=5),
+#' algo.control = list(convcontrol = 10^(-6))
 #' }
 #' @export
 bambu <- function(reads = NULL, readclass.file = NULL, outputReadClassDir = NULL, annotations = NULL, genomeSequence = NULL, algo.control = NULL, yieldSize = NULL, ir.control = NULL, extendAnnotations = TRUE, verbose = FALSE){
@@ -138,6 +140,7 @@ bambu <- function(reads = NULL, readclass.file = NULL, outputReadClassDir = NULL
       #===# When there are a lot number of samples, nSample > 10
       if(length(bam.file)>10 &(is.null(outputReadClassDir))){
         outputReadClassDir <- paste0(getwd(),"/tmpReadClassFolder")
+        warning(paste0("There are more than 10 samples, read class files will be saved to ",outputReadClassDir, " for more efficient process!"))
         tempfile(pattern = paste0(bam.file.basenames,"_readClassFolder"),
                  tmpdir =  outputReadClassDir,
                  fileext = ".rds")
@@ -306,13 +309,10 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
 
       start.time <- proc.time()
       se.quant <- bambu.quantSE(se = seWithDist, annotationGrangesList = annotationGrangesList, algo.control = algo.control, verbose = verbose)
-      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
-        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
-        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
       rm(list=c("se.quant","se.quantGene","seWithDist"))
       gc(verbose = FALSE)
@@ -366,22 +366,18 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
       se.quant <- bambu.quantSE(se = seWithDist, annotationGrangesList = extendedAnnotationGRangesList, algo.control = algo.control, verbose = verbose)
-      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(bam.file.index==1){
         seOutput <- se.quant  # create se object
-        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
-        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
-      rm(list = c("seWithDist","se.quant","se.quantGene"))
+      rm(list = c("seWithDist","se.quant"))
       gc(verbose = FALSE)
     }
 
   }
-  out <- list(seOutput,seOutputGene)
-  names(out) <- c("Transcript","Gene")
-  return(out)
+
+  return(seOutput)
 }
 
 #' Preprocess bam files and save read class files
@@ -444,15 +440,12 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
       se.quant <- bambu.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
-      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
-        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
-        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
-      rm(list = c("seWithDist","se.quant","se.quantGene"))
+      rm(list = c("seWithDist","se.quant"))
       gc(verbose = FALSE)
     }
 
@@ -495,24 +488,18 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
 
       se.quant <- bambu.quantSE(se = seWithDist, annotationGrangesList =  extendedAnnotationGRangesList, algo.control = algo.control, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
-      se.quantGene <- transcriptToGeneExpression(se.quant)
       if(readclass.file.index==1){
         seOutput <- se.quant  # create se object
-        seOutputGene <- se.quantGene
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
-        seOutputGene <- SummarizedExperiment::cbind(seOutputGene,se.quantGene)  # combine se object
       }
-      rm(list = c("seWithDist","se.quant","se.quantGene"))
+      rm(list = c("seWithDist","se.quant"))
       gc(verbose = FALSE)
     }
 
 
   }
-
-  out <- list(seOutput,seOutputGene)
-  names(out) <- c("Transcript","Gene")
-  return(out)
+  return(seOutput)
 }
 
 

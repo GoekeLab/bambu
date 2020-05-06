@@ -1,5 +1,4 @@
 context("Prepare annotations")
-library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 
 test_that("prepareAnnotations of txdb object is a GRangesList",{
   txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
@@ -15,7 +14,7 @@ test_that("prepareAnnotations of txdb object is a GRangesList",{
 
 
 test_that("prepareAnnotations of genome library is a GRangesList",{
-
+  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
   gr <- prepareAnnotations(TxDb.Hsapiens.UCSC.hg38.knownGene)
 
   expect_s4_class(gr, class = 'CompressedGRangesList')
