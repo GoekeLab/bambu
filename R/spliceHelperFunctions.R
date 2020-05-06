@@ -1,4 +1,7 @@
-########TODO: LOOK THROUGH CODE, clean up, acknowledge source if functions can't be imported (GenomicAlignments) #######
+# Note: several of the functions in this file are adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
+# License	Artistic-2.0
+# https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
+
 
 #' This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
 #' @noRd
@@ -46,7 +49,7 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
   strandedMatch <- ((all(strand(query)=='-') & all(strand(subject)=='-'))| (all(strand(query)=='+') & all(strand(subject)=='+')))
   mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific, strandedMatch)
 
-  if(firstLastSeparate) { ##################### HERE IS AN ERROR WITH THE START SEQUENCE !!! ####
+  if(firstLastSeparate) { ##NOTE: Check if there is an error with the start sequence ##
     if(length(olap)>0) {
       queryStart <- ranges(queryStart[queryHits(olap)])
       subjectStart <- ranges(subjectStart[subjectHits(olap)])
@@ -162,7 +165,10 @@ rangesDist <- function(query, subject, splice, maxDist)
 
 
 
-#' The following functions are implemented in R, I just included the within option to make them significantly faster+memorey friendly for this purpose (original code copied from https://rdrr.io/bioc/GenomicAlignments/src/R/findSpliceOverlaps-methods.R)
+#' The following function is implemented in R (GenomicAlignments), I just included the "within" option to make them significantly faster+memorey friendly for this purpose (original code modified from the GenomicAlignments package, Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
+# License	Artistic-2.0
+# https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
+
 #' @noRd
 findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
   olap <- findOverlaps(query, subject, ignore.strand=ignore.strand, type='within')
