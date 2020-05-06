@@ -1,7 +1,25 @@
 #' Reduce transcript expression to gene expression
-#' @noRd
+#' @title transcript to gene expression
+#' @param se a summarizedExperiment object from \code{\link{bambu}}
+#' @export
 transcriptToGeneExpression<- function(se){
   counts <- as.data.table(assays(se)$counts,keep.rownames = TRUE)
+  runnames <- colnames(counts)[-1]
+
+  ## rename runnames when duplicated names are found
+  if(length(which(duplicated(runnames)))>0){
+    iter <- 1
+    while(length(which(duplicated(runnames)))>0){
+      if(iter==1){
+        runnames[which(duplicated(runnames))] <- paste0(runnames[which(duplicated(runnames))],"...",iter)
+      }else{
+        runnames[which(duplicated(runnames))] <- gsub(paste0("...",iter-1,"$"),paste0("...",iter),runnames[which(duplicated(runnames))])
+      }
+      iter <- iter + 1
+    }
+  }
+
+  colnames(counts)[-1] <- runnames
   counts <- melt(counts, id.vars = "rn", measure.vars = colnames(counts)[-1])
   setnames(counts, "rn","TXNAME")
 

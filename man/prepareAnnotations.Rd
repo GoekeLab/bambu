@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotationFunctions.R
 \name{prepareAnnotations}
 \alias{prepareAnnotations}
-\title{PREPAREANNOTATIONS}
+\title{prepare annotations from txdb object}
 \usage{
 prepareAnnotations(txdb)
 }
@@ -10,7 +10,7 @@ prepareAnnotations(txdb)
 \item{txdb}{a \code{\link{TxDb}} object}
 }
 \value{
-A \code{\link{summarizedExperiment}} object
+A \code{\link{GrangesList}} object
 }
 \description{
 Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
