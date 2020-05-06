@@ -39,26 +39,24 @@ prepareAnnotations <- function(txdb) {
 #' @param organism as described in \code{\link{makeTxDbFromGFF}}.
 #' @param dataSource as described in \code{\link{makeTxDbFromGFF}}.
 #' @param taxonomyId as described in \code{\link{makeTxDbFromGFF}}.
-#' @param circ_seqs as described in \code{\link{makeTxDbFromGFF}}.
 #' @param chrominfo	as described in \code{\link{makeTxDbFromGFF}}.
 #' @param miRBaseBuild as described in \code{\link{makeTxDbFromGFF}}.
 #' @param metadata as described in \code{\link{makeTxDbFromGFF}}.
 #' @param dbxrefTag as described in \code{\link{makeTxDbFromGFF}}.
+#' @param ... see \code{\link{makeTxDbFromGFF}}.
 #' @return A \code{\link{summarizedExperiment}} object
 #' @export
 prepareAnnotationsFromGTF <- function(gtf.file, dataSource=NA,
                                      organism="Homo sapiens",
                                      taxonomyId=NA,
-                                     circ_seqs=DEFAULT_CIRC_SEQS,
                                      chrominfo=NULL,
                                      miRBaseBuild=NA,
                                      metadata=NULL,
-                                     dbxrefTag){
+                                     dbxrefTag,...){
   return(prepareAnnotations(GenomicFeatures::makeTxDbFromGFF(gtf.file, format = "gtf",
                                                              organism = organism,
                                                              dataSource = dataSource,
                                                              taxonomyId = taxonomyId,
-                                                             circ_seqs = circ_seqs,
                                                              chrominfo = chrominfo,
                                                              miRBaseBuild = miRBaseBuild,
                                                              metadata = metadata,
