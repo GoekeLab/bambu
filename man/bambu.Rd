@@ -2,7 +2,7 @@
 % Please edit documentation in R/bambu.R
 \name{bambu}
 \alias{bambu}
-\title{bambu: long read isoform reconstruction and quantification}
+\title{long read isoform reconstruction and quantification}
 \usage{
 bambu(
   reads = NULL,
@@ -70,6 +70,8 @@ Main function
 ## =====================
 ## More stringent new gene/isoform discovery: new isoforms are identified with at least 5 read count in 1 sample
 ## Increase EM convergence threshold to 10^(-6)
-seOutput <- bambu(reads, annotationGrangesList, genomeSequence, ir.control = list(min.readCount=5), algo.control = list(convcontrol = 10^(-6))
+seOutput <- bambu(reads, annotationGrangesList,
+genomeSequence, ir.control = list(min.readCount=5),
+algo.control = list(convcontrol = 10^(-6))
 }
 }
