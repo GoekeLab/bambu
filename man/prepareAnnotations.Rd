@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotationFunctions.R
 \name{prepareAnnotations}
 \alias{prepareAnnotations}
-\title{PREPAREANNOTATIONS}
+\title{prepare annotations from txdb object}
 \usage{
 prepareAnnotations(txdb)
 }

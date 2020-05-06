@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotationFunctions.R
 \name{prepareAnnotationsFromGTF}
 \alias{prepareAnnotationsFromGTF}
-\title{Prepare annotations from gtf}
+\title{prepare annotations from gtf file}
 \usage{
 prepareAnnotationsFromGTF(
   gtf.file,
