@@ -1,7 +1,7 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 #' @title prepare annotations from txdb object
 #' @param txdb a \code{\link{TxDb}} object
-#' @return A \code{\link{summarizedExperiment}} object
+#' @return A \code{\link{GrangesList}} object
 #' @export
 #' @examples
 #' \dontrun{
@@ -45,7 +45,7 @@ prepareAnnotations <- function(txdb) {
 #' @param metadata as described in \code{\link{makeTxDbFromGFF}}.
 #' @param dbxrefTag as described in \code{\link{makeTxDbFromGFF}}.
 #' @param ... see \code{\link{makeTxDbFromGFF}}.
-#' @return A \code{\link{summarizedExperiment}} object
+#' @return A \code{\link{GrangesList}} object
 #' @export
 prepareAnnotationsFromGTF <- function(gtf.file, dataSource=NA,
                                      organism="Homo sapiens",
