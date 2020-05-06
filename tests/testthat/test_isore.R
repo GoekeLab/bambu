@@ -1,5 +1,6 @@
 context("Isoform reconstruction")
 
+
 test_that("isore.constructReadClasses completes successfully", {
 
   readGrgList <- readRDS(system.file("extdata", "readGrgList_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
