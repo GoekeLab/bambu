@@ -38,16 +38,6 @@ estOutput_wBC <- lapply(1:5, function(s){
 })
 
 
-## expected output for test bam
-test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
-fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
-gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-set.seed(1234)
-expectedSE = bambu(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=F)
-set.seed(1234)
-expectedSE_extended = bambu(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations=T)
-
-
 
 ## expected output for test isore
 
@@ -60,13 +50,29 @@ seWithDistExpected <- isore.estimateDistanceToAnnotations(seReadClass=seReadClas
                                                   min.exonDistance = 35)
 
 
+## expected seGeneOutput
+
+se <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+seExtended <- readRDS(system.file("extdata", "seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+seCombined <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+seCombinedExtended <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+
+
+seGeneExpected <- transcriptToGeneExpression(se)
+seExtendedGeneExpected <- transcriptToGeneExpression(seExtended)
+seCombinedGeneExpected <- transcriptToGeneExpression(seCombined)
+seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
+
+
+
 
 usethis::use_data(data1,data2,data3,data4,data5,
                   estOutput_woBC,
                   estOutput_wBC,
                   standardJunctionModels_temp,
-                  expectedSE, expectedSE_extended,
                   seWithDistExpected,
+                  seGeneExpected,seExtendedGeneExpected,
+                  seCombinedGeneExpected,seCombinedExtendedGeneExpected,
                   internal = TRUE,overwrite = TRUE)
 
 
