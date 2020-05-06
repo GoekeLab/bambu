@@ -1,7 +1,7 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
-#' @title PREPAREANNOTATIONS
+#' @title prepare annotations from txdb object
 #' @param txdb a \code{\link{TxDb}} object
-#' @return A \code{\link{summarizedExperiment}} object
+#' @return A \code{\link{GrangesList}} object
 #' @export
 #' @examples
 #' \dontrun{
@@ -35,6 +35,7 @@ prepareAnnotations <- function(txdb) {
 
 
 #' Prepare annotations from gtf
+#' @title prepare annotations from gtf file
 #' @param gtf.file A string variable indicates the path to a gtf file.
 #' @param organism as described in \code{\link{makeTxDbFromGFF}}.
 #' @param dataSource as described in \code{\link{makeTxDbFromGFF}}.
@@ -44,7 +45,7 @@ prepareAnnotations <- function(txdb) {
 #' @param metadata as described in \code{\link{makeTxDbFromGFF}}.
 #' @param dbxrefTag as described in \code{\link{makeTxDbFromGFF}}.
 #' @param ... see \code{\link{makeTxDbFromGFF}}.
-#' @return A \code{\link{summarizedExperiment}} object
+#' @return A \code{\link{GrangesList}} object
 #' @export
 prepareAnnotationsFromGTF <- function(gtf.file, dataSource=NA,
                                      organism="Homo sapiens",
@@ -278,6 +279,12 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
 #' @noRd
 getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL){
   distTable <- data.table(metadata(se)$distTable)[,.(readClassId, annotationTxId, readCount, GENEID)]
+
+  # filter out multiple geneIDs mapped to the same readClass based on rowData(se)
+  compatibleData <- as.data.table(rowData(se), keep.rownames = TRUE)
+  setnames(compatibleData, old = c("rn","geneId"),new = c("readClassId","GENEID"))
+  distTable <- distTable[compatibleData[readClassId %in% unique(distTable$readClassId),.(readClassId,GENEID)], on = c("readClassId","GENEID")]
+
   distTable[, eqClass:=paste(sort(unique(annotationTxId)),collapse='.'), by = list(readClassId,GENEID)]
 
   rcTable <- unique(distTable[,.(readClassId, GENEID, eqClass, readCount)])
@@ -286,11 +293,10 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL){
 
   eqClassCountTable <- unique(distTable[,.(annotationTxId, GENEID, eqClass)][rcTable, on = c("GENEID","eqClass")])
 
-  #eqClassCountTable[,list(readCount=sum(readCount)), by = list(eqClass, GENEID)]
+
   setnames(eqClassCountTable, c("annotationTxId"),c("TXNAME"))
   eqClassTable <- as.data.table(mcols(annotationGrangesList)[,c('GENEID','eqClass','TXNAME')])
-  #eqClassCountTable <- eqClassCountTable[, list(TXNAME=unlist(strsplit(eqClass,'\\.'))), by = list(eqClass,GENEID, readCount)]
-  #check that if observed classes is more than reference eqClasses
+
 
   eqClassCountTable <- unique(merge(eqClassCountTable,eqClassTable,all = TRUE, on = c('GENEID','eqClass','TXNAME'))) # merge should be performed on both sides
   # if there exists new isoforms from eqClassCountTable, it would not be found in eqClassTable, keep them

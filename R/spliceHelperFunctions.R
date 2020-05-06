@@ -197,7 +197,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
 
 #' @param query query
 #' @param subject subject
-#' @param splice
+#' @param splice splice
 #' @noRd
 myCompatibleTranscription <- function(query, subject, splice)
 {
@@ -297,7 +297,7 @@ selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
 }
 
 #' Function that selects the last N exons from a grangeslist object (exon_endRank is required)
-#' @describeIn selectStartExonsFromGrangesList
+#' @describeIn selectStartExonsFromGrangesList grangesList
 #' @noRd
 selectEndExonsFromGrangesList <- function(grangesList, exonNumber=2) {
   unlisted_granges <- unlist(grangesList, use.names = FALSE)
