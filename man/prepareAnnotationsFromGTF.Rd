@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotationFunctions.R
 \name{prepareAnnotationsFromGTF}
 \alias{prepareAnnotationsFromGTF}
-\title{Prepare annotations from gtf}
+\title{prepare annotations from gtf file}
 \usage{
 prepareAnnotationsFromGTF(
   gtf.file,
@@ -36,7 +36,7 @@ prepareAnnotationsFromGTF(
 \item{...}{see \code{\link{makeTxDbFromGFF}}.}
 }
 \value{
-A \code{\link{summarizedExperiment}} object
+A \code{\link{GrangesList}} object
 }
 \description{
 Prepare annotations from gtf

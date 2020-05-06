@@ -37,40 +37,43 @@ test_that("bambu.quantISORE (isoform quantification of bam file) produces expect
   txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
   gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
+
+  seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seExtendedExpected <- readRDS(system.file("extdata", "seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seCombinedExpected <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seCombinedExtendedExpected <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+
+
+
   # test case 1: bambu with single bam file, only using annotations (default option)
   set.seed(1234)
   se = bambu(reads = test.bam,  annotations = txdb, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations = FALSE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
+  expect_s4_class(se, "SummarizedExperiment")
+  expect_equal(assays(se),assays(seExpected))
 
   set.seed(1234)
   se = bambu(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations = FALSE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
+  expect_s4_class(se, "SummarizedExperiment")
+  expect_equal(assays(se),assays(seExpected))
 
   set.seed(1234)
-  se = bambu(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
+  seExtended = bambu(reads = test.bam,  annotations =  gr, genomeSequence = fa.file, algo.control=list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE)
+  expect_s4_class(seExtended, "SummarizedExperiment")
+  expect_equal(assays(seExtended),assays(seExtendedExpected))
 
 
 
   # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
   set.seed(1234)
-  se = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genomeSequence = fa.file, algo.control = list(ncore = 1), extendAnnotations = FALSE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
+  seCombined = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genomeSequence = fa.file, algo.control = list(ncore = 1), extendAnnotations = FALSE)
+  expect_s4_class(seCombined, "SummarizedExperiment")
+  expect_equal(seCombined,seCombinedExpected)
 
   # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
   set.seed(1234)
-  se = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations =  gr, genomeSequence = fa.file, algo.control = list(ncore = 1), extendAnnotations = TRUE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
+  seCombinedExtended = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations =  gr, genomeSequence = fa.file, algo.control = list(ncore = 1), extendAnnotations = TRUE)
+  expect_s4_class(seCombinedExtended, "SummarizedExperiment")
+  expect_equal(seCombinedExtended,seCombinedExtendedExpected)
 
 
 })
@@ -87,44 +90,46 @@ test_that("bambu.preprocess (isoform quantification of bam file and save readCla
   gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
   outputReadClassDir = tempdir()
 
+
+  seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seExtendedExpected <- readRDS(system.file("extdata", "seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seCombinedExpected <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seCombinedExtendedExpected <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+
+
   # test case 1: bambu with single bam file, only using annotations (default option)
   set.seed(1234)
   se = bambu(reads = test.bam,  annotations = txdb, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = FALSE, outputReadClassDir = outputReadClassDir)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
+  expect_s4_class(se, "SummarizedExperiment")
+  expect_equal(se,seExpected)
 
 
   set.seed(1234)
   se = bambu(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = FALSE, outputReadClassDir = outputReadClassDir)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
+  expect_s4_class(se, "SummarizedExperiment")
+  expect_equal(se, seExpected)
 
 
   set.seed(1234)
-  se = bambu(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE, outputReadClassDir = outputReadClassDir)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
+  seExtended = bambu(reads = test.bam,  annotations = gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE, outputReadClassDir = outputReadClassDir)
+  expect_s4_class(seExtended, "SummarizedExperiment")
+  expect_equal(seExtended,seExtendedExpected)
 
 
 
   # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
   set.seed(1234)
-  se = bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = FALSE,outputReadClassDir = outputReadClassDir)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
+  seCombined = bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = FALSE,outputReadClassDir = outputReadClassDir)
+  expect_s4_class(seCombined, "SummarizedExperiment")
+  expect_equal(seCombined,seCombinedExpected)
 
 
 
   # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
   set.seed(1234)
-  se = bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE, outputReadClassDir = outputReadClassDir)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
+  seCombinedExtended = bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genomeSequence = fa.file, algo.control = list(bias_correction = FALSE, ncore = 1), extendAnnotations = TRUE, outputReadClassDir = outputReadClassDir)
+  expect_s4_class(seCombinedExtended, "SummarizedExperiment")
+  expect_equal(seCombinedExtended, seCombinedExtendedExpected)
 
 
 })
@@ -138,35 +143,36 @@ test_that("bambu.combineQuantify (isoform quantification of saved readClassFiles
   gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
 
+  seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seExtendedExpected <- readRDS(system.file("extdata", "seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seCombinedExpected <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  seCombinedExtendedExpected <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+
+
   # test case 1: bambu with single bam file, only using annotations (default option)
   set.seed(1234)
   se = bambu(readclass.file = seReadClass1,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = FALSE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
+  expect_s4_class(se, "SummarizedExperiment")
+  expect_equal(se,seExpected)
 
   set.seed(1234)
-  se = bambu(readclass.file = seReadClass1,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
+  seExtended = bambu(readclass.file = seReadClass1,  annotations = gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
+  expect_s4_class(seExtended, "SummarizedExperiment")
+  expect_equal(seExtended,seExtendedExpected)
 
 
   # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
   set.seed(1234)
-  se = bambu(readclass.file = c(seReadClass1, seReadClass1),  annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = FALSE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE[["Gene"]]))
-
+  seCombined = bambu(readclass.file = c(seReadClass1, seReadClass1),  annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = FALSE)
+  expect_s4_class(seCombined, "SummarizedExperiment")
+  expect_equal(seCombined,seCombinedExpected)
 
 
   # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
   set.seed(1234)
-  se = bambu(readclass.file = c(seReadClass1, seReadClass1), annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
-  expect_type(se, "list")
-  expect_equal(assays(se[["Transcript"]][,1]),assays(expectedSE_extended[["Transcript"]]))
-  expect_equal(assays(se[["Gene"]][,1]),assays(expectedSE_extended[["Gene"]]))
+  seCombinedExtended = bambu(readclass.file = c(seReadClass1, seReadClass1), annotations =  gr, algo.control = list(ncore = 1), extendAnnotations = TRUE)
+  expect_s4_class(seCombinedExtended, "SummarizedExperiment")
+  expect_equal(seCombinedExtended,seCombinedExtendedExpected)
 
 
 })
