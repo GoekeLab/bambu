@@ -36,7 +36,7 @@ prepareAnnotationsFromGTF(
 \item{...}{see \code{\link{makeTxDbFromGFF}}.}
 }
 \value{
-A \code{\link{summarizedExperiment}} object
+A \code{\link{GrangesList}} object
 }
 \description{
 Prepare annotations from gtf
