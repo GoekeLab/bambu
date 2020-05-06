@@ -2,21 +2,21 @@ Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read RNA-Seq data
 Version: 0.9.0
-Author: c(person("Jonathan Goeke", "Developer", role = c("aut", "cre"),
+Authors@R: c(person("Jonathan Goeke", "Developer", role = "aut",
                      email = "gokej@gis.a-star.edu.sg"),
-              person("Ying Chen", "Developer", role = c("aut","cre"))
-Maintainer: Ying Chen <chen_ying@gis.a-star.edu.sg>
+              person("Ying Chen", "Developer", role = "cre",email = "chen_ying@gis.a-star.edu.sg"))
 Description: Multi-sample transcript discovery and quantification using long read RNA-Seq data. 
 License: GPL-3 
 Encoding: UTF-8
 LazyData: true
 Depends: 
-   R(>= 3.2.0),
-   data.table(>= 1.1.8),
-   dplyr,
-   SummarizedExperiment(>= 1.1.6),
-   GenomicRanges,
-   GenomicFeatures
+    R(>= 3.5.0), 
+    data.table(>= 1.1.8), 
+    dplyr, 
+    SummarizedExperiment(>= 1.1.6),
+    GenomicRanges,
+    BiocManager,
+    GenomicFeatures
 Suggests: 
     knitr,
     rmarkdown,
@@ -25,21 +25,20 @@ Suggests:
 Enhances: parallel
 SystemRequirements:
 biocViews: 
-     FeatureExtraction, 
-     GeneExpression, 
-     GeneExpressionWorkflow, 
-     GenomeAnnotation,
-     ImmunoOncology, 
-     Normalization, 
-     RNASeq, 
-     Regression, 
-     Sequencing, 
-     Software, 
-     Transcription, 
-     Transctiptomics,
-     TxDb.Hsapiens.UCSC.hg38.knownGene
+    FeatureExtraction, 
+    GeneExpression, 
+    GeneExpressionWorkflow, 
+    GenomeAnnotation,
+    ImmunoOncology, 
+    Normalization, 
+    RNASeq, 
+    Regression, 
+    Sequencing, 
+    Software, 
+    Transcription, 
+    Transctiptomics
 bugReports: https://github.com/GoekeLab/bambu/issues
-URL: https://github.com/GoekeLab/bambu
+URL: https://github.com/GoekeLab/bambu   
 RoxygenNote: 7.1.0
 LinkingTo: 
     Rcpp,
