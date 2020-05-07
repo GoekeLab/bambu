@@ -16,7 +16,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) 
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
       if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
-        warning("not all chromosomes present in reference, ranges are dropped")
+        message("not all chromosomes present in reference genome sequence, ranges are dropped")
         unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
                                                    value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
                                                    pruning.mode = 'coarse')
@@ -317,7 +317,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
 
 #' Fit binomial model
 #' @noRd
-fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, maxSize.cv=10000, ...)
+fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, maxSize.cv=10000)
 {
   if(show.cv)
   {
@@ -327,15 +327,17 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
     data.train.cv.test=data.train[-mySample,]
     labels.train.cv.test=labels.train[-mySample]
 
-    cv.fit=glmnet::cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial', ...)
+    cv.fit=glmnet::cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial')
     predictions=glmnet:::predict.cv.glmnet(cv.fit,newx=data.train.cv.test,s='lambda.min')
     message('prediction accuracy (CV) (higher for splice donor than splice acceptor)')
 
-    message( fisher.test(table(predictions>0,labels.train.cv.test)))
-    message(evalutePerformance(labels.train.cv.test==1,predictions)$AUC)
+    testResults <- fisher.test(table(predictions>0,labels.train.cv.test))    
+    show(testResults$estimate)
+    show(testResults$p.value)
+    show(evalutePerformance(labels.train.cv.test==1,predictions)$AUC)
   }
 
-  cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial', ...)
+  cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial')
   predictions= glmnet:::predict.cv.glmnet(cv.fit,newx=data.test,s='lambda.min')
   return(list(predictions,cv.fit))
 }
