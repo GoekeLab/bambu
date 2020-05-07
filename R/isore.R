@@ -28,7 +28,7 @@
 #'@noRd
 isore.constructReadClasses <- function(readGrgList,
                                        runName='sample1',
-                                       annotationGrangesList, ## has to be provided (function should be called through bambu, so is optional through that main function)
+                                       annotationGrangesList,
                                        genomeSequence=NULL,
                                        stranded=FALSE,
                                        quickMode=FALSE,
@@ -62,29 +62,28 @@ isore.constructReadClasses <- function(readGrgList,
   #  cat('### infer strand/strand correction of junctions ### \n')
   intronsByTx <- myGaps(annotationGrangesList)
   junctionTables <- junctionStrandCorrection(uniqueJunctions, unlisted_junctions, intronsByTx, stranded=stranded, verbose=verbose)
-  uniqueJunctions <- junctionTables[[1]]
+  uniqueJunctions <- junctionTables[[1]][,c('score', 'spliceMotif', 'spliceStrand','junctionStartName','junctionEndName', 'startScore','endScore')]
   unlisted_junctions <- junctionTables[[2]]
   rm(junctionTables)
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
 
  # cat('### find annotated introns ### \n')
-  unlisted_introns <- unlist(intronsByTx)
-  unlisted_introns$txId <- names(unlisted_introns)
-  unlisted_introns$geneId <- annotationGrangesList[unlisted_introns$txId,'GENEID']
-
-  uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, unique(unlisted_introns))))
+    uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, unique(unlist(intronsByTx)))))
 
   # Indicator: is the junction start annotated as a intron start?
-  annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
-  uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
-  rm(annotatedStart)
-  gc(verbose = FALSE)
+  #annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
+  #uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
+  #rm(annotatedStart)
+  #gc(verbose = FALSE)
+  uniqueJunctions$annotatedStart <- uniqueJunctions$junctionStartName %in% uniqueJunctions$junctionStartName[uniqueJunctions$annotatedJunction]
+
 
   # Indicator: is the junction end annotated as a intron end?
-  annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
-  uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
-  rm(annotatedEnd)
-  gc(verbose = FALSE)
+  #annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
+  #uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
+  #rm(annotatedEnd)
+  #gc(verbose = FALSE)
+  uniqueJunctions$annotatedEnd <- uniqueJunctions$junctionEndName %in% uniqueJunctions$junctionEndName[uniqueJunctions$annotatedJunction]
 
 #  cat('### build model to predict true splice sites ### \n')
   start.ptm <- proc.time()
@@ -94,22 +93,22 @@ isore.constructReadClasses <- function(readGrgList,
     predictSpliceSites <- predictSpliceJunctions(annotatedJunctions = uniqueJunctions,
                                                  junctionModel = NULL,
                                                  verbose = verbose)
-    uniqueJunctions=predictSpliceSites[[1]]
+    uniqueJunctions=predictSpliceSites[[1]][,c('score', 'spliceMotif', 'spliceStrand','junctionStartName','junctionEndName', 'startScore','endScore','annotatedJunction','annotatedStart','annotatedEnd')]
     junctionModel=predictSpliceSites[[2]]
   } else {
     junctionModel = standardJunctionModels_temp
     predictSpliceSites <- predictSpliceJunctions(annotatedJunctions = uniqueJunctions,
                                                  junctionModel = junctionModel,
                                                  verbose = verbose)
-    uniqueJunctions=predictSpliceSites[[1]]
+    uniqueJunctions=predictSpliceSites[[1]][,c('score', 'spliceMotif', 'spliceStrand','junctionStartName','junctionEndName', 'startScore','endScore','annotatedJunction','annotatedStart','annotatedEnd')]
     message('Junction correction with not enough data, precalculated model is used')
   }
   rm(predictSpliceSites)  # clean up should be done more efficiently
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
   end.ptm <- proc.time()
  if(verbose) message('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
-
+#[,c('score','spliceStrand','annotatedStart','annotatedEnd', 'startScore','endScore','spliceMotif','junctionStartName','junctionEndName')]
 #  cat('### correct junctions based on set of high confidence junctions ### \n')
   start.ptm <- proc.time()
   uniqueJunctions <- findHighConfidenceJunctions(junctions=uniqueJunctions,
