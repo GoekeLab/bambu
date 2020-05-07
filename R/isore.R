@@ -46,7 +46,7 @@ isore.constructReadClasses <- function(readGrgList,
 
   #make sure that all seqlevels are consistent, and drop those that are not in uniqueJunctions (possible dropped when BSgenome is used)
   if(!all(seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions))) {
-    warning("not all chromosomes present in reference, ranges are dropped")
+    #warning("not all chromosomes present in reference, ranges are dropped") # warning is already shown when ranges are dropped the first time
     unlisted_junctions <- keepSeqlevels(unlisted_junctions,
                                         value = seqlevels(unlisted_junctions)[seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions)],
                                         pruning.mode = 'coarse')
@@ -102,7 +102,7 @@ isore.constructReadClasses <- function(readGrgList,
                                                  junctionModel = junctionModel,
                                                  verbose = verbose)
     uniqueJunctions=predictSpliceSites[[1]]
-    warning('Junction correction with not enough data, precalculated model is used')
+    message('Junction correction with not enough data, precalculated model is used')
   }
   rm(predictSpliceSites)  # clean up should be done more efficiently
   gc(verbose = FALSE)
