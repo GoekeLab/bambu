@@ -1,6 +1,6 @@
 #' Create Junction tables from unlisted junction granges
 #' @noRd
-createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) {
+createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, cores=1) {
   # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
   # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
 
@@ -41,9 +41,16 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) 
                                      minus_score=uniqueJunctions_minus_score)
 
 
-  junctionSeqStart<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
-  junctionSeqEnd<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
+  #junctionSeqStart<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
+  #junctionSeqEnd<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
 
+  bpParameters <- bpparam()
+  bpParameters$workers <- cores
+  junctionSeqStart=bpvec(IRanges::shift(flank(uniqueJunctions,width=2),2), getSeq, x= genomeSequence, BPPARAM=bpParameters)
+
+  junctionSeqEnd=bpvec(IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2), getSeq, x= genomeSequence, BPPARAM=bpParameters)
+
+  
   junctionMotif <- paste(junctionSeqStart,junctionSeqEnd,sep='-')
   uniqueJunctions_mcols <- cbind(uniqueJunctions_mcols,
                                  DataFrame(spliceMotif = junctionMotif,
@@ -433,7 +440,7 @@ findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALS
     message(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]))
     message(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction])/sum(junctions$score))
   }
-  return(junctions)
+  return(junctions[,'mergedHighConfJunctionId'])
 }
 
 
