@@ -96,6 +96,27 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
   olap
 }
 
+#' Get intron ranges from exon ranges list
+#' @noRd
+unlistIntrons <- function(x, use.ids = TRUE, use.names=TRUE)
+{
+  # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
+  # License	Artistic-2.0
+  # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
+  
+  flat <- unlist(x, use.names=FALSE)
+  gaps <- gaps(ranges(x))
+  
+  firstseg <- start(PartitioningByWidth(x))
+  seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
+  strand <- rep(strand(flat)[firstseg],elementNROWS(gaps))
+ 
+  gr <- GRanges(seqnms, unlist(gaps, use.names=use.names), strand)
+  if(use.ids & !is.null(mcols(x, use.names=FALSE)$id)) {
+    mcols(gr)$id <- rep(mcols(x)$id,elementNROWS(gaps))
+  }
+  gr
+}
 
 #' Get intron ranges from exon ranges list
 #' @noRd
