@@ -74,19 +74,15 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
   exByTxAnnotated_singleBpStartEnd <- cutStartEndFromGrangesList(exonsByTranscripts)  # estimate overlap only based on junctions
   spliceOverlaps <- findSpliceOverlapsQuick(exByTxAnnotated_singleBpStartEnd,exByTxAnnotated_singleBpStartEnd)  ## identify transcripts which are compatible with other transcripts (subsets by splice sites)
-  spliceOverlapsSelected <- spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,] ## select splicing compatible transcript matches
+  spliceOverlaps <- spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,] ## select splicing compatible transcript matches
 
-  minReadClassTable <- as_tibble(spliceOverlapsSelected) %>%
-    dplyr::select(queryHits, subjectHits)
-  minReadClassTable$queryTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$queryHits]
-  minReadClassTable$subjectTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$subjectHits]
-  minReadClassTable <- minReadClassTable %>%
-    arrange(queryTxId, subjectTxId) %>%
-    group_by(queryTxId) %>%
-    mutate(eqClass = paste(subjectTxId, collapse='.'), minEqClassSize = n()) %>%
-    dplyr::select(queryTxId, eqClass, minEqClassSize) %>%
-    distinct()
-  return(minReadClassTable)
+  queryTxId <- names(exByTxAnnotated_singleBpStartEnd)[queryHits(spliceOverlaps)]
+  subjectTxId <- names(exByTxAnnotated_singleBpStartEnd)[subjectHits(spliceOverlaps)]
+  subjectTxId <- subjectTxId[order(queryTxId, subjectTxId)]
+  queryTxId <- sort(queryTxId)
+  eqClass <- unstrsplit(splitAsList(subjectTxId, queryTxId), sep='.') 
+  
+  return( tibble(queryTxId = names(eqClass), eqClass=unname(eqClass)))
 }
 
 #' Assign New Gene with Gene Ids
