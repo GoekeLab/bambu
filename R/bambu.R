@@ -280,7 +280,7 @@ bambu.quantSE <- function(se, annotationGrangesList , algo.control = NULL, verbo
 #' Process bam files without saving to folders.
 #' @inheritParams bambu
 #' @noRd
-bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
+bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
@@ -293,7 +293,6 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
                                         annotationGrangesList = annotationGrangesList,
                                         genomeSequence = genomeSequence,
                                         stranded = ir.control[['stranded']],
-                                        quickMode= quickMode,
                                         verbose = verbose)
       rm(readGrgList)
       gc(verbose = FALSE)
@@ -333,7 +332,6 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
                                                               annotationGrangesList = annotationGrangesList,
                                                               genomeSequence = genomeSequence,
                                                               stranded = ir.control[['stranded']],
-                                                              quickMode = quickMode,
                                                               verbose = verbose)
 
 
@@ -383,7 +381,7 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
 #' Preprocess bam files and save read class files
 #' @inheritParams bambu
 #' @noRd
-bambu.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
+bambu.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
@@ -398,7 +396,6 @@ bambu.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeSe
                                      annotationGrangesList = annotationGrangesList,
                                      genomeSequence = genomeSequence,
                                      stranded = ir.control[['stranded']],
-                                     quickMode = quickMode,
                                      verbose = verbose)
     rm(readGrgList)
     gc(verbose = FALSE)
