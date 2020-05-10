@@ -20,7 +20,7 @@ prepareAnnotations <- function(txdb) {
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)), names=NULL)
   txIdForReorder <- togroup(PartitioningByWidth(exonsByTx))
   unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)]  #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
-  unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(exonsByTx),seq,to=1))
+  unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(exonsByTx),seq,to=1), use.names=FALSE)
   unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
   mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
   exonsByTx <- relist(unlistedExons, partitioning)
