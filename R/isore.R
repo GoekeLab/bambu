@@ -57,7 +57,7 @@ isore.constructReadClasses <- function(readGrgList,
   
   #the seqleels will be made comparable for all ranges, warning is shown if annotation is missing some
   if(!all(seqlevels(readGrgList) %in% seqlevels(annotationGrangesList))) {
-    show("not all chromosomes present in reference annotations, annotations might be incomplete. Please compare objects on the same reference") 
+    warning("not all chromosomes present in reference annotations, annotations might be incomplete. Please compare objects on the same reference") 
   }
   seqlevels(readGrgList) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
   seqlevels(annotationGrangesList) <- seqlevels(readGrgList)
@@ -90,7 +90,7 @@ isore.constructReadClasses <- function(readGrgList,
   #  cat('### build model to predict true splice sites ### \n')
   start.ptm <- proc.time()
   
-  if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
+  if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>4000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
     predictSpliceSites <- predictSpliceJunctions(annotatedJunctions = uniqueJunctions,
                                                  junctionModel = NULL,
                                                  verbose = verbose)
@@ -120,7 +120,7 @@ isore.constructReadClasses <- function(readGrgList,
   end.ptm <- proc.time()
   if(verbose) message('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   rm(junctionModel)
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
   
   #  cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
