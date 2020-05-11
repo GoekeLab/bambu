@@ -2,7 +2,7 @@
 #' @param bamFile bamFile
 #' @inheritParams bambu
 #' @noRd
-prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
+prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, cores=1) {
   
   if(class(bamFile)=='BamFile') {
     if(!is.null(yieldSize)) {
@@ -20,6 +20,20 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
     }
     bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
   }
+  
+  # parallel processing of single files by reading chromosomes separately
+  if(cores>1){ 
+    
+    chr <- scanBamHeader(bamFile)[[1]]
+    chrRanges <- GRanges(seqnames=names(chr), ranges=IRanges(start=1, end=chr))
+    readGrgList <- mclapply(1:length(chr),
+                            helpFun,
+                            chrRanges=chrRanges,
+                            bamFile=bamFile,
+                            mc.cores = cores)
+   } else {
+  
+  
   bf <- open(bamFile)
   #readGrgList <- GenomicRanges::GRangesList()
   
@@ -37,8 +51,8 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
   }
   
   close(bf)
+  }
   if(length(readGrgList)>1) {
-    
     readGrgList <-  do.call(c, readGrgList)
   } else   {
     readGrgList <- readGrgList[[1]]
@@ -47,3 +61,10 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE) {
   mcols(readGrgList)$id = 1:length(readGrgList) 
   return(readGrgList)
 }
+
+ helpFun<- function(chr, chrRanges, bamFile){
+  return(GenomicAlignments::grglist(readGAlignments(file=bamFile,
+                                                    param=Rsamtools::ScanBamParam(flag=Rsamtools::scanBamFlag(isSecondaryAlignment=FALSE),
+                                                                                  which=chrRanges[chr]),
+                                                    use.names=FALSE)))
+  }
