@@ -245,22 +245,23 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
                                                             dropRangesByMinLength=F,
                                                             cutStartEnd=F,
                                                             ignore.strand=ignore.strand)
-
-    txToAnTableRestStartEnd <- tbl_df(spliceOverlaps_restStartEnd) %>%
-      group_by(queryHits) %>%
-      mutate(dist = uniqueLengthQuery + uniqueLengthSubject + uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
-      mutate(txNumber = n())
-
-    txToAnTableRestStartEnd$queryHits <- (1:length(exByTx))[-setTMPRest][txToAnTableRestStartEnd$queryHits]  # reassign IDs based on unfiltered list length
-
-    # todo: check filters, what happens to reads with only start and end match?
-    txToAnTableRestStartEnd <- txToAnTableRestStartEnd %>%
-      group_by(queryHits) %>%
-      arrange(queryHits, dist) %>%
-      filter(dist <= (min(dist) + primarySecondaryDist)) %>%
-      mutate(txNumberFiltered = n())
+    if(length(spliceOverlaps_restStartEnd)>0){
+      txToAnTableRestStartEnd <- tbl_df(spliceOverlaps_restStartEnd) %>%
+        group_by(queryHits) %>%
+        mutate(dist = uniqueLengthQuery + uniqueLengthSubject + uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
+        mutate(txNumber = n())
+      
+      txToAnTableRestStartEnd$queryHits <- (1:length(exByTx))[-setTMPRest][txToAnTableRestStartEnd$queryHits]  # reassign IDs based on unfiltered list length
+      
+      # todo: check filters, what happens to reads with only start and end match?
+      txToAnTableRestStartEnd <- txToAnTableRestStartEnd %>%
+        group_by(queryHits) %>%
+        arrange(queryHits, dist) %>%
+        filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+        mutate(txNumberFiltered = n())
+    }
   }
-
+  
   txToAnTableFiltered <- rbind(txToAnTableFiltered, txToAnTableRest, txToAnTableRestStartEnd) %>% ungroup()
 
   txToAnTableFiltered$readClassId <- names(exByTx)[txToAnTableFiltered$queryHits]
