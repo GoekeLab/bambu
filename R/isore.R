@@ -45,7 +45,8 @@ isore.constructReadClasses <- function(readGrgList,
   
   #make sure that all seqlevels are consistent, and drop those that are not in uniqueJunctions (possible dropped when BSgenome is used)
   if(!all(seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions))) {
-    #warning("not all chromosomes present in reference, ranges are dropped") # warning is already shown when ranges are dropped the first time
+    # warning is already shown when ranges are dropped the first time
+    #ranges are dropped if not in the reference sequence as no intron motif can be extracted
     unlisted_junctions <- keepSeqlevels(unlisted_junctions,
                                         value = seqlevels(unlisted_junctions)[seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions)],
                                         pruning.mode = 'coarse')
@@ -53,6 +54,15 @@ isore.constructReadClasses <- function(readGrgList,
                                  value = seqlevels(readGrgList)[seqlevels(readGrgList) %in% seqlevels(uniqueJunctions)],
                                  pruning.mode = 'coarse')
   }
+  
+  #the seqleels will be made comparable for all ranges, warning is shown if annotation is missing some
+  if(!all(seqlevels(readGrgList) %in% seqlevels(annotationGrangesList))) {
+    show("not all chromosomes present in reference annotations, annotations might be incomplete. Please compare objects on the same reference") 
+  }
+  seqlevels(readGrgList) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
+  seqlevels(annotationGrangesList) <- seqlevels(readGrgList)
+  seqlevels(unlisted_junctions) <- seqlevels(readGrgList)
+  seqlevels(uniqueJunctions) <- seqlevels(readGrgList)
   
   end.ptm <- proc.time()
   if(verbose)  message('Finished creating junction list with splice motif in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
@@ -127,7 +137,7 @@ isore.constructReadClasses <- function(readGrgList,
   start.ptm <- proc.time()
   
   # seqlevels are made equal (added for chromosomes missing in any of them)
-  seqlevels(readClassListSpliced) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
+  # seqlevels(readClassListSpliced) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
   
   singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1], use.names=F)
   mcols(singleExonReads)$id <- mcols(readGrgList[elementNROWS(readGrgList)==1])$id
