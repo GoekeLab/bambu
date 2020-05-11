@@ -313,7 +313,7 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
-      rm(list=c("se.quant","se.quantGene","seWithDist"))
+      rm(list=c("se.quant","seWithDist"))
       gc(verbose = FALSE)
       end.time <- proc.time()
       if(verbose)   message('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins.')
