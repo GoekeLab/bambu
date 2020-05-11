@@ -3,6 +3,7 @@
 #' @noRd
 constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, readGrgList, stranded=FALSE){
   options(scipen = 999)
+ # seqLevelList <- unique(c(seqlevels(uniqueJunctions), seqlevels(unlisted_junctions), seqlevels(readGrgList)))
   
   uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
   if(any(order(uniqueReadIds) != 1:length(uniqueReadIds))) warning('read Id not sorted, can result in wrong assignments. Please report error')
@@ -44,7 +45,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   
   # chr
   firstseg <- start(PartitioningByWidth(readGrgList))
-  readTable[, 'chr'] <- as.character(seqnames(unlist(readGrgList)[firstseg]))
+  readTable[, 'chr'] <- as.factor(seqnames(unlist(readGrgList)[firstseg]))
   
   #intron start and end
   readRanges <- unlist(range(ranges(readGrgList)), use.names=FALSE)
@@ -111,6 +112,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
     dplyr::select(chr.rc = chr, strand.rc = strand, intronStarts, intronEnds, confidenceType, readCount)
   
   mcols(exonsByReadClass) <- readTable
+ # seqlevels(exonsByReadClass) <- seqLevelList
   return(exonsByReadClass)
 }
 
@@ -124,6 +126,8 @@ constructUnsplicedReadClasses <- function(granges,
   if(is.null(mcols(granges)$id)){
     stop("ID column is missing from mcols(granges)")
   }
+  #seqLevelList <- unique(c(seqlevels(granges), seqlevels(grangesReference)))
+  
   hitsWithin <- findOverlaps(granges,
                              grangesReference,
                              ignore.strand=!stranded,
@@ -131,7 +135,7 @@ constructUnsplicedReadClasses <- function(granges,
                              select='all')  # find reads that overlap with reference ranges
   
   hitsDF <- tbl_df(hitsWithin)
-  hitsDF$chr <- as.character(seqnames(grangesReference)[subjectHits(hitsWithin)])
+  hitsDF$chr <- as.factor(seqnames(grangesReference)[subjectHits(hitsWithin)])
   hitsDF$start <- start(grangesReference)[subjectHits(hitsWithin)]
   hitsDF$end <- end(grangesReference)[subjectHits(hitsWithin)]
   if(stranded==FALSE) {
@@ -181,5 +185,6 @@ constructUnsplicedReadClasses <- function(granges,
                           readCount)
   
   mcols(exByReadClassUnspliced) <- hitsDF
+ # seqlevels(exByReadClassUnspliced) <- seqLevelList
   return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
 }
