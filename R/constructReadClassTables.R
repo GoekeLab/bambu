@@ -8,7 +8,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
   if(any(order(uniqueReadIds) != 1:length(uniqueReadIds))) warning('read Id not sorted, can result in wrong assignments. Please report error')
   readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
-  
+  firstseg <- start(PartitioningByWidth(readGrgList))
   allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
                                                      uniqueJunctions,type = 'equal',
                                                      ignore.strand = TRUE)
@@ -44,7 +44,6 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   colnames(readTable) <- c('chr', 'start', 'end', 'strand', 'intronEnds', 'intronStarts', 'confidenceType')
   
   # chr
-  firstseg <- start(PartitioningByWidth(readGrgList))
   readTable[, 'chr'] <- as.factor(seqnames(unlist(readGrgList)[firstseg]))
   
   #intron start and end
