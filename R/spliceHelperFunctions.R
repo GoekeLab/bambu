@@ -195,7 +195,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand=FALSE) {
   olap <- findOverlaps(query, subject, ignore.strand=ignore.strand, type='within')
   olapEqual <- findOverlaps(query, subject, ignore.strand=ignore.strand, type='equal')
   if (length(olap) == 0L)
-    return(.result(olap))
+    return(GenomicAlignments:::.result(olap))
 
 
   query <- query[queryHits(olap)]
