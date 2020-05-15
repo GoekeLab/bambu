@@ -160,6 +160,7 @@ myGaps <- function(x, start=NA, end=NA)
   }
 
 }
+#myGaps <- .GenomicAlignments:::.gaps
 
 #' @noRd
 .isNumericOrNAs <- S4Vectors:::isNumericOrNAs
