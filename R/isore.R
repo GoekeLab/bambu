@@ -695,12 +695,13 @@ isore.extendAnnotations <- function(se,
     if(verbose)  message('transcript filtering in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
     start.ptm <- proc.time()
-
-    minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges)
+    geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in% mcols(extendedAnnotationRanges)$GENEID[which(mcols(extendedAnnotationRanges)$newTxClass!='annotation')])
+    
+    minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
     end.ptm <- proc.time()
     if(verbose)  message('calculated minimum equivalent classes for extended annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
-    mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass[match(names(extendedAnnotationRanges), minEqClasses$queryTxId)]
+    mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <- minEqClasses$eqClass[match(names(extendedAnnotationRanges[geneListWithNewTx]), minEqClasses$queryTxId)]
     mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
 
     return(extendedAnnotationRanges)
