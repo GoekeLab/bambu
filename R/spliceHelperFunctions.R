@@ -276,8 +276,10 @@ cutStartEndFromGrangesList <- function(grangesList) {
 extendGrangesListElements <- function(grangesList, by=5) {
   unlistedExons <- unlist(grangesList, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)), names=NULL)
-  start(unlistedExons) <- pmax(0,start(unlistedExons)-by)
-  end(unlistedExons) <- end(unlistedExons)+by
+  start(unlistedExons) <- pmax(1,start(unlistedExons)-by)
+  end(unlistedExons) <- pmin(seqlengths(unlistedExons)[as.character(seqnames(unlistedExons))],
+                             end(unlistedExons)+by,
+                             na.rm=T)
 
   return(relist(unlistedExons, partitioning))
 }
