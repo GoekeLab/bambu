@@ -1,7 +1,7 @@
 #' Create Junction tables from unlisted junction granges
 #' @importFrom BiocParallel bppram bpvec
 #' @noRd
-createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, cores=1) {
+createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, ncore=1) {
   # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
   # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
 
@@ -43,7 +43,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   #junctionSeqEnd<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
 
   bpParameters <- BiocParallel::bpparam()
-  bpParameters$workers <- cores
+  bpParameters$workers <- ncore
   junctionSeqStart <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2),2),
                             getSeq,
                             x = genomeSequence,
