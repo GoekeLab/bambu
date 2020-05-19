@@ -20,7 +20,7 @@ prepareAnnotations <- function(txdb) {
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)), names=NULL)
   txIdForReorder <- togroup(PartitioningByWidth(exonsByTx))
   unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)]  #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
-  unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(exonsByTx),seq,to=1))
+  unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(exonsByTx),seq,to=1), use.names=FALSE)
   unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
   mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
   exonsByTx <- relist(unlistedExons, partitioning)
@@ -74,19 +74,15 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
 
   exByTxAnnotated_singleBpStartEnd <- cutStartEndFromGrangesList(exonsByTranscripts)  # estimate overlap only based on junctions
   spliceOverlaps <- findSpliceOverlapsQuick(exByTxAnnotated_singleBpStartEnd,exByTxAnnotated_singleBpStartEnd)  ## identify transcripts which are compatible with other transcripts (subsets by splice sites)
-  spliceOverlapsSelected <- spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,] ## select splicing compatible transcript matches
+  spliceOverlaps <- spliceOverlaps[mcols(spliceOverlaps)$compatible==TRUE,] ## select splicing compatible transcript matches
 
-  minReadClassTable <- as_tibble(spliceOverlapsSelected) %>%
-    dplyr::select(queryHits, subjectHits)
-  minReadClassTable$queryTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$queryHits]
-  minReadClassTable$subjectTxId <- names(exByTxAnnotated_singleBpStartEnd)[minReadClassTable$subjectHits]
-  minReadClassTable <- minReadClassTable %>%
-    arrange(queryTxId, subjectTxId) %>%
-    group_by(queryTxId) %>%
-    mutate(eqClass = paste(subjectTxId, collapse='.'), minEqClassSize = n()) %>%
-    dplyr::select(queryTxId, eqClass, minEqClassSize) %>%
-    distinct()
-  return(minReadClassTable)
+  queryTxId <- names(exByTxAnnotated_singleBpStartEnd)[queryHits(spliceOverlaps)]
+  subjectTxId <- names(exByTxAnnotated_singleBpStartEnd)[subjectHits(spliceOverlaps)]
+  subjectTxId <- subjectTxId[order(queryTxId, subjectTxId)]
+  queryTxId <- sort(queryTxId)
+  eqClass <- unstrsplit(splitAsList(subjectTxId, queryTxId), sep='.') 
+  
+  return( tibble(queryTxId = names(eqClass), eqClass=unname(eqClass)))
 }
 
 #' Assign New Gene with Gene Ids
@@ -249,22 +245,23 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
                                                             dropRangesByMinLength=F,
                                                             cutStartEnd=F,
                                                             ignore.strand=ignore.strand)
-
-    txToAnTableRestStartEnd <- tbl_df(spliceOverlaps_restStartEnd) %>%
-      group_by(queryHits) %>%
-      mutate(dist = uniqueLengthQuery + uniqueLengthSubject + uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
-      mutate(txNumber = n())
-
-    txToAnTableRestStartEnd$queryHits <- (1:length(exByTx))[-setTMPRest][txToAnTableRestStartEnd$queryHits]  # reassign IDs based on unfiltered list length
-
-    # todo: check filters, what happens to reads with only start and end match?
-    txToAnTableRestStartEnd <- txToAnTableRestStartEnd %>%
-      group_by(queryHits) %>%
-      arrange(queryHits, dist) %>%
-      filter(dist <= (min(dist) + primarySecondaryDist)) %>%
-      mutate(txNumberFiltered = n())
+    if(length(spliceOverlaps_restStartEnd)>0){
+      txToAnTableRestStartEnd <- tbl_df(spliceOverlaps_restStartEnd) %>%
+        group_by(queryHits) %>%
+        mutate(dist = uniqueLengthQuery + uniqueLengthSubject + uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
+        mutate(txNumber = n())
+      
+      txToAnTableRestStartEnd$queryHits <- (1:length(exByTx))[-setTMPRest][txToAnTableRestStartEnd$queryHits]  # reassign IDs based on unfiltered list length
+      
+      # todo: check filters, what happens to reads with only start and end match?
+      txToAnTableRestStartEnd <- txToAnTableRestStartEnd %>%
+        group_by(queryHits) %>%
+        arrange(queryHits, dist) %>%
+        filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+        mutate(txNumberFiltered = n())
+    }
   }
-
+  
   txToAnTableFiltered <- rbind(txToAnTableFiltered, txToAnTableRest, txToAnTableRestStartEnd) %>% ungroup()
 
   txToAnTableFiltered$readClassId <- names(exByTx)[txToAnTableFiltered$queryHits]
