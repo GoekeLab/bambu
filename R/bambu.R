@@ -48,7 +48,7 @@ bambu <- function(reads = NULL, readclass.file = NULL, outputReadClassDir = NULL
   if(!is.null(annotations)){
       if(class(annotations) == 'TxDb'){
         txdb <- annotations
-        annotationGrangesList <- prepareAnnotations(txdb) ## note: check which annotation tables are reused multiple times, and inlcude only those. Optimise required annotations if possible
+        annotationGrangesList <- prepareAnnotations(txdb) 
       }else if(class(annotations) == "CompressedGRangesList"){
         annotationGrangesList <- annotations
         ## check if annotationGrangesList is as expected
@@ -280,7 +280,7 @@ bambu.quantSE <- function(se, annotationGrangesList , algo.control = NULL, verbo
 #' Process bam files without saving to folders.
 #' @inheritParams bambu
 #' @noRd
-bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
+bambu.quantISORE <- function(bam.file = bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
@@ -288,12 +288,13 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
     for(bam.file.index in seq_along(bam.file)){
       start.time <- proc.time()
       readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]], verbose = verbose)
+      seqlevelsStyle(readGrgList) <- seqlevelsStyle(annotationGrangesList)[1]
+      
       se  <- isore.constructReadClasses(readGrgList = readGrgList,
                                         runName =bam.file.basenames[bam.file.index],
                                         annotationGrangesList = annotationGrangesList,
                                         genomeSequence = genomeSequence,
                                         stranded = ir.control[['stranded']],
-                                        quickMode= quickMode,
                                         verbose = verbose)
       rm(readGrgList)
       gc(verbose = FALSE)
@@ -314,7 +315,7 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
       }else {
         seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
       }
-      rm(list=c("se.quant","se.quantGene","seWithDist"))
+      rm(list=c("se.quant","seWithDist"))
       gc(verbose = FALSE)
       end.time <- proc.time()
       if(verbose)   message('Finished transcript abundance quantification in ', round((end.time-start.time)[3]/60,1), ' mins.')
@@ -328,12 +329,13 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
       start.time <- proc.time()
 
       readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]], verbose = verbose)
+      seqlevelsStyle(readGrgList) <- seqlevelsStyle(annotationGrangesList)[1]
+      
       seList[[bam.file.index]]  <- isore.constructReadClasses(readGrgList = readGrgList,
                                                               runName = bam.file.basenames[bam.file.index],
                                                               annotationGrangesList = annotationGrangesList,
                                                               genomeSequence = genomeSequence,
                                                               stranded = ir.control[['stranded']],
-                                                              quickMode = quickMode,
                                                               verbose = verbose)
 
 
@@ -383,7 +385,7 @@ bambu.quantISORE <- function(bam.file = bam.file,annotationGrangesList, genomeSe
 #' Preprocess bam files and save read class files
 #' @inheritParams bambu
 #' @noRd
-bambu.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL,  quickMode = FALSE, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
+bambu.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeSequence = NULL, algo.control = NULL,  ir.control = NULL, extendAnnotations=FALSE, outputReadClassDir = NULL, verbose = FALSE){
 
   bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
   seOutput = NULL
@@ -393,12 +395,13 @@ bambu.preprocess <- function(bam.file= bam.file, annotationGrangesList, genomeSe
     start.time <- proc.time()
 
     readGrgList <- prepareDataFromBam(bam.file[[bam.file.index]], verbose = verbose)
+    seqlevelsStyle(readGrgList) <- seqlevelsStyle(annotationGrangesList)[1]
+    
     se <- isore.constructReadClasses(readGrgList = readGrgList,
                                      runName = bam.file.basenames[bam.file.index],
                                      annotationGrangesList = annotationGrangesList,
                                      genomeSequence = genomeSequence,
                                      stranded = ir.control[['stranded']],
-                                     quickMode = quickMode,
                                      verbose = verbose)
     rm(readGrgList)
     gc(verbose = FALSE)
@@ -434,7 +437,7 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
 
       start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
-
+      seqlevelsStyle(se) <- seqlevelsStyle(annotationGrangesList)[1]
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       end.time <- proc.time()
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
@@ -454,6 +457,7 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
     combinedTxCandidates <- NULL
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
       se <- readRDS(file=readclass.file[readclass.file.index])
+      seqlevelsStyle(se) <- seqlevelsStyle(annotationGrangesList)[1]
       combinedTxCandidates <- isore.combineTranscriptCandidates(se, readClassSeRef = combinedTxCandidates, verbose = verbose)
       rm(se)
       gc(verbose = FALSE)
@@ -483,6 +487,8 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
       start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
+      seqlevelsStyle(se) <- seqlevelsStyle(annotationGrangesList)[1]
+      
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       end.time <- proc.time()
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
