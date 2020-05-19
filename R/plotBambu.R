@@ -11,35 +11,53 @@
 #' @importFrom circlize colorRamp2
 #' @importFrom RColorBrewer brewer.pal
 #' @export
-plot.bambu <- function(se, group.variable, type ){
+plot.bambu <- function(se, group.variable = NULL, type ){
 
   count.data <- assays(se)$CPM
-
-  count.data <- count.data[order(apply(count.data,1,sd),decreasing = TRUE),][1:min(500,nrow(count.data)),]
+  if(length(apply(count.data,1,sum)>10)>100){
+    count.data <- count.data[apply(count.data,1,sum)>10,]
+  }
 
   count.data <- log2(count.data+1)
 
 
-  if(!is.null(group.variable)){
-    sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",group.variable)]))
-    setnames(sample.info, 1:2, c("runname","groupVar"))
+
 
     if(type == "pca"){
-      pca_result <- prcomp(t(as.matrix(count.data)), scale = TRUE) ## can't really cluster them nicely
-      plotData <- data.table(pca_result$x[,1:2],keep.rownames = TRUE)
-      setnames(plotData, 'rn','runname')
-      if(!all(plotData$runname %in% sample.info$runname)){
-        stop("all(plotData$runname %in% sample.info$runname) is not satisfied!")
+      if(!is.null(group.variable)){
+        sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",group.variable)]))
+        setnames(sample.info, 1:2, c("runname","groupVar"))
+
+        pca_result <- prcomp(t(as.matrix(count.data)), scale = TRUE) ## can't really cluster them nicely
+        plotData <- data.table(pca_result$x[,1:2],keep.rownames = TRUE)
+        setnames(plotData, 'rn','runname')
+        if(!all(plotData$runname %in% sample.info$runname)){
+          stop("all(plotData$runname %in% sample.info$runname) is not satisfied!")
+        }
+        plotData <- sample.info[plotData, on = 'runname']
+
+        p <- ggplot(plotData, aes(x = PC1, y = PC2))+
+          geom_point(aes(col = groupVar))+
+          ylab(paste0('PC2 (',round(pca_result$sdev[2]/sum(pca_result$sdev)*100,1),'%)'))+
+          xlab(paste0('PC1 (',round(pca_result$sdev[1]/sum(pca_result$sdev)*100,1),'%)'))+
+          theme_minimal()
+
+      }else{
+        pca_result <- prcomp(t(as.matrix(count.data)), scale = TRUE) ## can't really cluster them nicely
+        plotData <- data.table(pca_result$x[,1:2],keep.rownames = TRUE)
+        setnames(plotData, 'rn','runname')
+
+        p <- ggplot(plotData, aes(x = PC1, y = PC2))+
+          geom_point(aes(col = runname))+
+          ylab(paste0('PC2 (',round(pca_result$sdev[2]/sum(pca_result$sdev)*100,1),'%)'))+
+          xlab(paste0('PC1 (',round(pca_result$sdev[1]/sum(pca_result$sdev)*100,1),'%)'))+
+          theme_minimal()
+
       }
-      plotData <- sample.info[plotData, on = 'runname']
-      p <- ggplot(plotData, aes(x = PC1, y = PC2))+
-        geom_point(aes(col = groupVar))+
-        ylab(paste0('PC2 (',round(pca_result$sdev[2]/sum(pca_result$sdev)*100,1),'%)'))+
-        xlab(paste0('PC1 (',round(pca_result$sdev[1]/sum(pca_result$sdev)*100,1),'%)'))+
-        theme_minimal()
-      print(p)
+
+      return(p)
     }
-  }
+
   if(type == "heatmap"){
 
     corData <- cor(count.data,method = "spearman")
@@ -50,18 +68,16 @@ plot.bambu <- function(se, group.variable, type ){
         stop("all(colnames(count.data) %in% sample.info$runname) is not satisfied!")
       }
       topAnnotation <- HeatmapAnnotation(group = sample.info[match(colnames(count.data), runname)]$groupVar)
-      colnames(corData) <- NULL
-      rownames(corData) <- NULL
+
       p <- Heatmap(corData, name = "Sp.R", col = col_fun,
                    top_annotation = topAnnotation)
-      print(p)
-    }else{
-      colnames(corData) <- NULL
-      rownames(corData) <- NULL
-      p <- Heatmap(corData, name = "Sp.R", col = col_fun)
-      print(p)
-    }
 
+    }else{
+
+      p <- Heatmap(corData, name = "Sp.R", col = col_fun)
+
+    }
+    return(p)
   }
 
 }
