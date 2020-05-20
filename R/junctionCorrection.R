@@ -1,6 +1,7 @@
 #' Create Junction tables from unlisted junction granges
+#' @importFrom BiocParallel bppram bpvec
 #' @noRd
-createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) {
+createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, ncore=1) {
   # License note: This function is adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
   # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
 
@@ -16,7 +17,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) 
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
       if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
-        warning("not all chromosomes present in reference, ranges are dropped")
+        message("not all chromosomes present in reference genome sequence, ranges are dropped")
         unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
                                                    value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
                                                    pruning.mode = 'coarse')
@@ -34,32 +35,46 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) 
   junctionMatchList <- as(findMatches(uniqueJunctions, unstranded_unlisted_junctions), "List")
   uniqueJunctions_score <- elementNROWS(junctionMatchList)
   junctionStrandList <- extractList(strand(unlisted_junction_granges), junctionMatchList)
-  uniqueJunctions_plus_score <- sum(junctionStrandList == "+")
-  uniqueJunctions_minus_score <- sum(junctionStrandList == "-")
-  uniqueJunctions_mcols <- DataFrame(score=uniqueJunctions_score,
-                                     plus_score=uniqueJunctions_plus_score,
-                                     minus_score=uniqueJunctions_minus_score)
 
 
-  junctionSeqStart<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
-  junctionSeqEnd<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
+  # the code now includes a parallel implementation, which is only helpful when the BSgenome package is used
+
+  #junctionSeqStart<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
+  #junctionSeqEnd<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
+
+  bpParameters <- BiocParallel::bpparam()
+  bpParameters$workers <- ncore
+  junctionSeqStart <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2),2),
+                            getSeq,
+                            x = genomeSequence,
+                            BPPARAM=bpParameters)
+
+  junctionSeqEnd <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2),
+                          getSeq,
+                          x = genomeSequence,
+                          BPPARAM=bpParameters)
+
 
   junctionMotif <- paste(junctionSeqStart,junctionSeqEnd,sep='-')
-  uniqueJunctions_mcols <- cbind(uniqueJunctions_mcols,
-                                 DataFrame(spliceMotif = junctionMotif,
-                                           spliceStrand = spliceStrand(junctionMotif)))
 
+  junctionStartName <- paste(seqnames(uniqueJunctions),start(uniqueJunctions),sep=':')
+  junctionEndName <- paste(seqnames(uniqueJunctions),end(uniqueJunctions),sep=':')
 
-  mcols(uniqueJunctions) <- uniqueJunctions_mcols
+  startScore <- as.integer(tapply(uniqueJunctions_score,  junctionStartName ,sum)[junctionStartName])
+  endScore <- as.integer(tapply(uniqueJunctions_score,  junctionEndName ,sum)[junctionEndName])
+
+  mcols(uniqueJunctions) <- DataFrame(score=uniqueJunctions_score,
+                                      plus_score=sum(junctionStrandList == "+"),
+                                      minus_score=sum(junctionStrandList == "-"),
+                                      spliceMotif = junctionMotif,
+                                      spliceStrand = spliceStrand(junctionMotif),
+                                      junctionStartName = junctionStartName,
+                                      junctionEndName = junctionEndName,
+                                      startScore = startScore,
+                                      endScore=endScore,
+                                      id=1:length(uniqueJunctions))
+
   strand(uniqueJunctions)<-uniqueJunctions$spliceStrand
-
-  uniqueJunctions$junctionStartName <- paste(seqnames(uniqueJunctions),start(uniqueJunctions),sep=':')
-  uniqueJunctions$junctionEndName <- paste(seqnames(uniqueJunctions),end(uniqueJunctions),sep=':')
-
-  startScore <- tapply(uniqueJunctions$score,  uniqueJunctions$junctionStartName ,sum)
-  uniqueJunctions$startScore <- startScore[uniqueJunctions$junctionStartName]
-  endScore <- tapply(uniqueJunctions$score,  uniqueJunctions$junctionEndName ,sum)
-  uniqueJunctions$endScore <- endScore[uniqueJunctions$junctionEndName]
 
   return(uniqueJunctions)
 }
@@ -68,14 +83,14 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL) 
 
 #' JUNCTIONSTRANDCORRECTION
 #' @noRd
-junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges, intronsByTx, stranded, verbose = FALSE) {
+junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges, uniqueAnnotatedIntrons, stranded, verbose = FALSE) {
   ##note: the strand is not always correctly infered based on motifs, it might introduce systematic errors due to alignment (which is biased towards splice motifs)
 
   allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junction_granges, uniqueJunctions,type='equal',ignore.strand=T)
 
   uniqueJunctionsUpdate <- uniqueJunctions # make a copy to revert to if strand correction does not improve results
 
-  annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions, intronsByTx, ignore.strand=F)['TRUE']
+  annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions, uniqueAnnotatedIntrons, ignore.strand=F)['TRUE']
   if(verbose) {
     message('before strand correction, annotated introns:')
     message(annotatedIntronNumber)
@@ -89,15 +104,15 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
 
       #annotated strand of jucntions for each read based on the infered read strand
       unlisted_junction_granges_strand <- as.character(strand(uniqueJunctionsUpdate)[subjectHits(allJunctionToUniqueJunctionOverlap)])
-      unlisted_junction_granges_strandList = splitAsList(unlisted_junction_granges_strand,names(unlisted_junction_granges))
+      unlisted_junction_granges_strandList = splitAsList(unlisted_junction_granges_strand,mcols(unlisted_junction_granges)$id)
       strandJunctionSum = sum(unlisted_junction_granges_strandList=='-')-sum(unlisted_junction_granges_strandList=='+')
 
-      uniqueReadNames <- unique(names(unlisted_junction_granges))
-      readStrand <- rep('*',length(uniqueReadNames))
-      names(readStrand) <- uniqueReadNames
-      readStrand[names(strandJunctionSum)][strandJunctionSum<0] <- '+'
-      readStrand[names(strandJunctionSum)][strandJunctionSum>0] <- '-'
-      strand(unlisted_junction_granges) <- readStrand[names(unlisted_junction_granges)]
+      readStrand <- rep('*',length(unlisted_junction_granges_strandList))
+      readStrand[strandJunctionSum<0] <- '+'
+      readStrand[strandJunctionSum>0] <- '-'
+      strand(unlisted_junction_granges) <- readStrand[match(mcols(unlisted_junction_granges)$id,
+                                                            as.integer(names(unlisted_junction_granges_strandList)))]
+
 
       unstranded_unlisted_junction_granges <- unstrand(unlisted_junction_granges)
       junctionMatchList <- as(findMatches(uniqueJunctions, unstranded_unlisted_junction_granges), "List")
@@ -105,9 +120,9 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
       uniqueJunctionsUpdate$plus_score_inferedByRead <- sum(tmp == "+")
       uniqueJunctionsUpdate$minus_score_inferedByRead <- sum(tmp == "-")
       strandScoreByRead <- uniqueJunctionsUpdate$minus_score_inferedByRead - uniqueJunctionsUpdate$plus_score_inferedByRead
-      strand(uniqueJunctionsUpdate[strandScoreByRead< 0 ]) = '+' ## ere we overwrite the information from the motif which increases overlap with known junctions
+      strand(uniqueJunctionsUpdate[strandScoreByRead< 0 ]) = '+' ## here we overwrite the information from the motif which increases overlap with known junctions
       strand(uniqueJunctionsUpdate[strandScoreByRead>0 ]) = '-'
-      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, intronsByTx, ignore.strand=F)['TRUE']
+      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, uniqueAnnotatedIntrons, ignore.strand=F)['TRUE']
       if(annotatedIntronNumberNew > annotatedIntronNumber & !is.na(annotatedIntronNumber)) # update junctions object if strand prediction improves overlap with annotations
       {
         if(verbose) {
@@ -128,7 +143,7 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
       strandScoreByRead <- uniqueJunctionsUpdate$minus_score - uniqueJunctionsUpdate$plus_score
       strand(uniqueJunctionsUpdate[strandScoreByRead>0 ]) = '-' ## here we verwrite the information from the motif which increases overlap with known junctions
       strand(uniqueJunctionsUpdate[strandScoreByRead<(0) ]) = '+'
-      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, intronsByTx, ignore.strand=F)['TRUE']
+      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, uniqueAnnotatedIntrons, ignore.strand=F)['TRUE']
       if(annotatedIntronNumberNew > annotatedIntronNumber & !is.na(annotatedIntronNumber)) # update junctions object if strand prediction improves overlap with annotations
       {
         if(verbose) {
@@ -150,9 +165,9 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
 
 #' Evaluate annoation overlap
 #' @noRd
-evalAnnotationOverlap <- function(intronRanges, intronsByTx, ignore.strand=FALSE)
+evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons, ignore.strand=FALSE)
 {
-  return(table(!is.na(GenomicRanges::match(intronRanges, unique(unlist(intronsByTx)),ignore.strand=ignore.strand))))
+  return(table(!is.na(GenomicRanges::match(intronRanges, uniqueAnnotatedIntrons,ignore.strand=ignore.strand))))
 }
 
 
@@ -160,7 +175,7 @@ evalAnnotationOverlap <- function(intronRanges, intronsByTx, ignore.strand=FALSE
 #' @noRd
 predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbose = FALSE)
 {
-
+  ##note: readibility can be improved using dplyr
   annotatedJunctionsStart <- unique(GRanges(seqnames=seqnames(annotatedJunctions),
                                             ranges=IRanges(start=start(annotatedJunctions),
                                                            end=start(annotatedJunctions)),
@@ -317,7 +332,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
 
 #' Fit binomial model
 #' @noRd
-fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, maxSize.cv=10000, ...)
+fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, maxSize.cv=10000)
 {
   if(show.cv)
   {
@@ -327,15 +342,17 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
     data.train.cv.test=data.train[-mySample,]
     labels.train.cv.test=labels.train[-mySample]
 
-    cv.fit=glmnet::cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial', ...)
+    cv.fit=glmnet::cv.glmnet(x=data.train.cv,y=labels.train.cv,family='binomial')
     predictions=glmnet:::predict.cv.glmnet(cv.fit,newx=data.train.cv.test,s='lambda.min')
     message('prediction accuracy (CV) (higher for splice donor than splice acceptor)')
 
-    message( fisher.test(table(predictions>0,labels.train.cv.test)))
-    message(evalutePerformance(labels.train.cv.test==1,predictions)$AUC)
+    testResults <- fisher.test(table(predictions>0,labels.train.cv.test))
+    show(testResults$estimate)
+    show(testResults$p.value)
+    show(evalutePerformance(labels.train.cv.test==1,predictions)$AUC)
   }
 
-  cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial', ...)
+  cv.fit=glmnet::cv.glmnet(x=data.train,y=labels.train,family='binomial')
   predictions= glmnet:::predict.cv.glmnet(cv.fit,newx=data.test,s='lambda.min')
   return(list(predictions,cv.fit))
 }
@@ -431,7 +448,7 @@ findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALS
     message(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]))
     message(sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction])/sum(junctions$score))
   }
-  return(junctions)
+  return(junctions[,'mergedHighConfJunctionId'])
 }
 
 
