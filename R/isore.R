@@ -28,10 +28,10 @@
 #'@noRd
 isore.constructReadClasses <- function(readGrgList,
                                        runName='sample1',
-                                       annotationGrangesList, ## has to be provided (function should be called through bambu, so is optional through that main function)
+                                       annotationGrangesList,
                                        genomeSequence=NULL,
                                        stranded=FALSE,
-                                       quickMode=FALSE,
+                                       ncore = 1,
                                        verbose=FALSE){
 
 
@@ -39,14 +39,15 @@ isore.constructReadClasses <- function(readGrgList,
   ## todo: which preprocessed junction correction model to use?
   #standardJunctionModels_temp
 
-  unlisted_junctions <- unlist(myGaps(readGrgList))
+  unlisted_junctions <- unlistIntrons(readGrgList, use.ids=TRUE, use.names=FALSE)
   # cat('### create junction list with splice motif ### \n')
   start.ptm <- proc.time()
-  uniqueJunctions <- createJunctionTable(unlisted_junctions,genomeSequence=genomeSequence)
+  uniqueJunctions <- createJunctionTable(unlisted_junctions,ncore = ncore, genomeSequence=genomeSequence)
 
   #make sure that all seqlevels are consistent, and drop those that are not in uniqueJunctions (possible dropped when BSgenome is used)
   if(!all(seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions))) {
-    warning("not all chromosomes present in reference, ranges are dropped")
+    # warning is already shown when ranges are dropped the first time
+    #ranges are dropped if not in the reference sequence as no intron motif can be extracted
     unlisted_junctions <- keepSeqlevels(unlisted_junctions,
                                         value = seqlevels(unlisted_junctions)[seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions)],
                                         pruning.mode = 'coarse')
@@ -54,63 +55,62 @@ isore.constructReadClasses <- function(readGrgList,
                                  value = seqlevels(readGrgList)[seqlevels(readGrgList) %in% seqlevels(uniqueJunctions)],
                                  pruning.mode = 'coarse')
   }
+
+  #the seqleels will be made comparable for all ranges, warning is shown if annotation is missing some
+  if(!all(seqlevels(readGrgList) %in% seqlevels(annotationGrangesList))) {
+    warning("not all chromosomes present in reference annotations, annotations might be incomplete. Please compare objects on the same reference")
+  }
+  seqlevels(readGrgList) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
+  seqlevels(annotationGrangesList) <- seqlevels(readGrgList)
+  seqlevels(unlisted_junctions) <- seqlevels(readGrgList)
+  seqlevels(uniqueJunctions) <- seqlevels(readGrgList)
+
   end.ptm <- proc.time()
   if(verbose)  message('Finished creating junction list with splice motif in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
 
 
   #  cat('### infer strand/strand correction of junctions ### \n')
-  intronsByTx <- myGaps(annotationGrangesList)
-  junctionTables <- junctionStrandCorrection(uniqueJunctions, unlisted_junctions, intronsByTx, stranded=stranded, verbose=verbose)
-  uniqueJunctions <- junctionTables[[1]]
+  uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList, use.names=FALSE, use.ids = FALSE))
+  junctionTables <- junctionStrandCorrection(uniqueJunctions, unlisted_junctions, uniqueAnnotatedIntrons, stranded=stranded, verbose=verbose)
+  uniqueJunctions <- junctionTables[[1]][,c('score', 'spliceMotif', 'spliceStrand','junctionStartName','junctionEndName', 'startScore','endScore', 'id')]
   unlisted_junctions <- junctionTables[[2]]
   rm(junctionTables)
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
 
- # cat('### find annotated introns ### \n')
-  unlisted_introns <- unlist(intronsByTx)
-  unlisted_introns$txId <- names(unlisted_introns)
-  unlisted_introns$geneId <- annotationGrangesList[unlisted_introns$txId,'GENEID']
-
-  uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, unique(unlisted_introns))))
+  # cat('### find annotated introns ### \n')
+  uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(uniqueJunctions, uniqueAnnotatedIntrons)))
 
   # Indicator: is the junction start annotated as a intron start?
-  annotatedStart <- tapply(uniqueJunctions$annotatedJunction,  uniqueJunctions$junctionStartName,sum)>0
-  uniqueJunctions$annotatedStart <- annotatedStart[uniqueJunctions$junctionStartName]
-  rm(annotatedStart)
-  gc(verbose = FALSE)
+  uniqueJunctions$annotatedStart <- uniqueJunctions$junctionStartName %in% uniqueJunctions$junctionStartName[uniqueJunctions$annotatedJunction]
+
 
   # Indicator: is the junction end annotated as a intron end?
-  annotatedEnd <- tapply(uniqueJunctions$annotatedJunction, uniqueJunctions$junctionEndName,sum)>0
-  uniqueJunctions$annotatedEnd <- annotatedEnd[uniqueJunctions$junctionEndName]
-  rm(annotatedEnd)
-  gc(verbose = FALSE)
+  uniqueJunctions$annotatedEnd <- uniqueJunctions$junctionEndName %in% uniqueJunctions$junctionEndName[uniqueJunctions$annotatedJunction]
 
-#  cat('### build model to predict true splice sites ### \n')
+  #  cat('### build model to predict true splice sites ### \n')
   start.ptm <- proc.time()
 
-
-  if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>5000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
+  if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>4000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
     predictSpliceSites <- predictSpliceJunctions(annotatedJunctions = uniqueJunctions,
                                                  junctionModel = NULL,
                                                  verbose = verbose)
-    uniqueJunctions=predictSpliceSites[[1]]
+    uniqueJunctions=predictSpliceSites[[1]][,c('score', 'spliceMotif', 'spliceStrand','junctionStartName','junctionEndName', 'startScore','endScore','annotatedJunction','annotatedStart','annotatedEnd')]
     junctionModel=predictSpliceSites[[2]]
   } else {
     junctionModel = standardJunctionModels_temp
     predictSpliceSites <- predictSpliceJunctions(annotatedJunctions = uniqueJunctions,
                                                  junctionModel = junctionModel,
                                                  verbose = verbose)
-    uniqueJunctions=predictSpliceSites[[1]]
-    warning('Junction correction with not enough data, precalculated model is used')
+    uniqueJunctions=predictSpliceSites[[1]][,c('score', 'spliceMotif', 'spliceStrand','junctionStartName','junctionEndName', 'startScore','endScore','annotatedJunction','annotatedStart','annotatedEnd')]
+    message('Junction correction with not enough data, precalculated model is used')
   }
-  rm(predictSpliceSites)  # clean up should be done more efficiently
-  gc(verbose = FALSE)
+  rm(predictSpliceSites)
+  #gc(verbose = FALSE)
   end.ptm <- proc.time()
- if(verbose) message('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
+  if(verbose) message('Model to predict true splice sites built in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
-
-#  cat('### correct junctions based on set of high confidence junctions ### \n')
+  #  cat('### correct junctions based on set of high confidence junctions ### \n')
   start.ptm <- proc.time()
   uniqueJunctions <- findHighConfidenceJunctions(junctions=uniqueJunctions,
                                                  junctionModel=junctionModel,
@@ -119,56 +119,54 @@ isore.constructReadClasses <- function(readGrgList,
   uniqueJunctions$mergedHighConfJunctionIdAll_noNA[is.na(uniqueJunctions$mergedHighConfJunctionId)] <- names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
   uniqueJunctions$strand.mergedHighConfJunction <- as.character(strand(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
   end.ptm <- proc.time()
- if(verbose) message('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
+  if(verbose) message('Finished correcting junction based on set of high confidence junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   rm(junctionModel)
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
 
-#  cat('### create transcript models (read classes) from spliced reads ### \n')
+  #  cat('### create transcript models (read classes) from spliced reads ### \n')
   start.ptm <- proc.time()
   readClassListSpliced <- constructSplicedReadClassTables(uniqueJunctions = uniqueJunctions,
                                                           unlisted_junctions = unlisted_junctions,
-                                                          readGrglist = readGrgList,
-                                                          readNames = mcols(readGrgList)$qname,
-                                                          quickMode = quickMode)  ## speed up this function, the slow part is using the quantiles for start/end calculation ##
+                                                          readGrgList = readGrgList,
+                                                          stranded = stranded)
   end.ptm <- proc.time()
-if(verbose)  message('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
+  if(verbose)  message('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   rm(list = c('uniqueJunctions','unlisted_junctions'))
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
 
-#  cat('### create single exon transcript models (read classes) ### \n')
+  #  cat('### create single exon transcript models (read classes) ### \n')
   start.ptm <- proc.time()
 
-  singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1])
-  referenceExons <- unique(c(granges(unlist(readClassListSpliced[mcols(readClassListSpliced)$confidenceType=='highConfidenceJunctionReads' & mcols(readClassListSpliced)$strand.rc!='*'])), granges(unlist(annotationGrangesList))))
+  # seqlevels are made equal (added for chromosomes missing in any of them)
+  # seqlevels(readClassListSpliced) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
+
+  singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1], use.names=F)
+  mcols(singleExonReads)$id <- mcols(readGrgList[elementNROWS(readGrgList)==1])$id
+
+  referenceExons <- unique(c(granges(unlist(readClassListSpliced[mcols(readClassListSpliced)$confidenceType=='highConfidenceJunctionReads' & mcols(readClassListSpliced)$strand.rc!='*'], use.names=F)), granges(unlist(annotationGrangesList, use.names=F))))
+
   readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(granges = singleExonReads,
                                                                         grangesReference = referenceExons,
-                                                                        readNames = mcols(readGrgList)$qname,
                                                                         confidenceType = 'unsplicedWithin',
-                                                                        prefix = 'unsplicedWithin',
                                                                         stranded = stranded)
 
-  singleExonReadsOutside <- singleExonReads[!(mcols(readGrgList)$qname[as.integer(names(singleExonReads))] %in% readClassListUnsplicedWithAnnotation$readIds)]
-  rm(list = c('singleExonReads'))
-  gc(verbose = FALSE)
+  singleExonReads <- singleExonReads[! mcols(singleExonReads)$id %in% readClassListUnsplicedWithAnnotation$readIds]
 
-  combinedSingleExonRanges <- reduce(singleExonReadsOutside, ignore.strand =! stranded)
-  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(granges = singleExonReadsOutside,
-                                                                 grangesReference =  combinedSingleExonRanges,
-                                                                 readNames = mcols(readGrgList)$qname,
+  referenceExons <- reduce(singleExonReads, ignore.strand =! stranded)
+  readClassListUnsplicedReduced <- constructUnsplicedReadClasses(granges = singleExonReads,
+                                                                 grangesReference =  referenceExons,
                                                                  confidenceType = 'unsplicedNew',
-                                                                 prefix = 'unsplicedNew',
                                                                  stranded = stranded)
-  rm(list = c('singleExonReadsOutside', 'combinedSingleExonRanges', 'readGrgList'))
-  gc(verbose = FALSE)
+  rm(list = c('singleExonReads', 'referenceExons', 'readGrgList'))
 
   end.ptm <- proc.time()
- if(verbose)  message('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
+  if(verbose)  message('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
 
   exonsByReadClass <- c(readClassListSpliced, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
 
   rm(list = c('readClassListSpliced', 'readClassListUnsplicedWithAnnotation', 'readClassListUnsplicedReduced'))
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
 
   counts <- matrix(mcols(exonsByReadClass)$readCount, dimnames = list(names(exonsByReadClass), runName))
   colDataDf <- DataFrame(name = runName, row.names = runName)
@@ -179,7 +177,7 @@ if(verbose)  message('Finished create transcript models (read classes) for reads
 
 
   rm(list=c('counts', 'exonsByReadClass'))
-  gc(verbose = FALSE)
+  #gc(verbose = FALSE)
   return(se)
 }
 
@@ -698,12 +696,13 @@ isore.extendAnnotations <- function(se,
     if(verbose)  message('transcript filtering in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
     start.ptm <- proc.time()
+    geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in% mcols(extendedAnnotationRanges)$GENEID[which(mcols(extendedAnnotationRanges)$newTxClass!='annotation')])
 
-    minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges)
+    minEqClasses <- getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
     end.ptm <- proc.time()
     if(verbose)  message('calculated minimum equivalent classes for extended annotations in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
-    mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass[match(names(extendedAnnotationRanges), minEqClasses$queryTxId)]
+    mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <- minEqClasses$eqClass[match(names(extendedAnnotationRanges[geneListWithNewTx]), minEqClasses$queryTxId)]
     mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
 
     return(extendedAnnotationRanges)
