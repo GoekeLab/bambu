@@ -3,7 +3,8 @@
 #' @param se An summarized experiment object obtained from \code\link{bambu} or \code{\link{transcriptToGene}}.
 #' @param group.variable Variable for grouping in plot, has be to provided if choosing to plot PCA.
 #' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see \code{\link{details}}.
-#' @param gene_id specifying the gene_id for plotting gene annotation, to be provided when type = "annotation".
+#' @param gene_id specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".
+#' @param transcript_id specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"
 #' @details \code{\link{type}} indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.
 #' @return A heatmap plot for all samples
 #' @importFrom stats prcomp
@@ -14,13 +15,16 @@
 #' @importFrom ggbio autoplot
 #' @importFrom gridExtra grid.arrange
 #' @export
-plot.bambu <- function(se, group.variable = NULL, type , gene_id){
+plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
 
   if(type == "annotation"){
-    if(is.null(gene_id)){
-      stop("Please provide the gene_id(s) of the gene of interest!")
+    if(is.null(gene_id)&(is.null(transcript_id))){
+      stop("Please provide the gene_id(s) of the gene of interest or transcript_id(s) for the transcripts of interest!")
     }
     if(ncol(rowData(se))==0){
+      if(is.null(gene_id)){
+        stop("Please provide the gene_id(s) of the gene of interest when gene expression are provided!")
+      }
       if(!all(gene_id %in% rownames(se))){
         stop("all(gene_id %in% rownames(se)) condition is not satisfied!")
       }
@@ -33,22 +37,38 @@ plot.bambu <- function(se, group.variable = NULL, type , gene_id){
       p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression)
       return(p)
     }else{
-      if(!all(gene_id %in% rowData(se)$GENEID)){
-        stop("all(gene_id %in% rowData(se)$GENEID) condition is not satisfied!")
-      }
-      p <- lapply(gene_id, function(g){
-        txVec <- rowData(se)[rowData(se)$GENEID == g,]$TXNAME
-        txRanges <- rowRanges(se)[txVec]
-        names(txRanges) <- paste0(txVec,":", unlist(lapply(strand(txRanges),function(x) unique(as.character(x)))))
-        p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
-        p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec,]+1)),axis.text.angle = 45)
-        
-        
-        p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, top = g, heights = c(1,1))
+      if(!is.null(transcript_id)){
+        if(!all(transcript_id %in% rownames(se))){
+          stop("all(transcript_id %in% rownames(se)) condition is not satisfied!")
+        }
+          txRanges <- rowRanges(se)[transcript_id]
+          names(txRanges) <- paste0(transcript_id,":", unlist(lapply(strand(txRanges),function(x) unique(as.character(x)))))
+          p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
+          p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[transcript_id,]+1)),axis.text.angle = 45)
+          
+          
+          p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, top = g, heights = c(1,1))
+         
         return(p)
-      })
+      }else{
+        if(!all(gene_id %in% rowData(se)$GENEID)){
+          stop("all(gene_id %in% rowData(se)$GENEID) condition is not satisfied!")
+        }
+        p <- lapply(gene_id, function(g){
+          txVec <- rowData(se)[rowData(se)$GENEID == g,]$TXNAME
+          txRanges <- rowRanges(se)[txVec]
+          names(txRanges) <- paste0(txVec,":", unlist(lapply(strand(txRanges),function(x) unique(as.character(x)))))
+          p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
+          p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec,]+1)),axis.text.angle = 45)
+          
+          
+          p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, top = g, heights = c(1,1))
+          return(p)
+        })
+        
+        return(p)
+      }
       
-      return(p)
     }
   }
   
