@@ -1,4 +1,4 @@
-context("Generate GTF from summarizedExperiment object")
+context("Generate GTF dataframe from summarizedExperiment object")
 
 test_that("SEtoGTF can generate a GTF file",{
   se <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
