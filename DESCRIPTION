@@ -16,12 +16,18 @@ Depends:
     SummarizedExperiment(>= 1.1.6),
     GenomicRanges,
     BiocManager,
-    GenomicFeatures
+    GenomicFeatures,
+    ggplot2
 Suggests: 
     knitr,
     rmarkdown,
     fs,
-    testthat
+    testthat,
+    ComplexHeatmap,
+    circlize,
+    ggbio,
+    RColorBrewer,
+    gridExtra
 Enhances: parallel
 SystemRequirements:
 biocViews: 
