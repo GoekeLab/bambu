@@ -20,6 +20,7 @@ SEtoGTF <- function(se){
                            start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
                            attributes= paste(df$GENEID,df$group_name,df$GIS_MCF7_directcDNA_Replicate1_genome.1))
     gtf <- rbind(gtf_trns,gtf_exon)
+    gtf <- gtf[order(gtf$attributes),]
   }
   return(gtf)
 }
