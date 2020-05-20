@@ -1,6 +1,7 @@
 #' Outputs a GTF dataframe for the nanorna-bam nextflow pipeline 
 #' @title transcript to gene expression
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
+#' @return gtf a GTF dataframe
 #' @export
 SEtoGTF <- function(se){
   if (missing(se)){
