@@ -220,7 +220,7 @@ bambu.quantDT <- function(dt = dt,algo.control = NULL,ncore = 1, verbose = FALSE
   ##----step4: quantification
   start.time <- proc.time()
   outList <- abundance_quantification(dt,
-                                      mc.cores = ncore,
+                                      ncore = ncore,
                                       bias_correction = algo.control[["bias_correction"]],
                                       maxiter = algo.control[["maxiter"]],
                                       conv.control = algo.control[["convcontrol"]])
@@ -440,24 +440,30 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
   seOutput <- NULL
   if(extendAnnotations==FALSE){
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
-
+      
       start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
       seqlevelsStyle(se) <- seqlevelsStyle(annotationGrangesList)[1]
-      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']],ncore = ncore, verbose = verbose)
+      seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       end.time <- proc.time()
       if(verbose)   message('Finished calculate distance to transcripts in ', round((end.time-start.time)[3]/60,1), ' mins.')
-
-      se.quant <- bambu.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control, ncore = ncore, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
-      if(readclass.file.index==1){
-        seOutput <- se.quant  # create se object
-      }else {
-        seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
-      }
-      rm(list = c("seWithDist","se.quant"))
-      gc(verbose = FALSE)
+      
+    
+    # bpParameters <- BiocParallel::bpparam()
+    # bpParameters$workers <- ncore
+    
+    #se.quantList <- BiocParallel::bplapply(seWithDistList, bambu.quantSE, annotationGrangesList, algo.control = algo.control, ncore = ncore, verbose = verbose )
+    se.quant <- bambu.quantSE(se = seWithDist, annotationGrangesList, algo.control = algo.control, ncore = ncore, verbose = verbose) ## NOTE: replace txdbTableList with new annotation table list
+    if(readclass.file.index==1){
+      seOutput <- se.quant  # create se object
+    }else {
+      seOutput <- SummarizedExperiment::cbind(seOutput,se.quant)  # combine se object
     }
-
+    #seOutput <- do.call("cbind",se.quantList) 
+    rm(list = c("seWithDist","se.quant"))
+    gc(verbose = FALSE)
+    
+    }
   }else{
     start.time <- proc.time()
     combinedTxCandidates <- NULL
@@ -509,7 +515,7 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
       gc(verbose = FALSE)
     }
 
-
+   
   }
   return(seOutput)
 }
