@@ -16,6 +16,7 @@ SEtoGTF <- function(se){
                            start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
                            attributes= paste(df$GENEID,df$group_name,df$exon_rank))
     df <- df[!duplicated(df$group_name),]
+    #The start and end coordinates of the full transcript may not be acruate as this is based on exon
     df$GIS_MCF7_directcDNA_Replicate1_genome.1 <- paste('CPM "',df$GIS_MCF7_directcDNA_Replicate1_genome.1,'";',sep= '')
     gtf_trns <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "transcript",
                            start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
