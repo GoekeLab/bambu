@@ -11,7 +11,9 @@ test_that("visualization for transcript expression is successful",{
   expect_is(plot.bambu(seCombined, type = "heatmap"),"Heatmap")
   expect_true(is.ggplot(plot.bambu(seCombined, type = "pca")))
   expect_is(plot.bambu(seCombined, type = "annotation", gene_id = unique(rowData(seCombined)$GENEID)[c(4,6)]),"list")
-
+  expect_is(plot.bambu(seCombined, type = "annotation", transcript_id = rownames(seCombined)[c(4,6)]),"grob")
+  
+  
   # case 2: group.variable is provided
   colData(seCombined)$groupVar <- c("group1","group2")
   expect_is(plot.bambu(seCombined, group.variable = "groupVar", type = "heatmap"),"Heatmap")
