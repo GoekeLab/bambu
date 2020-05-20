@@ -45,12 +45,12 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   bpParameters <- BiocParallel::bpparam()
   bpParameters$workers <- ncore
   junctionSeqStart <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2),2),
-                            getSeq,
+                            BSgenome::getSeq,
                             x = genomeSequence,
                             BPPARAM=bpParameters)
 
   junctionSeqEnd <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2),
-                          getSeq,
+                                        BSgenome::getSeq,
                           x = genomeSequence,
                           BPPARAM=bpParameters)
 
