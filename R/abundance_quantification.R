@@ -5,14 +5,16 @@
 #' @param read_classDT A \code{data.table} with columns
 #' @importFrom BiocParallel bplapply
 #' @noRd
-abundance_quantification <- function(read_classDT,mc.cores = 1,
+abundance_quantification <- function(read_classDT,ncore = 1,
                                      bias_correction = TRUE,
                                      maxiter = 20000,
                                      conv.control = 10^(-8)){
   gene_sidList <- unique(read_classDT$gene_sid)
 
   bpParameters <- BiocParallel::bpparam()
-  bpParameters$workers <- mc.cores
+  bpParameters$workers <- ncore
+  
+  
   emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
                                           run_parallel,
                                           conv.control = conv.control,
