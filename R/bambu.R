@@ -499,7 +499,7 @@ bambu.combineQuantify <- function(readclass.file, annotationGrangesList, ir.cont
     for(readclass.file.index in seq_along(readclass.file)){  # second loop after adding new gene annotations
       start.time <- proc.time()
       se <- readRDS(file=readclass.file[readclass.file.index])
-      seqlevelsStyle(se) <- seqlevelsStyle(annotationGrangesList)[1]
+      seqlevelsStyle(se) <- seqlevelsStyle(extendedAnnotationGRangesList)[1]
 
       seWithDist <- isore.estimateDistanceToAnnotations(se, annotationGrangesList = extendedAnnotationGRangesList, min.exonDistance = ir.control[['min.exonDistance']], verbose = verbose)
       end.time <- proc.time()
