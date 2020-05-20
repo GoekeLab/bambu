@@ -47,7 +47,7 @@ plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","h
           p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[transcript_id,]+1)),axis.text.angle = 45)
           
           
-          p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, top = g, heights = c(1,1))
+          p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, heights = c(1,1))
          
         return(p)
       }else{
