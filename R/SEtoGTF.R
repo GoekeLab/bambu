@@ -7,7 +7,7 @@ SEtoGTF <- function(se){
   if (missing(se)){
     stop("The summarizedExperiment object from bambu is required.")
   }else{
-  exp_dat <-cbind(as.data.frame(rowData(se))[,c(1,2,4)],data.frame(assays(se)$counts,assays(se)$CPM))
+  exp_dat <-cbind(as.data.frame(rowData(se)),data.frame(assays(se)$counts,assays(se)$CPM))
   df <- merge(as.data.frame(rowRanges(se)),exp_dat,by.x="group_name",by.y="TXNAME",all=TRUE)
   df$GENEID <- paste('gene_id "',df$GENEID,'";',sep= '')
   df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
