@@ -142,6 +142,7 @@ bambu <- function(reads = NULL, readclass.file = NULL, outputReadClassDir = NULL
       if(length(bam.file)>10 &(is.null(outputReadClassDir))){
         outputReadClassDir <- paste0(getwd(),"/tmpReadClassFolder")
         warning(paste0("There are more than 10 samples, read class files will be saved to ",outputReadClassDir, " for more efficient process!"))
+        bam.file.basenames <- tools::file_path_sans_ext(BiocGenerics::basename(bam.file))
         tempfile(pattern = paste0(bam.file.basenames,"_readClassFolder"),
                  tmpdir =  outputReadClassDir,
                  fileext = ".rds")
