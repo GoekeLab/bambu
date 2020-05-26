@@ -83,13 +83,13 @@ read.gtf <- function(gtf_file){
     data=read.delim(gtf_file,header=FALSE)
     colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
     data$strand[data$strand=='.'] <- '*'
-    data$gene_id = gsub('gene_id (.*); tra.*','\\1',data$attribute)
-    data$txid=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
+    data$GENEID = gsub('gene_id (.*); tra.*','\\1',data$attribute)
+    data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
     #geneData=unique(data[,c('txid','gene_id','refMatch')]))
-    geneData=unique(data[,c('txid','gene_id')])
+    geneData=unique(data[,c('TXNAME', 'GENEID')])
     grlist <- makeGRangesListFromDataFrame(
-      data[data$type=='exon',],split.field='txid', names.field='txid',keep.extra.columns = TRUE)
-    geneData=(unique(data[,c('txid','gene_id')]))
+      data[data$type=='exon',],split.field='TXNAME', names.field='TXNAME',keep.extra.columns = TRUE)
+    geneData=(unique(data[,c('TXNAME', 'GENEID')]))
     mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$txid)),])
   }
   return (grlist)
