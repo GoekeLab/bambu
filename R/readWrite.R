@@ -2,6 +2,7 @@
 #' @title transcript to gene expression
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
+#' @return gtf a GTF dataframe
 #' @export
 write.bambu <- function(transcript_se,path){
   if (missing(transcript_se) | missing(path)){
@@ -11,7 +12,7 @@ write.bambu <- function(transcript_se,path){
     transcript_grList <- rowRanges(transcript_se)
     transcript_gtffn <- paste(path,"bambu_transcript_exon.gtf",sep="/")
     transcript_geneIDs <-as.data.frame(rowData(transcript_se))[,c(1,2)]
-    write.gtf(grList=transcript_grList,file=transcript_gtffn,geneIDs=transcript_geneIDs)
+    gtf <- write.gtf(grList=transcript_grList,file=transcript_gtffn,geneIDs=transcript_geneIDs)
     transcript_counts <- as.data.frame(assays(transcript_se)$counts)
     transcript_countsfn <- paste(path,"counts_transcript.txt",sep="/")
     write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE)
@@ -20,12 +21,14 @@ write.bambu <- function(transcript_se,path){
     gene_countsfn <- paste(path,"counts_gene.txt",sep="/")
     write.table(gene_counts, file= gene_countsfn, sep="\t", quote=FALSE)
     }
+  return (gtf)
 }
 #' Outputs a GTF file for the nanorna-bam nextflow pipeline 
 #' @title transcript to gene expression
 #' @param grList a GRangesList object
 #' @param file the output gtf file name
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)
+#' @return gtf a GTF dataframe
 #' @export
 write.gtf <- function (grList,file,geneIDs) {
   if (missing(grList) | missing(file)){
@@ -66,6 +69,7 @@ write.gtf <- function (grList,file,geneIDs) {
     gtf <- gtf[order(gtf$attributes),]
   } 
   write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
+  return (gtf)
 }
 #' Outputs GRangesList object from reading a GTF file
 #' @title transcript to gene expression
