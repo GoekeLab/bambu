@@ -49,7 +49,7 @@ fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_c
 
 gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
 
-bambuAnnotations <- prepareAnnotationsFromGtf(gtf.file)
+bambuAnnotations <- prepareAnnotationsFromGTF(gtf.file)
 
 se <- bambu(reads = test.bam, annotations=bambuAnnotations, genomeSequence ="BSgenome.Hsapiens.NCBI.GRCh38")
 
