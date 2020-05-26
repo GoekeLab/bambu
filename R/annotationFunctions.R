@@ -278,7 +278,7 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL){
   distTable <- data.table(metadata(se)$distTable)[,.(readClassId, annotationTxId, readCount, GENEID)]
 
   # filter out multiple geneIDs mapped to the same readClass based on rowData(se)
-  compatibleData <- as.data.table(rowData(se), keep.rownames = TRUE)
+  compatibleData <- as.data.table(as.data.frame(rowData(se)), keep.rownames = TRUE)
   setnames(compatibleData, old = c("rn","geneId"),new = c("readClassId","GENEID"))
   distTable <- distTable[compatibleData[readClassId %in% unique(distTable$readClassId),.(readClassId,GENEID)], on = c("readClassId","GENEID")]
 
