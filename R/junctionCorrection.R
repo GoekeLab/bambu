@@ -205,125 +205,135 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
   annotatedJunctionsEnd$spliceStrand.end = c(annotatedJunctionsEnd$spliceStrand[-1],FALSE)
   annotatedJunctionsEnd$spliceMotif.start = c(FALSE,annotatedJunctionsEnd$spliceMotif[-length(annotatedJunctionsEnd)])
   annotatedJunctionsEnd$spliceMotif.end = c(annotatedJunctionsEnd$spliceMotif[-1],FALSE)
-
+  
   ## test start splice site given close by splice site (left/5')
   if(is.null(junctionModel))
   {
     junctionModelList <- list()
   }
-
+  
   mySet.all=((annotatedJunctionsStart$distStart.start!=0)&annotatedJunctionsStart$spliceStrand!='*'&annotatedJunctionsStart$startScore>0&(annotatedJunctionsStart$distStart.start<15))
-  mySet.training=(annotatedJunctionsStart$annotatedStart.start|annotatedJunctionsStart$annotatedStart)[mySet.all]
-
-  myData=data.frame(annotatedJunctionsStart$startScore/(annotatedJunctionsStart$startScore.start+annotatedJunctionsStart$startScore),annotatedJunctionsStart$startScore,annotatedJunctionsStart$distStart.start,(annotatedJunctionsStart$spliceStrand.start=='+'),annotatedJunctionsStart$spliceStrand.start=='-',(annotatedJunctionsStart$spliceStrand=='+'))[mySet.all,]
-
-  colnames(myData) <- paste('A',1:ncol(myData),sep='.')
-
-  modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
-
-  if(is.null(junctionModel))
-  {
-
-
-    myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsStart$annotatedStart)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
-
-    junctionModelList[['spliceSitePredictionStart.start']] <- myResults[[2]]
-    predictions = myResults[[1]]
-  }
-  else{
-    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionStart.start']],newx=modelmatrix,s='lambda.min')
-  }
-  spliceSitePredictionStart.start <- rep(NA, length(annotatedJunctionsStart))
-  names(spliceSitePredictionStart.start) <- annotatedJunctionsStart$junctionStartName
-  spliceSitePredictionStart.start[mySet.all]=predictions
   annotatedJunctions$spliceSitePredictionStart.start <- rep(NA, length(annotatedJunctions))
-  annotatedJunctions$spliceSitePredictionStart.start <- spliceSitePredictionStart.start[annotatedJunctions$junctionStartName]
-
-
+  if(any(mySet.all)){
+    mySet.training=(annotatedJunctionsStart$annotatedStart.start|annotatedJunctionsStart$annotatedStart)[mySet.all]
+    
+    myData=data.frame(annotatedJunctionsStart$startScore/(annotatedJunctionsStart$startScore.start+annotatedJunctionsStart$startScore),annotatedJunctionsStart$startScore,annotatedJunctionsStart$distStart.start,(annotatedJunctionsStart$spliceStrand.start=='+'),annotatedJunctionsStart$spliceStrand.start=='-',(annotatedJunctionsStart$spliceStrand=='+'))[mySet.all,]
+    
+    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    
+    modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
+    
+    if(is.null(junctionModel))
+    {
+      
+      
+      myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsStart$annotatedStart)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
+      
+      junctionModelList[['spliceSitePredictionStart.start']] <- myResults[[2]]
+      predictions = myResults[[1]]
+    }
+    else{
+      predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionStart.start']],newx=modelmatrix,s='lambda.min')
+    }
+    spliceSitePredictionStart.start <- rep(NA, length(annotatedJunctionsStart))
+    names(spliceSitePredictionStart.start) <- annotatedJunctionsStart$junctionStartName
+    spliceSitePredictionStart.start[mySet.all]=predictions
+    
+    annotatedJunctions$spliceSitePredictionStart.start <- spliceSitePredictionStart.start[annotatedJunctions$junctionStartName]
+  }
+  
   ## test start splice site given close by splice site (right/3')
-
+  
   mySet.all=((annotatedJunctionsStart$distStart.end!=0)&annotatedJunctionsStart$spliceStrand!='*'&annotatedJunctionsStart$startScore>0&abs(annotatedJunctionsStart$distStart.end)<15)
-  mySet.training=(annotatedJunctionsStart$annotatedStart.end|annotatedJunctionsStart$annotatedStart)[mySet.all]
-
-
-  myData=data.frame(annotatedJunctionsStart$startScore/(annotatedJunctionsStart$startScore.end+annotatedJunctionsStart$startScore),annotatedJunctionsStart$startScore,annotatedJunctionsStart$distStart.end,(annotatedJunctionsStart$spliceStrand.end=='+'),(annotatedJunctionsStart$spliceStrand.end=='-'),(annotatedJunctionsStart$spliceStrand=='+'))[mySet.all,]
-  colnames(myData) <- paste('A',1:ncol(myData),sep='.')
-
-  modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
-  if(is.null(junctionModel))
-  {
-
-
-    myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsStart$annotatedStart)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
-
-    junctionModelList[['spliceSitePredictionStart.end']] <- myResults[[2]]
-    predictions =myResults[[1]]
-  }
-  else{
-
-    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionStart.end']],newx=modelmatrix,s='lambda.min')
-  }
-  spliceSitePredictionStart.end <- rep(NA, length(annotatedJunctionsStart))
-  names(spliceSitePredictionStart.end) <- annotatedJunctionsStart$junctionStartName
-  spliceSitePredictionStart.end[mySet.all]=predictions
   annotatedJunctions$spliceSitePredictionStart.end <- rep(NA, length(annotatedJunctions))
-  annotatedJunctions$spliceSitePredictionStart.end <- spliceSitePredictionStart.end[annotatedJunctions$junctionStartName]
-
-
+  if(any(mySet.all)){
+    mySet.training=(annotatedJunctionsStart$annotatedStart.end|annotatedJunctionsStart$annotatedStart)[mySet.all]
+    
+    
+    myData=data.frame(annotatedJunctionsStart$startScore/(annotatedJunctionsStart$startScore.end+annotatedJunctionsStart$startScore),annotatedJunctionsStart$startScore,annotatedJunctionsStart$distStart.end,(annotatedJunctionsStart$spliceStrand.end=='+'),(annotatedJunctionsStart$spliceStrand.end=='-'),(annotatedJunctionsStart$spliceStrand=='+'))[mySet.all,]
+    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    
+    modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
+    if(is.null(junctionModel))
+    {
+      
+      
+      myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsStart$annotatedStart)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
+      
+      junctionModelList[['spliceSitePredictionStart.end']] <- myResults[[2]]
+      predictions =myResults[[1]]
+    }
+    else{
+      
+      predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionStart.end']],newx=modelmatrix,s='lambda.min')
+    }
+    spliceSitePredictionStart.end <- rep(NA, length(annotatedJunctionsStart))
+    names(spliceSitePredictionStart.end) <- annotatedJunctionsStart$junctionStartName
+    spliceSitePredictionStart.end[mySet.all]=predictions
+    
+    annotatedJunctions$spliceSitePredictionStart.end <- spliceSitePredictionStart.end[annotatedJunctions$junctionStartName]
+  }
+  
   ## test end splice site given close by splice site (start/5')
-
+  
   mySet.all=(annotatedJunctionsEnd$distEnd.start!=0&annotatedJunctionsEnd$spliceStrand!='*'&annotatedJunctionsEnd$endScore>0&(annotatedJunctionsEnd$distEnd.start<15))
-  mySet.training=(annotatedJunctionsEnd$annotatedEnd.start|annotatedJunctionsEnd$annotatedEnd)[mySet.all]
-
-
-  myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.start+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.start,(annotatedJunctionsEnd$spliceStrand.start=='+'),annotatedJunctionsEnd$spliceStrand.start=='-',(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
-
-  colnames(myData) <- paste('A',1:ncol(myData),sep='.')
-  modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData))) #+A.6+A.7+A.8+A.9+A.10
-  if(is.null(junctionModel))
-  {
-
-
-    myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsEnd$annotatedEnd)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
-    junctionModelList[['spliceSitePredictionEnd.start']] <- myResults[[2]]
-    predictions =myResults[[1]]
-  }
-  else{
-
-    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionEnd.start']],newx=modelmatrix,s='lambda.min')
-  }
-  spliceSitePredictionEnd.start <- rep(NA, length(annotatedJunctionsEnd))
-  names(spliceSitePredictionEnd.start) <- annotatedJunctionsEnd$junctionEndName
-  spliceSitePredictionEnd.start[mySet.all]=predictions
   annotatedJunctions$spliceSitePredictionEnd.start <- rep(NA, length(annotatedJunctions))
-  annotatedJunctions$spliceSitePredictionEnd.start <- spliceSitePredictionEnd.start[annotatedJunctions$junctionEndName]
-
+  
+  if(any(mySet.all)){
+    mySet.training=(annotatedJunctionsEnd$annotatedEnd.start|annotatedJunctionsEnd$annotatedEnd)[mySet.all]
+    
+    
+    myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.start+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.start,(annotatedJunctionsEnd$spliceStrand.start=='+'),annotatedJunctionsEnd$spliceStrand.start=='-',(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
+    
+    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData))) #+A.6+A.7+A.8+A.9+A.10
+    if(is.null(junctionModel))
+    {
+      
+      
+      myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsEnd$annotatedEnd)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
+      junctionModelList[['spliceSitePredictionEnd.start']] <- myResults[[2]]
+      predictions =myResults[[1]]
+    }
+    else{
+      predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionEnd.start']],newx=modelmatrix,s='lambda.min')
+    }
+    spliceSitePredictionEnd.start <- rep(NA, length(annotatedJunctionsEnd))
+    names(spliceSitePredictionEnd.start) <- annotatedJunctionsEnd$junctionEndName
+    spliceSitePredictionEnd.start[mySet.all]=predictions
+    annotatedJunctions$spliceSitePredictionEnd.start <- spliceSitePredictionEnd.start[annotatedJunctions$junctionEndName]
+  }
   ## test end splice site given close by splice site (right/3')
-
+  
   mySet.all=(annotatedJunctionsEnd$distEnd.end!=0&annotatedJunctionsEnd$spliceStrand!='*'&annotatedJunctionsEnd$endScore>0&abs(annotatedJunctionsEnd$distEnd.end)<15)
-  mySet.training=(annotatedJunctionsEnd$annotatedEnd.end|annotatedJunctionsEnd$annotatedEnd)[mySet.all]
-
-
-  myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.end+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.end ,annotatedJunctionsEnd$distEnd.end,(annotatedJunctionsEnd$spliceStrand.end=='+'),(annotatedJunctionsEnd$spliceStrand.end=='-'),(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
-
-  colnames(myData) <- paste('A',1:ncol(myData),sep='.')
-  modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
-  if(is.null(junctionModel))
-  {
-
-
-    myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsEnd$annotatedEnd)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
-    junctionModelList[['spliceSitePredictionEnd.end']] <- myResults[[2]]
-    predictions =myResults[[1]]
-  }
-  else{
-    predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionEnd.end']],newx=modelmatrix,s='lambda.min')
-  }
-  spliceSitePredictionEnd.end <- rep(NA, length(annotatedJunctionsEnd))
-  names(spliceSitePredictionEnd.end) <- annotatedJunctionsEnd$junctionEndName
-  spliceSitePredictionEnd.end[mySet.all]=predictions
   annotatedJunctions$spliceSitePredictionEnd.end <- rep(NA, length(annotatedJunctions))
-  annotatedJunctions$spliceSitePredictionEnd.end <- spliceSitePredictionEnd.end[annotatedJunctions$junctionEndName]
+  
+  if(any(mySet.all)){
+    mySet.training=(annotatedJunctionsEnd$annotatedEnd.end|annotatedJunctionsEnd$annotatedEnd)[mySet.all]
+    
+    
+    myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.end+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.end ,annotatedJunctionsEnd$distEnd.end,(annotatedJunctionsEnd$spliceStrand.end=='+'),(annotatedJunctionsEnd$spliceStrand.end=='-'),(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
+    
+    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
+    if(is.null(junctionModel))
+    {
+      
+      
+      myResults= fitBinomialModel(labels.train=as.integer(annotatedJunctionsEnd$annotatedEnd)[mySet.all][mySet.training], data.train=modelmatrix[mySet.training,], data.test=modelmatrix, show.cv=verbose, maxSize.cv=10000)
+      junctionModelList[['spliceSitePredictionEnd.end']] <- myResults[[2]]
+      predictions =myResults[[1]]
+    }
+    else{
+      predictions= glmnet:::predict.cv.glmnet(junctionModel[['spliceSitePredictionEnd.end']],newx=modelmatrix,s='lambda.min')
+    }
+    spliceSitePredictionEnd.end <- rep(NA, length(annotatedJunctionsEnd))
+    names(spliceSitePredictionEnd.end) <- annotatedJunctionsEnd$junctionEndName
+    spliceSitePredictionEnd.end[mySet.all]=predictions
+    
+    annotatedJunctions$spliceSitePredictionEnd.end <- spliceSitePredictionEnd.end[annotatedJunctions$junctionEndName]
+  }
+  
   if(is.null(junctionModel))
   { junctionModel=junctionModelList}
   return(list(annotatedJunctions, junctionModel))
