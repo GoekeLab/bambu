@@ -58,7 +58,7 @@ isore.constructReadClasses <- function(readGrgList,
 
   #the seqleels will be made comparable for all ranges, warning is shown if annotation is missing some
   if(!all(seqlevels(readGrgList) %in% seqlevels(annotationGrangesList))) {
-    warning("not all chromosomes present in reference annotations, annotations might be incomplete. Please compare objects on the same reference")
+    message("not all chromosomes present in reference annotations, annotations might be incomplete. Please compare objects on the same reference")
   }
   seqlevels(readGrgList) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
   seqlevels(annotationGrangesList) <- seqlevels(readGrgList)
@@ -302,7 +302,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 
     combinedSingleExonRanges <- reduce(c(unsplicedRangesRef,unsplicedRangesNew), ignore.strand=!stranded)
 
-    rowData.unspliced <- as_tibble(as.data.frame(combinedSingleExonRanges, stringsAsFactors = FALSE)) %>%
+    rowData.unspliced <- as_tibble(combinedSingleExonRanges) %>%
       mutate_if(is.factor, as.character) %>%
       dplyr::select(chr=seqnames, start, end, strand=strand) %>%
       mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
@@ -392,11 +392,6 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
   end.unspliced <- cbind(end.unsplicedRef, end.unsplicedNew)
   end.unspliced[which(is.infinite(end.unspliced))] <- NA  ## is slow, replace with more efficient method?
 
-  rowData.unspliced <- as_tibble(data.frame(combinedSingleExonRanges)) %>%
-                        dplyr::select(chr=seqnames, start, end, strand=strand) %>%
-                        mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
-
-
   se.unspliced <- SummarizedExperiment(assays = SimpleList(counts = counts.unspliced,
                                                          start = start.unspliced,
                                                          end = end.unspliced),
@@ -444,6 +439,7 @@ isore.extendAnnotations <- function(se,
                                                               strand=rowData(seFilteredSpliced)$strand)
 
       names(intronsByReadClass) <- 1:length(intronsByReadClass)
+      seqlevels(intronsByReadClass) <-  unique(c(seqlevels(intronsByReadClass), seqlevels(annotationGrangesList)))
 
       exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts,
                               rowData(seFilteredSpliced)$end + 1,
@@ -471,6 +467,8 @@ isore.extendAnnotations <- function(se,
 
       exonsByReadClass <- relist(unlistData, partitioning)
 
+      seqlevels(exonsByReadClass) <-  unique(c(seqlevels(exonsByReadClass), seqlevels(annotationGrangesList)))
+      
       ovExon <- findSpliceOverlapsQuick(cutStartEndFromGrangesList(exonsByReadClass),
                                         cutStartEndFromGrangesList(annotationGrangesList))
 
@@ -589,7 +587,7 @@ isore.extendAnnotations <- function(se,
       exonsByReadClassUnspliced$exon_rank <- rep(1, length(exonsByReadClassUnspliced))
       exonsByReadClassUnspliced$exon_endRank <- rep(1, length(exonsByReadClassUnspliced))
       exonsByReadClassUnspliced <- relist(exonsByReadClassUnspliced, partitioning)
-
+seqlevels(exonsByReadClassUnspliced) <-  unique(c(seqlevels(exonsByReadClassUnspliced), seqlevels(annotationGrangesList)))
       mcols(seFilteredUnspliced)$GENEID <- NA
       mcols(seFilteredUnspliced)$readClassType <- 'unsplicedNew'
 
