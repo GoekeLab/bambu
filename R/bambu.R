@@ -112,15 +112,12 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     
     bpParameters <- BiocParallel::bpparam()
     #===# set parallel options: If more CPUs than samples available, use parallel computing on each sample, otherwise use parallel to distribute samples (more efficient)
-    if((length(reads) %% ncore)!=0) {
-      bpParameters$workers <- 1
-      bpParameters$progressbar <- (!verbose)
-    } else {
-      bpParameters$workers <- ncore
-      bpParameters$progressbar <- (!verbose)
+    bpParameters$workers <- ifelse(ncore>length(reads), (ncore - ifelse(length(reads)==1, ncore-1, ncore%%length(reads))), ncore)
+    bpParameters$progressbar <- (!verbose)
+   
+    if(bpParameters$workers>1){
       ncore <- 1
     }
-    
     if(!is.null(reads)){  # calculate readClass objects
       
       #===# create BamFileList object from character #===#
@@ -183,7 +180,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
       gc(verbose = FALSE)
     }
     
-    if(!verbose) message("Start isoform quantification")
+    if(!verbose) message("Start isoform quantification") 
     if(length(readClassList)==1){
       countsSe <- lapply(readClassList,
                                          bambu.quantify,
