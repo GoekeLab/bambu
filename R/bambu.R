@@ -116,7 +116,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     
     bpParameters <- BiocParallel::bpparam()
     #===# set parallel options: If more CPUs than samples available, use parallel computing on each sample, otherwise use parallel to distribute samples (more efficient)
-    bpParameters$workers <- ifelse(ncore>length(reads), (ncore - ifelse(length(reads)==1, ncore-1, ncore%%length(reads))), ncore)
+    bpParameters$workers <- ifelse(ncore>length(reads), ifelse(length(reads)==1, 1, ncore - ncore%%length(reads)), ncore)
     bpParameters$progressbar <- (!verbose)
    
     if(bpParameters$workers>1){
