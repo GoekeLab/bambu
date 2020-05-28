@@ -6,30 +6,42 @@
 ***bambu*** is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use ***bambu*** after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from ***bambu*** can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.
 
 
-
-[![bambu](https://img.shields.io/badge/bambu-v0.9.0-brightgreen)](https://github.com/GoekeLab/bambu) [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-blue)](https://gemnasium.com/badges/badgerbadgerbadger)  [![Install](https://img.shields.io/badge/Install-Github-brightgreen)](https://github.com/badges/badgerbadgerbadger/issues) 
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic)](https://github.com/GoekeLab/bambu) 
+[![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-blue)](https://github.com/GoekeLab/bambu/graphs/contributors)  
+[![Install](https://img.shields.io/badge/Install-Github-brightgreen)](#installation)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+
+
 
 ---
 
+### Content
 
-## Installation
+  - [Installation](#installation)
+  - [General usage](#general-usage)
+  - [Use precalculated annotations object](#use-precalculated-annotation-objects)
+  - [Advanced options](#advanced-options)
+  - [Complimentary functions](#complimentary-functions)
+  - [Contributors](#contributors)
+
+
+### Installation
 
 You can install ***bambu*** from github:
 
 ```rscript
-install.packages("devtools")
+if (!requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
 devtools::install_github("GoekeLab/bambu")
 ```
 ---
 
-## General Usage 
+### General Usage 
 
-The default mode to run ***bambu*** is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). ***bambu*** will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and genes and with the transcript expression estimates: 
- ```rscript
+The default mode to run ***bambu** is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). ***bambu*** will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates: 
  
-bambu(reads, annotations, genomeSequence,...)
-
+ ```rscript
 library(bambu)
 
 test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
@@ -51,28 +63,30 @@ gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
 
 bambuAnnotations <- prepareAnnotationsFromGTF(gtf.file)
 
-se <- bambu(reads = test.bam, annotations=bambuAnnotations, genomeSequence ="BSgenome.Hsapiens.NCBI.GRCh38")
+se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
 
+```
+
+
+**Quantification of annotated transcripts and genes only (no transcript/gene discovery)**
+
+```rscript
+bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnnotations = FALSE)
+```
+
+**Large sample number/ limited memory**     
+For larger sample numbers we recommend to write the processed data to a file:
+```rscript
+bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnnotations, genomeSequence = fa.file)
 ```
 ---
 
 
-## Other Use Cases
-**Use precalculated annotation objects**
+### Use precalculated annotation objects
 
-If you plan to run ***bambu*** more frequently, you can store a bambuAnnotations object.
+You can also use precalculated annotations: 
 
-```rscript
-library(bambu)
-test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
-
-gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-
-# or hg38 <- readRDS(url(‘...’))
-
-se <- bambu(reads = test.bam, annotations = gr, genomeSequence = fa.file)
-
-```
+If you plan to run ***bambu*** more frequently, we recommend to save the bambuAnnotations object.
 
 The bambuAnnotation object can be calculated from a gtf file:
 ```rscript
@@ -84,30 +98,12 @@ From TxDb object
 annotations <- prepareAnnotations(txdb)
 ```
 
-You can also download annotations for recent genome releases here:
--  hg38:  ftp://ftp.ensembl.org/pub/release-99/gtf/homo_sapiens          
--  mm10:  ftp://ftp.ensembl.org/pub/release-99/gtf/mus_musculus     
-
-**Quantification of annotated transcripts and genes only (no transcript/gene discovery)**
-
-```rscript
-bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnnotations = FALSE)
-```
-
-**Large sample number/ limited memory**     
-For larger sample numbers we recommend to write the processed data to a file:
-```rscript
-bambu(reads, readClass.outputDir, annotations, genomeSequence)
-```
-
-
-
 ---
 
 ## Advanced Options
 
-**More strigent filtering thresholds imposed on potential novel transcripts**    
-- For example   
+**More stringent filtering thresholds imposed on potential novel transcripts**    
+ 
 > Keep novel transcripts with min 5 read count in at least 1 sample: 
 
 ```rscript
@@ -134,16 +130,17 @@ bambu(reads, annotations, genomeSequence, emParameters(bias = FALSE))
 ```
 
 **Parallel computation**      
-> ***bambu*** also allows parallel computation for EM.    
+> ***bambu***  allows parallel computation.  
+
 ```rscript
 bambu(reads, annotations, genomeSequence, ncore = 8)
 ```
 
-See [manual]() for details to customize other conditions.
+See [manual](docs/bambu_0.1.0.pdf) for details to customize other conditions.
 
 ---
 
-## Complementary functions
+### Complementary functions
 
 **Transcript expression to gene expression**
 
@@ -180,12 +177,7 @@ plot.bambu(se, type = "pca", group.var) # PCA visualization
 ---
 
 
-## Contributors
+### Contributors
 
-This package is developed and maintained by [Jonathan Goeke](https://github.com/jonathangoeke) and [Ying Chen](https://github.com/cying111) at Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
+This package is developed and maintained by[Ying Chen](https://github.com/cying111), [Yuk Kei Wan](https://github.com/yuukiiwa),  [Jonathan Goeke](https://github.com/jonathangoeke) and  at Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
 
-## License
-
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-
-- **[GPL v3](https://www.gnu.org/licenses/gpl-3.0)**
