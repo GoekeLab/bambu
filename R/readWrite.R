@@ -87,3 +87,38 @@ read.gtf <- function(file){
   }
   return (grlist)
 }
+
+#' Outputs GRangesList object from reading a GTF file for running bambu
+#' @title convert a GTF file into a GRangesList
+#' @param file a GTF file
+#' @return grlist a GRangesList object
+#' @export
+prepareAnnotationsFromGTF_draft <- function(file){
+  if (missing(file)){
+    stop('A GTF file is required.')
+  }else{
+    data <- read.delim(file,header=FALSE,,comment.char='#')
+    colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
+    data <- data[data$type=='exon',]
+    data$strand[data$strand=='.'] <- '*'
+    data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
+    data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
+    data$exon_rank=gsub('.*exon_number (.*?);.*', '\\1',data$attribute)
+    geneData=unique(data[,c('TXNAME', 'GENEID')])
+    grlist <- makeGRangesListFromDataFrame(
+      data,split.field='TXNAME', names.field='TXNAME',keep.extra.columns = TRUE)
+    geneData=(unique(data[,c('TXNAME', 'GENEID')]))
+    unlistedExons <- unlist(grlist, use.names = FALSE)
+    partitioning <- PartitioningByEnd(cumsum(elementNROWS(grlist)), names=NULL)
+    txIdForReorder <- togroup(PartitioningByWidth(grlist))
+    unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)] #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
+    unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(grlist),seq,to=1), use.names=FALSE)
+    unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
+    mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
+    grlist <- relist(unlistedExons, partitioning)
+    minEqClasses <- getMinimumEqClassByTx(grlist)
+    mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
+    mcols(grlist)$eqClass <- minEqClasses$eqClass[match(names(grlist),minEqClasses$queryTxId)]
+  }
+  return (grlist)
+}
