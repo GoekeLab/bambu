@@ -17,8 +17,7 @@ knitr::opts_chunk$set(
 
 
 ## Introduction
-Long read RNA-Seq has shown potential in characterizing the incomplete transcriptome profile. Particularly, the full length read of transcripts provided insights on transcriptome assembly. Methods, such as flair and stringtie2 have been developed to do reference-guided and de novo transcriptome assembly. Flair incorporates long read RNA-Seq data with short read RNA-Seq data to provide corrected junctions and transcripts models. However, this has also become a limitation in the usage where short read RNA-Seq has to be provided in the process. Stringtie2, on the other hand, improves short read assemblies without short read RNA-Seq data. *[Bambu](https://github.com/GoekeLab/bambu)*, unlike both methods, which we have developed recently, is able to provide multi-sample transcript discovery and quantification. 
-Here, we present an example usage of bambu on Oxford Nanopore Technology cancer cell line RNA-Seq data. 
+*[Bambu](https://github.com/GoekeLab/bambu)* can be used for transcript discovery and quantification from long read RNA-Seq data. Here, we present an example usage of bambu on Nanopore long read RNA-Sequencing from 2 human cancer cell lines
 
 
 ## Data description
