@@ -11,19 +11,10 @@ abundance_quantification <- function(readClassDt,ncore = 1,
                                      conv = 10^(-8)){
   gene_sidList <- unique(readClassDt$gene_sid)
  
-  ## set parallel options: when ncore is set to 1, use lapply to avoid nested bplapply
-  if(ncore == 1){
-    emResultsList <- lapply(as.list(gene_sidList),
-                                            run_parallel,
-                                            conv = conv,
-                                            bias = bias,
-                                            maxiter = maxiter,
-                                            readClassDt = readClassDt)
-  }else{
-    
+ 
     bpParameters <- BiocParallel::bpparam()
     bpParameters$workers <- ncore
-    bpParameters$progressbar <- TRUE
+   
     emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
                                             run_parallel,
                                             conv = conv,
@@ -31,7 +22,6 @@ abundance_quantification <- function(readClassDt,ncore = 1,
                                             maxiter = maxiter,
                                             readClassDt = readClassDt,
                                             BPPARAM=bpParameters)
-  }
   
 
 
