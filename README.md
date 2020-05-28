@@ -84,7 +84,7 @@ bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnn
 
 ### Use precalculated annotation objects
 
-You can also use precalculated annotations: 
+You can also use precalculated annotations.
 
 If you plan to run ***bambu*** more frequently, we recommend to save the bambuAnnotations object.
 
