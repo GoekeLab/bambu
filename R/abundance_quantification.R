@@ -20,11 +20,10 @@ abundance_quantification <- function(readClassDt,ncore = 1,
                                             maxiter = maxiter,
                                             readClassDt = readClassDt)
   }else{
+    
     bpParameters <- BiocParallel::bpparam()
     bpParameters$workers <- ncore
     bpParameters$progressbar <- TRUE
-    
-    
     emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
                                             run_parallel,
                                             conv = conv,
