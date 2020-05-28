@@ -110,24 +110,24 @@ bambu(reads, outputReadClassFolder, genomeSequence, annotations)
 - For example   
 > Keep novel transcripts with min 5 read count in at least 1 sample:  
 ```rscript
-bambu(reads, genomeSequence, annotations, ir.control = list(min.readCount = 5))
+bambu(reads, genomeSequence, annotations, isoreParameters = list(min.readCount = 5))
 ```
 
 > Keep novel transcripts with min 5 samples having at least 2 counts:
 
 ```rscript
-bambu(reads, genomeSequence, annotations, ir.control = list(min.sampleNumber = 5))
+bambu(reads, genomeSequence, annotations, isoreParameters = list(min.sampleNumber = 5))
 ```
 
 > Filter out transcripts with relative abundance within gene lower than 10%: 
 ```rscript
-bambu(reads, genomeSequence, annotations, ir.control = list(min.readFractionByGene = 0.1))
+bambu(reads, genomeSequence, annotations, isoreParameters = list(min.readFractionByGene = 0.1))
 ```
 
 **Quantification without bias correction**     
 > The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.    
 ```rscript
-bambu(reads, genomeSequence, annotations, algo.control(bias_correction = FALSE))
+bambu(reads, genomeSequence, annotations, emParameters(bias = FALSE))
 ```
 
 **Parallel computation**      
@@ -150,6 +150,7 @@ transcriptToGeneExpression(se)
 
 **Visualization**
 > You can visualize the novel genes/transcripts using ***plot.bambu*** function 
+
 ```rscript
 plot.bambu(se, type = "annotation", gene_id)
 
@@ -157,6 +158,7 @@ plot.bambu(se, type = "annotation", transcript_id)
 ```
 
 > ***plot.bambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions
+
 ```rscript
 plot.bambu(se, type = "heatmap") # heatmap 
 
@@ -164,6 +166,7 @@ plot.bambu(se, type = "pca") # PCA visualization
 ```
 
 > ***plot.bambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable
+
 ```rscript
 plot.bambu(se, type = "heatmap", group.var) # heatmap 
 
