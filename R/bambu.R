@@ -7,19 +7,11 @@
 #' @param readClass.file A string or a vector of strings specifying the read class files that are saved during previous run of \code{\link{bambu}}.
 #' @param readClass.outputDir A string variable specifying the path to where read class files will be saved.
 #' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}} or \code{\link{prepareAnnotationsFromGTF}}.
-#' @param extendAnnotations A logical variable indicating whether annotations are to be extended for quantification.
 #' @param genomeSequence A fasta file or a BSGenome object.
-#' @param emParameters A list of controlling parameters for quantification algorithm estimation process:
-#' \itemize{
-#'   \item ncore specifying number of cores used when parallel processing is used, defaults to 1.
-#'   \item maxiter specifying maximum number of run interations, defaults to 10000.
-#'   \item bias specifying whether to correct for bias, defaults to FALSE.
-#'   \item conv specifying the covergence trheshold control, defaults to 0.0001.
-#' }
+#' @param ncore specifying number of cores used when parallel processing is used, defaults to 1.
 #' @param yieldSize see \code{\link{Rsamtools}}.
 #' @param isoreParameters A list of controlling parameters for isoform reconstruction process:
 #' \itemize{
-#'   \item whether stranded, defaults to FALSE
 #'   \item prefix specifying prefix for new gene Ids (genePrefix.number), defaults to empty
 #'   \item remove.subsetTx indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   \item min.readCount specifying minimun read count to consider a read class valid in a sample, defaults to 2
@@ -28,6 +20,13 @@
 #'   \item min.exonDistance specifying minum distance to known transcript to be considered valid as new, defaults to 35
 #'   \item min.exonOverlap specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults 10 base pairs
 #' }
+#' @param emParameters A list of controlling parameters for quantification algorithm estimation process:
+#' \itemize{
+#'   \item maxiter specifying maximum number of run interations, defaults to 10000.
+#'   \item bias specifying whether to correct for bias, defaults to FALSE.
+#'   \item conv specifying the covergence trheshold control, defaults to 0.0001.
+#' }
+#' @param extendAnnotations A logical variable indicating whether annotations are to be extended for quantification.
 #' @param verbose A logical variable indicating whether processing messages will be printed.
 #' @details
 #' @return A list of two SummarizedExperiment object for transcript expression and gene expression.
@@ -116,7 +115,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     
     bpParameters <- BiocParallel::bpparam()
     #===# set parallel options: If more CPUs than samples available, use parallel computing on each sample, otherwise use parallel to distribute samples (more efficient)
-    bpParameters$workers <- ifelse(ncore>length(reads), ifelse(length(reads)==1, 1, ncore - ncore%%length(reads)), ncore)
+    bpParameters$workers <- ifelse(length(reads)==1, 1, ncore)
     bpParameters$progressbar <- (!verbose)
    
     if(bpParameters$workers>1){
