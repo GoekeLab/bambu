@@ -4,16 +4,16 @@
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
 #' @return gtf a GTF dataframe
 #' @export
-write.bambu <- function(transcript_se,path){
-  if (missing(transcript_se) | missing(path)){
+write.bambu <- function(se,path){
+  if (missing(se) | missing(path)){
     stop('Both summarizedExperiment object from bambu and the path for the output files are required.')
   }else{
     dir.create(path)
-    transcript_grList <- rowRanges(transcript_se)
+    transcript_grList <- rowRanges(se)
     transcript_gtffn <- paste(path,"bambu_transcript_exon.gtf",sep="/")
-    transcript_geneIDs <-as.data.frame(rowData(transcript_se))[,c(1,2)]
+    transcript_geneIDs <-as.data.frame(rowData(se))[,c(1,2)]
     gtf <- write.gtf(grList=transcript_grList,file=transcript_gtffn,geneIDs=transcript_geneIDs)
-    transcript_counts <- as.data.frame(assays(transcript_se)$counts)
+    transcript_counts <- as.data.frame(assays(se)$counts)
     transcript_countsfn <- paste(path,"counts_transcript.txt",sep="/")
     write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE)
     gene_se <- transcriptToGeneExpression(se)
@@ -21,22 +21,21 @@ write.bambu <- function(transcript_se,path){
     gene_countsfn <- paste(path,"counts_gene.txt",sep="/")
     write.table(gene_counts, file= gene_countsfn, sep="\t", quote=FALSE)
     }
-  return (gtf)
 }
 #' Outputs a GTF file for the nanorna-bam nextflow pipeline 
 #' @title write GRangeslist into GTF file
-#' @param grList a GRangesList object
+#' @param annotation a GRangesList object
 #' @param file the output gtf file name
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)
 #' @return gtf a GTF dataframe
 #' @export
-write.gtf <- function (grList,file,geneIDs) {
-  if (missing(grList) | missing(file)){
+write.gtf <- function (annotation,file,geneIDs=NULL) {
+  if (missing(annotation) | missing(file)){
     stop('Both GRangesList and the name of file are required.')
-  }else if (class(grList) != "CompressedGRangesList"){
+  }else if (class(annotation) != "CompressedGRangesList"){
     stop('The inputted GRangesList is of the wrong class.')
   }else {
-    df <- as.data.frame(grList)
+    df <- as.data.frame(annotation)
     df$exon_rank <- paste('exon_number "',df$exon_rank,'";',sep= '')
     if (missing(geneIDs)){
       df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
@@ -69,18 +68,17 @@ write.gtf <- function (grList,file,geneIDs) {
     gtf <- gtf[order(gtf$attributes),]
   } 
   write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
-  return (gtf)
 }
 #' Outputs GRangesList object from reading a GTF file
 #' @title convert a GTF file into a GRangesList
-#' @param gtf_file a GTF file
+#' @param file a GTF file
 #' @return grlist a GRangesList object
 #' @export
-read.gtf <- function(gtf_file){
-  if (missing(gtf_file)){
+read.gtf <- function(file){
+  if (missing(file)){
     stop('A GTF file is required.')
   }else{
-    data=read.delim(gtf_file,header=FALSE)
+    data=read.delim(file,header=FALSE)
     colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
     data$strand[data$strand=='.'] <- '*'
     data$GENEID = gsub('gene_id (.*); tra.*','\\1',data$attribute)
