@@ -21,7 +21,16 @@ knitr::opts_chunk$set(
 
 
 ## Data description
-To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which contains single chromosome RNA-Seq data from two common cell lines K562 and MCF7. Each of these cell line has three replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. 
+To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which contains single chromosome RNA-Seq data from two common cell lines K562 and MCF7. Each of these cell line has three 
+replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. 
+
+```{r, include = FALSE}
+# To be removed later 
+devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareForBambu/bambu/")
+#To be removed later
+devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareDataPackage/NanoporeRNASeq/")
+```
+
 ```{r setup}
 library(NanoporeRNASeq)
 library(bambu)
