@@ -97,7 +97,7 @@ bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnno
 **Large sample number/ limited memory**     
 For larger sample numbers we recommend to write the processed data to a file:
 ```rscript
-bambu(reads, outputReadClassFolder, genomeSequence, annotations)
+bambu(reads, readClass.outputDir, annotations, genomeSequence)
 ```
 
 
@@ -108,32 +108,35 @@ bambu(reads, outputReadClassFolder, genomeSequence, annotations)
 
 **More strigent filtering thresholds imposed on potential novel transcripts**    
 - For example   
-> Keep novel transcripts with min 5 read count in at least 1 sample:  
+> Keep novel transcripts with min 5 read count in at least 1 sample: 
+
 ```rscript
-bambu(reads, genomeSequence, annotations, isoreParameters = list(min.readCount = 5))
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readCount = 5))
 ```
 
 > Keep novel transcripts with min 5 samples having at least 2 counts:
 
 ```rscript
-bambu(reads, genomeSequence, annotations, isoreParameters = list(min.sampleNumber = 5))
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumber = 5))
 ```
 
 > Filter out transcripts with relative abundance within gene lower than 10%: 
+
 ```rscript
-bambu(reads, genomeSequence, annotations, isoreParameters = list(min.readFractionByGene = 0.1))
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))
 ```
 
 **Quantification without bias correction**     
-> The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.    
+> The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
+
 ```rscript
-bambu(reads, genomeSequence, annotations, emParameters(bias = FALSE))
+bambu(reads, annotations, genomeSequence, emParameters(bias = FALSE))
 ```
 
 **Parallel computation**      
 > ***bambu*** also allows parallel computation for EM.    
 ```rscript
-bambu(reads, genomeSequence, annotations, ncore = 8)
+bambu(reads, annotations, genomeSequence, ncore = 8)
 ```
 
 See [manual]() for details to customize other conditions.
