@@ -8,19 +8,22 @@ write.bambu <- function(se,path){
   if (missing(se) | missing(path)){
     stop('Both summarizedExperiment object from bambu and the path for the output files are required.')
   }else{
-    dir.create(path)
+    outdir <- strsplit(path,"/")[[1]][1]
+    if (dir.exists(outdir) == FALSE){
+      dir.create(outdir)
+    }
     transcript_grList <- rowRanges(se)
-    transcript_gtffn <- paste(path,"bambu_transcript_exon.gtf",sep="/")
+    transcript_gtffn <- paste(path,".gtf",sep="")
     transcript_geneIDs <-as.data.frame(rowData(se))[,c(1,2)]
-    gtf <- write.gtf(grList=transcript_grList,file=transcript_gtffn,geneIDs=transcript_geneIDs)
+    gtf <- write.gtf(annotation=transcript_grList,file=transcript_gtffn,geneIDs=transcript_geneIDs)
     transcript_counts <- as.data.frame(assays(se)$counts)
-    transcript_countsfn <- paste(path,"counts_transcript.txt",sep="/")
+    transcript_countsfn <- paste(path,"counts_transcript.txt",sep="_")
     write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE)
     gene_se <- transcriptToGeneExpression(se)
     gene_counts <- as.data.frame(assays(gene_se)$counts)
-    gene_countsfn <- paste(path,"counts_gene.txt",sep="/")
+    gene_countsfn <- paste(path,"counts_gene.txt",sep="_")
     write.table(gene_counts, file= gene_countsfn, sep="\t", quote=FALSE)
-    }
+  }
 }
 #' Outputs a GTF file for the nanorna-bam nextflow pipeline 
 #' @title write GRangeslist into GTF file
