@@ -14,8 +14,7 @@ write.bambu <- function(se,path){
     }
     transcript_grList <- rowRanges(se)
     transcript_gtffn <- paste(path,"transcript_exon.gtf",sep="")
-    transcript_geneIDs <-as.data.frame(rowData(se))[,c(1,2)]
-    gtf <- write.gtf(annotation=transcript_grList,file=transcript_gtffn,geneIDs=transcript_geneIDs)
+    gtf <- write.gtf(annotation=transcript_grList,file=transcript_gtffn)
     transcript_counts <- as.data.frame(assays(se)$counts)
     transcript_countsfn <- paste(path,"counts_transcript.txt",sep="")
     write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE)
@@ -41,37 +40,30 @@ write.gtf <- function (annotation,file,geneIDs=NULL) {
     df <- as.data.frame(annotation)
     df$exon_rank <- paste('exon_number "',df$exon_rank,'";',sep= '')
     if (missing(geneIDs)){
-      df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
-      gtf_exon <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "exon",
-                             start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
-                             attributes= paste(df$group_name,df$exon_rank))
-    }else{
-      df <- merge(df,geneIDs,by.x="group_name",by.y="TXNAME",all=TRUE)
-      df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
-      df$GENEID <- paste('gene_id "',df$GENEID,'";',sep= '')
-      gtf_exon <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "exon",
-                             start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
-                             attributes= paste(df$GENEID,df$group_name,df$exon_rank))
+      if (!is.null(mcols(annotation, use.names=FALSE)$GENEID)){
+        geneIDs <- data.frame(mcols(annotation, use.names=FALSE)$TXNAME,mcols(annotation, use.names=FALSE)$GENEID)
+        colnames(geneIDs) <- c("TXNAME","GENEID")
+      }
     }
+    df <- merge(df,geneIDs,by.x="group_name",by.y="TXNAME",all=TRUE)
+    df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
+    df$GENEID <- paste('gene_id "',df$GENEID,'";',sep= '')
+    gtf_exon <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "exon",
+                          start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
+                          attributes= paste(df$GENEID,df$group_name,df$exon_rank))
     df_end <- df[order(df$end, decreasing = TRUE),]
     df_end <- data.frame(group_name=df_end$group_name,uend=df_end$end)
     df_end <- df_end[!duplicated(df_end$group_name),]
     df <- df[!duplicated(df$group_name),]
     df <- merge(df,df_end,by="group_name",all=TRUE)
-    if (missing(geneIDs)){
-      gtf_trns <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "transcript",
-                             start=df$start,end=df$uend,score=".",strand=df$strand,frame=".",
-                             attributes= paste(df$group_name))
-    }else{
-      gtf_trns <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "transcript",
+    gtf_trns <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "transcript",
                              start=df$start,end=df$uend,score=".",strand=df$strand,frame=".",
                              attributes= paste(df$GENEID,df$group_name))
     }
     gtf <- rbind(gtf_trns,gtf_exon)
     gtf <- gtf[order(gtf$attributes),]
+    write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
   } 
-  write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
-}
 #' Outputs GRangesList object from reading a GTF file
 #' @title convert a GTF file into a GRangesList
 #' @param file a GTF file
