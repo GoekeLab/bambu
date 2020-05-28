@@ -59,7 +59,7 @@ plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","h
           txRanges <- rowRanges(se)[txVec]
           names(txRanges) <- paste0(txVec,":", unlist(lapply(strand(txRanges),function(x) unique(as.character(x)))))
           p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
-          p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec,]+1)),axis.text.angle = 45)
+          p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec,]+1)),axis.text.angle = 45, hjust = 1)
           
           
           p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, top = g, heights = c(1,1))
@@ -133,11 +133,11 @@ plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","h
       topAnnotation <- ComplexHeatmap::HeatmapAnnotation(group = sample.info[match(colnames(count.data), runname)]$groupVar)
 
       p <- ComplexHeatmap::Heatmap(corData, name = "Sp.R", col = col_fun,
-                   top_annotation = topAnnotation)
-
+                   top_annotation = topAnnotation, show_row_names = FALSE,column_names_gp = grid::gpar(fontsize = 9))
     }else{
 
-      p <- ComplexHeatmap::Heatmap(corData, name = "Sp.R", col = col_fun)
+      p <- ComplexHeatmap::Heatmap(corData, name = "Sp.R", col = col_fun, show_row_names = FALSE,column_names_gp = grid::gpar(fontsize = 9))
+      
 
     }
     return(p)
