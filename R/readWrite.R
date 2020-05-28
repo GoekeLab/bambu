@@ -1,5 +1,5 @@
 #' Outputs a GTF file, transcript-count file, and gene-count file from bambu
-#' @title transcript to gene expression
+#' @title write bambu results to GTF and transcript/gene-count files
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
 #' @return gtf a GTF dataframe
@@ -24,7 +24,7 @@ write.bambu <- function(transcript_se,path){
   return (gtf)
 }
 #' Outputs a GTF file for the nanorna-bam nextflow pipeline 
-#' @title transcript to gene expression
+#' @title write GRangeslist into GTF file
 #' @param grList a GRangesList object
 #' @param file the output gtf file name
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)
@@ -72,7 +72,7 @@ write.gtf <- function (grList,file,geneIDs) {
   return (gtf)
 }
 #' Outputs GRangesList object from reading a GTF file
-#' @title transcript to gene expression
+#' @title convert a GTF file into a GRangesList
 #' @param gtf_file a GTF file
 #' @return grlist a GRangesList object
 #' @export
