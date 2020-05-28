@@ -112,12 +112,12 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     
     bpParameters <- BiocParallel::bpparam()
     #===# set parallel options: If more CPUs than samples available, use parallel computing on each sample, otherwise use parallel to distribute samples (more efficient)
-    if(length(reads)<=(0.5*ncore)) {
+    if((length(reads) %% ncore)!=0) {
       bpParameters$workers <- 1
-      bpParameters$progressbar <- TRUE
+      bpParameters$progressbar <- (!verbose)
     } else {
       bpParameters$workers <- ncore
-      bpParameters$progressbar <- TRUE
+      bpParameters$progressbar <- (!verbose)
       ncore <- 1
     }
     
@@ -159,7 +159,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
    
         
       
-      
+      if(!verbose) message("Start generating read class files")
       readClassList <- BiocParallel::bplapply(names(reads), function(bamFileName){
                               bambu.constructReadClass(
                               bam.file= reads[bamFileName],
@@ -182,14 +182,27 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
       if(!verbose) message("Finished extending annotations.")
       gc(verbose = FALSE)
     }
-    countsSe <- BiocParallel::bplapply(readClassList,
-                                       bambu.quantify,
-                                       annotations=annotations,
-                                       min.exonDistance= isoreParameters[['min.exonDistance']],
-                                       emParameters = emParameters,
-                                       ncore = ifelse(length(readClassList)>1, 1,ncore),
-                                       verbose = verbose, 
-                                       BPPARAM=bpParameters)
+    
+    if(!verbose) message("Start isoform quantification")
+    if(length(readClassList)==1){
+      countsSe <- lapply(readClassList,
+                                         bambu.quantify,
+                                         annotations=annotations,
+                                         min.exonDistance= isoreParameters[['min.exonDistance']],
+                                         emParameters = emParameters,
+                                         ncore = ncore,
+                                         verbose = verbose)
+    }else{
+      countsSe <- BiocParallel::bplapply(readClassList,
+                                         bambu.quantify,
+                                         annotations=annotations,
+                                         min.exonDistance= isoreParameters[['min.exonDistance']],
+                                         emParameters = emParameters,
+                                         ncore = ncore,
+                                         verbose = verbose, 
+                                         BPPARAM=bpParameters)
+    }
+    
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
     rowRanges(countsSe) <- annotations
     if(!verbose) message("Finished isoform quantification.")
