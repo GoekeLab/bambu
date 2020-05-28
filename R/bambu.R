@@ -41,7 +41,12 @@
 #' emParameters = list(conv = 10^(-6))
 #' }
 #' @export
-bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NULL, annotations = NULL, genomeSequence = NULL, emParameters = NULL, yieldSize = NULL, isoreParameters = NULL, extendAnnotations = TRUE, stranded = FALSE, ncore = 1, verbose = FALSE){
+bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NULL, 
+                  annotations = NULL, genomeSequence = NULL,
+                  stranded = FALSE, ncore = 1, 
+                  yieldSize = NULL, 
+                  isoreParameters = NULL, emParameters = NULL, 
+                  extendAnnotations = TRUE,  verbose = FALSE){
 
 
   #===# Check annotation inputs #===#
@@ -81,8 +86,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     }
   }
     #===# set default controlling parameters for isoform reconstruction  #===#
-    isoreParameters.default <- list(stranded = FALSE,
-                               remove.subsetTx = TRUE, #
+    isoreParameters.default <- list(remove.subsetTx = TRUE, #
                                min.readCount = 2,  #
                                min.readFractionByGene = 0.05,  ##
                                min.sampleNumber = 1,  #
@@ -181,15 +185,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     }
     
     if(!verbose) message("Start isoform quantification") 
-    if(length(readClassList)==1){
-      countsSe <- lapply(readClassList,
-                                         bambu.quantify,
-                                         annotations=annotations,
-                                         min.exonDistance= isoreParameters[['min.exonDistance']],
-                                         emParameters = emParameters,
-                                         ncore = ncore,
-                                         verbose = verbose)
-    }else{
+   
       countsSe <- BiocParallel::bplapply(readClassList,
                                          bambu.quantify,
                                          annotations=annotations,
@@ -198,7 +194,6 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
                                          ncore = ncore,
                                          verbose = verbose, 
                                          BPPARAM=bpParameters)
-    }
     
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
     rowRanges(countsSe) <- annotations
