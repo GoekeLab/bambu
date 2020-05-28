@@ -15,16 +15,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r, include = FALSE}
-# To be removed later 
-devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareForBambu/bambu/")
-#To be removed later
-devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareDataPackage/NanoporeRNASeq/")
-```
-
-
-
-
 
 ## Introduction
 Long read RNA-Seq has shown potential in characterizing the incomplete transcriptome profile. Particularly, the full length read of transcripts provided insights on transcriptome assembly. Methods, such as flair and stringtie2 have been developed to do reference-guided and de novo transcriptome assembly. Flair incorporates long read RNA-Seq data with short read RNA-Seq data to provide corrected junctions and transcripts models. However, this has also become a limitation in the usage where short read RNA-Seq has to be provided in the process. Stringtie2, on the other hand, improves short read assemblies without short read RNA-Seq data. *[Bambu](https://github.com/GoekeLab/bambu)*, unlike both methods, which we have developed recently, is able to provide multi-sample transcript discovery and quantification. 
@@ -59,7 +49,7 @@ data("annotationGrangesList_chr22_1_25409234")
 
 We applied *bambu* to perform EM on  extended annotations
 ```{r}
-seExtended <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE)
+seExtended <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
 seExtended
 ```
 
@@ -67,6 +57,8 @@ seExtended
 We can check the estimated transcript expression using heatmap:
 ```{r, fig.width = 8, fig.height = 8}
 colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
+colnames(seExtended) <- gsub("_genome_chr22_1_25409234","",colnames(seExtended))
+colData(seExtended)$name <- gsub("_genome_chr22_1_25409234","",colData(seExtended)$name)
 plot.bambu(seExtended, group.variable = "groupVar", type = "heatmap")
 ```
 
@@ -92,7 +84,7 @@ seGene <- transcriptToGeneExpression(seExtended)
 ```
 
 Gene expression heatmap
-```{r, fig.width = 8, fig.height = 8}
+```{r, fig.width = 8, fig.height = 6}
 colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
 plot.bambu(seGene, group.variable = "groupVar", type = "heatmap")
 ```
