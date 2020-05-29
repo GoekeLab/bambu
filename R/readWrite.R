@@ -1,6 +1,6 @@
 #' Outputs a GTF file, transcript-count file, and gene-count file from bambu
 #' @title Write bambu results to GTF and transcript/gene-count files
-#' @param se a summarizedExperiment object from \code{\link{bambu}}
+#' @param se a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
 #' @return The function will generate three files, a \code{\link{.gtf}} file for the annotations, 
 #' two \code{\link{.txt}} files for transcript and gene counts respectively. 
@@ -9,8 +9,8 @@ writeBambuOutput <- function(se,path){
   if (missing(se) | missing(path)){
     stop('Both summarizedExperiment object from bambu and the path for the output files are required.')
   }else{
-    outdir <- strsplit(path,"/")[[1]][1]
-    if (dir.exists(outdir) == FALSE){
+    outdir <- paste0(path,"/")
+    if (!dir.exists(outdir)){
       dir.create(outdir)
     }
     transcript_grList <- rowRanges(se)
