@@ -24,7 +24,8 @@ test_that("visualization for transcript expression is successful",{
 
 test_that("visualization for gene expression  is successful",{
  
-  colnames(seCombinedGeneExpected) <-  c("sample1","sample2")
+  colnames(seCombinedGeneExpected) <- colData(seCombinedGeneExpected)$name <-  c("sample1","sample2")
+ 
   set.seed(1)
   assays(seCombinedGeneExpected)$CPM[,2]  <- pmax(0, rnorm(length(assays(seCombinedGeneExpected)$CPM[,2]),assays(seCombinedGeneExpected)$CPM[,2],10))
   

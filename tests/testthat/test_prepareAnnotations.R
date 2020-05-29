@@ -31,7 +31,7 @@ test_that("prepareAnnotationsFromGTF is GRangesList",{
 
   gr <- prepareAnnotationsFromGTF(gtf.file)
 
-  expect_equal(gr, expectedGR)
+  expect_equal(gr, expectedGR[order(names(expectedGR))])
   expect_s4_class(gr, class = 'CompressedGRangesList')
   expect_named(mcols(gr), c("TXNAME", "GENEID","eqClass"))
 })
