@@ -1,10 +1,11 @@
 #' Outputs a GTF file, transcript-count file, and gene-count file from bambu
-#' @title write bambu results to GTF and transcript/gene-count files
+#' @title Write bambu results to GTF and transcript/gene-count files
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
-#' @return gtf a GTF dataframe
+#' @return The function will generate three files, a \code{\link{.gtf}} file for the annotations, 
+#' two \code{\link{.txt}} files for transcript and gene counts respectively. 
 #' @export
-write.bambu <- function(se,path){
+writeBambuOutput <- function(se,path){
   if (missing(se) | missing(path)){
     stop('Both summarizedExperiment object from bambu and the path for the output files are required.')
   }else{
@@ -14,7 +15,7 @@ write.bambu <- function(se,path){
     }
     transcript_grList <- rowRanges(se)
     transcript_gtffn <- paste(path,"transcript_exon.gtf",sep="")
-    gtf <- write.gtf(annotation=transcript_grList,file=transcript_gtffn)
+    gtf <- writeToGTF(annotation=transcript_grList,file=transcript_gtffn)
     transcript_counts <- as.data.frame(assays(se)$counts)
     transcript_countsfn <- paste(path,"counts_transcript.txt",sep="")
     write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE)
@@ -24,14 +25,14 @@ write.bambu <- function(se,path){
     write.table(gene_counts, file= gene_countsfn, sep="\t", quote=FALSE)
   }
 }
-#' Outputs a GTF file for the nanorna-bam nextflow pipeline 
+#' Write annotation GRangesList into a GTF file
 #' @title write GRangeslist into GTF file
-#' @param annotation a GRangesList object
+#' @param annotation a \code{\link{GRangesList}} object
 #' @param file the output gtf file name
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)
 #' @return gtf a GTF dataframe
 #' @export
-write.gtf <- function (annotation,file,geneIDs=NULL) {
+writeToGTF <- function (annotation,file,geneIDs=NULL) {
   if (missing(annotation) | missing(file)){
     stop('Both GRangesList and the name of file are required.')
   }else if (class(annotation) != "CompressedGRangesList"){
@@ -63,13 +64,19 @@ write.gtf <- function (annotation,file,geneIDs=NULL) {
     gtf <- rbind(gtf_trns,gtf_exon)
     gtf <- gtf[order(gtf$attributes),]
     write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
-  } 
+} 
+
+
 #' Outputs GRangesList object from reading a GTF file
 #' @title convert a GTF file into a GRangesList
-#' @param file a GTF file
-#' @return grlist a GRangesList object
+#' @param file a \code{\link{.gtf}} file
+#' @return grlist a \code{\link{GRangesList}} object, with two columns
+#' \itemize{
+#'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
+#'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
+#'   }
 #' @export
-read.gtf <- function(file){
+readFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')
   }else{
@@ -88,37 +95,3 @@ read.gtf <- function(file){
   return (grlist)
 }
 
-#' Outputs GRangesList object from reading a GTF file for running bambu
-#' @title convert a GTF file into a GRangesList
-#' @param file a GTF file
-#' @return grlist a GRangesList object
-#' @export
-prepareAnnotationsFromGTF_draft <- function(file){
-  if (missing(file)){
-    stop('A GTF file is required.')
-  }else{
-    data <- read.delim(file,header=FALSE,comment.char='#')
-    colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
-    data <- data[data$type=='exon',]
-    data$strand[data$strand=='.'] <- '*'
-    data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
-    data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
-    data$exon_rank=as.integer(gsub('.*exon_number (.*?);.*', '\\1',data$attribute))
-    geneData=unique(data[,c('TXNAME', 'GENEID')])
-    grlist <- makeGRangesListFromDataFrame(
-      data[,c('seqname', 'start','end','strand','exon_rank','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
-    
-    unlistedExons <- unlist(grlist, use.names = FALSE)
-    partitioning <- PartitioningByEnd(cumsum(elementNROWS(grlist)), names=NULL)
-    txIdForReorder <- togroup(PartitioningByWidth(grlist))
-    unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)] #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
-    unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(grlist),seq,to=1), use.names=FALSE)
-    unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
-#    mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
-    grlist <- relist(unlistedExons, partitioning)
-    minEqClasses <- getMinimumEqClassByTx(grlist)
-    mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
-    mcols(grlist)$eqClass <- minEqClasses$eqClass[match(names(grlist),minEqClasses$queryTxId)]
-  }
-  return (grlist)
-}
