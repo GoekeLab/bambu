@@ -34,36 +34,49 @@ prepareAnnotations <- function(txdb) {
 }
 
 
-#' Prepare annotations from gtf
-#' @title prepare annotations from gtf file
-#' @param gtf.file A string variable indicates the path to a gtf file.
-#' @param organism as described in \code{\link{makeTxDbFromGFF}}.
-#' @param dataSource as described in \code{\link{makeTxDbFromGFF}}.
-#' @param taxonomyId as described in \code{\link{makeTxDbFromGFF}}.
-#' @param chrominfo	as described in \code{\link{makeTxDbFromGFF}}.
-#' @param miRBaseBuild as described in \code{\link{makeTxDbFromGFF}}.
-#' @param metadata as described in \code{\link{makeTxDbFromGFF}}.
-#' @param dbxrefTag as described in \code{\link{makeTxDbFromGFF}}.
-#' @param ... see \code{\link{makeTxDbFromGFF}}.
-#' @return A \code{\link{GrangesList}} object
+#' Prepare annotation granges object from GTF file 
+#' @title Prepare annotation granges object from GTF file  into a GRangesList object
+#' @param file a GTF file
+#' @return grlist a \code{\link{GRangesList}} object, unlike \code\link{readFromGTF}}, 
+#' this function finds out the equivalence classes between the transcripts, 
+#' with \code{\link{mcols}} data having three columns:
+#' \itemize{
+#'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
+#'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
+#'   \item eqClass specifying minimun read count to consider a read class valid in a sample, defaults to 2
+#'   }
+#' 
 #' @export
-prepareAnnotationsFromGTF <- function(gtf.file, dataSource=NA,
-                                     organism="Homo sapiens",
-                                     taxonomyId=NA,
-                                     chrominfo=NULL,
-                                     miRBaseBuild=NA,
-                                     metadata=NULL,
-                                     dbxrefTag,...){
-  return(prepareAnnotations(GenomicFeatures::makeTxDbFromGFF(gtf.file, format = "gtf",
-                                                             organism = organism,
-                                                             dataSource = dataSource,
-                                                             taxonomyId = taxonomyId,
-                                                             chrominfo = chrominfo,
-                                                             miRBaseBuild = miRBaseBuild,
-                                                             metadata = metadata,
-                                                             dbxrefTag = dbxrefTag
-  )))
+prepareAnnotationsFromGTF <- function(file){
+  if (missing(file)){
+    stop('A GTF file is required.')
+  }else{
+    data <- read.delim(file,header=FALSE,comment.char='#')
+    colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
+    data <- data[data$type=='exon',]
+    data$strand[data$strand=='.'] <- '*'
+    data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
+    data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
+    data$exon_rank=as.integer(gsub('.*exon_number (.*?);.*', '\\1',data$attribute))
+    geneData=unique(data[,c('TXNAME', 'GENEID')])
+    grlist <- makeGRangesListFromDataFrame(
+      data[,c('seqname', 'start','end','strand','exon_rank','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
+    
+    unlistedExons <- unlist(grlist, use.names = FALSE)
+    partitioning <- PartitioningByEnd(cumsum(elementNROWS(grlist)), names=NULL)
+    txIdForReorder <- togroup(PartitioningByWidth(grlist))
+    unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)] #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
+    unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(grlist),seq,to=1), use.names=FALSE)
+    unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
+    #    mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
+    grlist <- relist(unlistedExons, partitioning)
+    minEqClasses <- getMinimumEqClassByTx(grlist)
+    mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
+    mcols(grlist)$eqClass <- minEqClasses$eqClass[match(names(grlist),minEqClasses$queryTxId)]
+  }
+  return (grlist)
 }
+
 
 
 

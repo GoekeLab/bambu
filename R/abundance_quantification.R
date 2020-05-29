@@ -2,26 +2,37 @@
 #' @title transcript_abundance_quantification
 #' @param method A string variable indicates the whether a one-step or two-step approach will be used. See \code{Details}
 #' for details on one-step and two-step approach.
-#' @param read_classDT A \code{data.table} with columns
+#' @param readClassDt A \code{data.table} with columns
 #' @importFrom BiocParallel bplapply
 #' @noRd
-abundance_quantification <- function(read_classDT,ncore = 1,
-                                     bias_correction = TRUE,
+abundance_quantification <- function(readClassDt,ncore = 1,
+                                     bias = TRUE,
                                      maxiter = 20000,
-                                     conv.control = 10^(-8)){
-  gene_sidList <- unique(read_classDT$gene_sid)
-
-  bpParameters <- BiocParallel::bpparam()
-  bpParameters$workers <- ncore
+                                     conv = 10^(-8)){
+  gene_sidList <- unique(readClassDt$gene_sid)
+ 
+    if(ncore == 1){
+      
+      emResultsList <- lapply(as.list(gene_sidList),
+                                              run_parallel,
+                                              conv = conv,
+                                              bias = bias,
+                                              maxiter = maxiter,
+                                              readClassDt = readClassDt)
+    }else{
+      bpParameters <- BiocParallel::bpparam()
+      bpParameters$workers <- ncore
+      
+      emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
+                                              run_parallel,
+                                              conv = conv,
+                                              bias = bias,
+                                              maxiter = maxiter,
+                                              readClassDt = readClassDt,
+                                              BPPARAM=bpParameters)
+    }
+    
   
-  
-  emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
-                                          run_parallel,
-                                          conv.control = conv.control,
-                                          bias_correction = bias_correction,
-                                          maxiter = maxiter,
-                                          read_classDT = read_classDT,
-                                          BPPARAM=bpParameters)
 
 
   estimates <- list(do.call('rbind',lapply(1:length(emResultsList), function(x) emResultsList[[x]][[1]])),
@@ -30,8 +41,8 @@ abundance_quantification <- function(read_classDT,ncore = 1,
   return(estimates)
 }
 
-run_parallel <- function(g,conv.control,bias_correction,maxiter, read_classDT){
-  tmp <- read_classDT[gene_sid==g]
+run_parallel <- function(g,conv,bias,maxiter, readClassDt){
+  tmp <- readClassDt[gene_sid==g]
   if((nrow(tmp)==1)){
     out <- list(data.table(tx_sid = tmp$tx_sid,
                                estimates = tmp$nobs,
@@ -58,12 +69,12 @@ run_parallel <- function(g,conv.control,bias_correction,maxiter, read_classDT){
     est_output <- emWithL1(X = as.matrix(a_mat),
                           Y = n.obs,
                           lambda = lambda,
-                          d = bias_correction,
+                          d = bias,
                           maxiter = maxiter,
-                          conv = conv.control)
+                          conv = conv)
     t_est <- as.numeric(t(est_output[["theta"]]))
 
-    if(bias_correction){
+    if(bias){
       b_est <- as.numeric(t(est_output[["b"]]))
     }else{
       b_est <- rep(0,ncol(a_mat))

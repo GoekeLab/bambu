@@ -40,3 +40,5 @@ vignettes/*.pdf
 .Renviron
 packrat/lib*/
 .Rproj.user
+doc
+Meta
