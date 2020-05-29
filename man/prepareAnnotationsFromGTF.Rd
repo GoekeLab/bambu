@@ -2,42 +2,16 @@
 % Please edit documentation in R/annotationFunctions.R
 \name{prepareAnnotationsFromGTF}
 \alias{prepareAnnotationsFromGTF}
-\title{prepare annotations from gtf file}
+\title{Prepare annotation granges object from GTF file  into a \code{\link{GRangesList}}}
 \usage{
-prepareAnnotationsFromGTF(
-  gtf.file,
-  dataSource = NA,
-  organism = "Homo sapiens",
-  taxonomyId = NA,
-  chrominfo = NULL,
-  miRBaseBuild = NA,
-  metadata = NULL,
-  dbxrefTag,
-  ...
-)
+prepareAnnotationsFromGTF(file)
 }
 \arguments{
-\item{gtf.file}{A string variable indicates the path to a gtf file.}
-
-\item{dataSource}{as described in \code{\link{makeTxDbFromGFF}}.}
-
-\item{organism}{as described in \code{\link{makeTxDbFromGFF}}.}
-
-\item{taxonomyId}{as described in \code{\link{makeTxDbFromGFF}}.}
-
-\item{chrominfo}{as described in \code{\link{makeTxDbFromGFF}}.}
-
-\item{miRBaseBuild}{as described in \code{\link{makeTxDbFromGFF}}.}
-
-\item{metadata}{as described in \code{\link{makeTxDbFromGFF}}.}
-
-\item{dbxrefTag}{as described in \code{\link{makeTxDbFromGFF}}.}
-
-\item{...}{see \code{\link{makeTxDbFromGFF}}.}
+\item{file}{a GTF file}
 }
 \value{
-A \code{\link{GrangesList}} object
+
 }
 \description{
-Prepare annotations from gtf
+Prepare annotation granges object from GTF file
 }
