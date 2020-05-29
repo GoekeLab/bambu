@@ -80,7 +80,7 @@ readFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')
   }else{
-    data=read.delim(file,header=FALSE)
+    data=read.delim(file,header=FALSE, comment.char='#')
     colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
     data$strand[data$strand=='.'] <- '*'
     data$GENEID = gsub('gene_id (.*); tra.*','\\1',data$attribute)
@@ -94,4 +94,3 @@ readFromGTF <- function(file){
   }
   return (grlist)
 }
-
