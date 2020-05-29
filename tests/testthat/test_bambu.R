@@ -160,6 +160,9 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
   # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
   set.seed(1234)
   seCombined = bambu(readClass.file = c(seReadClass1, seReadClass1),  annotations =  gr, extendAnnotations = FALSE)
+  dimnames(assays(seCombinedExpected)$counts)[[2]] <- dimnames(assays(seCombinedExpected)$CPM)[[2]] <- colnames(seCombinedExpected) <- colData(seCombinedExpected)$name <-  gsub(".bam","", colnames(seCombinedExpected))
+  dimnames(seCombined@assays@data@listData$counts)[[1]] <- dimnames(seCombined@assays@data@listData$CPM)[[1]] <-  rownames(seCombinedExpected) 
+ 
   expect_s4_class(seCombined, "SummarizedExperiment")
   expect_equal(seCombined,seCombinedExpected)
 
@@ -167,6 +170,8 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
   # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
   set.seed(1234)
   seCombinedExtended = bambu(readClass.file = c(seReadClass1, seReadClass1), annotations =  gr, extendAnnotations = TRUE)
+  dimnames(assays(seCombinedExtendedExpected)$counts)[[2]] <- dimnames(assays(seCombinedExtendedExpected)$CPM)[[2]] <- colnames(seCombinedExtendedExpected) <- colData(seCombinedExtendedExpected)$name <-  gsub(".bam","", colnames(seCombinedExtendedExpected))
+  dimnames(seCombinedExtended@assays@data@listData$counts)[[1]] <- dimnames(seCombinedExtended@assays@data@listData$CPM)[[1]] <-  rownames(seCombinedExtendedExpected) 
   expect_s4_class(seCombinedExtended, "SummarizedExperiment")
   expect_equal(seCombinedExtended,seCombinedExtendedExpected)
 
