@@ -11,17 +11,27 @@ abundance_quantification <- function(readClassDt,ncore = 1,
                                      conv = 10^(-8)){
   gene_sidList <- unique(readClassDt$gene_sid)
  
- 
-    bpParameters <- BiocParallel::bpparam()
-    bpParameters$workers <- ncore
-   
-    emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
-                                            run_parallel,
-                                            conv = conv,
-                                            bias = bias,
-                                            maxiter = maxiter,
-                                            readClassDt = readClassDt,
-                                            BPPARAM=bpParameters)
+    if(ncore == 1){
+      
+      emResultsList <- lapply(as.list(gene_sidList),
+                                              run_parallel,
+                                              conv = conv,
+                                              bias = bias,
+                                              maxiter = maxiter,
+                                              readClassDt = readClassDt)
+    }else{
+      bpParameters <- BiocParallel::bpparam()
+      bpParameters$workers <- ncore
+      
+      emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
+                                              run_parallel,
+                                              conv = conv,
+                                              bias = bias,
+                                              maxiter = maxiter,
+                                              readClassDt = readClassDt,
+                                              BPPARAM=bpParameters)
+    }
+    
   
 
 
