@@ -7,7 +7,7 @@
 writeBambuOutput(se, path)
 }
 \arguments{
-\item{se}{a summarizedExperiment object from \code{\link{bambu}}}
+\item{se}{a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}}
 
 \item{path}{the destination of the output files (gtf, transcript counts, and gene counts)}
 }

@@ -35,7 +35,7 @@ prepareAnnotations <- function(txdb) {
 
 
 #' Prepare annotation granges object from GTF file 
-#' @title Prepare annotation granges object from GTF file  into a \code{\link{GRangesList}}
+#' @title Prepare annotation granges object from GTF file  into a GRangesList object
 #' @param file a GTF file
 #' @return grlist a \code{\link{GRangesList}} object, unlike \code\link{readFromGTF}}, 
 #' this function finds out the equivalence classes between the transcripts, 

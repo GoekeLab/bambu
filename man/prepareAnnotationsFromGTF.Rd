@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotationFunctions.R
 \name{prepareAnnotationsFromGTF}
 \alias{prepareAnnotationsFromGTF}
-\title{Prepare annotation granges object from GTF file  into a \code{\link{GRangesList}}}
+\title{Prepare annotation granges object from GTF file  into a GRangesList object}
 \usage{
 prepareAnnotationsFromGTF(file)
 }
