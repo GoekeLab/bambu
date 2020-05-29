@@ -173,7 +173,13 @@ plot.bambu(se, type = "heatmap", group.var) # heatmap
 plot.bambu(se, type = "pca", group.var) # PCA visualization
 ```
 
+**Write bambu outputs to files**
 
+> ***writeBambuOutput*** will generate three files, including a **.gtf** file for the extended annotations, and two **.txt** files for the expression counts at transcript and gene levels.
+
+```rscript
+writeBambuOutput(se, path = "./bambu/")
+```
 ---
 
 
