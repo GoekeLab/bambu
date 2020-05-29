@@ -7,7 +7,7 @@ test_that("readGTF can generate a GRangesList from a GTF file",{
   outputGtfFile <- tempfile()
   expect_null(writeBambuOutput(se,path))
   gr <- readFromGTF(gtf.file)
-  expect_null(writeToGTF(gr, outputGtfFile))  gr <- read.gtf(gtf)
+  expect_null(writeToGTF(gr, outputGtfFile))
   
   expect_s4_class(gr, class = 'CompressedGRangesList')
   expect_named(mcols(gr), c("TXNAME", "GENEID"))
