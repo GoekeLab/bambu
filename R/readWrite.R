@@ -50,8 +50,8 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
     df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
     df$GENEID <- paste('gene_id "',df$GENEID,'";',sep= '')
     gtf_exon <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "exon",
-                           start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
-                           attributes= paste(df$GENEID,df$group_name,df$exon_rank))
+                          start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
+                          attributes= paste(df$GENEID,df$group_name,df$exon_rank))
     df_end <- df[order(df$end, decreasing = TRUE),]
     df_end <- data.frame(group_name=df_end$group_name,uend=df_end$end)
     df_end <- df_end[!duplicated(df_end$group_name),]
