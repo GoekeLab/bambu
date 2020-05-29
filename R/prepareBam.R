@@ -2,7 +2,7 @@
 #' @param bamFile bamFile
 #' @inheritParams bambu
 #' @noRd
-prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, cores=1) {
+prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, ncore=1) {
   
   if(class(bamFile)=='BamFile') {
     if(!is.null(yieldSize)) {
@@ -22,7 +22,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, cores=1
   }
   
   # parallel processing of single files by reading chromosomes separately
-  if(cores>1){ 
+  if(ncore>1){ 
     
     chr <- scanBamHeader(bamFile)[[1]]
     chrRanges <- GRanges(seqnames=names(chr), ranges=IRanges(start=1, end=chr))
@@ -30,7 +30,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, cores=1
                             helpFun,
                             chrRanges=chrRanges,
                             bamFile=bamFile,
-                            mc.cores = cores)
+                            mc.cores = ncore)
    } else {
   
   

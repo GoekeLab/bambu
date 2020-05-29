@@ -6,13 +6,15 @@
 \usage{
 bambu(
   reads = NULL,
-  readclass.file = NULL,
-  outputReadClassDir = NULL,
+  readClass.file = NULL,
+  readClass.outputDir = NULL,
   annotations = NULL,
   genomeSequence = NULL,
-  algo.control = NULL,
+  stranded = FALSE,
+  ncore = 1,
   yieldSize = NULL,
-  ir.control = NULL,
+  isoreParameters = NULL,
+  emParameters = NULL,
   extendAnnotations = TRUE,
   verbose = FALSE
 )
@@ -20,27 +22,20 @@ bambu(
 \arguments{
 \item{reads}{A string or a vector of strings specifying the paths of bam files for genomic alignments, or a \code{\link{BamFile}} object or a \code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).}
 
-\item{readclass.file}{A string or a vector of strings specifying the read class files that are saved during previous run of \code{\link{bambu}}.}
+\item{readClass.file}{A string or a vector of strings specifying the read class files that are saved during previous run of \code{\link{bambu}}.}
 
-\item{outputReadClassDir}{A string variable specifying the path to where read class files will be saved.}
+\item{readClass.outputDir}{A string variable specifying the path to where read class files will be saved.}
 
 \item{annotations}{A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}} or \code{\link{prepareAnnotationsFromGTF}}.}
 
 \item{genomeSequence}{A fasta file or a BSGenome object.}
 
-\item{algo.control}{A list of controlling parameters for quantification algorithm estimation process:
-\itemize{
-  \item ncore specifying number of cores used when parallel processing is used, defaults to 1.
-  \item maxiter specifying maximum number of run interations, defaults to 10000.
-  \item bias_correction specifying whether to correct for bias, defaults to FALSE.
-  \item convcontrol specifying the covergence trheshold control, defaults to 0.0001.
-}}
+\item{ncore}{specifying number of cores used when parallel processing is used, defaults to 1.}
 
 \item{yieldSize}{see \code{\link{Rsamtools}}.}
 
-\item{ir.control}{A list of controlling parameters for isoform reconstruction process:
+\item{isoreParameters}{A list of controlling parameters for isoform reconstruction process:
 \itemize{
-  \item whether stranded, defaults to FALSE
   \item prefix specifying prefix for new gene Ids (genePrefix.number), defaults to empty
   \item remove.subsetTx indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
   \item min.readCount specifying minimun read count to consider a read class valid in a sample, defaults to 2
@@ -48,6 +43,13 @@ bambu(
   \item min.sampleNumber specifying minimum sample number with minimum read count, defaults to 1
   \item min.exonDistance specifying minum distance to known transcript to be considered valid as new, defaults to 35
   \item min.exonOverlap specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults 10 base pairs
+}}
+
+\item{emParameters}{A list of controlling parameters for quantification algorithm estimation process:
+\itemize{
+  \item maxiter specifying maximum number of run interations, defaults to 10000.
+  \item bias specifying whether to correct for bias, defaults to FALSE.
+  \item conv specifying the covergence trheshold control, defaults to 0.0001.
 }}
 
 \item{extendAnnotations}{A logical variable indicating whether annotations are to be extended for quantification.}
@@ -71,7 +73,7 @@ Main function
 ## More stringent new gene/isoform discovery: new isoforms are identified with at least 5 read count in 1 sample
 ## Increase EM convergence threshold to 10^(-6)
 seOutput <- bambu(reads, annotationGrangesList,
-genomeSequence, ir.control = list(min.readCount=5),
-algo.control = list(convcontrol = 10^(-6))
+genomeSequence, isoreParameters = list(min.readCount=5),
+emParameters = list(conv = 10^(-6))
 }
 }
