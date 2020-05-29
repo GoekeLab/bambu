@@ -58,12 +58,12 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
     df <- df[!duplicated(df$group_name),]
     df <- merge(df,df_end,by="group_name",all=TRUE)
     gtf_trns <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "transcript",
-                           start=df$start,end=df$uend,score=".",strand=df$strand,frame=".",
-                           attributes= paste(df$GENEID,df$group_name))
-  }
-  gtf <- rbind(gtf_trns,gtf_exon)
-  gtf <- gtf[order(gtf$attributes),]
-  write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
+                             start=df$start,end=df$uend,score=".",strand=df$strand,frame=".",
+                             attributes= paste(df$GENEID,df$group_name))
+    }
+    gtf <- rbind(gtf_trns,gtf_exon)
+    gtf <- gtf[order(gtf$attributes),]
+    write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
 } 
 
 
