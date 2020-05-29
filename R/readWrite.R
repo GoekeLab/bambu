@@ -94,3 +94,4 @@ readFromGTF <- function(file){
   }
   return (grlist)
 }
+
