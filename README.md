@@ -76,6 +76,7 @@ bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnno
 
 **Large sample number/ limited memory**     
 For larger sample numbers we recommend to write the processed data to a file:
+
 ```rscript
 bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnnotations, genomeSequence = fa.file)
 ```
@@ -88,12 +89,14 @@ You can also use precalculated annotations.
 
 If you plan to run ***bambu*** more frequently, we recommend to save the bambuAnnotations object.
 
-The bambuAnnotation object can be calculated from a gtf file:
+The bambuAnnotation object can be calculated from a *.gtf* file:
+
 ```rscript
 annotations <- prepareAnnotationFromGTF(gtf.file)
 ```
 
-From TxDb object
+From *TxDb* object
+
 ```rscript
 annotations <- prepareAnnotations(txdb)
 ```
@@ -122,11 +125,12 @@ bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumbe
 bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))
 ```
 
-**Quantification without bias correction**     
+**Quantification without bias correction** 
+
 > The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
 
 ```rscript
-bambu(reads, annotations, genomeSequence, emParameters(bias = FALSE))
+bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
 ```
 
 **Parallel computation**      
@@ -175,7 +179,7 @@ plot.bambu(se, type = "pca", group.var) # PCA visualization
 
 **Write bambu outputs to files**
 
-> ***writeBambuOutput*** will generate three files, including a **.gtf** file for the extended annotations, and two **.txt** files for the expression counts at transcript and gene levels.
+> ***writeBambuOutput*** will generate three files, including a *.gtf* file for the extended annotations, and two *.txt* files for the expression counts at transcript and gene levels.
 
 ```rscript
 writeBambuOutput(se, path = "./bambu/")
@@ -185,5 +189,5 @@ writeBambuOutput(se, path = "./bambu/")
 
 ### Contributors
 
-This package is developed and maintained by[Ying Chen](https://github.com/cying111), [Yuk Kei Wan](https://github.com/yuukiiwa),  [Jonathan Goeke](https://github.com/jonathangoeke) and  at Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
+This package is developed and maintained by [Ying Chen](https://github.com/cying111), [Yuk Kei Wan](https://github.com/yuukiiwa),  and [Jonathan Goeke](https://github.com/jonathangoeke) at Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
 
