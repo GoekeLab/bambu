@@ -11,7 +11,7 @@ writeBambuOutput <- function(se,path){
   }else{
     outdir <- paste0(path,"/")
     if (!dir.exists(outdir)){
-      dir.create(outdir)
+      dir.create(outdir, recursive = TRUE)
     }
     transcript_grList <- rowRanges(se)
     transcript_gtffn <- paste(path,"transcript_exon.gtf",sep="")
