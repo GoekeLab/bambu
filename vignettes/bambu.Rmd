@@ -60,10 +60,15 @@ We applied *bambu* to perform EM on  extended annotations
 seExtended <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
 seExtended
 ```
+*bambu* allows quantification without isoform discovery
+```{r}
+se <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = FALSE, verbose = FALSE, ncore = 6)
+se
+```
 
 ## Check expression estimates
 We can check the estimated transcript expression using heatmap:
-```{r, fig.width = 8, fig.height = 8}
+```{r, fig.width = 8, fig.height = 6}
 colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
 colnames(seExtended) <- gsub("_genome_chr22_1_25409234","",colnames(seExtended))
 colData(seExtended)$name <- gsub("_genome_chr22_1_25409234","",colData(seExtended)$name)
@@ -71,7 +76,7 @@ plot.bambu(seExtended, group.variable = "groupVar", type = "heatmap")
 ```
 
 or with PCA plot
-```{r, fig.width = 8, fig.height = 8}
+```{r, fig.width = 8, fig.height = 6}
 colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
 plot.bambu(seExtended, group.variable = "groupVar", type = "pca")
 ```
@@ -89,6 +94,7 @@ plot.bambu(seExtended, type = "annotation", gene_id = unique(rowData(seExtended)
 Gene expression can be obtained from transcript expression using this function:
 ```{r}
 seGene <- transcriptToGeneExpression(seExtended)
+seGene
 ```
 
 Gene expression heatmap
@@ -98,7 +104,7 @@ plot.bambu(seGene, group.variable = "groupVar", type = "heatmap")
 ```
 
 Gene expression PCA plot
-```{r, fig.width = 8, fig.height = 8}
+```{r, fig.width = 8, fig.height = 6}
 colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
 plot.bambu(seGene, group.variable = "groupVar", type = "pca")
 ```
@@ -235,7 +241,7 @@ head(dxrDT)
 ```
 
 
-```{r, fig.width = 8, fig.height = 8}
+```{r, fig.width = 8, fig.height = 6}
 dxrDT[,sigLFC2:=(padj < 0.5&(abs(log2fold_MCF7_K562)>=2))]
 ggplot(dxrDT, aes(y = log2fold_MCF7_K562, x = exonBaseMean, color = as.factor(padj<0.5)))+
   geom_point(size = 0.5)+
@@ -246,6 +252,8 @@ ggplot(dxrDT, aes(y = log2fold_MCF7_K562, x = exonBaseMean, color = as.factor(pa
   theme_minimal()
 
 ```
+
+
 ```{r}
 dxrDT[padj<0.5,.(geneID, txID, log2fold_MCF7_K562,K562,MCF7)]
 ```
