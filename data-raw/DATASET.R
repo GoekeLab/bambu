@@ -30,11 +30,11 @@ data5 <- data.frame(tx_id = c(1:6,2,3,1,2,5,1,2,3,5,1:5),
 
 
 estOutput_woBC <- lapply(1:5, function(s){
-  est <- bambu.quantDT(dt = get(paste0("data",s)),  algo.control=list(bias_correction = FALSE,ncore = 1))
+  est <- bambu.quantDT(readClassDt = get(paste0("data",s)),  emParameters=list(bias = FALSE))
 })
 
 estOutput_wBC <- lapply(1:5, function(s){
-  est <- bambu.quantDT(dt = get(paste0("data",s)),  algo.control=list(ncore = 1))
+  est <- bambu.quantDT(readClassDt = get(paste0("data",s)))
 })
 
 
