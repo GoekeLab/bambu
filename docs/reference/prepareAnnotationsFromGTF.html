@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>prepare annotations from gtf file — prepareAnnotationsFromGTF • bambu</title>
+<title>Prepare annotation granges object from GTF file  into a <code>GRangesList</code> — prepareAnnotationsFromGTF • bambu</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="prepare annotations from gtf file — prepareAnnotationsFromGTF" />
-<meta property="og:description" content="Prepare annotations from gtf" />
+<meta property="og:title" content="Prepare annotation granges object from GTF file  into a <code>GRangesList</code> — prepareAnnotationsFromGTF" />
+<meta property="og:description" content="Prepare annotation granges object from GTF file" />
 
 
 
@@ -111,71 +111,31 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>prepare annotations from gtf file</h1>
+    <h1>Prepare annotation granges object from GTF file  into a <code>GRangesList</code></h1>
     <small class="dont-index">Source: <a href='https://github.com/GoekeLab/bambu/blob/master/R/annotationFunctions.R'><code>R/annotationFunctions.R</code></a></small>
     <div class="hidden name"><code>prepareAnnotationsFromGTF.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Prepare annotations from gtf</p>
+    <p>Prepare annotation granges object from GTF file</p>
     </div>
 
-    <pre class="usage"><span class='fu'>prepareAnnotationsFromGTF</span>(
-  <span class='no'>gtf.file</span>,
-  <span class='kw'>dataSource</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>organism</span> <span class='kw'>=</span> <span class='st'>"Homo sapiens"</span>,
-  <span class='kw'>taxonomyId</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>chrominfo</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>miRBaseBuild</span> <span class='kw'>=</span> <span class='fl'>NA</span>,
-  <span class='kw'>metadata</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='no'>dbxrefTag</span>,
-  <span class='no'>...</span>
-)</pre>
+    <pre class="usage"><span class='fu'>prepareAnnotationsFromGTF</span>(<span class='no'>file</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>gtf.file</th>
-      <td><p>A string variable indicates the path to a gtf file.</p></td>
-    </tr>
-    <tr>
-      <th>dataSource</th>
-      <td><p>as described in <code>makeTxDbFromGFF</code>.</p></td>
-    </tr>
-    <tr>
-      <th>organism</th>
-      <td><p>as described in <code>makeTxDbFromGFF</code>.</p></td>
-    </tr>
-    <tr>
-      <th>taxonomyId</th>
-      <td><p>as described in <code>makeTxDbFromGFF</code>.</p></td>
-    </tr>
-    <tr>
-      <th>chrominfo</th>
-      <td><p>as described in <code>makeTxDbFromGFF</code>.</p></td>
-    </tr>
-    <tr>
-      <th>miRBaseBuild</th>
-      <td><p>as described in <code>makeTxDbFromGFF</code>.</p></td>
-    </tr>
-    <tr>
-      <th>metadata</th>
-      <td><p>as described in <code>makeTxDbFromGFF</code>.</p></td>
-    </tr>
-    <tr>
-      <th>dbxrefTag</th>
-      <td><p>as described in <code>makeTxDbFromGFF</code>.</p></td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td><p>see <code>makeTxDbFromGFF</code>.</p></td>
+      <th>file</th>
+      <td><p>a GTF file</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>A <code>GrangesList</code> object</p>
+    
+
+
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">

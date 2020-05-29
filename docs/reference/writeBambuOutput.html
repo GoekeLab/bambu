@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Function reference • bambu</title>
+<title>Write bambu results to GTF and transcript/gene-count files — writeBambuOutput • bambu</title>
 
 
 <!-- jquery -->
@@ -39,7 +39,8 @@
 
 
 
-<meta property="og:title" content="Function reference" />
+<meta property="og:title" content="Write bambu results to GTF and transcript/gene-count files — writeBambuOutput" />
+<meta property="og:description" content="Outputs a GTF file, transcript-count file, and gene-count file from bambu" />
 
 
 
@@ -58,7 +59,7 @@
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    <div class="container template-reference-index">
+    <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -108,84 +109,38 @@
       </header>
 
 <div class="row">
-  <div class="contents col-md-9">
+  <div class="col-md-9 contents">
     <div class="page-header">
-      <h1>Reference</h1>
+    <h1>Write bambu results to GTF and transcript/gene-count files</h1>
+    <small class="dont-index">Source: <a href='https://github.com/GoekeLab/bambu/blob/master/R/readWrite.R'><code>R/readWrite.R</code></a></small>
+    <div class="hidden name"><code>writeBambuOutput.Rd</code></div>
     </div>
 
-    <table class="ref-index">
+    <div class="ref-description">
+    <p>Outputs a GTF file, transcript-count file, and gene-count file from bambu</p>
+    </div>
 
-    <colgroup>
-      
-      <col class="alias" />
-      <col class="title" />
-    </colgroup>
+    <pre class="usage"><span class='fu'>writeBambuOutput</span>(<span class='no'>se</span>, <span class='no'>path</span>)</pre>
 
-    <tbody>
-      <tr>
-        <th colspan="2">
-          <h2 id="section-all-functions" class="hasAnchor"><a href="#section-all-functions" class="anchor"></a>All functions</h2>
-          <p class="section-desc"></p>
-        </th>
-      </tr>
-      
-      
-    </tbody><tbody>
-      
-      
-      <tr>
-        
-        <td>
-          <p><code><a href="bambu.html">bambu()</a></code> </p>
-        </td>
-        <td><p>long read isoform reconstruction and quantification</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="plot.bambu.html">plot(<i>&lt;bambu&gt;</i>)</a></code> </p>
-        </td>
-        <td><p>plot.bambu</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="prepareAnnotations.html">prepareAnnotations()</a></code> </p>
-        </td>
-        <td><p>prepare annotations from txdb object</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="prepareAnnotationsFromGTF.html">prepareAnnotationsFromGTF()</a></code> </p>
-        </td>
-        <td><p>Prepare annotation granges object from GTF file  into a <code>GRangesList</code></p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="readFromGTF.html">readFromGTF()</a></code> </p>
-        </td>
-        <td><p>convert a GTF file into a GRangesList</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="transcriptToGeneExpression.html">transcriptToGeneExpression()</a></code> </p>
-        </td>
-        <td><p>transcript to gene expression</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="writeBambuOutput.html">writeBambuOutput()</a></code> </p>
-        </td>
-        <td><p>Write bambu results to GTF and transcript/gene-count files</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="writeToGTF.html">writeToGTF()</a></code> </p>
-        </td>
-        <td><p>write GRangeslist into GTF file</p></td>
-      </tr>
-    </tbody>
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>se</th>
+      <td><p>a summarizedExperiment object from <code><a href='bambu.html'>bambu</a></code></p></td>
+    </tr>
+    <tr>
+      <th>path</th>
+      <td><p>the destination of the output files (gtf, transcript counts, and gene counts)</p></td>
+    </tr>
     </table>
-  </div>
 
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>The function will generate three files, a <code>.gtf</code> file for the annotations, 
+two <code>.txt</code> files for transcript and gene counts respectively.</p>
+
+  </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
       <h2 data-toc-skip>Contents</h2>

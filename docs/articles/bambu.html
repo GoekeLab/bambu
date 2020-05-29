@@ -125,15 +125,87 @@
   |                                                                            
   |                                                                      |   0%
   |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
   |============                                                          |  17%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
   |                                                                            
   |=======================                                               |  33%
   |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
   |===================================                                   |  50%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
   |                                                                            
   |===============================================                       |  67%
   |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
   |==========================================================            |  83%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
   |                                                                            
   |======================================================================| 100%
 ##&gt; 
@@ -165,6 +237,125 @@ seExtended
 ##&gt;   SGNex_MCF7_directcDNA_replicate3_run3_genome_chr22_1_25409234
 ##&gt;   SGNex_MCF7_directRNA_replicate4_run1_genome_chr22_1_25409234
 ##&gt; colData names(1): name</pre></body></html></div>
+<p><em>bambu</em> allows quantification without isoform discovery</p>
+<div class="sourceCode"><html><body><pre class="r">se &lt;- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = FALSE, verbose = FALSE, ncore = 6)
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |======================================================================| 100%
+##&gt; 
+##&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |============                                                          |  17%
+  |                                                                            
+  |=======================                                               |  33%
+  |                                                                            
+  |===================================                                   |  50%
+  |                                                                            
+  |===============================================                       |  67%
+  |                                                                            
+  |==========================================================            |  83%
+  |                                                                            
+  |======================================================================| 100%
+se
+##&gt; class: RangedSummarizedExperiment 
+##&gt; dim: 1500 6 
+##&gt; metadata(0):
+##&gt; assays(2): counts CPM
+##&gt; rownames(1500): ENST00000624155 ENST00000422332 ... ENST00000484509
+##&gt;   ENST00000468442
+##&gt; rowData names(3): TXNAME GENEID eqClass
+##&gt; colnames(6):
+##&gt;   SGNex_K562_directcDNA_replicate1_run2_genome_chr22_1_25409234
+##&gt;   SGNex_K562_directcDNA_replicate4_run2_genome_chr22_1_25409234 ...
+##&gt;   SGNex_MCF7_directcDNA_replicate3_run3_genome_chr22_1_25409234
+##&gt;   SGNex_MCF7_directRNA_replicate4_run1_genome_chr22_1_25409234
+##&gt; colData names(1): name</pre></body></html></div>
 </div>
 <div id="check-expression-estimates" class="section level2">
 <h2 class="hasAnchor">
@@ -174,17 +365,17 @@ seExtended
 <span class="fu"><a href="https://rdrr.io/r/base/colnames.html">colnames</a></span>(<span class="no">seExtended</span>) <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html">gsub</a></span>(<span class="st">"_genome_chr22_1_25409234"</span>,<span class="st">""</span>,<span class="fu"><a href="https://rdrr.io/r/base/colnames.html">colnames</a></span>(<span class="no">seExtended</span>))
 <span class="fu">colData</span>(<span class="no">seExtended</span>)$<span class="no">name</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html">gsub</a></span>(<span class="st">"_genome_chr22_1_25409234"</span>,<span class="st">""</span>,<span class="fu">colData</span>(<span class="no">seExtended</span>)$<span class="no">name</span>)
 <span class="fu"><a href="../reference/plot.bambu.html">plot.bambu</a></span>(<span class="no">seExtended</span>, <span class="kw">group.variable</span> <span class="kw">=</span> <span class="st">"groupVar"</span>, <span class="kw">type</span> <span class="kw">=</span> <span class="st">"heatmap"</span>)</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-7-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-8-1.png" width="768"></p>
 <p>or with PCA plot</p>
 <div class="sourceCode"><html><body><pre class="r"><span class="fu">colData</span>(<span class="no">seExtended</span>)$<span class="no">groupVar</span> <span class="kw">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/unlist.html">unlist</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/lapply.html">lapply</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/colnames.html">colnames</a></span>(<span class="no">seExtended</span>),<span class="kw">function</span>(<span class="no">x</span>) <span class="fu"><a href="https://rdrr.io/r/base/unlist.html">unlist</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/strsplit.html">strsplit</a></span>(<span class="no">x</span>,<span class="st">"_"</span>))[<span class="fl">2</span>]))
 <span class="fu"><a href="../reference/plot.bambu.html">plot.bambu</a></span>(<span class="no">seExtended</span>, <span class="kw">group.variable</span> <span class="kw">=</span> <span class="st">"groupVar"</span>, <span class="kw">type</span> <span class="kw">=</span> <span class="st">"pca"</span>)</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-8-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-9-1.png" width="768"></p>
 <div id="check-for-gene-examples" class="section level3">
 <h3 class="hasAnchor">
 <a href="#check-for-gene-examples" class="anchor"></a>Check for gene examples</h3>
 <p>Single gene examples can also be checked using plot functions from <em>bambu</em></p>
 <div class="sourceCode"><html><body><pre class="r"><span class="fu"><a href="../reference/plot.bambu.html">plot.bambu</a></span>(<span class="no">seExtended</span>, <span class="kw">type</span> <span class="kw">=</span> <span class="st">"annotation"</span>, <span class="kw">gene_id</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html">unique</a></span>(<span class="fu">rowData</span>(<span class="no">seExtended</span>)$<span class="no">GENEID</span>)[<span class="fl">10</span>])</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-9-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-10-1.png" width="768"></p>
 <pre><code>##&gt; [[1]]
 ##&gt; TableGrob (3 x 1) "arrange": 3 grobs
 ##&gt;   z     cells    name                grob
@@ -196,15 +387,27 @@ seExtended
 <h3 class="hasAnchor">
 <a href="#transcript-to-gene-expression" class="anchor"></a>Transcript to Gene expression</h3>
 <p>Gene expression can be obtained from transcript expression using this function:</p>
-<div class="sourceCode"><html><body><pre class="r"><span class="no">seGene</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/transcriptToGeneExpression.html">transcriptToGeneExpression</a></span>(<span class="no">seExtended</span>)</pre></body></html></div>
+<div class="sourceCode"><html><body><pre class="r"><span class="no">seGene</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/transcriptToGeneExpression.html">transcriptToGeneExpression</a></span>(<span class="no">seExtended</span>)
+<span class="no">seGene</span>
+<span class="co">##&gt; class: RangedSummarizedExperiment </span>
+<span class="co">##&gt; dim: 887 6 </span>
+<span class="co">##&gt; metadata(0):</span>
+<span class="co">##&gt; assays(2): counts CPM</span>
+<span class="co">##&gt; rownames(887): ENSG00000015475 ENSG00000040608 ... gene.98 gene.99</span>
+<span class="co">##&gt; rowData names(2): GENEID newGeneClass</span>
+<span class="co">##&gt; colnames(6): SGNex_K562_directcDNA_replicate1_run2</span>
+<span class="co">##&gt;   SGNex_K562_directcDNA_replicate4_run2 ...</span>
+<span class="co">##&gt;   SGNex_MCF7_directcDNA_replicate3_run3</span>
+<span class="co">##&gt;   SGNex_MCF7_directRNA_replicate4_run1</span>
+<span class="co">##&gt; colData names(2): name groupVar</span></pre></body></html></div>
 <p>Gene expression heatmap</p>
 <div class="sourceCode"><html><body><pre class="r"><span class="fu">colData</span>(<span class="no">seGene</span>)$<span class="no">groupVar</span> <span class="kw">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/unlist.html">unlist</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/lapply.html">lapply</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/colnames.html">colnames</a></span>(<span class="no">seGene</span>),<span class="kw">function</span>(<span class="no">x</span>) <span class="fu"><a href="https://rdrr.io/r/base/unlist.html">unlist</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/strsplit.html">strsplit</a></span>(<span class="no">x</span>,<span class="st">"_"</span>))[<span class="fl">2</span>]))
 <span class="fu"><a href="../reference/plot.bambu.html">plot.bambu</a></span>(<span class="no">seGene</span>, <span class="kw">group.variable</span> <span class="kw">=</span> <span class="st">"groupVar"</span>, <span class="kw">type</span> <span class="kw">=</span> <span class="st">"heatmap"</span>)</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-11-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-12-1.png" width="768"></p>
 <p>Gene expression PCA plot</p>
 <div class="sourceCode"><html><body><pre class="r"><span class="fu">colData</span>(<span class="no">seGene</span>)$<span class="no">groupVar</span> <span class="kw">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/unlist.html">unlist</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/lapply.html">lapply</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/colnames.html">colnames</a></span>(<span class="no">seGene</span>),<span class="kw">function</span>(<span class="no">x</span>) <span class="fu"><a href="https://rdrr.io/r/base/unlist.html">unlist</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/strsplit.html">strsplit</a></span>(<span class="no">x</span>,<span class="st">"_"</span>))[<span class="fl">2</span>]))
 <span class="fu"><a href="../reference/plot.bambu.html">plot.bambu</a></span>(<span class="no">seGene</span>, <span class="kw">group.variable</span> <span class="kw">=</span> <span class="st">"groupVar"</span>, <span class="kw">type</span> <span class="kw">=</span> <span class="st">"pca"</span>)</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-12-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-13-1.png" width="768"></p>
 </div>
 </div>
 <div id="differentially-expressed-genes" class="section level2">
@@ -217,29 +420,37 @@ seExtended
                                    <span class="kw">design</span> <span class="kw">=</span> ~ <span class="no">groupVar</span>)
 <span class="fu"><a href="https://rdrr.io/r/base/system.time.html">system.time</a></span>(<span class="no">dds.deseq</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/DESeq.html">DESeq</a></span>(<span class="no">dds</span>))
 <span class="co">##&gt;    user  system elapsed </span>
-<span class="co">##&gt;    1.98    0.00    1.98</span>
+<span class="co">##&gt;   1.996   0.028   2.025</span>
 
 <span class="no">deGeneRes</span> <span class="kw">&lt;-</span> <span class="kw pkg">DESeq2</span><span class="kw ns">::</span><span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/results.html">results</a></span>(<span class="no">dds.deseq</span>, <span class="kw">independentFiltering</span><span class="kw">=</span><span class="fl">FALSE</span>)</pre></body></html></div>
 <div class="sourceCode"><html><body><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span>(<span class="no">deGeneRes</span>[<span class="fu"><a href="https://rdrr.io/r/base/order.html">order</a></span>(<span class="no">deGeneRes</span>$<span class="no">padj</span>),])
 <span class="co">##&gt; log2 fold change (MLE): groupVar MCF7 vs K562 </span>
 <span class="co">##&gt; Wald test p-value: groupVar MCF7 vs K562 </span>
 <span class="co">##&gt; DataFrame with 6 rows and 6 columns</span>
-<span class="co">##&gt;                  baseMean log2FoldChange     lfcSE      stat      pvalue</span>
-<span class="co">##&gt;                 &lt;numeric&gt;      &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;   &lt;numeric&gt;</span>
-<span class="co">##&gt; ENSG00000185686  513.5554       -7.22327  0.498140 -14.50048 1.20303e-47</span>
-<span class="co">##&gt; ENSG00000197077   26.2357        9.09835  1.326114   6.86091 6.84254e-12</span>
-<span class="co">##&gt; ENSG00000283633   88.7407       -9.03039  1.431724  -6.30736 2.83841e-10</span>
-<span class="co">##&gt; ENSG00000099977  232.6720        1.85141  0.306629   6.03795 1.56080e-09</span>
-<span class="co">##&gt; ENSG00000169635   44.4275       -3.44047  0.579080  -5.94127 2.82821e-09</span>
-<span class="co">##&gt; ENSG00000100181   38.3698       -5.07047  0.892940  -5.67840 1.35959e-08</span>
-<span class="co">##&gt;                        padj</span>
-<span class="co">##&gt;                   &lt;numeric&gt;</span>
-<span class="co">##&gt; ENSG00000185686 7.14599e-45</span>
-<span class="co">##&gt; ENSG00000197077 2.03224e-09</span>
-<span class="co">##&gt; ENSG00000283633 5.62005e-08</span>
-<span class="co">##&gt; ENSG00000099977 2.31779e-07</span>
-<span class="co">##&gt; ENSG00000169635 3.35991e-07</span>
-<span class="co">##&gt; ENSG00000100181 1.34599e-06</span></pre></body></html></div>
+<span class="co">##&gt;                  baseMean log2FoldChange     lfcSE      stat</span>
+<span class="co">##&gt;                 &lt;numeric&gt;      &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;</span>
+<span class="co">##&gt; ENSG00000185686  513.5554       -7.22327  0.498140 -14.50048</span>
+<span class="co">##&gt; ENSG00000197077   26.2357        9.09835  1.326114   6.86091</span>
+<span class="co">##&gt; ENSG00000283633   88.7407       -9.03039  1.431724  -6.30736</span>
+<span class="co">##&gt; ENSG00000099977  232.6720        1.85141  0.306629   6.03795</span>
+<span class="co">##&gt; ENSG00000169635   44.4275       -3.44047  0.579080  -5.94127</span>
+<span class="co">##&gt; ENSG00000100181   38.3698       -5.07047  0.892940  -5.67840</span>
+<span class="co">##&gt;                                                                 pvalue</span>
+<span class="co">##&gt;                                                              &lt;numeric&gt;</span>
+<span class="co">##&gt; ENSG00000185686 0.0000000000000000000000000000000000000000000000120303</span>
+<span class="co">##&gt; ENSG00000197077 0.0000000000068425448545783570607904382313656081217312</span>
+<span class="co">##&gt; ENSG00000283633 0.0000000002838407468976333203669654163178986266968806</span>
+<span class="co">##&gt; ENSG00000099977 0.0000000015607995974142258612474572408387353539271913</span>
+<span class="co">##&gt; ENSG00000169635 0.0000000028282083250919303521398367383355917925591427</span>
+<span class="co">##&gt; ENSG00000100181 0.0000000135958879211409468852046023923732520621854292</span>
+<span class="co">##&gt;                                                                 padj</span>
+<span class="co">##&gt;                                                            &lt;numeric&gt;</span>
+<span class="co">##&gt; ENSG00000185686 0.00000000000000000000000000000000000000000000714599</span>
+<span class="co">##&gt; ENSG00000197077 0.00000000203223582180977191457661517551974705853013</span>
+<span class="co">##&gt; ENSG00000283633 0.00000005620046788573139474432216163360398475390411</span>
+<span class="co">##&gt; ENSG00000099977 0.00000023177874021601254939083656177872816428475744</span>
+<span class="co">##&gt; ENSG00000169635 0.00000033599114902092130879429198592189820260500710</span>
+<span class="co">##&gt; ENSG00000100181 0.00000134599290419295367876952908281484866392929689</span></pre></body></html></div>
 <div class="sourceCode"><html><body><pre class="r"><span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/summary.html">summary</a></span>(<span class="no">deGeneRes</span>)
 <span class="co">##&gt; </span>
 <span class="co">##&gt; out of 594 with nonzero total read count</span>
@@ -252,11 +463,11 @@ seExtended
 <span class="co">##&gt; [1] see 'cooksCutoff' argument of ?results</span>
 <span class="co">##&gt; [2] see 'independentFiltering' argument of ?results</span></pre></body></html></div>
 <div class="sourceCode"><html><body><pre class="r"><span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/plotMA.html">plotMA</a></span>(<span class="no">deGeneRes</span>, <span class="kw">ylim</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(-<span class="fl">3</span>,<span class="fl">3</span>))</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-16-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-17-1.png" width="768"></p>
 <p>Plotting shrinked lFC results</p>
 <div class="sourceCode"><html><body><pre class="r"><span class="no">resLFC</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/lfcShrink.html">lfcShrink</a></span>(<span class="no">dds.deseq</span>, <span class="kw">coef</span><span class="kw">=</span><span class="st">"groupVar_MCF7_vs_K562"</span>, <span class="kw">type</span><span class="kw">=</span><span class="st">"apeglm"</span>)
 <span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/plotMA.html">plotMA</a></span>(<span class="no">resLFC</span>, <span class="kw">ylim</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(-<span class="fl">3</span>,<span class="fl">3</span>))</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-17-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-18-1.png" width="768"></p>
 </div>
 <div id="differential-expression-for-isoform-detection" class="section level2">
 <h2 class="hasAnchor">
@@ -317,7 +528,7 @@ seExtended
 <span class="co">##&gt; [1] "DEU tested"</span>
 <span class="co">##&gt; [1] "Exon fold changes estimated"</span>
 <span class="co">##&gt;    user  system elapsed </span>
-<span class="co">##&gt;   8.136   0.056   8.194</span></pre></body></html></div>
+<span class="co">##&gt;   7.860   0.040   7.903</span></pre></body></html></div>
 <div class="sourceCode"><html><body><pre class="r"><span class="no">dxr</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DEXSeq/man/DEXSeqResults.html">DEXSeqResults</a></span>(<span class="no">dxd</span>, <span class="kw">independentFiltering</span><span class="kw">=</span><span class="fl">FALSE</span>)
 <span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span>(<span class="no">dxr</span>)
 <span class="co">##&gt; </span>
@@ -449,7 +660,7 @@ seExtended
      <span class="fu">xlab</span>(<span class="st">"Mean of normalized counts"</span>)+
     <span class="fu">ylab</span>(<span class="st">"Log2 Fold change"</span>)+
   <span class="fu">theme_minimal</span>()</pre></body></html></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-23-1.png" width="768"></p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-24-1.png" width="768"></p>
 <div class="sourceCode"><html><body><pre class="r"><span class="no">dxrDT</span>[<span class="no">padj</span><span class="kw">&lt;</span><span class="fl">0.5</span>,<span class="fu">.</span>(<span class="no">geneID</span>, <span class="no">txID</span>, <span class="no">log2fold_MCF7_K562</span>,<span class="no">K562</span>,<span class="no">MCF7</span>)]
 <span class="co">##&gt;             geneID            txID log2fold_MCF7_K562      K562     MCF7</span>
 <span class="co">##&gt; 1: ENSG00000183597           tx.35          -2.925745 4.2504114 2.284457</span>
