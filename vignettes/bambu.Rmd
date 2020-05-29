@@ -10,10 +10,253 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  warning=FALSE, message=FALSE,
+  comment = "##>"
 )
 ```
 
+
+## Introduction
+*[Bambu](https://github.com/GoekeLab/bambu)* can be used for transcript discovery and quantification from long read RNA-Seq data. Here, we present an example usage of bambu on Nanopore long read RNA-Sequencing from 2 human cancer cell lines
+
+
+## Data description
+To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which contains single chromosome RNA-Seq data from two common cell lines K562 and MCF7. Each of these cell line has three 
+replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. 
+
+```{r, include = FALSE}
+# To be removed later 
+devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareForBambu/bambu/")
+#To be removed later
+devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareDataPackage/NanoporeRNASeq/")
+```
+
 ```{r setup}
+library(NanoporeRNASeq)
 library(bambu)
 ```
+
+```{r}
+data("sample_info")
+sample_info
+```
+
+
+Name of bamfiles can be loaded as follows 
+```{r}
+data("bamFileNames")
+bamFileNames
+```
+
+We then loaded bam.files.
+```{r}
+bam.file <- system.file("extdata",bamFileNames, package = "NanoporeRNASeq")
+data("annotationGrangesList_chr22_1_25409234")
+```
+
+
+We applied *bambu* to perform EM on  extended annotations
+```{r}
+seExtended <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
+seExtended
+```
+*bambu* allows quantification without isoform discovery
+```{r}
+se <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = FALSE, verbose = FALSE, ncore = 6)
+se
+```
+
+## Check expression estimates
+We can check the estimated transcript expression using heatmap:
+```{r, fig.width = 8, fig.height = 6}
+colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
+colnames(seExtended) <- gsub("_genome_chr22_1_25409234","",colnames(seExtended))
+colData(seExtended)$name <- gsub("_genome_chr22_1_25409234","",colData(seExtended)$name)
+plot.bambu(seExtended, group.variable = "groupVar", type = "heatmap")
+```
+
+or with PCA plot
+```{r, fig.width = 8, fig.height = 6}
+colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
+plot.bambu(seExtended, group.variable = "groupVar", type = "pca")
+```
+
+
+### Check for gene examples
+
+Single gene examples can also be checked using plot functions from *bambu*
+```{r, fig.width = 8, fig.height = 10}
+plot.bambu(seExtended, type = "annotation", gene_id = unique(rowData(seExtended)$GENEID)[10])
+
+```
+
+### Transcript to Gene expression 
+Gene expression can be obtained from transcript expression using this function:
+```{r}
+seGene <- transcriptToGeneExpression(seExtended)
+seGene
+```
+
+Gene expression heatmap
+```{r, fig.width = 8, fig.height = 6}
+colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
+plot.bambu(seGene, group.variable = "groupVar", type = "heatmap")
+```
+
+Gene expression PCA plot
+```{r, fig.width = 8, fig.height = 6}
+colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
+plot.bambu(seGene, group.variable = "groupVar", type = "pca")
+```
+
+## Differentially expressed genes
+We used *DESeq2* to find the differentially expressed genes:
+```{r}
+library(DESeq2)
+dds <- DESeqDataSetFromMatrix(apply(assays(seGene)$counts,c(1,2),round),#tmp_wide[,-1],
+                                   colData = colData(seExtended),
+                                   design = ~ groupVar)
+system.time(dds.deseq <- DESeq(dds))
+
+deGeneRes <- DESeq2::results(dds.deseq, independentFiltering=FALSE)
+```
+
+```{r}
+head(deGeneRes[order(deGeneRes$padj),])
+```
+
+```{r}
+summary(deGeneRes)
+```
+```{r, fig.width = 8, fig.height = 6}
+plotMA(deGeneRes, ylim = c(-3,3))
+```
+
+Plotting shrinked lFC results
+```{r, fig.width = 8, fig.height = 6}
+resLFC <- lfcShrink(dds.deseq, coef="groupVar_MCF7_vs_K562", type="apeglm")
+plotMA(resLFC, ylim = c(-3,3))
+```
+
+
+
+## Differential expression for isoform detection
+We used *DEXSeq* to detect alternative used isoforms.
+```{r}
+library(DRIMSeq)
+count.data <- as.data.frame(rowData(seExtended))
+count.data$gene_id <- count.data$GENEID
+count.data$feature_id <- count.data$TXNAME
+count.data$GENEID <- count.data$TXNAME <- NULL
+
+count.data <- cbind(count.data, assays(seExtended)$counts)
+
+sample.info <- as.data.frame(colData(seExtended))
+sample.info$sample_id <- sample.info$name
+sample.info$name <- NULL
+d <- dmDSdata(counts=count.data, samples=sample.info)
+
+n_samp_gene <- 1
+n_samp_feature <- 1
+min_count_gene <- 1
+min_count_feature <- 1
+dFilter <- dmFilter(d,
+              min_samps_feature_expr = n_samp_feature, 
+              min_samps_feature_prop = n_samp_feature,
+              min_samps_gene_expr = n_samp_gene, 
+              min_feature_expr = min_count_feature,
+              min_gene_expr = min_count_gene,
+              min_feature_prop=0.1)
+table(table(counts(dFilter)$gene_id)) ## number of isoforms 
+
+
+
+```
+
+```{r}
+library(DEXSeq)
+formulaFullModel <- as.formula("~sample + exon + groupVar:exon")
+
+
+dxd <- DEXSeqDataSet(countData=round(as.matrix(counts(dFilter)[,-c(1:2)])),
+                     sampleData=DRIMSeq::samples(dFilter),
+                     design=formulaFullModel,
+                     featureID = counts(dFilter)$feature_id,
+                     groupID=counts(dFilter)$gene_id)
+
+
+system.time({
+  dxd <- estimateSizeFactors(dxd)
+  print('Size factor estimated')
+  dxd <- estimateDispersions(dxd, formula = formulaFullModel)
+  print('Dispersion estimated')
+  #dxd <- estimateExonFoldChanges( dxd )
+  dxd <- testForDEU(dxd, fullModel = formulaFullModel)
+  print('DEU tested')
+  dxd <- estimateExonFoldChanges(dxd, fitExpToVar="groupVar")
+  print('Exon fold changes estimated')
+}) 
+```
+
+```{r}
+dxr <- DEXSeqResults(dxd, independentFiltering=FALSE)
+head(dxr)
+```
+
+
+```{r}
+library(stageR)
+strp <- function(x) substr(x,1,15)
+qval <- perGeneQValue(dxr)
+dxr.g <- data.frame(gene=names(qval),qval)
+
+columns <- c("featureID","groupID","pvalue")
+dxr_pval <- as.data.frame(dxr[,columns])
+head(dxr_pval)
+
+pConfirmation <- matrix(dxr_pval$pvalue,ncol=1)
+dimnames(pConfirmation) <- list(strp(dxr_pval$featureID),"transcript")
+pScreen <- qval
+names(pScreen) <- strp(names(pScreen))
+tx2gene <- as.data.frame(dxr_pval[,c("featureID", "groupID")])
+for (i in 1:2) tx2gene[,i] <- strp(tx2gene[,i])
+
+
+stageRObj <- stageRTx(pScreen=pScreen, pConfirmation=pConfirmation,
+                      pScreenAdjusted=TRUE, tx2gene=tx2gene)
+stageRObj <- stageWiseAdjustment(stageRObj, method="dtu", alpha=0.5)
+suppressWarnings({
+  dex.padj <- getAdjustedPValues(stageRObj, order=FALSE,
+                                 onlySignificantGenes=TRUE)
+})
+```
+
+```{r}
+dxrDT <- data.table(as.data.frame(dxr))
+setnames(dxrDT, old = c('groupID','featureID'), new = c('geneID','txID'))
+dex.padj <- data.table(dex.padj)
+
+dxrDT <- dex.padj[dxrDT, on = c('geneID','txID')]
+head(dxrDT)
+```
+
+
+```{r, fig.width = 8, fig.height = 6}
+dxrDT[,sigLFC2:=(padj < 0.5&(abs(log2fold_MCF7_K562)>=2))]
+ggplot(dxrDT, aes(y = log2fold_MCF7_K562, x = exonBaseMean, color = as.factor(padj<0.5)))+
+  geom_point(size = 0.5)+
+     scale_x_log10()+
+  scale_color_manual(values = c('grey','indianred'), name = "Significant")+
+     xlab("Mean of normalized counts")+
+    ylab("Log2 Fold change")+
+  theme_minimal()
+
+```
+
+
+```{r}
+dxrDT[padj<0.5,.(geneID, txID, log2fold_MCF7_K562,K562,MCF7)]
+```
+
+
+
