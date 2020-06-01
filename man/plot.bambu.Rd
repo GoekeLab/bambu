@@ -13,7 +13,7 @@
 )
 }
 \arguments{
-\item{se}{An summarized experiment object obtained from \code\link{bambu} or \code{\link{transcriptToGene}}.}
+\item{se}{An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGene}}.}
 
 \item{group.variable}{Variable for grouping in plot, has be to provided if choosing to plot PCA.}
 

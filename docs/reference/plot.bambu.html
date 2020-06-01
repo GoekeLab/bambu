@@ -40,6 +40,7 @@
 
 
 <meta property="og:title" content="plot.bambu — plot.bambu" />
+<meta property="og:description" content="plotSEOuptut" />
 
 
 
@@ -116,6 +117,7 @@
     </div>
 
     <div class="ref-description">
+    <p>plotSEOuptut</p>
     </div>
 
     <pre class="usage"><span class='co'># S3 method for bambu</span>
@@ -132,28 +134,32 @@
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>se</th>
-      <td><p>An summarized experiment object obtained from <a href='bambu.html'>bambu</a> or <code>transcriptToGene</code>.}
-
-{group.variable}{Variable for grouping in plot, has be to provided if choosing to plot PCA.}
-
-{type}{plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see <code>details</code>.}
-
-{gene_id}{specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".}
-
-{transcript_id}{specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"}
-}
-{
-A heatmap plot for all samples
-}
-{
-plotSEOuptut
-}
-{
-<code><a href='https://rdrr.io/r/base/typeof.html'>type</a></code> indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.
-}</p></td>
+      <td><p>An summarized experiment object obtained from <code><a href='bambu.html'>bambu</a></code> or <code>transcriptToGene</code>.</p></td>
+    </tr>
+    <tr>
+      <th>group.variable</th>
+      <td><p>Variable for grouping in plot, has be to provided if choosing to plot PCA.</p></td>
+    </tr>
+    <tr>
+      <th>type</th>
+      <td><p>plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see <code>details</code>.</p></td>
+    </tr>
+    <tr>
+      <th>gene_id</th>
+      <td><p>specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".</p></td>
+    </tr>
+    <tr>
+      <th>transcript_id</th>
+      <td><p>specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"</p></td>
     </tr>
     </table>
 
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>A heatmap plot for all samples</p>
+    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
+
+    <p><code><a href='https://rdrr.io/r/base/typeof.html'>type</a></code> indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">

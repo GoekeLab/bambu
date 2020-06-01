@@ -1,6 +1,6 @@
 #' plotSEOuptut
 #' @title plot.bambu
-#' @param se An summarized experiment object obtained from \code\link{bambu} or \code{\link{transcriptToGene}}.
+#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGene}}.
 #' @param group.variable Variable for grouping in plot, has be to provided if choosing to plot PCA.
 #' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see \code{\link{details}}.
 #' @param gene_id specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".
