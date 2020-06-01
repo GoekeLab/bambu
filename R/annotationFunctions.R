@@ -68,13 +68,8 @@ prepareAnnotationsFromGTF <- function(file){
     unlistedExons <- unlist(grlist, use.names = FALSE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(grlist)), names=NULL)
      
-    
-    
-   
+  
     unlistedExons$exon_rank <- unlist(sapply(elementNROWS(grlist),seq,from=1), use.names=FALSE)
-   
-    
-    
     txIdForReorder <- togroup(PartitioningByWidth(grlist))
     unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)] #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
     unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(grlist),seq,to=1), use.names=FALSE)
