@@ -57,24 +57,23 @@ prepareAnnotationsFromGTF <- function(file){
     data$strand[data$strand=='.'] <- '*'
     data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
     data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
-    data$exon_rank=as.integer(gsub('.*exon_number (.*?);.*', '\\1',data$attribute))
+    #data$exon_rank=as.integer(gsub('.*exon_number (.*?);.*', '\\1',data$attribute))
     
     
     
     geneData=unique(data[,c('TXNAME', 'GENEID')])
     grlist <- makeGRangesListFromDataFrame(
-      data[,c('seqname', 'start','end','strand','exon_rank','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
+      data[,c('seqname', 'start','end','strand','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
     
     unlistedExons <- unlist(grlist, use.names = FALSE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(grlist)), names=NULL)
      
     
     
-    if(length(is.na(unlistedExons$exon_rank))>0){
-      unlistedExons$exon_newRank <- unlist(sapply(elementNROWS(grlist),seq,from=1), use.names=FALSE)
-      unlistedExons[is.na(unlistedExons$exon_rank)]$exon_rank <- unlistedExons[is.na(unlistedExons$exon_rank)]$exon_newRank
-      unlistedExons$exon_newRank <- NULL
-    }
+   
+    unlistedExons$exon_rank <- unlist(sapply(elementNROWS(grlist),seq,from=1), use.names=FALSE)
+   
+    
     
     txIdForReorder <- togroup(PartitioningByWidth(grlist))
     unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)] #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
