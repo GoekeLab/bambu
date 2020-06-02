@@ -100,7 +100,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     isoreParameters <- isoreParameters.default
 
     ## check quantification parameters
-    emParameters.default <- list(bias = FALSE,
+    emParameters.default <- list(bias = TRUE,
                                  maxiter = 10000,
                                  conv = 10^(-4))
     
