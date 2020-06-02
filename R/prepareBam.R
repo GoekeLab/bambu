@@ -2,7 +2,7 @@
 #' @param bamFile bamFile
 #' @inheritParams bambu
 #' @noRd
-prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, ncore=1) {
+prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, ncore = 1) {
   
   if(class(bamFile)=='BamFile') {
     if(!is.null(yieldSize)) {
@@ -26,11 +26,14 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, ncore=1
     
     chr <- scanBamHeader(bamFile)[[1]]
     chrRanges <- GRanges(seqnames=names(chr), ranges=IRanges(start=1, end=chr))
-    readGrgList <- mclapply(1:length(chr),
+    bpParameters <- BiocParallel::bpparam()
+    #===# set parallel options: If more CPUs than samples available, use parallel computing on each sample, otherwise use parallel to distribute samples (more efficient)
+    bpParameters$workers <- ncore
+    readGrgList <- BiocParallel::bplapply(1:length(chr),
                             helpFun,
                             chrRanges=chrRanges,
                             bamFile=bamFile,
-                            mc.cores = ncore)
+                            BPPARAM = bpParameters)
    } else {
   
   
