@@ -20,7 +20,7 @@ write.bambu <- function(se,path){
     colnames(geneIDs) <- c("TXNAME","GENEID")
     transcript_counts <- cbind(geneIDs,transcript_counts)  
     transcript_countsfn <- paste(path,"counts_transcript.txt",sep="")
-    write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE)
+    write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE,row.names= FALSE)
     gene_se <- transcriptToGeneExpression(se)
     gene_counts <- as.data.frame(assays(gene_se)$counts)
     gene_countsfn <- paste(path,"counts_gene.txt",sep="")
