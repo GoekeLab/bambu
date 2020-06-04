@@ -57,19 +57,37 @@ prepareAnnotationsFromGTF <- function(file){
     data$strand[data$strand=='.'] <- '*'
     data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
     data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
-    data$exon_rank=as.integer(gsub('.*exon_number (.*?);.*', '\\1',data$attribute))
+    #data$exon_rank=as.integer(gsub('.*exon_number (.*?);.*', '\\1',data$attribute))
+    
     geneData=unique(data[,c('TXNAME', 'GENEID')])
     grlist <- makeGRangesListFromDataFrame(
-      data[,c('seqname', 'start','end','strand','exon_rank','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
-    
+      data[,c('seqname', 'start','end','strand','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
+    grlist <- grlist[IRanges::order(start(grlist))]
+  
     unlistedExons <- unlist(grlist, use.names = FALSE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(grlist)), names=NULL)
     txIdForReorder <- togroup(PartitioningByWidth(grlist))
-    unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)] #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
+    
+    exon_rank <- sapply(elementNROWS(grlist), seq, from = 1)
+    exon_rank[which(unlist(unique(strand(grlist)))=="-")] <- lapply(exon_rank[which(unlist(unique(strand(grlist)))=="-")], rev)  # * assumes positive for exon ranking
+    names(exon_rank) <- NULL
+    unlistedExons$exon_rank <- unlist(exon_rank)
+    
+    
+    unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)]  #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
     unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(grlist),seq,to=1), use.names=FALSE)
     unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
-    #    mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
+    
+    
+    mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
+    
     grlist <- relist(unlistedExons, partitioning)
+    
+    # the grlist from gtf is ranked by exon_number instead of start position
+    # to be consistent with prepareAnnotations
+    # need to sort the grlist by start position
+    
+      
     minEqClasses <- getMinimumEqClassByTx(grlist)
     mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
     mcols(grlist)$eqClass <- minEqClasses$eqClass[match(names(grlist),minEqClasses$queryTxId)]
