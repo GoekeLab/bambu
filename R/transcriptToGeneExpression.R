@@ -28,7 +28,7 @@ transcriptToGeneExpression<- function(se){
   counts <- rowDataSe[,.(TXNAME,GENEID)][counts, on = "TXNAME"]
 
   counts[, valueGene:=sum(value), by = list(variable, GENEID)]
-  counts[, valueGeneCPM:=valueGene/sum(value)*10^6, by = list(variable)]
+  counts[, valueGeneCPM:=valueGene/max(sum(value),1)*10^6, by = list(variable)]
 
   ## counts
   counts_gene <- dcast(unique(counts[,.(GENEID, variable, valueGene)]), GENEID ~ variable, value.var = "valueGene")
