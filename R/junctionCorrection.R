@@ -39,20 +39,20 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
 
   # the code now includes a parallel implementation, which is only helpful when the BSgenome package is used
 
-  #junctionSeqStart<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
-  #junctionSeqEnd<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
+  junctionSeqStart<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2),2)) # shift: from IRanges
+  junctionSeqEnd<-BSgenome::getSeq(genomeSequence,IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2)) # shift: from IRanges
 
-  bpParameters <- BiocParallel::bpparam()
-  bpParameters$workers <- ncore
-  junctionSeqStart <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2),2),
-                            BSgenome::getSeq,
-                            x = genomeSequence,
-                            BPPARAM=bpParameters)
-
-  junctionSeqEnd <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2),
-                                        BSgenome::getSeq,
-                          x = genomeSequence,
-                          BPPARAM=bpParameters)
+  # bpParameters <- BiocParallel::bpparam()
+  # bpParameters$workers <- ncore
+  # junctionSeqStart <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2),2),
+  #                           BSgenome::getSeq,
+  #                           x = genomeSequence,
+  #                           BPPARAM=bpParameters)
+  # 
+  # junctionSeqEnd <- BiocParallel::bpvec(IRanges::shift(flank(uniqueJunctions,width=2,start=FALSE),-2),
+  #                                       BSgenome::getSeq,
+  #                         x = genomeSequence,
+  #                         BPPARAM=bpParameters)
 
 
   junctionMotif <- paste(junctionSeqStart,junctionSeqEnd,sep='-')
