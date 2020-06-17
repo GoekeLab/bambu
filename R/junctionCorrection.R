@@ -15,22 +15,24 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
         original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
         seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
       }
-     
     }else {
       if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
         stop("Please install the BSgenome package")
       
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-      
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
-    
     }
-    if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
-      message("not all chromosomes present in reference genome sequence, ranges are dropped")
-      unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
-                                                 value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
-                                                 pruning.mode = 'coarse')
+  }else{
+    if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)){
+      original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
+      seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
     }
+  }
+  if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
+    message("not all chromosomes present in reference genome sequence, ranges are dropped")
+    unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
+                                               value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
+                                               pruning.mode = 'coarse')
   }
 
   ##Todo: don't create junction names, instead work with indices/intergers (names are memory intensive)
