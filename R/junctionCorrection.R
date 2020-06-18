@@ -7,14 +7,18 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
 
   if(is.null(genomeSequence)){
     stop("Reference genome sequence is missing, please provide fasta file or BSgenome name, see available.genomes()")
-  }else if(class(genomeSequence) != 'FaFile'){
+  }
+  
+  original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
+  
+  if(class(genomeSequence) != 'FaFile'){
     if(grepl('.fa',genomeSequence)){
       genomeSequence <- Rsamtools::FaFile(genomeSequence)
       
       if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
-        original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
         seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
       }
+      
     }else {
       if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
         stop("Please install the BSgenome package")
@@ -22,9 +26,10 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
     }
-  }else{
+  }
+  
+  if(class(genomeSequence) != 'FaFile'){
     if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
-      original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
       seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
     }
   }
@@ -85,7 +90,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
                                       id=1:length(uniqueJunctions))
 
   strand(uniqueJunctions)<-uniqueJunctions$spliceStrand
-  if(original_seqlevelstyle != seqlevelsStyle(uniqueJunctions)[1]){
+  if(original_seqlevelstyle != seqlevelsStyle(unlisted_junction_granges)[1]){
     seqlevelsStyle(uniqueJunctions) <- original_seqlevelstyle
   }
   return(uniqueJunctions)
