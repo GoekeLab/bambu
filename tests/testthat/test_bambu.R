@@ -179,3 +179,33 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 })
 
 
+test_that("bambu works fine with inconsistent seqlevels styles",{
+  ## ToDo: update data sets for comparison
+  test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+  
+  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+  
+  
+  
+  # test case 1: with fa.file
+  set.seed(1234)
+  seqlevelsStyle(gr) <- "UCSC"
+  se = bambu(reads = test.bam,  annotations = gr, genomeSequence = fa.file, extendAnnotations = FALSE)
+  expect_s4_class(se, "SummarizedExperiment")
+  expect_equal(se,seUCSCExpected)
+  
+  # test case 2: with FaFile
+  set.seed(1234)
+  seqlevelsStyle(gr) <- "UCSC"
+  se = bambu(reads = test.bam,  annotations = gr, genomeSequence = Rsamtools::FaFile(fa.file), extendAnnotations = FALSE)
+  expect_s4_class(se, "SummarizedExperiment")
+  expect_equal(se,seUCSCExpected)
+  
+  
+  
+})
+
+
+
+
