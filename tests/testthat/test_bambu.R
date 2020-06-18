@@ -147,12 +147,12 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 
   # test case 1: bambu with single bam file, only using annotations (default option)
   set.seed(1234)
-  se = bambu(readClass.file = seReadClass1,  annotations = gr, extendAnnotations = FALSE)
+  se = bambu(readClass.file = seReadClass1,  annotations = gr,emParameters=list(bias = FALSE), extendAnnotations = FALSE)
   expect_s4_class(se, "SummarizedExperiment")
   expect_equal(se,seExpected)
 
   set.seed(1234)
-  seExtended = bambu(readClass.file = seReadClass1,  annotations = gr, extendAnnotations = TRUE)
+  seExtended = bambu(readClass.file = seReadClass1,  annotations = gr,emParameters=list(bias = FALSE), extendAnnotations = TRUE)
   expect_s4_class(seExtended, "SummarizedExperiment")
   expect_equal(seExtended,seExtendedExpected)
 
