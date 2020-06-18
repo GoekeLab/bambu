@@ -7,22 +7,37 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
 
   if(is.null(genomeSequence)){
     stop("Reference genome sequence is missing, please provide fasta file or BSgenome name, see available.genomes()")
-  }else if(class(genomeSequence) != 'FaFile'){
+  }
+  
+  original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
+  
+  if(class(genomeSequence) != 'FaFile'){
     if(grepl('.fa',genomeSequence)){
       genomeSequence <- Rsamtools::FaFile(genomeSequence)
+      
+      if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
+        seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
+      }
+      
     }else {
       if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
         stop("Please install the BSgenome package")
-
+      
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
-      if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
-        message("not all chromosomes present in reference genome sequence, ranges are dropped")
-        unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
-                                                   value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
-                                                   pruning.mode = 'coarse')
-      }
     }
+  }
+  
+  if(class(genomeSequence) == 'FaFile'){
+    if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
+      seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
+    }
+  }
+  if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
+    message("not all chromosomes present in reference genome sequence, ranges are dropped")
+    unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
+                                               value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
+                                               pruning.mode = 'coarse')
   }
 
   ##Todo: don't create junction names, instead work with indices/intergers (names are memory intensive)
@@ -75,7 +90,9 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
                                       id=1:length(uniqueJunctions))
 
   strand(uniqueJunctions)<-uniqueJunctions$spliceStrand
-
+  if(original_seqlevelstyle != seqlevelsStyle(unlisted_junction_granges)[1]){
+    seqlevelsStyle(uniqueJunctions) <- original_seqlevelstyle
+  }
   return(uniqueJunctions)
 }
 
