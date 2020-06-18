@@ -28,7 +28,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
     }
   }
   
-  if(class(genomeSequence) != 'FaFile'){
+  if(class(genomeSequence) == 'FaFile'){
     if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
       seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
     }
