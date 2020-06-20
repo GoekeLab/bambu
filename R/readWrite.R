@@ -75,7 +75,7 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
     arrange(as.character(seqnames), start) %>%
     ungroup() %>%
     dplyr::select(seqnames, source, feature, start, end, score, strand, frame, attributes)
-  
+  gtf <- mutate(gtf, strand=recode_factor(strand, `*`="."))
   write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
 } 
 
