@@ -210,6 +210,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations, isoreParameters, verbose = FALSE){
   combinedTxCandidates = NULL
+  start.ptm <- proc.time()
   for(readClassIndex in seq_along(readClassList)){
     readClass <- readClassList[[readClassIndex]]
     if(is.character(readClass)){
@@ -217,7 +218,11 @@ bambu.extendAnnotations <- function(readClassList, annotations, isoreParameters,
       seqlevelsStyle(readClass) <- seqlevelsStyle(annotations)[1]
     }
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClass, readClassSeRef = combinedTxCandidates, verbose = verbose)
+    rm(readClass)
+    gc(verbose=FALSE)
   }
+  end.ptm <- proc.time()
+  if(verbose)  message('combining transcripts in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   annotations <- isore.extendAnnotations(se=combinedTxCandidates,
                                          annotationGrangesList=annotations,
                                          remove.subsetTx = isoreParameters[['remove.subsetTx']],
@@ -228,6 +233,8 @@ bambu.extendAnnotations <- function(readClassList, annotations, isoreParameters,
                                          min.exonOverlap = isoreParameters[['min.exonOverlap']],
                                          prefix = isoreParameters[['prefix']],
                                          verbose = verbose)
+  rm(combinedTxCandidates)
+  gc(verbose=FALSE)
   return(annotations)
 }
 
@@ -241,16 +248,21 @@ bambu.quantify <- function(readClass, annotations, emParameters, min.exonDistanc
   }
   
   readClass <- isore.estimateDistanceToAnnotations(readClass, annotations, min.exonDistance = min.exonDistance, verbose = verbose)
+  gc(verbose=FALSE)
   readClassDt <- getEmptyClassFromSE(readClass, annotations)
   colNameRC <- colnames(readClass)
   colDataRC <- colData(readClass)
   rm(readClass)
   gc(verbose=FALSE)
   counts <- bambu.quantDT(readClassDt,emParameters = emParameters, ncore = ncore, verbose = verbose)
+  rm(readClassDt)
+  gc(verbose=FALSE)
   if(length(setdiff(counts$tx_name,names(annotations)))>0){
     stop("The provided annotation is incomplete")
   }
   counts <- counts[data.table(tx_name = names(annotations)),  on = 'tx_name']
+  rm(annotations)
+  gc(verbose=FALSE)
   counts[is.na(estimates),`:=`(estimates = 0, CPM = 0) ]
   
   seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(counts = matrix(counts$estimates,ncol = 1, dimnames = list(NULL, colNameRC)),
