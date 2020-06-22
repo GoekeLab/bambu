@@ -70,12 +70,12 @@
       </header><div class="row">
   <div class="contents col-md-9">
 
-
+<p><img src="figures/transparent-bambu.png" title="Bambu" alt="Bambu"></p>
 <div id="bambu-reference-guided-transcript-discovery-and-quantification-for-long-read-rna-seq-data" class="section level1">
 <div class="page-header"><h1 class="hasAnchor">
 <a href="#bambu-reference-guided-transcript-discovery-and-quantification-for-long-read-rna-seq-data" class="anchor"></a>bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data</h1></div>
+<p><a href="https://github.com/GoekeLab/bambu"><img src="https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic" alt="GitHub release (latest by date)"></a> <a href="https://github.com/GoekeLab/bambu/graphs/contributors"><img src="https://img.shields.io/badge/Maintained%3F-Yes-brightgreen" alt="Maintained?"></a> <a href="#installation"><img src="https://img.shields.io/badge/Install-Github-brightgreen" alt="Install"></a> <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a></p>
 <p><strong><em>bambu</em></strong> is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use <strong><em>bambu</em></strong> after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from <strong><em>bambu</em></strong> can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.</p>
-<p><a href="https://github.com/GoekeLab/bambu"><img src="https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic" alt="GitHub release (latest by date)"></a> <a href="https://github.com/GoekeLab/bambu/graphs/contributors"><img src="https://img.shields.io/badge/Maintained%3F-Yes-blue" alt="Maintained?"></a><br><a href="#installation"><img src="https://img.shields.io/badge/Install-Github-brightgreen" alt="Install"></a> <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a></p>
 <hr>
 <div id="content" class="section level3">
 <h3 class="hasAnchor">
@@ -83,9 +83,10 @@
 <ul>
 <li><a href="#installation">Installation</a></li>
 <li><a href="#general-usage">General usage</a></li>
-<li><a href="#use-precalculated-annotation-objects">Use precalculated annotations object</a></li>
+<li><a href="#use-precalculated-annotation-objects">Use precalculated annotation objects</a></li>
 <li><a href="#advanced-options">Advanced options</a></li>
 <li><a href="#complementary-functions">Complementary functions</a></li>
+<li><a href="#release-history">Release History</a></li>
 <li><a href="#contributors">Contributors</a></li>
 </ul>
 </div>
@@ -129,76 +130,79 @@ For larger sample numbers we recommend to write the processed data to a file:</p
 <a href="#use-precalculated-annotation-objects" class="anchor"></a>Use precalculated annotation objects</h3>
 <p>You can also use precalculated annotations.</p>
 <p>If you plan to run <strong><em>bambu</em></strong> more frequently, we recommend to save the bambuAnnotations object.</p>
-<p>The bambuAnnotation object can be calculated from a gtf file:</p>
+<p>The bambuAnnotation object can be calculated from a <em>.gtf</em> file:</p>
 <pre class="rscript"><code>annotations &lt;- prepareAnnotationFromGTF(gtf.file)</code></pre>
-<p>From TxDb object</p>
+<p>From <em>TxDb</em> object</p>
 <pre class="rscript"><code>annotations &lt;- prepareAnnotations(txdb)</code></pre>
 <hr>
 </div>
-<div id="advanced-options" class="section level2">
-<h2 class="hasAnchor">
-<a href="#advanced-options" class="anchor"></a>Advanced Options</h2>
+<div id="advanced-options" class="section level3">
+<h3 class="hasAnchor">
+<a href="#advanced-options" class="anchor"></a>Advanced Options</h3>
 <p><strong>More stringent filtering thresholds imposed on potential novel transcripts</strong></p>
-<blockquote>
-<p>Keep novel transcripts with min 5 read count in at least 1 sample:</p>
-</blockquote>
+<ul>
+<li>Keep novel transcripts with min 5 read count in at least 1 sample:</li>
+</ul>
 <pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readCount = 5))</a></code></pre>
-<blockquote>
-<p>Keep novel transcripts with min 5 samples having at least 2 counts:</p>
-</blockquote>
+<ul>
+<li>Keep novel transcripts with min 5 samples having at least 2 counts:</li>
+</ul>
 <pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumber = 5))</a></code></pre>
-<blockquote>
-<p>Filter out transcripts with relative abundance within gene lower than 10%:</p>
-</blockquote>
+<ul>
+<li>Filter out transcripts with relative abundance within gene lower than 10%:</li>
+</ul>
 <pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))</a></code></pre>
 <p><strong>Quantification without bias correction</strong></p>
-<blockquote>
 <p>The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.</p>
-</blockquote>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, emParameters(bias = FALSE))</a></code></pre>
-<p><strong>Parallel computation</strong></p>
-<blockquote>
-<p><strong><em>bambu</em></strong> allows parallel computation.</p>
-</blockquote>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))</a></code></pre>
+<p><strong>Parallel computation</strong><br><strong><em>bambu</em></strong> allows parallel computation.</p>
 <pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, ncore = 8)</a></code></pre>
 <p>See <a href="docs/bambu_0.1.0.pdf">manual</a> for details to customize other conditions.</p>
 <hr>
+</div>
 <div id="complementary-functions" class="section level3">
 <h3 class="hasAnchor">
 <a href="#complementary-functions" class="anchor"></a>Complementary functions</h3>
 <p><strong>Transcript expression to gene expression</strong></p>
 <pre class="rscript"><code><a href="reference/transcriptToGeneExpression.html">transcriptToGeneExpression(se)</a></code></pre>
 <p><strong>Visualization</strong></p>
-<blockquote>
 <p>You can visualize the novel genes/transcripts using <strong><em>plot.bambu</em></strong> function</p>
-</blockquote>
 <pre class="rscript"><code><a href="reference/plot.bambu.html">plot.bambu(se, type = "annotation", gene_id)
 
 plot.bambu(se, type = "annotation", transcript_id)</a></code></pre>
-<blockquote>
-<p><strong><em>plot.bambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions</p>
-</blockquote>
+<ul>
+<li>
+<strong><em>plot.bambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions</li>
+</ul>
 <pre class="rscript"><code><a href="reference/plot.bambu.html">plot.bambu(se, type = "heatmap") # heatmap 
 
 plot.bambu(se, type = "pca") # PCA visualization</a></code></pre>
-<blockquote>
-<p><strong><em>plot.bambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable</p>
-</blockquote>
+<ul>
+<li>
+<strong><em>plot.bambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable</li>
+</ul>
 <pre class="rscript"><code><a href="reference/plot.bambu.html">plot.bambu(se, type = "heatmap", group.var) # heatmap 
 
 plot.bambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 <p><strong>Write bambu outputs to files</strong></p>
-<blockquote>
-<p><strong><em>writeBambuOutput</em></strong> will generate three files, including a <strong>.gtf</strong> file for the extended annotations, and two <strong>.txt</strong> files for the expression counts at transcript and gene levels.</p>
-</blockquote>
+<ul>
+<li>
+<strong><em>writeBambuOutput</em></strong> will generate three files, including a <em>.gtf</em> file for the extended annotations, and two <em>.txt</em> files for the expression counts at transcript and gene levels.</li>
+</ul>
 <pre class="rscript"><code><a href="reference/writeBambuOutput.html">writeBambuOutput(se, path = "./bambu/")</a></code></pre>
 <hr>
+</div>
+<div id="release-history" class="section level3">
+<h3 class="hasAnchor">
+<a href="#release-history" class="anchor"></a>Release History</h3>
+<p><strong>bambu version 0.1.0</strong></p>
+<p>Release date: 29th May 2020</p>
 </div>
 <div id="contributors" class="section level3">
 <h3 class="hasAnchor">
 <a href="#contributors" class="anchor"></a>Contributors</h3>
-<p>This package is developed and maintained by<a href="https://github.com/cying111">Ying Chen</a>, <a href="https://github.com/yuukiiwa">Yuk Kei Wan</a>, <a href="https://github.com/jonathangoeke">Jonathan Goeke</a> and at Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.</p>
-</div>
+<p>This package is developed and maintained by <a href="https://github.com/cying111">Ying Chen</a>, <a href="https://github.com/yuukiiwa">Yuk Kei Wan</a>, and <a href="https://github.com/jonathangoeke">Jonathan Goeke</a> at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.</p>
+<p><img src="figures/bambu_design_highres.png" title="Bambu" alt="Bambu"></p>
 </div>
 </div>
 
@@ -227,13 +231,7 @@ plot.bambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 </ul>
 </div>
 
-  <div class="dev-status">
-<h2>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://raw.githubusercontent.com/GoekeLab/bambu/master/figures/transparent-bambu.png?token=AGA7DTCQ2VT5ILG3R6ORKUK6WP424"><img src="https://raw.githubusercontent.com/GoekeLab/bambu/master/figures/transparent-bambu.png?token=AGA7DTCQ2VT5ILG3R6ORKUK6WP424" title="Bambu" alt="Bambu"></a></li>
-</ul>
-</div>
-</div>
+  </div>
 </div>
 
 

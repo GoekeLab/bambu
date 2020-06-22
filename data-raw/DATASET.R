@@ -64,6 +64,11 @@ seCombinedGeneExpected <- transcriptToGeneExpression(seCombined)
 seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 
+set.seed(1234)
+seqlevelsStyle(gr) <- "UCSC"
+seUCSCExpected = bambu(reads = test.bam,  annotations = gr, genomeSequence = fa.file, extendAnnotations = FALSE)
+
+
 
 
 usethis::use_data(data1,data2,data3,data4,data5,
@@ -73,6 +78,7 @@ usethis::use_data(data1,data2,data3,data4,data5,
                   seWithDistExpected,
                   seGeneExpected,seExtendedGeneExpected,
                   seCombinedGeneExpected,seCombinedExtendedGeneExpected,
+                  seUCSCExpected,
                   internal = TRUE,overwrite = TRUE)
 
 

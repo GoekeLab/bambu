@@ -30,8 +30,8 @@ test_that("prepareAnnotationsFromGTF is GRangesList",{
   expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
   gr <- prepareAnnotationsFromGTF(gtf.file)
-
-  expect_equal(gr, expectedGR[order(names(expectedGR))])
+  
+  expect_equal(gr[order(names(gr))], expectedGR[order(names(expectedGR))])
   expect_s4_class(gr, class = 'CompressedGRangesList')
   expect_named(mcols(gr), c("TXNAME", "GENEID","eqClass"))
 })
