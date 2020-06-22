@@ -259,4 +259,9 @@ dxrDT[padj<0.5,.(geneID, txID, log2fold_MCF7_K562,K562,MCF7)]
 ```
 
 
+```{r}
+sessionInfo()
+```
+
+
 
