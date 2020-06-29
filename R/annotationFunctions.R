@@ -53,9 +53,6 @@ prepareAnnotationsFromGTF <- function(file){
   }else{
     data <- read.delim(file,header=FALSE,comment.char='#')
     colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
-    if (startsWith(data$seqname,"chr")){
-      data$seqname = gsub('chr(.*?)','\\1',data$seqname)
-    }
     data <- data[data$type=='exon',]
     data$strand[data$strand=='.'] <- '*'
     data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
