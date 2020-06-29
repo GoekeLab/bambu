@@ -37,36 +37,46 @@ writeBambuOutput <- function(se,path){
 #' @export
 writeToGTF <- function (annotation,file,geneIDs=NULL) {
   if (missing(annotation) | missing(file)){
-    stop('Both GRangesList and the name of file are required.')
+    stop('Both GRangesList and the name of the output file are required.')
   }else if (class(annotation) != "CompressedGRangesList"){
     stop('The inputted GRangesList is of the wrong class.')
-  }else {
-    df <- as.data.frame(annotation)
-    df$exon_rank <- paste('exon_number "',df$exon_rank,'";',sep= '')
-    if (missing(geneIDs)){
-      if (!is.null(mcols(annotation, use.names=FALSE)$GENEID)){
-        geneIDs <- data.frame(mcols(annotation, use.names=FALSE)$TXNAME,mcols(annotation, use.names=FALSE)$GENEID)
-        colnames(geneIDs) <- c("TXNAME","GENEID")
-      }
+  }
+  df <- as_tibble(annotation)
+  df$exon_rank <- paste('exon_number "',df$exon_rank,'";',sep= '')
+  if (missing(geneIDs)){
+    if (!is.null(mcols(annotation, use.names=FALSE)$GENEID)){
+      geneIDs <- as_tibble(mcols(annotation, use.names=FALSE)[, c('TXNAME','GENEID')])
+      geneIDs$seqnames = unlist(unique(seqnames(annotation)))
+      geneIDs$strand = unlist(unique(strand(annotation)))
     }
-    df <- merge(df,geneIDs,by.x="group_name",by.y="TXNAME",all=TRUE)
-    df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
-    df$GENEID <- paste('gene_id "',df$GENEID,'";',sep= '')
-    gtf_exon <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "exon",
-                          start=df$start,end=df$end,score=".",strand=df$strand,frame=".",
-                          attributes= paste(df$GENEID,df$group_name,df$exon_rank))
-    df_end <- df[order(df$end, decreasing = TRUE),]
-    df_end <- data.frame(group_name=df_end$group_name,uend=df_end$end)
-    df_end <- df_end[!duplicated(df_end$group_name),]
-    df <- df[!duplicated(df$group_name),]
-    df <- merge(df,df_end,by="group_name",all=TRUE)
-    gtf_trns <- data.frame(seqname=df$seqnames, source= "Bambu",feature= "transcript",
-                             start=df$start,end=df$uend,score=".",strand=df$strand,frame=".",
-                             attributes= paste(df$GENEID,df$group_name))
-    }
-    gtf <- rbind(gtf_trns,gtf_exon)
-    gtf <- gtf[order(gtf$attributes),]
-    write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
+  }
+  df <- left_join(df,geneIDs[,c('TXNAME','GENEID')],by=c("group_name"="TXNAME"),all=TRUE)
+  df$group_name <- paste('transcript_id "',df$group_name,'";',sep= '')
+  df$GENEID <- paste('gene_id "',df$GENEID,'";',sep= '')
+  dfExon <- mutate(df, source='Bambu',
+                   feature='exon',
+                   score='.',
+                   frame='.',
+                   attributes=paste(GENEID, group_name, exon_rank)) %>%
+    dplyr::select( seqnames, source, feature, start, end, score, strand, frame, attributes, group_name)
+  dfTx <- as.data.frame(range(ranges(annotation)))
+  dfTx <- left_join(dfTx,geneIDs,by=c("group_name"="TXNAME"),all=TRUE)
+  dfTx$group_name <- paste('transcript_id "',dfTx$group_name,'";',sep= '')
+  dfTx$GENEID <- paste('gene_id "',dfTx$GENEID,'";',sep= '')
+  
+  dfTx <- mutate(dfTx, source='Bambu',
+                 feature='transcript',
+                 score='.',
+                 frame='.',
+                 attributes=paste(GENEID, group_name)) %>%
+    dplyr::select( seqnames, source, feature, start, end, score, strand,frame, attributes, group_name)
+  gtf <- rbind(dfTx, dfExon) %>%
+    group_by(group_name) %>% 
+    arrange(as.character(seqnames), start) %>%
+    ungroup() %>%
+    dplyr::select(seqnames, source, feature, start, end, score, strand, frame, attributes)
+  gtf <- mutate(gtf, strand=recode_factor(strand, `*`="."))
+  write.table(gtf, file= file, quote=FALSE, row.names=FALSE, col.names=FALSE, sep = "\t")
 } 
 
 
@@ -84,16 +94,19 @@ readFromGTF <- function(file){
     stop('A GTF file is required.')
   }else{
     data=read.delim(file,header=FALSE, comment.char='#')
+
     colnames(data) <- c("seqname","source","type","start","end","score","strand","frame","attribute")
-    data$strand[data$strand=='.'] <- '*'
-    data$GENEID = gsub('gene_id (.*); tra.*','\\1',data$attribute)
+    data <- data[data$type=='exon',]
+        data$strand[data$strand=='.'] <- '*'
+    data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
     data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
-    #geneData=unique(data[,c('txid','gene_id','refMatch')]))
-    geneData=unique(data[,c('TXNAME', 'GENEID')])
     grlist <- makeGRangesListFromDataFrame(
-      data[data$type=='exon',],split.field='TXNAME', names.field='TXNAME',keep.extra.columns = TRUE)
+      data[,c('seqname', 'start','end','strand','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
+    grlist <- grlist[IRanges::order(start(grlist))]
+    
     geneData=(unique(data[,c('TXNAME', 'GENEID')]))
-    mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$txid)),])
+    mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
+    
   }
   return (grlist)
 }
