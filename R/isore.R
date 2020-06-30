@@ -140,10 +140,10 @@ isore.constructReadClasses <- function(readGrgList,
   # seqlevels are made equal (added for chromosomes missing in any of them)
   # seqlevels(readClassListSpliced) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
 
-  singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1], use.names=F)
+  singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1], use.names=FALSE)
   mcols(singleExonReads)$id <- mcols(readGrgList[elementNROWS(readGrgList)==1])$id
 
-  referenceExons <- unique(c(granges(unlist(readClassListSpliced[mcols(readClassListSpliced)$confidenceType=='highConfidenceJunctionReads' & mcols(readClassListSpliced)$strand.rc!='*'], use.names=F)), granges(unlist(annotationGrangesList, use.names=F))))
+  referenceExons <- unique(c(granges(unlist(readClassListSpliced[mcols(readClassListSpliced)$confidenceType=='highConfidenceJunctionReads' & mcols(readClassListSpliced)$strand.rc!='*'], use.names=FALSE)), granges(unlist(annotationGrangesList, use.names=FALSE))))
 
   readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(granges = singleExonReads,
                                                                         grangesReference = referenceExons,
@@ -270,8 +270,8 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
     start.spliced <- cbind(start.splicedRef, start.splicedNew)
     end.spliced <- cbind(end.splicedRef, end.splicedNew)
-    rowData.spliced$start <- rowMins(start.spliced, na.rm=T)
-    rowData.spliced$end <- rowMaxs(end.spliced, na.rm=T)
+    rowData.spliced$start <- rowMins(start.spliced, na.rm=TRUE)
+    rowData.spliced$end <- rowMaxs(end.spliced, na.rm=TRUE)
     rowData.spliced <- dplyr::select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds) %>%
       mutate(confidenceType = 'highConfidenceJunctionReads')
 
@@ -321,36 +321,36 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     counts.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[['counts']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
       mutate(index=overlapRefToCombined) %>%
       group_by(index) %>%
-      summarise_all(sum, na.rm=T)
+      summarise_all(sum, na.rm=TRUE)
 
     counts.unsplicedNewSum <- as_tibble(assays(readClassSe)[['counts']])[rowData(readClassSe)$confidenceType=='unsplicedNew',] %>%
       mutate(index=overlapNewToCombined) %>%
       group_by(index) %>%
-      summarise_all(sum, na.rm=T)
+      summarise_all(sum, na.rm=TRUE)
 
     start.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[['start']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
       mutate(index=overlapRefToCombined) %>%
       group_by(index) %>%
-      summarise_all(min, na.rm=T)
+      summarise_all(min, na.rm=TRUE)
 
     start.unsplicedNewSum <- readClassSeTBL %>%
       filter(confidenceType=='unsplicedNew') %>%
       dplyr::select(start) %>%
       mutate(index=overlapNewToCombined) %>%
       group_by(index) %>%
-      summarise_all(min, na.rm=T)
+      summarise_all(min, na.rm=TRUE)
 
     end.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[['end']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
       mutate(index=overlapRefToCombined) %>%
       group_by(index) %>%
-      summarise_all(max, na.rm=T)
+      summarise_all(max, na.rm=TRUE)
 
     end.unsplicedNewSum <- readClassSeTBL %>%
       filter(confidenceType=='unsplicedNew') %>%
       dplyr::select(end) %>%
       mutate(index=overlapNewToCombined) %>%
       group_by(index) %>%
-      summarise_all(max, na.rm=T)
+      summarise_all(max, na.rm=TRUE)
 
     counts.unsplicedRef <- matrix(0,
                                   dimnames = list(1:nrow(rowData.unspliced),
@@ -639,7 +639,7 @@ seqlevels(exonsByReadClassUnspliced) <-  unique(c(seqlevels(exonsByReadClassUnsp
 
     if(any(is.na(mcols(seCombined)$GENEID))){
 
-      newGeneIds <- assignNewGeneIds(exonRangesCombined[is.na(mcols(seCombined)$GENEID)], prefix=prefix, minoverlap=5, ignore.strand=F)
+      newGeneIds <- assignNewGeneIds(exonRangesCombined[is.na(mcols(seCombined)$GENEID)], prefix=prefix, minoverlap=5, ignore.strand=FALSE)
 
       mcols(seCombined)$GENEID[as.integer(newGeneIds$readClassId)] <- newGeneIds$geneId
     }
@@ -657,7 +657,7 @@ seqlevels(exonsByReadClassUnspliced) <-  unique(c(seqlevels(exonsByReadClassUnsp
       ungroup() %>%
       dplyr::select(-geneId)
     relCounts <- assays(seCombined)$counts / countsTBL
-    filterTxUsage <- rowSums(relCounts >= min.readFractionByGene, na.rm=T) >= min.sampleNumber
+    filterTxUsage <- rowSums(relCounts >= min.readFractionByGene, na.rm=TRUE) >= min.sampleNumber
     seCombinedFiltered <- seCombined[filterTxUsage]
     exonRangesCombinedFiltered <- exonRangesCombined[filterTxUsage]
 
@@ -765,7 +765,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
   readClassToGeneIdTableNew <- assignNewGeneIds(rowRanges(seReadClass)[newGeneCandidates],
                                                 prefix='.unassigned',
                                                 minoverlap=5,
-                                                ignore.strand=F)
+                                                ignore.strand=FALSE)
   readClassGeneTable <- rbind(readClassToGeneIdTable, readClassToGeneIdTableNew)
   readClassTable <- left_join(readClassTable, readClassGeneTable, by="readClassId") %>%
     dplyr::select(confidenceType, geneId, compatible, equal)
