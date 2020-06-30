@@ -11,7 +11,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   
   original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
   
-  if(class(genomeSequence) != 'FaFile'){
+  if(!is(genomeSequence,'FaFile')){
     if(grepl('.fa',genomeSequence)){
       genomeSequence <- Rsamtools::FaFile(genomeSequence)
       
@@ -28,7 +28,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
     }
   }
   
-  if(class(genomeSequence) == 'FaFile'){
+  if(is(genomeSequence,'FaFile')){
     if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
       seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
     }
