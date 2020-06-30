@@ -1,4 +1,6 @@
 useDynLib(bambu, .registration=TRUE)
 exportPattern("^[[:alpha:]]+")
 importFrom(Rcpp, evalCpp)
-
+import(RcppArmadillo)
+import(RcppProgress)
+import(progress)
