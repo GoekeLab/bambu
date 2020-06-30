@@ -38,7 +38,7 @@ writeBambuOutput <- function(se,path){
 writeToGTF <- function (annotation,file,geneIDs=NULL) {
   if (missing(annotation) | missing(file)){
     stop('Both GRangesList and the name of the output file are required.')
-  }else if (class(annotation) != "CompressedGRangesList"){
+  }else if (!is(annotation,"CompressedGRangesList")){
     stop('The inputted GRangesList is of the wrong class.')
   }
   df <- as_tibble(annotation)
