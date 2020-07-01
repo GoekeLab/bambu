@@ -29,7 +29,12 @@ Suggests:
     RColorBrewer,
     gridExtra,
     BSgenome.Hsapiens.NCBI.GRCh38,
-    TxDb.Hsapiens.UCSC.hg38.knownGene
+    TxDb.Hsapiens.UCSC.hg38.knownGene,
+    AnnotationDbi,
+    BSgenome,
+    BiocGenerics,
+    BiocParallel,
+    Biostrings
 Enhances: parallel
 SystemRequirements:
 biocViews: 
