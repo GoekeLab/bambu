@@ -14,7 +14,7 @@
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom ggbio autoplot
 #' @importFrom gridExtra grid.arrange
-#' @export
+#' @noRd
 plot <- function(se, ..., group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
     UseMethod("plot")
   }
