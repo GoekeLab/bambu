@@ -2,8 +2,8 @@
 #' @title Write bambu results to GTF and transcript/gene-count files
 #' @param se a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
-#' @return The function will generate three files, a \code{\link{.gtf}} file for the annotations, 
-#' two \code{\link{.txt}} files for transcript and gene counts respectively. 
+#' @return The function will generate three files, a .gtf file for the annotations, 
+#' two .txt files for transcript and gene counts respectively. 
 #' @export
 writeBambuOutput <- function(se,path){
   if (missing(se) | missing(path)){
@@ -82,7 +82,7 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
 
 #' Outputs GRangesList object from reading a GTF file
 #' @title convert a GTF file into a GRangesList
-#' @param file a \code{\link{.gtf}} file
+#' @param file a .gtf file
 #' @return grlist a \code{\link{GRangesList}} object, with two columns
 #' \itemize{
 #'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
