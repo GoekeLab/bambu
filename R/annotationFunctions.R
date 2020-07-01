@@ -37,8 +37,8 @@ prepareAnnotations <- function(txdb) {
 #' Prepare annotation granges object from GTF file 
 #' @title Prepare annotation granges object from GTF file  into a GRangesList object
 #' @param file a GTF file
-#' @return grlist a \code{\link{GRangesList}} object, unlike \code\link{readFromGTF}}, 
-#' this function finds out the equivalence classes between the transcripts, 
+#' @return A \code{\link{GRangesList}} object
+#' @details Unlike \code\link{readFromGTF}}, this function finds out the equivalence classes between the transcripts,
 #' with \code{\link{mcols}} data having three columns:
 #' \itemize{
 #'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
