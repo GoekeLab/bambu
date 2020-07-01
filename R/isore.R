@@ -532,6 +532,7 @@ isore.extendAnnotations <- function(se,
                                                          type='equal',
                                                          select='all',
                                                          ignore.strand=FALSE)
+      if(length(overlapsNewIntronsAnnotatedIntrons)>0){
       maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
                                                 geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)],
                                                 stringsAsFactors=FALSE)) %>%
@@ -566,7 +567,7 @@ isore.extendAnnotations <- function(se,
 
       classificationTable$newLastExon[distNewTxByQuery$queryHits[!distNewTxByQuery$endMatch]] <- 'newLastExon'
       classificationTable$newLastExon[classificationTable$newLastJunction != 'newLastJunction'] <- ''
-
+}
       mcols(seFilteredSpliced)$readClassType <- apply(classificationTable, 1, paste, collapse='')
 
 
