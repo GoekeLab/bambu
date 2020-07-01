@@ -27,7 +27,9 @@ Suggests:
     circlize,
     ggbio,
     RColorBrewer,
-    gridExtra
+    gridExtra,
+    BSgenome.Hsapiens.NCBI.GRCh38,
+    TxDb.Hsapiens.UCSC.hg38.knownGene
 Enhances: parallel
 SystemRequirements:
 biocViews: 
