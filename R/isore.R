@@ -437,24 +437,26 @@ isore.extendAnnotations <- function(se,
                                                               fragmentStarts=rowData(seFilteredSpliced)$intronStarts,
                                                               fragmentEnds=rowData(seFilteredSpliced)$intronEnds,
                                                               strand=rowData(seFilteredSpliced)$strand)
-
+      
       names(intronsByReadClass) <- 1:length(intronsByReadClass)
       seqlevels(intronsByReadClass) <-  unique(c(seqlevels(intronsByReadClass), seqlevels(annotationGrangesList)))
 
       exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts,
-                              rowData(seFilteredSpliced)$end + 1,
+                              as.integer(rowData(seFilteredSpliced)$end + 1),
                               sep=',')
-      exonStartsShifted <- paste(rowData(seFilteredSpliced)$start - 1,
+      exonStartsShifted <- paste(as.integer(rowData(seFilteredSpliced)$start - 1),
                                  rowData(seFilteredSpliced)$intronEnds,
                                  sep=',')
-
+      
       exonsByReadClass <- makeGRangesListFromFeatureFragments(seqnames=rowData(seFilteredSpliced)$chr,
                                                               fragmentStarts=exonStartsShifted,
                                                               fragmentEnds=exonEndsShifted,
                                                               strand=rowData(seFilteredSpliced)$strand)
+     
       exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)  # correct junction to exon differences in coordinates
+      
       names(exonsByReadClass) <- 1:length(exonsByReadClass)
-
+      
       # add exon start and exon end rank
       unlistData <- unlist(exonsByReadClass, use.names = FALSE)
       partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
@@ -532,6 +534,7 @@ isore.extendAnnotations <- function(se,
                                                          type='equal',
                                                          select='all',
                                                          ignore.strand=FALSE)
+      if(length(overlapsNewIntronsAnnotatedIntrons)>0){
       maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
                                                 geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)],
                                                 stringsAsFactors=FALSE)) %>%
@@ -566,7 +569,7 @@ isore.extendAnnotations <- function(se,
 
       classificationTable$newLastExon[distNewTxByQuery$queryHits[!distNewTxByQuery$endMatch]] <- 'newLastExon'
       classificationTable$newLastExon[classificationTable$newLastJunction != 'newLastJunction'] <- ''
-
+}
       mcols(seFilteredSpliced)$readClassType <- apply(classificationTable, 1, paste, collapse='')
 
 
