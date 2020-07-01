@@ -8,6 +8,7 @@
 #' @param readClass.outputDir A string variable specifying the path to where read class files will be saved.
 #' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}} or \code{\link{prepareAnnotationsFromGTF}}.
 #' @param genomeSequence A fasta file or a BSGenome object.
+#' @param stranded A boolean for strandedness, defaults to FALSE.
 #' @param ncore specifying number of cores used when parallel processing is used, defaults to 1.
 #' @param yieldSize see \code{\link{Rsamtools}}.
 #' @param isoreParameters A list of controlling parameters for isoform reconstruction process:
