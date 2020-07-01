@@ -1,7 +1,7 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 #' @title prepare annotations from txdb object
 #' @param txdb a \code{\link{TxDb}} object
-#' @return A \code{\link{GrangesList}} object
+#' @return A \code{\link{GRangesList}} object
 #' @export
 #' @examples
 #' \dontrun{
