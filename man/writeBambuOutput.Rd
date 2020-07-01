@@ -12,8 +12,8 @@ writeBambuOutput(se, path)
 \item{path}{the destination of the output files (gtf, transcript counts, and gene counts)}
 }
 \value{
-The function will generate three files, a \code{\link{.gtf}} file for the annotations, 
-two \code{\link{.txt}} files for transcript and gene counts respectively.
+The function will generate three files, a .gtf file for the annotations, 
+two .txt files for transcript and gene counts respectively.
 }
 \description{
 Outputs a GTF file, transcript-count file, and gene-count file from bambu
