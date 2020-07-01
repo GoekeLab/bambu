@@ -15,7 +15,11 @@
 #' @importFrom ggbio autoplot
 #' @importFrom gridExtra grid.arrange
 #' @export
-plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+plot <- function(se, ..., group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+    UseMethod("plot")
+  }
+#' @export
+plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
 
   if(type == "annotation"){
     if(is.null(gene_id)&(is.null(transcript_id))){
