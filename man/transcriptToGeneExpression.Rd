@@ -9,6 +9,9 @@ transcriptToGeneExpression(se)
 \arguments{
 \item{se}{a summarizedExperiment object from \code{\link{bambu}}}
 }
+\value{
+A SummarizedExperiment object
+}
 \description{
 Reduce transcript expression to gene expression
 }
