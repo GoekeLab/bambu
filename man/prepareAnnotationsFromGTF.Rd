@@ -10,8 +10,11 @@ prepareAnnotationsFromGTF(file)
 \item{file}{a GTF file}
 }
 \value{
-
+A \code{\link{GRangesList}} object
 }
 \description{
 Prepare annotation granges object from GTF file
+}
+\details{
+
 }

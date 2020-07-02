@@ -30,6 +30,8 @@ bambu(
 
 \item{genomeSequence}{A fasta file or a BSGenome object.}
 
+\item{stranded}{A boolean for strandedness, defaults to FALSE.}
+
 \item{ncore}{specifying number of cores used when parallel processing is used, defaults to 1.}
 
 \item{yieldSize}{see \code{\link{Rsamtools}}.}

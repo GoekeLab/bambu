@@ -1,6 +1,7 @@
 #' Reduce transcript expression to gene expression
 #' @title transcript to gene expression
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
+#' @return A SummarizedExperiment object
 #' @export
 transcriptToGeneExpression<- function(se){
   counts <- as.data.table(assays(se)$counts,keep.rownames = TRUE)

@@ -8,6 +8,7 @@
 #' @param readClass.outputDir A string variable specifying the path to where read class files will be saved.
 #' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}} or \code{\link{prepareAnnotationsFromGTF}}.
 #' @param genomeSequence A fasta file or a BSGenome object.
+#' @param stranded A boolean for strandedness, defaults to FALSE.
 #' @param ncore specifying number of cores used when parallel processing is used, defaults to 1.
 #' @param yieldSize see \code{\link{Rsamtools}}.
 #' @param isoreParameters A list of controlling parameters for isoform reconstruction process:
@@ -50,9 +51,9 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
 
   #===# Check annotation inputs #===#
   if(!is.null(annotations)){
-      if(class(annotations) == 'TxDb'){
+      if(is(annotations,'TxDb')){
         annotations <- prepareAnnotations(annotations)
-      }else if(class(annotations) == "CompressedGRangesList"){
+      }else if(is(annotations,"CompressedGRangesList")){
         ## check if annotations is as expected
         if(!all(c("TXNAME","GENEID","eqClass") %in% colnames(mcols(annotations)))){
          stop("The annotations is not properly prepared.\nPlease prepareAnnnotations using prepareAnnotations or prepareAnnotationsFromGTF functions.")
@@ -124,7 +125,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     if(!is.null(reads)){  # calculate readClass objects
       
       #===# create BamFileList object from character #===#
-      if(class(reads)=='BamFile') {
+      if(is(reads,'BamFile')) {
         if(!is.null(yieldSize)) {
           Rsamtools::yieldSize(reads) <- yieldSize
         } else {
@@ -132,7 +133,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
         }
         reads<- Rsamtools::BamFileList(reads)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
-      }else if(class(reads)=='BamFileList') {
+      }else if(is(reads,'BamFileList')) {
         if(!is.null(yieldSize)) {
           Rsamtools::yieldSize(reads) <- yieldSize
         } else {
