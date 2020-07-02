@@ -33,8 +33,11 @@ plotSEOuptut
 \code{\link{type}} indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.
 }
 \examples{
-se <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+se <- readRDS(system.file("extdata", 
+"seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
+ package = "bambu"))
 colnames(se) <- colData(se)$name <- c("sample1","sample2")
-assays(se)$CPM[,2]  <- pmax(0, rnorm(length(assays(se)$CPM[,2]),assays(se)$CPM[,2],10))
+assays(se)$CPM[,2]  <- pmax(0, rnorm(length(assays(se)$CPM[,2]),
+assays(se)$CPM[,2],10))
 plot.bambu(se, type = "heatmap")
 }
