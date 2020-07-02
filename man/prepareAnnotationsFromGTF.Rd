@@ -18,3 +18,7 @@ Prepare annotation granges object from GTF file
 \details{
 
 }
+\examples{
+gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+gr <- prepareAnnotationsFromGTF(gtf.file)
+}

@@ -43,7 +43,6 @@ prepareAnnotations <- function(txdb) {
 #'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   \item eqClass specifying minimun read count to consider a read class valid in a sample, defaults to 2
 #'   }
-#' 
 #' @export
 #' @examples 
 #' gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
