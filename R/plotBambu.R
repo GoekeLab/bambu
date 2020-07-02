@@ -1,3 +1,8 @@
+
+#' @noRd
+plot <- function(se, ..., group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+    UseMethod("plot")
+   }
 #' plotSEOuptut
 #' @title plot.bambu
 #' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.
@@ -14,11 +19,15 @@
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom ggbio autoplot
 #' @importFrom gridExtra grid.arrange
-#' @noRd
-plot <- function(se, ..., group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
-    UseMethod("plot")
-  }
 #' @export
+#' @examples 
+#' se <- readRDS(system.file("extdata", 
+#' "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
+#'  package = "bambu"))
+#' colnames(se) <- colData(se)$name <- c("sample1","sample2")
+#' assays(se)$CPM[,2]  <- pmax(0, rnorm(length(assays(se)$CPM[,2]),
+#' assays(se)$CPM[,2],10))
+#' plot.bambu(se, type = "heatmap")
 plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
 
   if(type == "annotation"){

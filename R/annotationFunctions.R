@@ -4,11 +4,9 @@
 #' @return A \code{\link{GRangesList}} object
 #' @export
 #' @examples
-#' \dontrun{
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 #'  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
 #'  prepareAnnotations(txdb)
-#'  }
 prepareAnnotations <- function(txdb) {
   exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
   if(any(duplicated(names(exonsByTx)))) {
@@ -38,15 +36,19 @@ prepareAnnotations <- function(txdb) {
 #' @title Prepare annotation granges object from GTF file  into a GRangesList object
 #' @param file a GTF file
 #' @return A \code{\link{GRangesList}} object
-#' @details Unlike \code\link{readFromGTF}}, this function finds out the equivalence classes between the transcripts,
-#' with \code{\link{mcols}} data having three columns:
+#' @details Unlike \code{\link{readFromGTF}}, this function finds out the equivalence classes between the transcripts,
+#' with \code{\link{mcols}} data having three columns: 
 #' \itemize{
 #'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
 #'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   \item eqClass specifying minimun read count to consider a read class valid in a sample, defaults to 2
 #'   }
-#' 
 #' @export
+#' @examples 
+#' gtf.file <- system.file("extdata", 
+#' "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+#' package = "bambu")
+#' gr <- prepareAnnotationsFromGTF(gtf.file)
 prepareAnnotationsFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')
