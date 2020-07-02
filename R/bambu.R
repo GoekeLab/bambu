@@ -32,14 +32,15 @@
 #' @details
 #' @return A list of two SummarizedExperiment object for transcript expression and gene expression.
 #' @examples
-#' \dontrun{
+#' 
 #' ## =====================
-#' ## More stringent new gene/isoform discovery: new isoforms are identified with at least 5 read count in 1 sample
+#' ## Minimum read support 5
 #' ## Increase EM convergence threshold to 10^(-6)
-#' seOutput <- bambu(reads, annotationGrangesList,
-#' genomeSequence, isoreParameters = list(min.readCount=5),
-#' emParameters = list(conv = 10^(-6))
-#' }
+#'  test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+#'  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+#'  fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+#'  se = bambu(reads = test.bam,  annotations = gr, genomeSequence = fa.file, extendAnnotations = FALSE)
+#' 
 #' @export
 bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NULL, 
                   annotations = NULL, genomeSequence = NULL,
