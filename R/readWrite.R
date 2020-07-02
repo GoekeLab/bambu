@@ -6,7 +6,9 @@
 #' two .txt files for transcript and gene counts respectively. 
 #' @export
 #' @examples 
-#' se <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+#' se <- readRDS(system.file("extdata", 
+#' "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+#' package = "bambu"))
 #' path <- tempdir()
 #' writeBambuOutput(se,path)
 writeBambuOutput <- function(se,path){
@@ -41,7 +43,9 @@ writeBambuOutput <- function(se,path){
 #' @export
 #' @examples
 #' outputGtfFile <- tempfile()
-#' gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+#' gr <- readRDS(system.file("extdata", 
+#' "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
+#' package = "bambu"))
 #' writeToGTF(gr, outputGtfFile)
 writeToGTF <- function (annotation,file,geneIDs=NULL) {
   if (missing(annotation) | missing(file)){
@@ -98,7 +102,9 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
 #'   }
 #' @export
 #' @examples
-#' gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+#' gtf.file <- system.file("extdata", 
+#' "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+#' package = "bambu")
 #' readFromGTF(gtf.file)
 readFromGTF <- function(file){
   if (missing(file)){
