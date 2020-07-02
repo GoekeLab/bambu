@@ -7,7 +7,7 @@
 readFromGTF(file)
 }
 \arguments{
-\item{file}{a \code{\link{.gtf}} file}
+\item{file}{a .gtf file}
 }
 \value{
 grlist a \code{\link{GRangesList}} object, with two columns
