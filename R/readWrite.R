@@ -39,8 +39,9 @@ writeBambuOutput <- function(se,path){
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)
 #' @return gtf a GTF dataframe
 #' @export
+#' @examples
 #' outputGtfFile <- tempfile()
-#'  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+#' gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 #' writeToGTF(gr, outputGtfFile)
 writeToGTF <- function (annotation,file,geneIDs=NULL) {
   if (missing(annotation) | missing(file)){
