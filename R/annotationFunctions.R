@@ -4,11 +4,9 @@
 #' @return A \code{\link{GRangesList}} object
 #' @export
 #' @examples
-#' \dontrun{
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 #'  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
 #'  prepareAnnotations(txdb)
-#'  }
 prepareAnnotations <- function(txdb) {
   exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
   if(any(duplicated(names(exonsByTx)))) {
@@ -47,6 +45,9 @@ prepareAnnotations <- function(txdb) {
 #'   }
 #' 
 #' @export
+#' @examples 
+#' gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+#' gr <- prepareAnnotationsFromGTF(gtf.file)
 prepareAnnotationsFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')
