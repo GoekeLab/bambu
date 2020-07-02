@@ -21,6 +21,8 @@ Write annotation GRangesList into a GTF file
 }
 \examples{
 outputGtfFile <- tempfile()
-gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+gr <- readRDS(system.file("extdata", 
+"annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
+package = "bambu"))
 writeToGTF(gr, outputGtfFile)
 }

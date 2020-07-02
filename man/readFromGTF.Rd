@@ -20,6 +20,8 @@ grlist a \code{\link{GRangesList}} object, with two columns
 Outputs GRangesList object from reading a GTF file
 }
 \examples{
-gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+gtf.file <- system.file("extdata", 
+"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+package = "bambu")
 readFromGTF(gtf.file)
 }

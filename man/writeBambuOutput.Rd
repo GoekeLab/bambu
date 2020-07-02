@@ -19,7 +19,9 @@ two .txt files for transcript and gene counts respectively.
 Outputs a GTF file, transcript-count file, and gene-count file from bambu
 }
 \examples{
-se <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+se <- readRDS(system.file("extdata", 
+"seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+package = "bambu"))
 path <- tempdir()
 writeBambuOutput(se,path)
 }
