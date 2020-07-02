@@ -13,11 +13,11 @@
 )
 }
 \arguments{
-\item{se}{An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGene}}.}
+\item{se}{An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.}
 
 \item{group.variable}{Variable for grouping in plot, has be to provided if choosing to plot PCA.}
 
-\item{type}{plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see \code{\link{details}}.}
+\item{type}{plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see details.}
 
 \item{gene_id}{specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".}
 

@@ -4,7 +4,7 @@
 #' @noRd
 prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, ncore = 1) {
   
-  if(class(bamFile)=='BamFile') {
+  if(is(bamFile,'BamFile')) {
     if(!is.null(yieldSize)) {
       Rsamtools::yieldSize(bamFile) <- yieldSize
     } else {
@@ -33,7 +33,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, ncore =
                                                                                             use.names=FALSE))
     
     # readGrgList<-c(readGrgList,GenomicAlignments::grglist(reads))
-    if(verbose) show(min(length(readGrgList), counter* yieldSize, na.rm=T))
+    if(verbose) show(min(length(readGrgList), counter* yieldSize, na.rm=TRUE))
     counter <- counter + 1
   }
   

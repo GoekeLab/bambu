@@ -1,8 +1,8 @@
 #' plotSEOuptut
 #' @title plot.bambu
-#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGene}}.
+#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.
 #' @param group.variable Variable for grouping in plot, has be to provided if choosing to plot PCA.
-#' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see \code{\link{details}}.
+#' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see details.
 #' @param gene_id specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".
 #' @param transcript_id specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"
 #' @details \code{\link{type}} indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.
@@ -14,8 +14,12 @@
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom ggbio autoplot
 #' @importFrom gridExtra grid.arrange
+#' @noRd
+plot <- function(se, ..., group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+    UseMethod("plot")
+  }
 #' @export
-plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
 
   if(type == "annotation"){
     if(is.null(gene_id)&(is.null(transcript_id))){

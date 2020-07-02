@@ -5,7 +5,7 @@
 
 #' This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
 #' @noRd
-findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist = 5, type='within', firstLastSeparate = T, dropRangesByMinLength=F, cutStartEnd = T) {
+findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist = 5, type='within', firstLastSeparate = TRUE, dropRangesByMinLength=FALSE, cutStartEnd = TRUE) {
 
   #  with this option the first and last exons are stored and the distance for each between query and subject hits is returned
   if(firstLastSeparate) {
@@ -279,7 +279,7 @@ extendGrangesListElements <- function(grangesList, by=5) {
   start(unlistedExons) <- pmax(1,start(unlistedExons)-by)
   end(unlistedExons) <- pmin(seqlengths(unlistedExons)[as.character(seqnames(unlistedExons))],
                              end(unlistedExons)+by,
-                             na.rm=T)
+                             na.rm=TRUE)
 
   return(relist(unlistedExons, partitioning))
 }
