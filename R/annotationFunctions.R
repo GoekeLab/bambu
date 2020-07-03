@@ -1,14 +1,12 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 #' @title prepare annotations from txdb object
 #' @param txdb a \code{\link{TxDb}} object
-#' @return A \code{\link{GrangesList}} object
+#' @return A \code{\link{GRangesList}} object
 #' @export
 #' @examples
-#' \dontrun{
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 #'  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
 #'  prepareAnnotations(txdb)
-#'  }
 prepareAnnotations <- function(txdb) {
   exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
   if(any(duplicated(names(exonsByTx)))) {
@@ -37,16 +35,20 @@ prepareAnnotations <- function(txdb) {
 #' Prepare annotation granges object from GTF file 
 #' @title Prepare annotation granges object from GTF file  into a GRangesList object
 #' @param file a GTF file
-#' @return grlist a \code{\link{GRangesList}} object, unlike \code\link{readFromGTF}}, 
-#' this function finds out the equivalence classes between the transcripts, 
-#' with \code{\link{mcols}} data having three columns:
+#' @return A \code{\link{GRangesList}} object
+#' @details Unlike \code{\link{readFromGTF}}, this function finds out the equivalence classes between the transcripts,
+#' with \code{\link{mcols}} data having three columns: 
 #' \itemize{
 #'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
 #'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   \item eqClass specifying minimun read count to consider a read class valid in a sample, defaults to 2
 #'   }
-#' 
 #' @export
+#' @examples 
+#' gtf.file <- system.file("extdata", 
+#' "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+#' package = "bambu")
+#' gr <- prepareAnnotationsFromGTF(gtf.file)
 prepareAnnotationsFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')
@@ -122,7 +124,7 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
 #' @param minoverlap defaults to 5
 #' @param ignore.strand defaults to FALSE
 #' @noRd
-assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=F){
+assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALSE){
   if(is.null(names(exByTx))){
     names(exByTx) <- 1:length(exByTx)
   }
@@ -218,8 +220,8 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
   spliceOverlaps <- findSpliceOverlapsByDist(exByTx,
                                              exByTxRef,
                                              maxDist=maxDist,
-                                             firstLastSeparate=T,
-                                             dropRangesByMinLength=T,
+                                             firstLastSeparate=TRUE,
+                                             dropRangesByMinLength=TRUE,
                                              cutStartEnd=TRUE,
                                              ignore.strand=ignore.strand)
 
@@ -243,8 +245,8 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
                                                   exByTxRef,
                                                   maxDist=0,
                                                   type='any',
-                                                  firstLastSeparate=T,
-                                                  dropRangesByMinLength=F,
+                                                  firstLastSeparate=TRUE,
+                                                  dropRangesByMinLength=FALSE,
                                                   cutStartEnd=TRUE,
                                                   ignore.strand=ignore.strand)
 
@@ -272,9 +274,9 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
                                                             exByTxRef,
                                                             maxDist=0,
                                                             type='any',
-                                                            firstLastSeparate=T,
-                                                            dropRangesByMinLength=F,
-                                                            cutStartEnd=F,
+                                                            firstLastSeparate=TRUE,
+                                                            dropRangesByMinLength=FALSE,
+                                                            cutStartEnd=FALSE,
                                                             ignore.strand=ignore.strand)
     if(length(spliceOverlaps_restStartEnd)>0){
       txToAnTableRestStartEnd <- tbl_df(spliceOverlaps_restStartEnd) %>%

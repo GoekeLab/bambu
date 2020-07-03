@@ -1,7 +1,13 @@
 #' Reduce transcript expression to gene expression
 #' @title transcript to gene expression
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
+#' @return A SummarizedExperiment object
 #' @export
+#' @examples 
+#' se <- readRDS(system.file("extdata", 
+#' "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+#' package = "bambu"))
+#' transcriptToGeneExpression(se)
 transcriptToGeneExpression<- function(se){
   counts <- as.data.table(assays(se)$counts,keep.rownames = TRUE)
   runnames <- colnames(counts)[-1]

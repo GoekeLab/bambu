@@ -8,6 +8,7 @@
 #' @param readClass.outputDir A string variable specifying the path to where read class files will be saved.
 #' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}} or \code{\link{prepareAnnotationsFromGTF}}.
 #' @param genomeSequence A fasta file or a BSGenome object.
+#' @param stranded A boolean for strandedness, defaults to FALSE.
 #' @param ncore specifying number of cores used when parallel processing is used, defaults to 1.
 #' @param yieldSize see \code{\link{Rsamtools}}.
 #' @param isoreParameters A list of controlling parameters for isoform reconstruction process:
@@ -31,14 +32,22 @@
 #' @details
 #' @return A list of two SummarizedExperiment object for transcript expression and gene expression.
 #' @examples
-#' \dontrun{
+#' 
 #' ## =====================
-#' ## More stringent new gene/isoform discovery: new isoforms are identified with at least 5 read count in 1 sample
+#' ## Minimum read support 5
 #' ## Increase EM convergence threshold to 10^(-6)
-#' seOutput <- bambu(reads, annotationGrangesList,
-#' genomeSequence, isoreParameters = list(min.readCount=5),
-#' emParameters = list(conv = 10^(-6))
-#' }
+#'  test.bam <- system.file("extdata", 
+#'  "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", 
+#'  package = "bambu")
+#'  gr <- readRDS(system.file("extdata", 
+#'  "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
+#'  package = "bambu"))
+#'  fa.file <- system.file("extdata", 
+#'  "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", 
+#'  package = "bambu")
+#'  se = bambu(reads = test.bam,  annotations = gr, 
+#'  genomeSequence = fa.file, extendAnnotations = FALSE)
+#' 
 #' @export
 bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NULL, 
                   annotations = NULL, genomeSequence = NULL,
@@ -50,9 +59,9 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
 
   #===# Check annotation inputs #===#
   if(!is.null(annotations)){
-      if(class(annotations) == 'TxDb'){
+      if(is(annotations,'TxDb')){
         annotations <- prepareAnnotations(annotations)
-      }else if(class(annotations) == "CompressedGRangesList"){
+      }else if(is(annotations,"CompressedGRangesList")){
         ## check if annotations is as expected
         if(!all(c("TXNAME","GENEID","eqClass") %in% colnames(mcols(annotations)))){
          stop("The annotations is not properly prepared.\nPlease prepareAnnnotations using prepareAnnotations or prepareAnnotationsFromGTF functions.")
@@ -124,7 +133,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
     if(!is.null(reads)){  # calculate readClass objects
       
       #===# create BamFileList object from character #===#
-      if(class(reads)=='BamFile') {
+      if(is(reads,'BamFile')) {
         if(!is.null(yieldSize)) {
           Rsamtools::yieldSize(reads) <- yieldSize
         } else {
@@ -132,7 +141,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
         }
         reads<- Rsamtools::BamFileList(reads)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
-      }else if(class(reads)=='BamFileList') {
+      }else if(is(reads,'BamFileList')) {
         if(!is.null(yieldSize)) {
           Rsamtools::yieldSize(reads) <- yieldSize
         } else {

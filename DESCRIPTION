@@ -1,7 +1,7 @@
 Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read RNA-Seq data
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: c(person("Ying Chen", "Developer", role = "cre",email = "chen_ying@gis.a-star.edu.sg"),
              person("Jonathan Goeke", "Developer", role = "aut",
                      email = "gokej@gis.a-star.edu.sg"))
@@ -10,7 +10,7 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R(>= 3.5.0), 
+    R(>= 4.0.0), 
     data.table(>= 1.1.8), 
     dplyr, 
     SummarizedExperiment(>= 1.1.6),
@@ -27,13 +27,19 @@ Suggests:
     circlize,
     ggbio,
     RColorBrewer,
-    gridExtra
+    gridExtra,
+    BSgenome.Hsapiens.NCBI.GRCh38,
+    TxDb.Hsapiens.UCSC.hg38.knownGene,
+    AnnotationDbi,
+    BSgenome,
+    BiocGenerics,
+    BiocParallel,
+    Biostrings
 Enhances: parallel
 SystemRequirements:
 biocViews: 
     FeatureExtraction, 
     GeneExpression, 
-    GeneExpressionWorkflow, 
     GenomeAnnotation,
     ImmunoOncology, 
     Normalization, 

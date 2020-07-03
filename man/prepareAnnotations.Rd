@@ -10,15 +10,13 @@ prepareAnnotations(txdb)
 \item{txdb}{a \code{\link{TxDb}} object}
 }
 \value{
-A \code{\link{GrangesList}} object
+A \code{\link{GRangesList}} object
 }
 \description{
 Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 }
 \examples{
-\dontrun{
  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
  prepareAnnotations(txdb)
- }
 }
