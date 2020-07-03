@@ -12,9 +12,16 @@ writeBambuOutput(se, path)
 \item{path}{the destination of the output files (gtf, transcript counts, and gene counts)}
 }
 \value{
-The function will generate three files, a \code{\link{.gtf}} file for the annotations, 
-two \code{\link{.txt}} files for transcript and gene counts respectively.
+The function will generate three files, a .gtf file for the annotations, 
+two .txt files for transcript and gene counts respectively.
 }
 \description{
 Outputs a GTF file, transcript-count file, and gene-count file from bambu
+}
+\examples{
+se <- readRDS(system.file("extdata", 
+"seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+package = "bambu"))
+path <- tempdir()
+writeBambuOutput(se,path)
 }

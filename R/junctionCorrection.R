@@ -11,7 +11,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   
   original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
   
-  if(class(genomeSequence) != 'FaFile'){
+  if(!is(genomeSequence,'FaFile')){
     if(grepl('.fa',genomeSequence)){
       genomeSequence <- Rsamtools::FaFile(genomeSequence)
       
@@ -28,7 +28,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
     }
   }
   
-  if(class(genomeSequence) == 'FaFile'){
+  if(is(genomeSequence,'FaFile')){
     if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
       seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
     }
@@ -103,11 +103,11 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
 junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges, uniqueAnnotatedIntrons, stranded, verbose = FALSE) {
   ##note: the strand is not always correctly infered based on motifs, it might introduce systematic errors due to alignment (which is biased towards splice motifs)
 
-  allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junction_granges, uniqueJunctions,type='equal',ignore.strand=T)
+  allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junction_granges, uniqueJunctions,type='equal',ignore.strand=TRUE)
 
   uniqueJunctionsUpdate <- uniqueJunctions # make a copy to revert to if strand correction does not improve results
 
-  annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions, uniqueAnnotatedIntrons, ignore.strand=F)['TRUE']
+  annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions, uniqueAnnotatedIntrons, ignore.strand=FALSE)['TRUE']
   if(verbose) {
     message('before strand correction, annotated introns:')
     message(annotatedIntronNumber)
@@ -139,7 +139,7 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
       strandScoreByRead <- uniqueJunctionsUpdate$minus_score_inferedByRead - uniqueJunctionsUpdate$plus_score_inferedByRead
       strand(uniqueJunctionsUpdate[strandScoreByRead< 0 ]) = '+' ## here we overwrite the information from the motif which increases overlap with known junctions
       strand(uniqueJunctionsUpdate[strandScoreByRead>0 ]) = '-'
-      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, uniqueAnnotatedIntrons, ignore.strand=F)['TRUE']
+      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, uniqueAnnotatedIntrons, ignore.strand=FALSE)['TRUE']
       if(annotatedIntronNumberNew > annotatedIntronNumber & !is.na(annotatedIntronNumber)) # update junctions object if strand prediction improves overlap with annotations
       {
         if(verbose) {
@@ -160,7 +160,7 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
       strandScoreByRead <- uniqueJunctionsUpdate$minus_score - uniqueJunctionsUpdate$plus_score
       strand(uniqueJunctionsUpdate[strandScoreByRead>0 ]) = '-' ## here we verwrite the information from the motif which increases overlap with known junctions
       strand(uniqueJunctionsUpdate[strandScoreByRead<(0) ]) = '+'
-      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, uniqueAnnotatedIntrons, ignore.strand=F)['TRUE']
+      annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate, uniqueAnnotatedIntrons, ignore.strand=FALSE)['TRUE']
       if(annotatedIntronNumberNew > annotatedIntronNumber & !is.na(annotatedIntronNumber)) # update junctions object if strand prediction improves overlap with annotations
       {
         if(verbose) {

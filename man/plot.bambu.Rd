@@ -13,11 +13,11 @@
 )
 }
 \arguments{
-\item{se}{An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGene}}.}
+\item{se}{An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.}
 
 \item{group.variable}{Variable for grouping in plot, has be to provided if choosing to plot PCA.}
 
-\item{type}{plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see \code{\link{details}}.}
+\item{type}{plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see details.}
 
 \item{gene_id}{specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".}
 
@@ -31,4 +31,13 @@ plotSEOuptut
 }
 \details{
 \code{\link{type}} indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.
+}
+\examples{
+se <- readRDS(system.file("extdata", 
+"seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
+ package = "bambu"))
+colnames(se) <- colData(se)$name <- c("sample1","sample2")
+assays(se)$CPM[,2]  <- pmax(0, rnorm(length(assays(se)$CPM[,2]),
+assays(se)$CPM[,2],10))
+plot.bambu(se, type = "heatmap")
 }
