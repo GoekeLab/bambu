@@ -26,6 +26,9 @@ plot(
 
 \item{transcript_id}{specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"}
 }
+\value{
+A heatmap plot for all samples
+}
 \description{
-redefine plot in bambu for plot.bambu
+redefine plot for plot.bambu
 }
