@@ -5,6 +5,12 @@
 #' @return The function will generate three files, a .gtf file for the annotations, 
 #' two .txt files for transcript and gene counts respectively. 
 #' @export
+#' @examples 
+#' se <- readRDS(system.file("extdata", 
+#' "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+#' package = "bambu"))
+#' path <- tempdir()
+#' writeBambuOutput(se,path)
 writeBambuOutput <- function(se,path){
   if (missing(se) | missing(path)){
     stop('Both summarizedExperiment object from bambu and the path for the output files are required.')
@@ -35,6 +41,12 @@ writeBambuOutput <- function(se,path){
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)
 #' @return gtf a GTF dataframe
 #' @export
+#' @examples
+#' outputGtfFile <- tempfile()
+#' gr <- readRDS(system.file("extdata", 
+#' "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
+#' package = "bambu"))
+#' writeToGTF(gr, outputGtfFile)
 writeToGTF <- function (annotation,file,geneIDs=NULL) {
   if (missing(annotation) | missing(file)){
     stop('Both GRangesList and the name of the output file are required.')
@@ -89,6 +101,11 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
 #'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   }
 #' @export
+#' @examples
+#' gtf.file <- system.file("extdata", 
+#' "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+#' package = "bambu")
+#' readFromGTF(gtf.file)
 readFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')

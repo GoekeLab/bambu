@@ -16,9 +16,7 @@ A \code{\link{GRangesList}} object
 Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 }
 \examples{
-\dontrun{
  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
  prepareAnnotations(txdb)
- }
 }
