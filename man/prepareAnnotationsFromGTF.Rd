@@ -16,5 +16,17 @@ A \code{\link{GRangesList}} object
 Prepare annotation granges object from GTF file
 }
 \details{
-
+Unlike \code{\link{readFromGTF}}, this function finds out the equivalence classes between the transcripts,
+with \code{\link{mcols}} data having three columns: 
+\itemize{
+  \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
+  \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
+  \item eqClass specifying minimun read count to consider a read class valid in a sample, defaults to 2
+  }
+}
+\examples{
+gtf.file <- system.file("extdata", 
+"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+package = "bambu")
+gr <- prepareAnnotationsFromGTF(gtf.file)
 }
