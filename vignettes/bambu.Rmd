@@ -47,7 +47,7 @@ Bamfiles can be loaded as follows
 data("bamFiles")
 ```
 
-We then loaded annotation.
+We then load annotation.
 ```{r}
 data("annotation")
 ```
