@@ -42,27 +42,25 @@ sample_info
 ```
 
 
-Name of bamfiles can be loaded as follows 
+Bamfiles can be loaded as follows 
 ```{r}
-data("bamFileNames")
-bamFileNames
+data("bamFiles")
 ```
 
-We then loaded bam.files.
+We then loaded annotation.
 ```{r}
-bam.file <- system.file("extdata",bamFileNames, package = "NanoporeRNASeq")
-data("annotationGrangesList_chr22_1_25409234")
+data("annotation")
 ```
 
 
 We applied *bambu* to perform EM on  extended annotations
 ```{r}
-seExtended <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
+seExtended <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
 seExtended
 ```
 *bambu* allows quantification without isoform discovery
 ```{r}
-se <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = FALSE, verbose = FALSE, ncore = 6)
+se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = FALSE, verbose = FALSE, ncore = 6)
 se
 ```
 
