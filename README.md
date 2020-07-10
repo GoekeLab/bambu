@@ -5,7 +5,7 @@
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic)](https://github.com/GoekeLab/bambu)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic)](https://zenodo.org/record/3900025#.XwPOMigzbIU)
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
 [![Install](https://img.shields.io/badge/Install-Github-brightgreen)](#installation)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -24,6 +24,7 @@
   - [Advanced options](#advanced-options)
   - [Complementary functions](#complementary-functions)
   - [Release History](#release-history)
+  - [Citation](#citation)
   - [Contributors](#contributors)
 
 
@@ -197,6 +198,9 @@ Release date: 18th June 2020
 **bambu version 0.1.0**
 
 Release date: 29th May 2020
+
+### Citation
+A manuscript describing bambu  is currently in preparation. If you use bambu for your research, please cite using the following doi: 10.5281/zenodo.3900025. 
 
 ### Contributors
 
