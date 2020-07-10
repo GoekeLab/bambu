@@ -19,6 +19,9 @@ test_that("isore.constructReadClasses completes successfully", {
                                                       stranded = FALSE,
                                                       ncore = 1,
                                                       verbose = FALSE)
+  ## in case of testing on Mac
+  names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronStarts) <- NULL
+  names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronEnds) <- NULL
   expect_equal(seReadClassUnstranded, seReadClassUnstrandedExpected)
 
 
@@ -29,6 +32,8 @@ test_that("isore.constructReadClasses completes successfully", {
                                                     stranded=TRUE,
                                                     ncore = 1,
                                                     verbose = FALSE)
+  names(seReadClassStranded@rowRanges@elementMetadata@listData$intronStarts) <- NULL
+  names(seReadClassStranded@rowRanges@elementMetadata@listData$intronEnds) <- NULL
   expect_equal(seReadClassStranded, seReadClassStrandedExpected)
 
   seReadClassFromBsgenome <- isore.constructReadClasses(readGrgList = readGrgList,
@@ -38,7 +43,8 @@ test_that("isore.constructReadClasses completes successfully", {
                                                         stranded = TRUE,
                                                         ncore = 1,
                                                         verbose = FALSE)
-
+  names(seReadClassFromBsgenome@rowRanges@elementMetadata@listData$intronStarts) <- NULL
+  names(seReadClassFromBsgenome@rowRanges@elementMetadata@listData$intronEnds) <- NULL
   expect_equal(seReadClassFromBsgenome,seReadClassFromBsgenomeExpected)
 
 })
@@ -97,6 +103,6 @@ test_that("isore.estimateDistanceToAnnotations completes successfully", {
   seWithDist <- isore.estimateDistanceToAnnotations(seReadClass = seReadClass1,
                                       annotationGrangesList = extendedAnnotations,
                                       min.exonDistance = 35)
-
+  names(seWithDist@metadata$distTable$readCount) <- NULL
   expect_equal(seWithDist, seWithDistExpected)
 })
