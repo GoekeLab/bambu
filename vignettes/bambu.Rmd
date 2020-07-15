@@ -37,8 +37,7 @@ knitr::opts_chunk$set(
 * [Running bambu with large sample numbers](#large-sample-num)
 
 ## Data description {#quick-start}
-To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which contains single chromosome RNA-Seq data from two common cell lines K562 and MCF7. Each of these cell line has three 
-replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. 
+To demonstrate the usage of *Bambu*, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7). Each of these cell lines has three replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. Reads are aligned to chromosome 22 (Grch38) and stored as bam files.
 
 ```{r, include = FALSE}
 devtools::install_github("GoekeLab/NanoporeRNASeq")
@@ -49,12 +48,13 @@ library(NanoporeRNASeq)
 library(bambu)
 ```
 
+## Input data {#input-data}
+load sample information
 ```{r}
 data("sample_info")
 sample_info
 ```
 
-## Input data {#input-data}
 ### Bamfiles can be loaded as follows {#bam-files}
 ```{r}
 data("bamFiles")
@@ -62,6 +62,8 @@ data("bamFiles")
 
 ### Loading genome sequences {#genome-sequences}
 ```{r}
+# get path to fasta file
+fasta_path <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr22_1_25409234.fa", package="NanoporeRNASeq")
 # BSgenome
 library(library(BSgenome.Hsapiens.NCBI.GRCh38))
 ```
