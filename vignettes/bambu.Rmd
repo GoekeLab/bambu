@@ -34,7 +34,7 @@ knitr::opts_chunk$set(
   + [Save data (gtf/text)](#save-data)
 * [Identify differentially expressed genes](#DESeq2)
 * [Identify differential transcript usage](#DEXSeq)
-* [Running bambu with large sample numbers](#large-sample-num)
+* [Running bambu with large number of samples](#large-sample-num)
 
 ## Data description {#quick-start}
 To demonstrate the usage of *Bambu*, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7). Each of these cell lines has three replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. Reads are aligned to chromosome 22 (Grch38) and stored as bam files.
@@ -279,7 +279,7 @@ ggplot(dxrDT, aes(y = log2fold_MCF7_K562, x = exonBaseMean, color = as.factor(pa
 ```{r}
 dxrDT[padj<0.5,.(geneID, txID, log2fold_MCF7_K562,K562,MCF7)]
 ```
-### Running bambu with large sample numbers {#large-sample-num}
+### Running bambu with large number of samples {#large-sample-num}
 
 
 ```{r}
