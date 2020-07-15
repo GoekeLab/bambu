@@ -83,15 +83,15 @@ seUnextended
 ## Check expression estimates 
 We can check the estimated transcript expression using heatmap:
 ```{r, fig.width = 8, fig.height = 6}
-colData(se)$groupVar <-  unlist(lapply(colnames(se),function(x) unlist(strsplit(x,"_"))[2]))
-colnames(se) <- gsub("_genome_chr22_1_25409234","",colnames(se))
-colData(se)$name <- gsub("_genome_chr22_1_25409234","",colData(se)$name)
+colData(se)$groupVar <- sample_info$protocol
+colnames(se) <- sample_info$sample_id
+colData(se)$name <- sample_info$sample_id
 plot.bambu(se, group.variable = "groupVar", type = "heatmap")
 ```
 
 or with PCA plot
 ```{r, fig.width = 8, fig.height = 6}
-colData(se)$groupVar <-  unlist(lapply(colnames(se),function(x) unlist(strsplit(x,"_"))[2]))
+colData(se)$groupVar <-  sample_info$protocol
 plot.bambu(se, group.variable = "groupVar", type = "pca")
 ```
 
@@ -100,7 +100,7 @@ plot.bambu(se, group.variable = "groupVar", type = "pca")
 
 Single gene examples can also be checked using plot functions from *bambu*
 ```{r, fig.width = 8, fig.height = 10}
-plot.bambu(se, type = "annotation", gene_id = unique(rowData(seExtended)$GENEID)[10])
+plot.bambu(se, type = "annotation", gene_id = unique(rowData(se)$GENEID)[10])
 
 ```
 
@@ -113,13 +113,13 @@ seGene
 
 Gene expression heatmap
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
+colData(seGene)$groupVar <-  sample_info$protocol
 plot.bambu(seGene, group.variable = "groupVar", type = "heatmap")
 ```
 
 Gene expression PCA plot
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
+colData(seGene)$groupVar <-  sample_info$protocol
 plot.bambu(seGene, group.variable = "groupVar", type = "pca")
 ```
 
