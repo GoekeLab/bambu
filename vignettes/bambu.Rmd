@@ -41,10 +41,7 @@ To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which c
 replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. 
 
 ```{r, include = FALSE}
-# To be removed later 
-devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareForBambu/bambu/")
-#To be removed later
-devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareDataPackage/NanoporeRNASeq/")
+devtools::install_github("GoekeLab/NanoporeRNASeq")
 ```
 
 ```{r setup}
