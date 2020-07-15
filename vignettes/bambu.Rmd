@@ -55,12 +55,12 @@ data("sample_info")
 sample_info
 ```
 
-### Bamfiles can be loaded as follows {#bam-files}
+### Load Bam files {#bam-files}
 ```{r}
 data("bamFiles")
 ```
 
-### Loading genome sequences {#genome-sequences}
+### Load genome sequences {#genome-sequences}
 ```{r}
 # get path to fasta file
 fasta_path <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr22_1_25409234.fa", package="NanoporeRNASeq")
@@ -68,13 +68,13 @@ fasta_path <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembl
 library(library(BSgenome.Hsapiens.NCBI.GRCh38))
 ```
 
-### We then load annotation. {#annotation}
+### Load Annotation {#annotation}
 ```{r}
 data("annotation")
 ```
 
 ## Transcript discovery and quantification {#transcript-discovery-quantification}
-### We applied *bambu* to perform EM on  extended annotations {#run-bambu}
+### Apply *bambu* to perform EM on  extended annotations {#run-bambu}
 ```{r}
 se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE)
 se
