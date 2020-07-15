@@ -25,16 +25,16 @@ knitr::opts_chunk$set(
 * [Quick Start: Transcript discovery and quantification with bambu](#quick-start)
 * [Input data](#input-data)
   + [Aligned reads (bam files)](#bam-files)
-  + Genome sequence (fasta file/ BSGenome object)
+  + [Genome sequence (fasta file/ BSGenome object)](#genome-sequences)
   + [Genome annotations (bambu annotations object/ gtf file / TxDb object)](#annotations)
 * [Transcript discovery and quantification](#transcript-discovery-quantification)
   + [Run bambu](#run-bambu)
   + [Visualise results](#visualise-results)
-  + [Obtain gene expression estimates from transcript expression]()
-  + [Save data (gtf/text)]()
-* Identify differentially expressed genes
-* Identify differential transcript usage
-* Running bambu with large sample numbers
+  + [Obtain gene expression estimates from transcript expression](#gene-expression)
+  + [Save data (gtf/text)](#save-data)
+* [Identify differentially expressed genes](#DESeq2)
+* [Identify differential transcript usage](#DEXSeq)
+* [Running bambu with large sample numbers](#large-sample-num)
 
 ## Data description {#quick-start}
 To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which contains single chromosome RNA-Seq data from two common cell lines K562 and MCF7. Each of these cell line has three 
@@ -58,18 +58,24 @@ sample_info
 ```
 
 ## Input data {#input-data}
-Bamfiles can be loaded as follows {#bam-files}
+### Bamfiles can be loaded as follows {#bam-files}
 ```{r}
 data("bamFiles")
 ```
 
-We then load annotation. {#annotation}
+### Loading genome sequences {#genome-sequences}
+```{r}
+# BSgenome
+library(library(BSgenome.Hsapiens.NCBI.GRCh38))
+```
+
+### We then load annotation. {#annotation}
 ```{r}
 data("annotation")
 ```
 
 ## Transcript discovery and quantification {#transcript-discovery-quantification}
-We applied *bambu* to perform EM on  extended annotations {#run-bambu}
+### We applied *bambu* to perform EM on  extended annotations {#run-bambu}
 ```{r}
 se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE)
 se
@@ -80,10 +86,10 @@ seUnextended <- bambu(reads = bamFiles, annotations = annotation, genomeSequence
 seUnextended
 ```
 
-## Check expression estimates 
+### Check expression estimates {#visualise-results}
 We can check the estimated transcript expression using heatmap:
 ```{r, fig.width = 8, fig.height = 6}
-colData(se)$groupVar <- sample_info$protocol
+colData(se)$groupVar <- sample_info$cellLine
 colnames(se) <- sample_info$sample_id
 colData(se)$name <- sample_info$sample_id
 plot.bambu(se, group.variable = "groupVar", type = "heatmap")
@@ -91,12 +97,12 @@ plot.bambu(se, group.variable = "groupVar", type = "heatmap")
 
 or with PCA plot
 ```{r, fig.width = 8, fig.height = 6}
-colData(se)$groupVar <-  sample_info$protocol
+colData(se)$groupVar <-  sample_info$cellLine
 plot.bambu(se, group.variable = "groupVar", type = "pca")
 ```
 
 
-### Check for gene examples
+### Check for gene examples 
 
 Single gene examples can also be checked using plot functions from *bambu*
 ```{r, fig.width = 8, fig.height = 10}
@@ -104,7 +110,7 @@ plot.bambu(se, type = "annotation", gene_id = unique(rowData(se)$GENEID)[10])
 
 ```
 
-### Transcript to Gene expression 
+### Transcript to Gene expression {#gene-expression}
 Gene expression can be obtained from transcript expression using this function:
 ```{r}
 seGene <- transcriptToGeneExpression(se)
@@ -113,17 +119,22 @@ seGene
 
 Gene expression heatmap
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <-  sample_info$protocol
+colData(seGene)$groupVar <-  sample_info$cellLine
 plot.bambu(seGene, group.variable = "groupVar", type = "heatmap")
 ```
 
 Gene expression PCA plot
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <-  sample_info$protocol
+colData(seGene)$groupVar <-  sample_info$cellLine
 plot.bambu(seGene, group.variable = "groupVar", type = "pca")
 ```
 
-## Differentially expressed genes
+### Save data (gtf/text){#save-data}
+```{r}
+writeBambuOutput(se, path = "./bambu/")
+```
+
+## Differentially expressed genes {#DESeq2}
 We used *DESeq2* to find the differentially expressed genes:
 ```{r}
 library(DESeq2)
@@ -148,13 +159,12 @@ plotMA(deGeneRes, ylim = c(-3,3))
 
 Plotting shrinked lFC results
 ```{r, fig.width = 8, fig.height = 6}
+library(apeglm)
 resLFC <- lfcShrink(dds.deseq, coef="groupVar_MCF7_vs_K562", type="apeglm")
 plotMA(resLFC, ylim = c(-3,3))
 ```
 
-
-
-## Differential expression for isoform detection
+## Differential expression for isoform detection {#DEXSeq}
 We used *DEXSeq* to detect alternative used isoforms.
 ```{r}
 library(DRIMSeq)
@@ -267,10 +277,10 @@ ggplot(dxrDT, aes(y = log2fold_MCF7_K562, x = exonBaseMean, color = as.factor(pa
 
 ```
 
-
 ```{r}
 dxrDT[padj<0.5,.(geneID, txID, log2fold_MCF7_K562,K562,MCF7)]
 ```
+### Running bambu with large sample numbers {#large-sample-num}
 
 
 ```{r}
