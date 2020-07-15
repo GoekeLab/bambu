@@ -1,5 +1,6 @@
 ---
-title: "bambu"
+title: "Analysing Long Read RNA-Seq data with bambu"
+author: Chen Ying, Yuk Kei Wan, Jonathan Göke
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{bambu}
@@ -17,10 +18,25 @@ knitr::opts_chunk$set(
 
 
 ## Introduction
-*[Bambu](https://github.com/GoekeLab/bambu)* can be used for transcript discovery and quantification from long read RNA-Seq data. Here, we present an example usage of bambu on Nanopore long read RNA-Sequencing from 2 human cancer cell lines
+*[Bambu](https://github.com/GoekeLab/bambu)* can be used for transcript discovery and quantification from long read RNA-Seq data. Here, we present an example workflow for analysing Nanopore long read RNA-Sequencing data from 2 human cancer cell lines
 
 
-## Data description
+### Content
+* [Quick Start: Transcript discovery and quantification with bambu](#quick-start)
+* [Input data](#input-data)
+  + [Aligned reads (bam files)](#bam-files)
+  + Genome sequence (fasta file/ BSGenome object)
+  + [Genome annotations (bambu annotations object/ gtf file / TxDb object)](#annotations)
+* [Transcript discovery and quantification](#transcript-discovery-quantification)
+  + [Run bambu](#run-bambu)
+  + [Visualise results](#visualise-results)
+  + [Obtain gene expression estimates from transcript expression]()
+  + [Save data (gtf/text)]
+* Identify differentially expressed genes
+* Identify differential transcript usage
+* Running bambu with large sample numbers
+
+## Data description {#quick-start}
 To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which contains single chromosome RNA-Seq data from two common cell lines K562 and MCF7. Each of these cell line has three 
 replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. 
 
@@ -41,19 +57,19 @@ data("sample_info")
 sample_info
 ```
 
-
-Bamfiles can be loaded as follows 
+## Input data {#input-data}
+Bamfiles can be loaded as follows {#bam-files}
 ```{r}
 data("bamFiles")
 ```
 
-We then load annotation.
+We then load annotation. {#annotation}
 ```{r}
 data("annotation")
 ```
 
-
-We applied *bambu* to perform EM on  extended annotations
+## Transcript discovery and quantification {#transcript-discovery-quantification}
+We applied *bambu* to perform EM on  extended annotations {#run-bambu}
 ```{r}
 seExtended <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
 seExtended
@@ -64,7 +80,7 @@ se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgeno
 se
 ```
 
-## Check expression estimates
+## Check expression estimates 
 We can check the estimated transcript expression using heatmap:
 ```{r, fig.width = 8, fig.height = 6}
 colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
