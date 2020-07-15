@@ -31,7 +31,7 @@ knitr::opts_chunk$set(
   + [Run bambu](#run-bambu)
   + [Visualise results](#visualise-results)
   + [Obtain gene expression estimates from transcript expression]()
-  + [Save data (gtf/text)]
+  + [Save data (gtf/text)]()
 * Identify differentially expressed genes
 * Identify differential transcript usage
 * Running bambu with large sample numbers
@@ -71,28 +71,28 @@ data("annotation")
 ## Transcript discovery and quantification {#transcript-discovery-quantification}
 We applied *bambu* to perform EM on  extended annotations {#run-bambu}
 ```{r}
-seExtended <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
-seExtended
+se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE)
+se
 ```
 *bambu* allows quantification without isoform discovery
 ```{r}
-se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = FALSE, verbose = FALSE, ncore = 6)
-se
+seUnextended <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38")
+seUnextended
 ```
 
 ## Check expression estimates 
 We can check the estimated transcript expression using heatmap:
 ```{r, fig.width = 8, fig.height = 6}
-colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
-colnames(seExtended) <- gsub("_genome_chr22_1_25409234","",colnames(seExtended))
-colData(seExtended)$name <- gsub("_genome_chr22_1_25409234","",colData(seExtended)$name)
-plot.bambu(seExtended, group.variable = "groupVar", type = "heatmap")
+colData(se)$groupVar <-  unlist(lapply(colnames(se),function(x) unlist(strsplit(x,"_"))[2]))
+colnames(se) <- gsub("_genome_chr22_1_25409234","",colnames(se))
+colData(se)$name <- gsub("_genome_chr22_1_25409234","",colData(se)$name)
+plot.bambu(se, group.variable = "groupVar", type = "heatmap")
 ```
 
 or with PCA plot
 ```{r, fig.width = 8, fig.height = 6}
-colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
-plot.bambu(seExtended, group.variable = "groupVar", type = "pca")
+colData(se)$groupVar <-  unlist(lapply(colnames(se),function(x) unlist(strsplit(x,"_"))[2]))
+plot.bambu(se, group.variable = "groupVar", type = "pca")
 ```
 
 
@@ -100,14 +100,14 @@ plot.bambu(seExtended, group.variable = "groupVar", type = "pca")
 
 Single gene examples can also be checked using plot functions from *bambu*
 ```{r, fig.width = 8, fig.height = 10}
-plot.bambu(seExtended, type = "annotation", gene_id = unique(rowData(seExtended)$GENEID)[10])
+plot.bambu(se, type = "annotation", gene_id = unique(rowData(seExtended)$GENEID)[10])
 
 ```
 
 ### Transcript to Gene expression 
 Gene expression can be obtained from transcript expression using this function:
 ```{r}
-seGene <- transcriptToGeneExpression(seExtended)
+seGene <- transcriptToGeneExpression(se)
 seGene
 ```
 
@@ -128,7 +128,7 @@ We used *DESeq2* to find the differentially expressed genes:
 ```{r}
 library(DESeq2)
 dds <- DESeqDataSetFromMatrix(apply(assays(seGene)$counts,c(1,2),round),#tmp_wide[,-1],
-                                   colData = colData(seExtended),
+                                   colData = colData(se),
                                    design = ~ groupVar)
 system.time(dds.deseq <- DESeq(dds))
 
@@ -158,14 +158,14 @@ plotMA(resLFC, ylim = c(-3,3))
 We used *DEXSeq* to detect alternative used isoforms.
 ```{r}
 library(DRIMSeq)
-count.data <- as.data.frame(rowData(seExtended))
+count.data <- as.data.frame(rowData(se))
 count.data$gene_id <- count.data$GENEID
 count.data$feature_id <- count.data$TXNAME
 count.data$GENEID <- count.data$TXNAME <- NULL
 
-count.data <- cbind(count.data, assays(seExtended)$counts)
+count.data <- cbind(count.data, assays(se)$counts)
 
-sample.info <- as.data.frame(colData(seExtended))
+sample.info <- as.data.frame(colData(se))
 sample.info$sample_id <- sample.info$name
 sample.info$name <- NULL
 d <- dmDSdata(counts=count.data, samples=sample.info)
