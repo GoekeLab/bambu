@@ -65,10 +65,10 @@ data("bamFiles")
 # get path to fasta file
 fasta_path <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr22_1_25409234.fa", package="NanoporeRNASeq")
 # BSgenome
-library(library(BSgenome.Hsapiens.NCBI.GRCh38))
+library(BSgenome.Hsapiens.NCBI.GRCh38)
 ```
 
-### Load Annotation {#annotation}
+### Load Annotation {#annotations}
 ```{r}
 data("annotation")
 ```
