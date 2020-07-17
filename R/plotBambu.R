@@ -96,13 +96,10 @@ plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","he
   
   #= 
   count.data <- assays(se)$CPM
-  if(length(apply(count.data,1,sum)>10)>100){
-    count.data <- count.data[apply(count.data,1,sum)>10,]
-  }
-
+  count.data <- count.data[apply(count.data,1,sd) > quantile(apply(count.data,1,sd), 0.50),]
   count.data <- log2(count.data+1)
 
-
+  
 
 
     if(type == "pca"){
