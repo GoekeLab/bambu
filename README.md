@@ -5,7 +5,7 @@
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic)](https://github.com/GoekeLab/bambu/releases/tag/v0.2.0)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic)](https://github.com/GoekeLab/bambu/releases/)
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
 [![Install](https://img.shields.io/badge/Install-Github-brightgreen)](#installation)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
