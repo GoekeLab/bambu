@@ -37,34 +37,62 @@ knitr::opts_chunk$set(
  + [Identify differential transcript usage](#DEXSeq)
 * [Running bambu with large number of samples](#large-sample-num)
 * [Getting Help](#get-help)
-* [Session Information](#session-info)
 * [Citing bambu](#cite-bambu)
+* [Session Information](#session-info)
 
-## Data description {#quick-start}
-To demonstrate the usage of *Bambu*, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7). Each of these cell lines has three replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. Reads are aligned to chromosome 22 (Grch38) and stored as bam files.
 
-```{r, include = FALSE}
-devtools::install_github("GoekeLab/NanoporeRNASeq")
+# Quick start: Transcript discovery and quantification with bambu {#quick-start}
+
+## Installation
+You can install bambu from github:
+```{r, eval = FALSE}
+if (!requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
+devtools::install_github("GoekeLab/bambu")
 ```
 
-```{r setup}
-library(NanoporeRNASeq)
+## General Usage
+The default mode to run *bambu is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). bambu will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates:
+```{r, eval = FALSE}
 library(bambu)
+ 
+test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+ 
+se <- bambu(reads = test.bam, annotations = "TxDb.Hsapiens.UCSC.hg38.knownGene", genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38")
 ```
+
+We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run bambu with the following options:
+```{r, eval = FALSE}
+test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+  
+fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+ 
+gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+ 
+bambuAnnotations <- prepareAnnotationsFromGTF(gtf.file)
+ 
+se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
+```
+# A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data {#complete-workflow}
+To demonstrate the usage of Bambu, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7). Each of these cell lines has three replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. Reads are aligned to chromosome 22 (Grch38) and stored as bam files. 
 
 ## Input data {#input-data}
-load sample information
+### Aligned reads (bam files) {#bam-files}
+```{r}
+devtools::install_github("GoekeLab/NanoporeRNASeq")
+library(NanoporeRNASeq)
+devtools::load_all()
+library(bambu)
+```
 ```{r}
 data("sample_info")
 sample_info
 ```
-
-### Load Bam files {#bam-files}
 ```{r}
 data("bamFiles")
 ```
 
-### Load genome sequences {#genome-sequences}
+### Genome sequence (fasta file/ BSGenome object) {#genome-sequences}
 ```{r}
 # get path to fasta file
 fasta_path <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr22_1_25409234.fa", package="NanoporeRNASeq")
@@ -72,13 +100,14 @@ fasta_path <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembl
 library(BSgenome.Hsapiens.NCBI.GRCh38)
 ```
 
-### Load Annotation {#annotations}
+### Genome annotations (bambu annotations object/ gtf file / TxDb object) {#annotations}
 ```{r}
 data("annotation")
 ```
 
 ## Transcript discovery and quantification {#transcript-discovery-quantification}
-### Apply *bambu* to perform EM on  extended annotations {#run-bambu}
+### Running bambu {#run-bambu}
+#### Apply *bambu* to perform EM on  extended annotations 
 ```{r}
 se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE)
 se
@@ -89,7 +118,7 @@ seUnextended <- bambu(reads = bamFiles, annotations = annotation, genomeSequence
 seUnextended
 ```
 
-### Check expression estimates {#visualise-results}
+### Visualise results {#visualise-results}
 We can check the estimated transcript expression using heatmap:
 ```{r, fig.width = 8, fig.height = 6}
 colData(se)$groupVar <- sample_info$cellLine
@@ -104,16 +133,14 @@ colData(se)$groupVar <-  sample_info$cellLine
 plot.bambu(se, group.variable = "groupVar", type = "pca")
 ```
 
-
-### Check for gene examples 
-
+Check for gene examples 
 Single gene examples can also be checked using plot functions from *bambu*
 ```{r, fig.width = 8, fig.height = 10}
 plot.bambu(se, type = "annotation", gene_id = unique(rowData(se)$GENEID)[10])
 
 ```
 
-### Transcript to Gene expression {#gene-expression}
+### Obtain gene expression estimates from transcript expression {#gene-expression}
 Gene expression can be obtained from transcript expression using this function:
 ```{r}
 seGene <- transcriptToGeneExpression(se)
@@ -137,7 +164,7 @@ plot.bambu(seGene, group.variable = "groupVar", type = "pca")
 writeBambuOutput(se, path = "./bambu/")
 ```
 
-## Differentially expressed genes {#DESeq2}
+## Identifying differentially expressed genes {#DESeq2}
 We used *DESeq2* to find the differentially expressed genes:
 ```{r}
 library(DESeq2)
@@ -167,7 +194,7 @@ resLFC <- lfcShrink(dds.deseq, coef="groupVar_MCF7_vs_K562", type="apeglm")
 plotMA(resLFC, ylim = c(-3,3))
 ```
 
-## Differential expression for isoform detection {#DEXSeq}
+## Identifying differential expression for isoform detection {#DEXSeq}
 We used *DEXSeq* to detect alternative used isoforms.
 ```{r}
 library(DRIMSeq)
@@ -283,9 +310,43 @@ ggplot(dxrDT, aes(y = log2fold_MCF7_K562, x = exonBaseMean, color = as.factor(pa
 ```{r}
 dxrDT[padj<0.5,.(geneID, txID, log2fold_MCF7_K562,K562,MCF7)]
 ```
-### Running bambu with large number of samples {#large-sample-num}
+# Running bambu with large number of samples {#large-sample-num}
+For larger sample numbers we recommend to write the processed data to a file:
+```{r, eval = FALSE}
+bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnnotations, genomeSequence = fa.file)
+```
+# Getting Help {#get-help}
+## Advanced Options
+More stringent filtering thresholds imposed on potential novel transcripts
+* Keep novel transcripts with min 5 read count in at least 1 sample:
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readCount = 5))
+```
+* Keep novel transcripts with min 5 samples having at least 2 counts:
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumber = 5))
+```
+* Filter out transcripts with relative abundance within gene lower than 10%:
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))
+```
+Quantification without bias correction
+The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
+```
+Parallel computation
+bambu allows parallel computation.
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, ncore = 8)
+```
+See *[manual](https://github.com/GoekeLab/bambu/blob/master/docs/bambu_0.1.0.pdf)* for details to customize other conditions.
 
 
+# Citing bambu {#cite-bambu}
+A manuscript describing bambu is currently in preparation. If you use bambu for your research, please cite using the following doi: 10.5281/zenodo.3900025.
+
+# Session Information {#session-info}
 ```{r}
 sessionInfo()
 ```
