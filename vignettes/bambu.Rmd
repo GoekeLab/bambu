@@ -1,6 +1,6 @@
 ---
 title: "Analysing Long Read RNA-Seq data with bambu"
-author: Chen Ying, Yuk Kei Wan, Jonathan Göke
+author: Ying Chen, Yuk Kei Wan, Jonathan Göke
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{bambu}
@@ -17,24 +17,28 @@ knitr::opts_chunk$set(
 ```
 
 
-## Introduction
-*[Bambu](https://github.com/GoekeLab/bambu)* can be used for transcript discovery and quantification from long read RNA-Seq data. Here, we present an example workflow for analysing Nanopore long read RNA-Sequencing data from 2 human cancer cell lines
+# Introduction
+*[Bambu](https://github.com/GoekeLab/bambu)* is a method  for transcript discovery and quantification from long read RNA-Seq data. Bambu uses aligned reads and genome reference annotations as input, and will return abundance estimates for all known transcripts and for newly discovered transcripts. Bambu uses the information from the reference annotations to correct misalignment at splice junctions, then reduces the aligned reads to read equivalent classes, and uses this information to identify novel transcripts across all samples of interest. Reads are then assigned to transcripts, and expression estimates are obtained using an expectation maximisation algorithm. Here, we present an example workflow for analysing Nanopore long read RNA-Sequencing data from two human cancer cell lines from the Singapore Nanopore Expression Project (SG-NEx).
 
 
-### Content
+# Content
 * [Quick Start: Transcript discovery and quantification with bambu](#quick-start)
-* [Input data](#input-data)
-  + [Aligned reads (bam files)](#bam-files)
-  + [Genome sequence (fasta file/ BSGenome object)](#genome-sequences)
-  + [Genome annotations (bambu annotations object/ gtf file / TxDb object)](#annotations)
-* [Transcript discovery and quantification](#transcript-discovery-quantification)
-  + [Run bambu](#run-bambu)
-  + [Visualise results](#visualise-results)
-  + [Obtain gene expression estimates from transcript expression](#gene-expression)
-  + [Save data (gtf/text)](#save-data)
-* [Identify differentially expressed genes](#DESeq2)
-* [Identify differential transcript usage](#DEXSeq)
+* [A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data](#complete-workflow)
+ + [Input data](#input-data)
+  - [Aligned reads (bam files)](#bam-files)
+  - [Genome sequence (fasta file/ BSGenome object)](#genome-sequences)
+  - [Genome annotations (bambu annotations object/ gtf file / TxDb object)](#annotations)
+ + [Transcript discovery and quantification](#transcript-discovery-quantification)
+  - [Run bambu](#run-bambu)
+  - [Visualise results](#visualise-results)
+  - [Obtain gene expression estimates from transcript expression](#gene-expression)
+  - [Save data (gtf/text)](#save-data)
+ + [Identify differentially expressed genes](#DESeq2)
+ + [Identify differential transcript usage](#DEXSeq)
 * [Running bambu with large number of samples](#large-sample-num)
+* [Getting Help](#get-help)
+* [Session Information](#session-info)
+* [Citing bambu](#cite-bambu)
 
 ## Data description {#quick-start}
 To demonstrate the usage of *Bambu*, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7). Each of these cell lines has three replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. Reads are aligned to chromosome 22 (Grch38) and stored as bam files.
