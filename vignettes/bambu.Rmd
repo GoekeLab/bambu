@@ -52,7 +52,7 @@ devtools::install_github("GoekeLab/bambu")
 ```
 
 ## General Usage
-The default mode to run *bambu is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). bambu will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates:
+The default mode to run *bambu* is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). bambu will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates:
 ```{r, eval = FALSE}
 library(bambu)
  
