@@ -11,7 +11,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   
   original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
   
-  if(!is(genomeSequence,'FaFile')){
+  if(class(genomeSequence)=='character'){
     if(grepl('.fa',genomeSequence)){
       
       if(.Platform$OS.type == "windows"){
@@ -22,16 +22,16 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
       if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
         seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
       }
-      
-      
-    }else {
+    } else {
       if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
         stop("Please install the BSgenome package")
       
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
     }
-  }
+  } else if(class(genomeSequence)=='BSgenome'){
+    seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
+  } 
   
   if(is(genomeSequence,'FaFile')){
     if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
