@@ -1,5 +1,6 @@
 ---
-title: "bambu"
+title: "Analysing Long Read RNA-Seq data with bambu"
+author: Ying Chen, Yuk Kei Wan, Jonathan Göke
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{bambu}
@@ -9,256 +10,265 @@ vignette: >
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
+  collapse = TRUE,tidy = TRUE,
   warning=FALSE, message=FALSE,
   comment = "##>"
 )
 ```
 
 
-## Introduction
-*[Bambu](https://github.com/GoekeLab/bambu)* can be used for transcript discovery and quantification from long read RNA-Seq data. Here, we present an example usage of bambu on Nanopore long read RNA-Sequencing from 2 human cancer cell lines
+# Introduction
+*[Bambu](https://github.com/GoekeLab/bambu)* is a method  for transcript discovery and quantification from long read RNA-Seq data. Bambu uses aligned reads and genome reference annotations as input, and will return abundance estimates for all known transcripts and for newly discovered transcripts. Bambu uses the information from the reference annotations to correct misalignment at splice junctions, then reduces the aligned reads to read equivalent classes, and uses this information to identify novel transcripts across all samples of interest. Reads are then assigned to transcripts, and expression estimates are obtained using an expectation maximisation algorithm. Here, we present an example workflow for analysing Nanopore long read RNA-Sequencing data from two human cancer cell lines from the Singapore Nanopore Expression Project (SG-NEx).
 
 
-## Data description
-To demonstrate the usage of *Bambu*, we used the data in NanoporeRNASeq, which contains single chromosome RNA-Seq data from two common cell lines K562 and MCF7. Each of these cell line has three 
-replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. 
+# Content
+* [Quick Start: Transcript discovery and quantification with bambu](#quick-start)
+* [A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data](#complete-workflow)
+  + [Input data](#input-data)
+    - [Aligned reads (bam files)](#bam-files)
+    - [Genome sequence (fasta file/ BSGenome object)](#genome-sequences)
+    - [Genome annotations (bambu annotations object/ gtf file / TxDb object)](#annotations)
+  + [Transcript discovery and quantification](#transcript-discovery-quantification)
+    - [Run bambu](#run-bambu)
+    - [Visualise results](#visualise-results)
+    - [Obtain gene expression estimates from transcript expression](#gene-expression)
+    - [Save data (gtf/text)](#save-data)
+  + [Identify differentially expressed genes](#DESeq2)
+  + [Identify differential transcript usage](#DEXSeq)
+* [Running bambu with large number of samples](#large-sample-num)
+* [Getting Help](#get-help)
+* [Citing bambu](#cite-bambu)
+* [Session Information](#session-info)
 
-```{r, include = FALSE}
-# To be removed later 
-devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareForBambu/bambu/")
-#To be removed later
-devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/bambuAnddatapackage/PrepareDataPackage/NanoporeRNASeq/")
+
+# Quick start: Transcript discovery and quantification with bambu {#quick-start}
+
+## Installation
+You can install bambu from github:
+```{r, eval = FALSE}
+if (!requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
+devtools::install_github("GoekeLab/bambu")
 ```
 
-```{r setup}
-library(NanoporeRNASeq)
+## General Usage
+The default mode to run *bambu* is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). bambu will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates:
+```{r, eval = FALSE}
 library(bambu)
+ 
+test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+ 
+se <- bambu(reads = test.bam, annotations = "TxDb.Hsapiens.UCSC.hg38.knownGene", genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38")
 ```
 
+We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run bambu with the following options:
+```{r, eval = FALSE}
+test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
+  
+fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+ 
+gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+ 
+bambuAnnotations <- prepareAnnotationsFromGTF(gtf.file)
+ 
+se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
+```
+# A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data {#complete-workflow}
+To demonstrate the usage of Bambu, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7). Each of these cell lines has three replicates, with 1 direct RNA sequencing data and 2 cDNA sequencing data. Reads are aligned to chromosome 22 (Grch38) and stored as bam files. We applied *bambu* to these bam files, visualized the results, and performed differential analysis to identify differentially expressed genes/transcripts. 
+
+## Input data {#input-data}
+### Aligned reads (bam files) {#bam-files}            
+*bambu* takes genomic alignments saved in bam files. We used bamb-files from *NanoporeRNASeq* package, which contains reads aligned to the first half of the human chromosome 22 using *minimap2*. 
 ```{r}
+devtools::load_all("/mnt/ont/s3.ontdata.store.genome.sg/projects/NanoporeRNASeq")
+#devtools::install_github("GoekeLab/NanoporeRNASeq")
+library(NanoporeRNASeq)
+devtools::load_all()
+library(bambu)
+
 data("sample_info")
 sample_info
+
+data("bamFiles")
+bamFiles <- Rsamtools::BamFileList(system.file("extdata",bamFiles,package = "NanoporeRNASeq"))
+bamFiles
 ```
 
-
-Name of bamfiles can be loaded as follows 
+### Genome sequence (fasta file/ BSGenome object) {#genome-sequences}          
+*bambu* additionally requires genome sequence, which is used to correct splicing junctions in read alignments. Ideally, we recommend the same genome seqeunce file that is used for alignment to be used for bambu. As an option, users can also choose to use BS genome object.
 ```{r}
-data("bamFileNames")
-bamFileNames
+# get path to fasta file
+fasta_path <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr22_1_25409234.fa", package="NanoporeRNASeq")
+# BSgenome
+library(BSgenome.Hsapiens.NCBI.GRCh38)
 ```
 
-We then loaded bam.files.
+### Genome annotations (bambu annotations object/ gtf file / TxDb object) {#annotations}    
+*bambu* also requires annotation object, which is used in *bambu* to correct for start or end sites of matched read classes as well as determing the annotation type of identified transcripts. Here we used the annotation object from *NanoporeRNASeq*  package that is prepared by \code{prepareAnnotation} function in *bambu*.  
 ```{r}
-bam.file <- system.file("extdata",bamFileNames, package = "NanoporeRNASeq")
-data("annotationGrangesList_chr22_1_25409234")
+data("annotation")
+annotation
 ```
 
-
-We applied *bambu* to perform EM on  extended annotations
-```{r}
-seExtended <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE, verbose = FALSE, ncore = 6)
-seExtended
+## Transcript discovery and quantification {#transcript-discovery-quantification}   
+### Running bambu {#run-bambu}           
+Applying *bambu* to perform isoform discovery to extend provided annotation, and then perform EM quantification on extended annotation.         
+```{r, results = "hide"}
+se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = TRUE)
 ```
-*bambu* allows quantification without isoform discovery
 ```{r}
-se <- bambu(reads = bam.file, annotations = annotationGrangesList_chr22_1_25409234, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38", extendAnnotations = FALSE, verbose = FALSE, ncore = 6)
 se
 ```
 
-## Check expression estimates
-We can check the estimated transcript expression using heatmap:
-```{r, fig.width = 8, fig.height = 6}
-colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
-colnames(seExtended) <- gsub("_genome_chr22_1_25409234","",colnames(seExtended))
-colData(seExtended)$name <- gsub("_genome_chr22_1_25409234","",colData(seExtended)$name)
-plot.bambu(seExtended, group.variable = "groupVar", type = "heatmap")
+Optionally, users can choose to apply *bambu* to do quantification without isoform discovery
+```{r, results = "hide"}
+seUnextended <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38")
 ```
-
-or with PCA plot
-```{r, fig.width = 8, fig.height = 6}
-colData(seExtended)$groupVar <-  unlist(lapply(colnames(seExtended),function(x) unlist(strsplit(x,"_"))[2]))
-plot.bambu(seExtended, group.variable = "groupVar", type = "pca")
-```
-
-
-### Check for gene examples
-
-Single gene examples can also be checked using plot functions from *bambu*
-```{r, fig.width = 8, fig.height = 10}
-plot.bambu(seExtended, type = "annotation", gene_id = unique(rowData(seExtended)$GENEID)[10])
-
-```
-
-### Transcript to Gene expression 
-Gene expression can be obtained from transcript expression using this function:
 ```{r}
-seGene <- transcriptToGeneExpression(seExtended)
+seUnextended
+```
+
+
+### Visualise results {#visualise-results}               
+*bambu* provides quick visualisation of transcript estimation results with \code{plot.bambu} function. With multiple samples, we can visualise the correlation clustering between cell lines with heatmap:
+```{r, fig.width = 8, fig.height = 6}
+colData(se)$groupVar <- sample_info$cellLine
+colnames(se) <- sample_info$sample_id
+colData(se)$name <- sample_info$sample_id
+plot.bambu(se, group.variable = "groupVar", type = "heatmap")
+```
+
+Additionally, we can also visualise the correlation with a 2-dimmension PCA plot.
+```{r, fig.width = 8, fig.height = 6}
+colData(se)$groupVar <-  sample_info$cellLine
+plot.bambu(se, group.variable = "groupVar", type = "pca")
+```
+
+In addition to visualising correlation between samples, we also provide quick look into the extended annotation by looking at gene examples. Here we looked at gene ENSG00000099968 and visualised the genomic annotations for annotated and novel isoforms for this gene and compared the expression levels for these isoforms across samples. 
+```{r, fig.width = 8, fig.height = 10}
+plot.bambu(se, type = "annotation", gene_id = "ENSG00000099968")
+
+```
+
+### Obtain gene expression estimates from transcript expression {#gene-expression}
+Gene expression can be obtained from transcript expression obtained from *bambu* using this function. Looking at the output, we can see there are novel genes identified as well
+```{r}
+seGene <- transcriptToGeneExpression(se)
 seGene
 ```
 
-Gene expression heatmap
+We compared the gene expression across the 6 samples. Generally, samples from the cell line showed higher correlation than across the cell lines for gene expression.
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
+colData(seGene)$groupVar <-  sample_info$cellLine
 plot.bambu(seGene, group.variable = "groupVar", type = "heatmap")
 ```
 
-Gene expression PCA plot
+Similarly, when we visualise using PCA plot, we see that samples for the same cell line are more clustered.
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <-  unlist(lapply(colnames(seGene),function(x) unlist(strsplit(x,"_"))[2]))
+colData(seGene)$groupVar <-  sample_info$cellLine
 plot.bambu(seGene, group.variable = "groupVar", type = "pca")
 ```
 
-## Differentially expressed genes
-We used *DESeq2* to find the differentially expressed genes:
+### Save data (gtf/text){#save-data}
+*bambu* allows write annotation output to gtf file and gene and transcript estimates to txt files.
+```{r}
+writeBambuOutput(se, path = "./bambu/")
+```
+
+## Identifying differentially expressed genes {#DESeq2}
+We used *DESeq2* to find the differentially expressed genes. Similar to using results from *Salmon*, estimates from *bambu* will first be rounded.  
 ```{r}
 library(DESeq2)
-dds <- DESeqDataSetFromMatrix(apply(assays(seGene)$counts,c(1,2),round),#tmp_wide[,-1],
-                                   colData = colData(seExtended),
+dds <- DESeqDataSetFromMatrix(apply(assays(seGene)$counts,c(1,2),round),
+                                   colData = colData(se),
                                    design = ~ groupVar)
-system.time(dds.deseq <- DESeq(dds))
-
+dds.deseq <- DESeq(dds)
 deGeneRes <- DESeq2::results(dds.deseq, independentFiltering=FALSE)
-```
-
-```{r}
 head(deGeneRes[order(deGeneRes$padj),])
 ```
-
+A quick summary of differentially expressed genes
 ```{r}
 summary(deGeneRes)
 ```
+
+We can also visualise the MA-plot for differentially used isoforms
 ```{r, fig.width = 8, fig.height = 6}
 plotMA(deGeneRes, ylim = c(-3,3))
 ```
 
-Plotting shrinked lFC results
+However, as recommended by [*DESeq2* tutorial](http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#alternative-shrinkage-estimators), visualizing the MA-plots using the original log-fold change results will be affected by the noise associated with log2 fold changes from low count genes without requiring arbitrary filtering thresholds. So we applied same shrinkage to effect sizes to improve the visualization.
 ```{r, fig.width = 8, fig.height = 6}
+library(apeglm)
 resLFC <- lfcShrink(dds.deseq, coef="groupVar_MCF7_vs_K562", type="apeglm")
 plotMA(resLFC, ylim = c(-3,3))
 ```
 
-
-
-## Differential expression for isoform detection
+## Identifying differential expression for isoform detection {#DEXSeq}
 We used *DEXSeq* to detect alternative used isoforms.
 ```{r}
-library(DRIMSeq)
-count.data <- as.data.frame(rowData(seExtended))
-count.data$gene_id <- count.data$GENEID
-count.data$feature_id <- count.data$TXNAME
-count.data$GENEID <- count.data$TXNAME <- NULL
-
-count.data <- cbind(count.data, assays(seExtended)$counts)
-
-sample.info <- as.data.frame(colData(seExtended))
-sample.info$sample_id <- sample.info$name
-sample.info$name <- NULL
-d <- dmDSdata(counts=count.data, samples=sample.info)
-
-n_samp_gene <- 1
-n_samp_feature <- 1
-min_count_gene <- 1
-min_count_feature <- 1
-dFilter <- dmFilter(d,
-              min_samps_feature_expr = n_samp_feature, 
-              min_samps_feature_prop = n_samp_feature,
-              min_samps_gene_expr = n_samp_gene, 
-              min_feature_expr = min_count_feature,
-              min_gene_expr = min_count_gene,
-              min_feature_prop=0.1)
-table(table(counts(dFilter)$gene_id)) ## number of isoforms 
-
-
-
+count.data <- cbind(data.frame(gene_id = as.data.frame(rowData(se))$GENEID,
+                               feature_id = as.data.frame(rowData(se))$TXNAME),
+                               assays(se)$counts)
 ```
 
 ```{r}
 library(DEXSeq)
-formulaFullModel <- as.formula("~sample + exon + groupVar:exon")
+formula <- as.formula("~sample + exon + groupVar:exon")
+dxd <- DEXSeqDataSet(countData=round(as.matrix(count.data[,-c(1:2)])),
+                     sampleData=as.data.frame(colData(se)),
+                     design=formula,
+                     featureID = count.data$feature_id,
+                     groupID=count.data$gene_id)
+dxd <- estimateExonFoldChanges(testForDEU(estimateDispersions(estimateSizeFactors(dxd), formula = formula), fullModel = formula), fitExpToVar="groupVar")
 
-
-dxd <- DEXSeqDataSet(countData=round(as.matrix(counts(dFilter)[,-c(1:2)])),
-                     sampleData=DRIMSeq::samples(dFilter),
-                     design=formulaFullModel,
-                     featureID = counts(dFilter)$feature_id,
-                     groupID=counts(dFilter)$gene_id)
-
-
-system.time({
-  dxd <- estimateSizeFactors(dxd)
-  print('Size factor estimated')
-  dxd <- estimateDispersions(dxd, formula = formulaFullModel)
-  print('Dispersion estimated')
-  #dxd <- estimateExonFoldChanges( dxd )
-  dxd <- testForDEU(dxd, fullModel = formulaFullModel)
-  print('DEU tested')
-  dxd <- estimateExonFoldChanges(dxd, fitExpToVar="groupVar")
-  print('Exon fold changes estimated')
-}) 
-```
-
-```{r}
 dxr <- DEXSeqResults(dxd, independentFiltering=FALSE)
 head(dxr)
 ```
-
-
-```{r}
-library(stageR)
-strp <- function(x) substr(x,1,15)
-qval <- perGeneQValue(dxr)
-dxr.g <- data.frame(gene=names(qval),qval)
-
-columns <- c("featureID","groupID","pvalue")
-dxr_pval <- as.data.frame(dxr[,columns])
-head(dxr_pval)
-
-pConfirmation <- matrix(dxr_pval$pvalue,ncol=1)
-dimnames(pConfirmation) <- list(strp(dxr_pval$featureID),"transcript")
-pScreen <- qval
-names(pScreen) <- strp(names(pScreen))
-tx2gene <- as.data.frame(dxr_pval[,c("featureID", "groupID")])
-for (i in 1:2) tx2gene[,i] <- strp(tx2gene[,i])
-
-
-stageRObj <- stageRTx(pScreen=pScreen, pConfirmation=pConfirmation,
-                      pScreenAdjusted=TRUE, tx2gene=tx2gene)
-stageRObj <- stageWiseAdjustment(stageRObj, method="dtu", alpha=0.5)
-suppressWarnings({
-  dex.padj <- getAdjustedPValues(stageRObj, order=FALSE,
-                                 onlySignificantGenes=TRUE)
-})
-```
-
-```{r}
-dxrDT <- data.table(as.data.frame(dxr))
-setnames(dxrDT, old = c('groupID','featureID'), new = c('geneID','txID'))
-dex.padj <- data.table(dex.padj)
-
-dxrDT <- dex.padj[dxrDT, on = c('geneID','txID')]
-head(dxrDT)
+We can visualize the MA-plot
+```{r,fig.width = 8, fig.height = 6}
+plotMA(dxr, cex=0.8 )
 ```
 
 
-```{r, fig.width = 8, fig.height = 6}
-dxrDT[,sigLFC2:=(padj < 0.5&(abs(log2fold_MCF7_K562)>=2))]
-ggplot(dxrDT, aes(y = log2fold_MCF7_K562, x = exonBaseMean, color = as.factor(padj<0.5)))+
-  geom_point(size = 0.5)+
-     scale_x_log10()+
-  scale_color_manual(values = c('grey','indianred'), name = "Significant")+
-     xlab("Mean of normalized counts")+
-    ylab("Log2 Fold change")+
-  theme_minimal()
 
+# Running bambu with large number of samples {#large-sample-num}
+For larger sample numbers we recommend to write the processed data to a file:
+```{r, eval = FALSE}
+bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnnotations, genomeSequence = fa.file)
 ```
+# Getting Help {#get-help}
+## Advanced Options
+More stringent filtering thresholds imposed on potential novel transcripts    
 
-
-```{r}
-dxrDT[padj<0.5,.(geneID, txID, log2fold_MCF7_K562,K562,MCF7)]
+* Keep novel transcripts with min 5 read count in at least 1 sample:
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readCount = 5))
 ```
+* Keep novel transcripts with min 5 samples having at least 2 counts:
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumber = 5))
+```
+* Filter out transcripts with relative abundance within gene lower than 10%:
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))
+```
+Quantification without bias correction          
+The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
+```
+Parallel computation       
+bambu allows parallel computation.
+```{r, eval = FALSE}
+bambu(reads, annotations, genomeSequence, ncore = 8)
+```
+See *[manual](https://github.com/GoekeLab/bambu/blob/master/docs/bambu_0.1.0.pdf)* for details to customize other conditions.
 
 
+# Citing bambu {#cite-bambu}
+A manuscript describing bambu is currently in preparation. If you use bambu for your research, please cite using the following doi: 10.5281/zenodo.3900025.
+
+# Session Information {#session-info}
 ```{r}
 sessionInfo()
 ```

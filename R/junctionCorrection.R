@@ -13,11 +13,16 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   
   if(!is(genomeSequence,'FaFile')){
     if(grepl('.fa',genomeSequence)){
-      genomeSequence <- Rsamtools::FaFile(genomeSequence)
       
+      if(.Platform$OS.type == "windows"){
+        genomeSequence <- Biostring::readDNAStringSet(genomeSequence)
+      }else{
+        genomeSequence <- Rsamtools::FaFile(genomeSequence)
+      }
       if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
         seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
       }
+      
       
     }else {
       if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
@@ -39,7 +44,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
                                                value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
                                                pruning.mode = 'coarse')
   }
-
+  
   ##Todo: don't create junction names, instead work with indices/intergers (names are memory intensive)
 
   unstranded_unlisted_junctions <- unstrand(unlisted_junction_granges)
