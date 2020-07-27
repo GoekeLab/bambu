@@ -1,34 +1,44 @@
 #' Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
-#' @title prepare annotations from txdb object
-#' @param txdb a \code{\link{TxDb}} object
+#' @title prepare annotations from txdb object or gtf file
+#' @param x A \code{\link{TxDb}} object or a gtf file
 #' @return A \code{\link{GRangesList}} object
 #' @export
 #' @examples
 #'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 #'  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
-#'  prepareAnnotations(txdb)
-prepareAnnotations <- function(txdb) {
-  exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
-  if(any(duplicated(names(exonsByTx)))) {
-    warning('transcript names are not unique, only one transcript per ID will be kept')
-    exonsByTx <- exonsByTx[!duplicated(exonsByTx)]
+#'  prepareAnnotations(x = txdb)
+#'  gtf.file <- system.file("extdata", 
+#'  "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+#'  package = "bambu")
+#'  gr <- prepareAnnotationsFrom(x = gtf.file)
+prepareAnnotations <- function(x) {
+  if(grepl(".gtf",x)){
+    return(prepareAnnotationsFromGTF(x))
   }
-
-  unlistedExons <- unlist(exonsByTx, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)), names=NULL)
-  txIdForReorder <- togroup(PartitioningByWidth(exonsByTx))
-  unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)]  #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
-  unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(exonsByTx),seq,to=1), use.names=FALSE)
-  unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
-  mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
-  exonsByTx <- relist(unlistedExons, partitioning)
-
-  mcols(exonsByTx) <-  suppressMessages(AnnotationDbi::select(txdb, names(exonsByTx),
-                                             columns=c("TXNAME", "GENEID"),
-                                             keytype="TXNAME"))
-  minEqClasses <- getMinimumEqClassByTx(exonsByTx)
-  mcols(exonsByTx)$eqClass <- minEqClasses$eqClass[match(names(exonsByTx),minEqClasses$queryTxId)]
-  return(exonsByTx)
+  if(class(x) == "TxDb"){
+    exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
+    if(any(duplicated(names(exonsByTx)))) {
+      warning('transcript names are not unique, only one transcript per ID will be kept')
+      exonsByTx <- exonsByTx[!duplicated(exonsByTx)]
+    }
+    
+    unlistedExons <- unlist(exonsByTx, use.names = FALSE)
+    partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)), names=NULL)
+    txIdForReorder <- togroup(PartitioningByWidth(exonsByTx))
+    unlistedExons <- unlistedExons[order(txIdForReorder, unlistedExons$exon_rank)]  #'exonsByTx' is always sorted by exon rank, not by strand, make sure that this is the case here
+    unlistedExons$exon_endRank <- unlist(sapply(elementNROWS(exonsByTx),seq,to=1), use.names=FALSE)
+    unlistedExons <- unlistedExons[order(txIdForReorder, start(unlistedExons))]
+    mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
+    exonsByTx <- relist(unlistedExons, partitioning)
+    
+    mcols(exonsByTx) <-  suppressMessages(AnnotationDbi::select(txdb, names(exonsByTx),
+                                                                columns=c("TXNAME", "GENEID"),
+                                                                keytype="TXNAME"))
+    minEqClasses <- getMinimumEqClassByTx(exonsByTx)
+    mcols(exonsByTx)$eqClass <- minEqClasses$eqClass[match(names(exonsByTx),minEqClasses$queryTxId)]
+    return(exonsByTx)
+  }
+  
 }
 
 
@@ -43,12 +53,7 @@ prepareAnnotations <- function(txdb) {
 #'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   \item eqClass specifying minimun read count to consider a read class valid in a sample, defaults to 2
 #'   }
-#' @export
-#' @examples 
-#' gtf.file <- system.file("extdata", 
-#' "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
-#' package = "bambu")
-#' gr <- prepareAnnotationsFromGTF(gtf.file)
+#' @noRd
 prepareAnnotationsFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')
