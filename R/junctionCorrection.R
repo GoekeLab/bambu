@@ -15,7 +15,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
     if(grepl('.fa',genomeSequence)){
       
       if(.Platform$OS.type == "windows"){
-        genomeSequence <- Biostring::readDNAStringSet(genomeSequence)
+        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
         newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),"[[",1))  
         names(genomeSequence) <- newlevels
       }else{
