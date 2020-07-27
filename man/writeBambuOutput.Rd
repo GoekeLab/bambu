@@ -4,7 +4,7 @@
 \alias{writeBambuOutput}
 \title{Write bambu results to GTF and transcript/gene-count files}
 \usage{
-writeBambuOutput(se, path)
+writeBambuOutput(se, path, prefix = "")
 }
 \arguments{
 \item{se}{a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}}
