@@ -21,25 +21,26 @@ knitr::opts_chunk$set(
 *[Bambu](https://github.com/GoekeLab/bambu)* is a method for transcript discovery and quantification from long read RNA-Seq data. Bambu uses aligned reads and genome reference annotations as input, and will return abundance estimates for all known transcripts and for newly discovered transcripts. Bambu uses the information from the reference annotations to correct misalignment at splice junctions, then reduces the aligned reads to read equivalent classes, and uses this information to identify novel transcripts across all samples of interest. Reads are then assigned to transcripts, and expression estimates are obtained using an expectation maximisation algorithm. Here, we present an example workflow for analysing Nanopore long read RNA-Sequencing data from two human cancer cell lines from the Singapore Nanopore Expression Project (SG-NEx).
 
 
-# Content
-* [Quick Start: Transcript discovery and quantification with bambu](#quick-start)
-* [A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data](#complete-workflow)
-  + [Input data](#input-data)
-    - [Aligned reads (bam files)](#bam-files)
-    - [Genome sequence (fasta file/ BSGenome object)](#genome-sequences)
-    - [Genome annotations (bambu annotations object/ gtf file / TxDb object)](#annotations)
-  + [Transcript discovery and quantification](#transcript-discovery-quantification)
-    - [Run bambu](#run-bambu)
-    - [Visualise results](#visualise-results)
-    - [Obtain gene expression estimates from transcript expression](#gene-expression)
-    - [Save data (gtf/text)](#save-data)
-  + [Identify differentially expressed genes](#DESeq2)
-  + [Identify differential transcript usage](#DEXSeq)
+# Content 
+
+* [Quick Start: Transcript discovery and quantification with bambu](#quick-start) 
+* [A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data](#complete-workflow)      
+    + [Input data](#input-data)        
+        - [Aligned reads (bam files)](#bam-files)                     
+        - [Genome sequence (fasta file/ BSGenome object)](#genome-sequences)                    
+        - [Genome annotations (bambu annotations object/ gtf file / TxDb object)](#annotations)
+    + [Transcript discovery and quantification](#transcript-discovery-quantification)  
+        - [Run bambu](#run-bambu)
+        - [Visualise results](#visualise-results)
+        - [Obtain gene expression estimates from transcript expression](#gene-expression)
+        - [Save data (gtf/text)](#save-data)  
+    + [Identify differentially expressed genes](#DESeq2) 
+    + [Identify differential transcript usage](#DEXSeq)    
 * [Running bambu with large number of samples](#large-sample-num)
 * [Bambu parameters](#bambu-parameters)
 * [Getting help](#get-help)
-* [Citing bambu](#citing-bambu)
-* [Session Information](#session-information)
+* [Citing bambu](#cite-bambu)
+* [Session Information](#session-info)
 
 
 # Quick start: Transcript discovery and quantification with bambu {#quick-start}
@@ -74,9 +75,10 @@ bambuAnnotations <- prepareAnnotations(gtf.file)
  
 se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
 ```
-*bambu* returns a SummarizedExperiment object which can be accessed as follows:             
+*bambu* returns a SummarizedExperiment object which can be accessed as follows:         
+
 * assays(se) returns the transcript abundance estimates as counts or CPM              
-* rowRanges(se) returns a GRangesList with all annotated and newly discovered transcripts              
+* rowRanges(se) returns a GRangesList with all annotated and newly discovered transcripts   
 * rowData(se) returns additional information about each transcript such as the gene name and the class of newly discovered transcript          
 
 # A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data {#complete-workflow}
@@ -134,7 +136,7 @@ annotation
 
 ## Transcript discovery and quantification {#transcript-discovery-quantification}   
 ### Running bambu {#run-bambu}           
-Next we apply *bambu* on the input data (bam files, annotations, genomeSequence). Bambu willto perform isoform discovery to extend the provided annotation, and then quantify the transcript expression from these extended annotation using an Expectation-Maximisation algorithm. Here we will use 1 core, which can be changed to process multiple files in parallel.
+Next we apply *bambu* on the input data (bam files, annotations, genomeSequence). Bambu will perform isoform discovery to extend the provided annotation, and then quantify the transcript expression from these extended annotation using an Expectation-Maximisation algorithm. Here we will use 1 core, which can be changed to process multiple files in parallel.
        
 ```{r, results = "hide"}
 se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = genomeSequence, ncore = 1)
@@ -142,7 +144,7 @@ se <- bambu(reads = bamFiles, annotations = annotation, genomeSequence = genomeS
 ```{r}
 se
 ```
-For the downstream analysis we will add the condition of interest to the \code{colData} object that describes the samples. Here we are interested in a comparison of the 2 cell lines:
+For the downstream analysis, we will add the condition of interest to the \code{colData} object that describes the samples. Here we are interested in a comparison of the 2 cell lines:
 ```{r}
 colData(se)$condition <- as.factor(sample_info$cellLine)
 ```
@@ -190,8 +192,8 @@ plot.bambu(seGene, group.variable = "condition", type = "heatmap")
 
 
 ### Save data (gtf/text){#save-data}
-*bambu* includes a function to write the extended annotations, the transcript and the gene expression estimates that include any newly discovered genes and transcripts to text files.
-```{r， eval = FALSE}
+*bambu* includes a function to write the extended annotations, the transcript and the gene expression estimates that include any newly discovered genes and transcripts to text files.   
+```{r, eval = FALSE}
 writeBambuOutput(se, path = "./bambu/", prefix="NanoporeRNASeq_")
 ```
 
@@ -283,6 +285,8 @@ bambu allows parallel computation.
 bambu(reads, annotations, genomeSequence, ncore = 8)
 ```
 See *[manual](https://github.com/GoekeLab/bambu/blob/master/docs/bambu_0.1.0.pdf)* for details to customize other conditions.
+
+For transcript discovery we recommend to adjust the parameters according to the number of replicates and the sequencing throughput. The most relevant parameters are explained here. You can use any combination of these parameters.
 
 # Getting help {#get-help}
 
