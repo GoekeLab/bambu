@@ -23,9 +23,6 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
         seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
       }
     } else {
-      if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
-        stop("Please install the BSgenome package")
-      
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
     }
