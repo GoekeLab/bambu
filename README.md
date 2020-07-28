@@ -196,6 +196,11 @@ writeBambuOutput(se, path = "./bambu/")
 
 Release date: 28th July 2020
 
+- bambu now runs on windows with a fasta file
+- update to the documentation (vignette)
+- prepareAnnotations now works with TxDb or gtf file
+- minor bug fixes
+
 **bambu version 0.2.0**
 
 Release date: 18th June 2020
