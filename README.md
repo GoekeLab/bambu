@@ -192,7 +192,8 @@ writeBambuOutput(se, path = "./bambu/")
 
 ### Release History
 
-**bambu version 0.3.0**
+**bambu version 0.3.0**     
+
 Release date: 28th July 2020
 
 **bambu version 0.2.0**
