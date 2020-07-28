@@ -258,6 +258,7 @@ se <- bambu(reads = bamFiles, readClass.outputDir = "./bambu/", annotations = an
 ```
 # Bambu parameters {#bambu-parameters}
 ## Advanced Options
+For transcript discovery we recommend to adjust the parameters according to the number of replicates and the sequencing throughput. The most relevant parameters are explained here. You can use any combination of these parameters.   
 ### More stringent filtering thresholds imposed on potential novel transcripts    
 
 * Keep novel transcripts with min 5 read count in at least 1 sample:
@@ -285,8 +286,6 @@ bambu allows parallel computation.
 bambu(reads, annotations, genomeSequence, ncore = 8)
 ```
 See *[manual](https://github.com/GoekeLab/bambu/blob/master/docs/bambu_0.1.0.pdf)* for details to customize other conditions.
-
-For transcript discovery we recommend to adjust the parameters according to the number of replicates and the sequencing throughput. The most relevant parameters are explained here. You can use any combination of these parameters.
 
 # Getting help {#get-help}
 
