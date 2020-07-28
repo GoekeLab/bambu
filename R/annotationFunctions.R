@@ -12,9 +12,6 @@
 #'  package = "bambu")
 #'  gr <- prepareAnnotationsFrom(x = gtf.file)
 prepareAnnotations <- function(x) {
-  if(grepl(".gtf",x)){
-    return(prepareAnnotationsFromGTF(x))
-  }
   if(class(x) == "TxDb"){
     exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
     if(any(duplicated(names(exonsByTx)))) {
@@ -37,7 +34,13 @@ prepareAnnotations <- function(x) {
     minEqClasses <- getMinimumEqClassByTx(exonsByTx)
     mcols(exonsByTx)$eqClass <- minEqClasses$eqClass[match(names(exonsByTx),minEqClasses$queryTxId)]
     return(exonsByTx)
+  }else{
+    if(grepl(".gtf",x)){
+      return(prepareAnnotationsFromGTF(x))
+    }
+    
   }
+  
   
 }
 
