@@ -54,7 +54,7 @@ run_parallel <- function(g,conv,bias,maxiter, readClassDt){
                                gene_sid = g,
                                ntotal = sum(tmp$nobs)))
   }else{
-    tmp_wide <- dcast(tmp[order(nobs)], tx_sid~read_class_sid, fun.agg = length,
+    tmp_wide <- dcast(tmp[order(nobs)], tx_sid~read_class_sid, fun.aggregate = length,
                       value.var = 'nobs')
     a_mat <- tmp_wide[,-1,with=FALSE]
     setDF(a_mat)

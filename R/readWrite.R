@@ -2,10 +2,16 @@
 #' @title Write bambu results to GTF and transcript/gene-count files
 #' @param se a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
-#' @return The function will generate three files, a \code{\link{.gtf}} file for the annotations, 
-#' two \code{\link{.txt}} files for transcript and gene counts respectively. 
+#' @return The function will generate three files, a .gtf file for the annotations, 
+#' two .txt files for transcript and gene counts respectively. 
 #' @export
-writeBambuOutput <- function(se,path){
+#' @examples 
+#' se <- readRDS(system.file("extdata", 
+#' "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+#' package = "bambu"))
+#' path <- tempdir()
+#' writeBambuOutput(se,path)
+writeBambuOutput <- function(se, path, prefix=''){
   if (missing(se) | missing(path)){
     stop('Both summarizedExperiment object from bambu and the path for the output files are required.')
   }else{
@@ -14,17 +20,17 @@ writeBambuOutput <- function(se,path){
       dir.create(outdir, recursive = TRUE)
     }
     transcript_grList <- rowRanges(se)
-    transcript_gtffn <- paste(path,"transcript_exon.gtf",sep="")
+    transcript_gtffn <- paste(outdir, prefix, "extended_annotations.gtf",sep="")
     gtf <- writeToGTF(annotation=transcript_grList,file=transcript_gtffn)
     transcript_counts <- as.data.frame(assays(se)$counts)
     geneIDs <- data.frame(mcols(transcript_grList, use.names=FALSE)$TXNAME,mcols(transcript_grList, use.names=FALSE)$GENEID)
     colnames(geneIDs) <- c("TXNAME","GENEID")
     transcript_counts <- cbind(geneIDs,transcript_counts)  
-    transcript_countsfn <- paste(path,"counts_transcript.txt",sep="")
+    transcript_countsfn <- paste(outdir,prefix, "counts_transcript.txt",sep="")
     write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE,row.names= FALSE)
     gene_se <- transcriptToGeneExpression(se)
     gene_counts <- as.data.frame(assays(gene_se)$counts)
-    gene_countsfn <- paste(path,"counts_gene.txt",sep="")
+    gene_countsfn <- paste(outdir, prefix, "counts_gene.txt",sep="")
     write.table(gene_counts, file= gene_countsfn, sep="\t", quote=FALSE)
   }
 }
@@ -35,10 +41,16 @@ writeBambuOutput <- function(se,path){
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)
 #' @return gtf a GTF dataframe
 #' @export
+#' @examples
+#' outputGtfFile <- tempfile()
+#' gr <- readRDS(system.file("extdata", 
+#' "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
+#' package = "bambu"))
+#' writeToGTF(gr, outputGtfFile)
 writeToGTF <- function (annotation,file,geneIDs=NULL) {
   if (missing(annotation) | missing(file)){
     stop('Both GRangesList and the name of the output file are required.')
-  }else if (class(annotation) != "CompressedGRangesList"){
+  }else if (!is(annotation,"CompressedGRangesList")){
     stop('The inputted GRangesList is of the wrong class.')
   }
   df <- as_tibble(annotation)
@@ -82,13 +94,18 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
 
 #' Outputs GRangesList object from reading a GTF file
 #' @title convert a GTF file into a GRangesList
-#' @param file a \code{\link{.gtf}} file
+#' @param file a .gtf file
 #' @return grlist a \code{\link{GRangesList}} object, with two columns
 #' \itemize{
 #'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
 #'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   }
 #' @export
+#' @examples
+#' gtf.file <- system.file("extdata", 
+#' "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+#' package = "bambu")
+#' readFromGTF(gtf.file)
 readFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')

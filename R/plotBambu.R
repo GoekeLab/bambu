@@ -1,8 +1,22 @@
+#' redefine plot for plot.bambu
+#' @title plot
+#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.
+#' @param ... Additional arguments
+#' @param group.variable Variable for grouping in plot, has be to provided if choosing to plot PCA.
+#' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see details.
+#' @param gene_id specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".
+#' @param transcript_id specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"
+#' @return A heatmap plot for all samples
+#' @export
+plot <- function(se, ...,group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+    UseMethod("plot")
+   }
+
 #' plotSEOuptut
 #' @title plot.bambu
-#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGene}}.
+#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.
 #' @param group.variable Variable for grouping in plot, has be to provided if choosing to plot PCA.
-#' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see \code{\link{details}}.
+#' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see details.
 #' @param gene_id specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".
 #' @param transcript_id specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"
 #' @details \code{\link{type}} indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.
@@ -15,7 +29,15 @@
 #' @importFrom ggbio autoplot
 #' @importFrom gridExtra grid.arrange
 #' @export
-plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+#' @examples 
+#' se <- readRDS(system.file("extdata", 
+#' "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
+#'  package = "bambu"))
+#' colnames(se) <- colData(se)$name <- c("sample1","sample2")
+#' assays(se)$CPM[,2]  <- pmax(0, rnorm(length(assays(se)$CPM[,2]),
+#' assays(se)$CPM[,2],10))
+#' plot.bambu(se, type = "heatmap")
+plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
 
   if(type == "annotation"){
     if(is.null(gene_id)&(is.null(transcript_id))){
@@ -74,13 +96,10 @@ plot.bambu <- function(se, group.variable = NULL, type = c("annotation","pca","h
   
   #= 
   count.data <- assays(se)$CPM
-  if(length(apply(count.data,1,sum)>10)>100){
-    count.data <- count.data[apply(count.data,1,sum)>10,]
-  }
-
+  count.data <- count.data[apply(count.data,1,sd) > quantile(apply(count.data,1,sd), 0.50),]
   count.data <- log2(count.data+1)
 
-
+  
 
 
     if(type == "pca"){
