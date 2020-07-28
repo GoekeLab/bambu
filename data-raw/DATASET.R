@@ -43,6 +43,7 @@ estOutput_wBC <- lapply(1:5, function(s){
 
 seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 extendedAnnotations <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
 
 seWithDistExpected <- isore.estimateDistanceToAnnotations(seReadClass=seReadClass1,

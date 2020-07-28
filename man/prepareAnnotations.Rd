@@ -2,23 +2,25 @@
 % Please edit documentation in R/annotationFunctions.R
 \name{prepareAnnotations}
 \alias{prepareAnnotations}
-\title{prepare annotations from txdb object}
+\title{prepare annotations from txdb object or gtf file}
 \usage{
-prepareAnnotations(txdb)
+prepareAnnotations(x)
 }
 \arguments{
-\item{txdb}{a \code{\link{TxDb}} object}
+\item{x}{A \code{\link{TxDb}} object or a gtf file}
 }
 \value{
-A \code{\link{GrangesList}} object
+A \code{\link{GRangesList}} object
 }
 \description{
 Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 }
 \examples{
-\dontrun{
  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
- prepareAnnotations(txdb)
- }
+ prepareAnnotations(x = txdb)
+ gtf.file <- system.file("extdata", 
+ "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
+ package = "bambu")
+ gr <- prepareAnnotationsFrom(x = gtf.file)
 }

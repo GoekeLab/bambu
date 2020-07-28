@@ -9,6 +9,15 @@ transcriptToGeneExpression(se)
 \arguments{
 \item{se}{a summarizedExperiment object from \code{\link{bambu}}}
 }
+\value{
+A SummarizedExperiment object
+}
 \description{
 Reduce transcript expression to gene expression
+}
+\examples{
+se <- readRDS(system.file("extdata", 
+"seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+package = "bambu"))
+transcriptToGeneExpression(se)
 }
