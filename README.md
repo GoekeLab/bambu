@@ -143,7 +143,7 @@ bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
 bambu(reads, annotations, genomeSequence, ncore = 8)
 ```
 
-See [manual](docs/bambu_0.1.0.pdf) for details to customize other conditions.
+See [manual](docs/bambu_0.3.0.pdf) for details to customize other conditions.
 
 ---
 
@@ -191,6 +191,9 @@ writeBambuOutput(se, path = "./bambu/")
 ---
 
 ### Release History
+
+**bambu version 0.3.0**
+Release date: 28th July 2020
 
 **bambu version 0.2.0**
 
