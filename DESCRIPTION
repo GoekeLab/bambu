@@ -20,7 +20,6 @@ Depends:
     ggplot2
 Suggests: 
     knitr,
-    rmarkdown,
     fs,
     testthat,
     ComplexHeatmap,
@@ -67,5 +66,4 @@ Imports:
     RcppProgress,
     progress
 VignetteBuilder: 
-    knitr,
-    rmarkdown
+    knitr
