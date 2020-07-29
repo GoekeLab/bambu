@@ -12,7 +12,7 @@
 #'  package = "bambu")
 #'  gr <- prepareAnnotationsFrom(x = gtf.file)
 prepareAnnotations <- function(x) {
-  if(class(x) == "TxDb"){
+  if(is(x,"TxDb")){
     exonsByTx = exonsBy(x,by='tx', use.names=TRUE)
     if(any(duplicated(names(exonsByTx)))) {
       warning('transcript names are not unique, only one transcript per ID will be kept')
