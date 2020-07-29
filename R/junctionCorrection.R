@@ -11,22 +11,26 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   
   original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
   
-  if(!is(genomeSequence,'FaFile')){
+  if(class(genomeSequence)=='character'){
     if(grepl('.fa',genomeSequence)){
-      genomeSequence <- Rsamtools::FaFile(genomeSequence)
       
+      if(.Platform$OS.type == "windows"){
+        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
+        newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),"[[",1))  
+        names(genomeSequence) <- newlevels
+      }else{
+        genomeSequence <- Rsamtools::FaFile(genomeSequence)
+      }
       if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
         seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
       }
-      
-    }else {
-      if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
-        stop("Please install the BSgenome package")
-      
+    } else {
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
     }
-  }
+  } else if(class(genomeSequence)=='BSgenome'){
+    seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
+  } 
   
   if(is(genomeSequence,'FaFile')){
     if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
@@ -39,7 +43,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
                                                value = seqlevels(unlisted_junction_granges)[seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence)],
                                                pruning.mode = 'coarse')
   }
-
+  
   ##Todo: don't create junction names, instead work with indices/intergers (names are memory intensive)
 
   unstranded_unlisted_junctions <- unstrand(unlisted_junction_granges)
