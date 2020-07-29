@@ -11,7 +11,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   
   original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
   
-  if(class(genomeSequence)=='character'){
+  if(is(genomeSequence,'character')){
     if(grepl('.fa',genomeSequence)){
       
       if(.Platform$OS.type == "windows"){
@@ -28,7 +28,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
     }
-  } else if(class(genomeSequence)=='BSgenome'){
+  } else if(is(genomeSequence,'BSgenome')){
     seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
   } 
   
