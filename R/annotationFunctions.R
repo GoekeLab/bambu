@@ -13,7 +13,7 @@
 #'  gr <- prepareAnnotationsFrom(x = gtf.file)
 prepareAnnotations <- function(x) {
   if(class(x) == "TxDb"){
-    exonsByTx = exonsBy(txdb,by='tx', use.names=TRUE)
+    exonsByTx = exonsBy(x,by='tx', use.names=TRUE)
     if(any(duplicated(names(exonsByTx)))) {
       warning('transcript names are not unique, only one transcript per ID will be kept')
       exonsByTx <- exonsByTx[!duplicated(exonsByTx)]
@@ -28,7 +28,7 @@ prepareAnnotations <- function(x) {
     mcols(unlistedExons) <- mcols(unlistedExons)[,c('exon_rank','exon_endRank')]
     exonsByTx <- relist(unlistedExons, partitioning)
     
-    mcols(exonsByTx) <-  suppressMessages(AnnotationDbi::select(txdb, names(exonsByTx),
+    mcols(exonsByTx) <-  suppressMessages(AnnotationDbi::select(x, names(exonsByTx),
                                                                 columns=c("TXNAME", "GENEID"),
                                                                 keytype="TXNAME"))
     minEqClasses <- getMinimumEqClassByTx(exonsByTx)
