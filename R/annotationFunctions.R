@@ -56,7 +56,7 @@ prepareAnnotations <- function(x) {
 #'   \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
 #'   \item eqClass specifying minimun read count to consider a read class valid in a sample, defaults to 2
 #'   }
-#' @export
+#' @noRd
 prepareAnnotationsFromGTF <- function(file){
   if (missing(file)){
     stop('A GTF file is required.')
