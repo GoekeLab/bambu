@@ -17,6 +17,7 @@ Depends:
     GenomicRanges,
     BiocManager,
     GenomicFeatures,
+    BSgenome,
     ggplot2
 Suggests: 
     knitr,
@@ -30,7 +31,6 @@ Suggests:
     BSgenome.Hsapiens.NCBI.GRCh38,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
     AnnotationDbi,
-    BSgenome,
     BiocGenerics,
     BiocParallel,
     Biostrings
