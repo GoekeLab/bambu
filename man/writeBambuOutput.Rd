@@ -10,6 +10,8 @@ writeBambuOutput(se, path, prefix = "")
 \item{se}{a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}}
 
 \item{path}{the destination of the output files (gtf, transcript counts, and gene counts)}
+
+\item{prefix}{the prefix of the output files}
 }
 \value{
 The function will generate three files, a .gtf file for the annotations, 

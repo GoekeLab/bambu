@@ -22,5 +22,5 @@ Function to prepare tables and genomic ranges for transript reconstruction using
  gtf.file <- system.file("extdata", 
  "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
  package = "bambu")
- gr <- prepareAnnotationsFrom(x = gtf.file)
+ gr <- prepareAnnotations(x = gtf.file)
 }

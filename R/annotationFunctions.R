@@ -10,7 +10,7 @@
 #'  gtf.file <- system.file("extdata", 
 #'  "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
 #'  package = "bambu")
-#'  gr <- prepareAnnotationsFrom(x = gtf.file)
+#'  gr <- prepareAnnotations(x = gtf.file)
 prepareAnnotations <- function(x) {
   if(is(x,"TxDb")){
     exonsByTx = exonsBy(x,by='tx', use.names=TRUE)
