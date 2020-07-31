@@ -17,6 +17,7 @@ Depends:
     GenomicRanges,
     BiocManager,
     GenomicFeatures,
+    BSgenome,
     ggplot2
 Suggests: 
     knitr,
@@ -58,7 +59,6 @@ Imports:
     S4Vectors(>= 0.22.1), 
     IRanges, 
     GenomicAlignments,
-    BSgenome,
     glmnet,
     Rsamtools,
     Rcpp,
