@@ -11,11 +11,13 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   
   original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
   
-  if(class(genomeSequence)=='character'){
+  if(is(genomeSequence,'character')){
     if(grepl('.fa',genomeSequence)){
       
       if(.Platform$OS.type == "windows"){
-        genomeSequence <- Biostring::readDNAStringSet(genomeSequence)
+        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
+        newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),"[[",1))  
+        names(genomeSequence) <- newlevels
       }else{
         genomeSequence <- Rsamtools::FaFile(genomeSequence)
       }
@@ -23,13 +25,10 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
         seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
       }
     } else {
-      if (!suppressWarnings(require(BSgenome, quietly=TRUE)))
-        stop("Please install the BSgenome package")
-      
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
       seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
     }
-  } else if(class(genomeSequence)=='BSgenome'){
+  } else if(is(genomeSequence,'BSgenome')){
     seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
   } 
   

@@ -2,6 +2,7 @@
 #' @title Write bambu results to GTF and transcript/gene-count files
 #' @param se a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
+#' @param prefix the prefix of the output files
 #' @return The function will generate three files, a .gtf file for the annotations, 
 #' two .txt files for transcript and gene counts respectively. 
 #' @export
