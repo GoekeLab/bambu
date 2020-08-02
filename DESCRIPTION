@@ -17,10 +17,10 @@ Depends:
     GenomicRanges,
     BiocManager,
     GenomicFeatures,
+    BSgenome,
     ggplot2
 Suggests: 
     knitr,
-    rmarkdown,
     fs,
     testthat,
     ComplexHeatmap,
@@ -31,7 +31,6 @@ Suggests:
     BSgenome.Hsapiens.NCBI.GRCh38,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
     AnnotationDbi,
-    BSgenome,
     BiocGenerics,
     BiocParallel,
     Biostrings
@@ -67,5 +66,4 @@ Imports:
     RcppProgress,
     progress
 VignetteBuilder: 
-    knitr,
-    rmarkdown
+    knitr
