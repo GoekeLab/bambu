@@ -208,7 +208,7 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALS
 #' @param primarySecondaryDist defaults to 5
 #' @param ignore.strand defaults to FALSE
 #' @noRd
-calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySecondaryDist = 5, ignore.strand=FALSE) {
+calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5, ignore.strand=FALSE) {
 
   ########## TODO: go through filter rules: (are these correct/up to date?)
   ## (1) select minimum distance match (note: allow for a few base pairs error?)
@@ -236,7 +236,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
     arrange(queryHits, dist) %>%
     filter(dist <= (min(dist) + primarySecondaryDist)) %>%
     filter(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist == min(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist)) %>%
-    filter((uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist) == max(uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist)) %>%
+    filter((uniqueStartLengthQuery <= primarySecondaryDistStartEnd & uniqueEndLengthQuery <= primarySecondaryDistStartEnd) == max(uniqueStartLengthQuery <= primarySecondaryDistStartEnd & uniqueEndLengthQuery <= primarySecondaryDistStartEnd)) %>%
     mutate(txNumberFiltered = n())
 
   # (2) calculate splice overlap for any not in the list (all hits have a unique new exon of at least 35bp length, might be new candidates)
@@ -263,7 +263,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
     arrange(queryHits, dist) %>%
     filter(dist <= (min(dist) + primarySecondaryDist)) %>%
     filter(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist == min(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist)) %>%
-    filter((uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist) == max(uniqueStartLengthQuery <= primarySecondaryDist & uniqueEndLengthQuery <= primarySecondaryDist)) %>%
+    filter((uniqueStartLengthQuery <= primarySecondaryDistStartEnd & uniqueEndLengthQuery <= primarySecondaryDistStartEnd) == max(uniqueStartLengthQuery <= primarySecondaryDistStartEnd & uniqueEndLengthQuery <= primarySecondaryDistStartEnd)) %>%
     mutate(txNumberFiltered = n())
 
   # (3) find overlaps for remaining reads (reads which have start/end match, this time not cut and used to calculate distance)
