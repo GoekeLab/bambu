@@ -17,7 +17,6 @@ Depends:
     GenomicRanges,
     BiocManager,
     GenomicFeatures,
-    
     ggplot2
 Suggests: 
     knitr,
