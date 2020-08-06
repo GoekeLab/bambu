@@ -17,7 +17,6 @@ Depends:
     GenomicRanges,
     BiocManager,
     GenomicFeatures,
-    BSgenome,
     ggplot2
 Suggests: 
     knitr,
@@ -62,6 +61,7 @@ Imports:
     glmnet,
     Rsamtools,
     Rcpp,
+    BSgenome,
     RcppArmadillo,
     RcppProgress,
     progress
