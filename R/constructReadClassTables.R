@@ -112,6 +112,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   
   mcols(exonsByReadClass) <- readTable
  # seqlevels(exonsByReadClass) <- seqLevelList
+  options(scipen = 0)
   return(exonsByReadClass)
 }
 
