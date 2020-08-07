@@ -2,6 +2,7 @@
 #' @title Write bambu results to GTF and transcript/gene-count files
 #' @param se a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}
 #' @param path the destination of the output files (gtf, transcript counts, and gene counts)
+#' @param prefix the prefix of the output files
 #' @return The function will generate three files, a .gtf file for the annotations, 
 #' two .txt files for transcript and gene counts respectively. 
 #' @export
@@ -11,7 +12,7 @@
 #' package = "bambu"))
 #' path <- tempdir()
 #' writeBambuOutput(se,path)
-writeBambuOutput <- function(se,path){
+writeBambuOutput <- function(se, path, prefix=''){
   if (missing(se) | missing(path)){
     stop('Both summarizedExperiment object from bambu and the path for the output files are required.')
   }else{
@@ -20,17 +21,17 @@ writeBambuOutput <- function(se,path){
       dir.create(outdir, recursive = TRUE)
     }
     transcript_grList <- rowRanges(se)
-    transcript_gtffn <- paste(path,"transcript_exon.gtf",sep="")
+    transcript_gtffn <- paste(outdir, prefix, "extended_annotations.gtf",sep="")
     gtf <- writeToGTF(annotation=transcript_grList,file=transcript_gtffn)
     transcript_counts <- as.data.frame(assays(se)$counts)
     geneIDs <- data.frame(mcols(transcript_grList, use.names=FALSE)$TXNAME,mcols(transcript_grList, use.names=FALSE)$GENEID)
     colnames(geneIDs) <- c("TXNAME","GENEID")
     transcript_counts <- cbind(geneIDs,transcript_counts)  
-    transcript_countsfn <- paste(path,"counts_transcript.txt",sep="")
+    transcript_countsfn <- paste(outdir,prefix, "counts_transcript.txt",sep="")
     write.table(transcript_counts, file= transcript_countsfn, sep="\t",quote=FALSE,row.names= FALSE)
     gene_se <- transcriptToGeneExpression(se)
     gene_counts <- as.data.frame(assays(gene_se)$counts)
-    gene_countsfn <- paste(path,"counts_gene.txt",sep="")
+    gene_countsfn <- paste(outdir, prefix, "counts_gene.txt",sep="")
     write.table(gene_counts, file= gene_countsfn, sep="\t", quote=FALSE)
   }
 }

@@ -5,10 +5,11 @@
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic)](https://zenodo.org/record/3900025#.XwPOMigzbIU)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu)](https://github.com/GoekeLab/bambu/releases/)
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
 [![Install](https://img.shields.io/badge/Install-Github-brightgreen)](#installation)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3900025.svg)](https://doi.org/10.5281/zenodo.3900025)
 
 
 ***bambu*** is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use ***bambu*** after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from ***bambu*** can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.
@@ -142,7 +143,7 @@ bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
 bambu(reads, annotations, genomeSequence, ncore = 8)
 ```
 
-See [manual](docs/bambu_0.1.0.pdf) for details to customize other conditions.
+See [manual](docs/bambu_0.3.0.pdf) for details to customize other conditions.
 
 ---
 
@@ -190,6 +191,15 @@ writeBambuOutput(se, path = "./bambu/")
 ---
 
 ### Release History
+
+**bambu version 0.3.0**     
+
+Release date: 28th July 2020
+
+- bambu now runs on windows with a fasta file
+- update to the documentation (vignette)
+- prepareAnnotations now works with TxDb or gtf file
+- minor bug fixes
 
 **bambu version 0.2.0**
 

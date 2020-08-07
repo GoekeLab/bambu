@@ -4,12 +4,14 @@
 \alias{writeBambuOutput}
 \title{Write bambu results to GTF and transcript/gene-count files}
 \usage{
-writeBambuOutput(se, path)
+writeBambuOutput(se, path, prefix = "")
 }
 \arguments{
 \item{se}{a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}}
 
 \item{path}{the destination of the output files (gtf, transcript counts, and gene counts)}
+
+\item{prefix}{the prefix of the output files}
 }
 \value{
 The function will generate three files, a .gtf file for the annotations, 
