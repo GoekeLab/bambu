@@ -96,6 +96,7 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
 #' Outputs GRangesList object from reading a GTF file
 #' @title convert a GTF file into a GRangesList
 #' @param file a .gtf file
+#' @param keep.extra.columns a vector with names of columns to keep from the the attributes in the gtf file. For ensembl, this could be keep.extra.columns=c('gene_name','gene_biotype','transcript_biotype', 'transcript_name')
 #' @return grlist a \code{\link{GRangesList}} object, with two columns
 #' \itemize{
 #'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
@@ -107,7 +108,7 @@ writeToGTF <- function (annotation,file,geneIDs=NULL) {
 #' "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
 #' package = "bambu")
 #' readFromGTF(gtf.file)
-readFromGTF <- function(file){
+readFromGTF <- function(file, keep.extra.columns = NULL){
   if (missing(file)){
     stop('A GTF file is required.')
   }else{
@@ -118,11 +119,17 @@ readFromGTF <- function(file){
         data$strand[data$strand=='.'] <- '*'
     data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
     data$TXNAME=gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
+    if(!is.null(keep.extra.columns)){
+      for(extraColumn in seq_along(keep.extra.columns)){
+      data[,keep.extra.columns[extraColumn]] <- gsub(paste0('.*',keep.extra.columns[extraColumn],' (.*?);.*'), '\\1',data$attribute)
+      data[grepl(';', data[,keep.extra.columns[extraColumn]]),keep.extra.columns[extraColumn]] <- ''
+      }
+      }
     grlist <- makeGRangesListFromDataFrame(
       data[,c('seqname', 'start','end','strand','TXNAME')],split.field='TXNAME',keep.extra.columns = TRUE)
     grlist <- grlist[IRanges::order(start(grlist))]
     
-    geneData=(unique(data[,c('TXNAME', 'GENEID')]))
+    geneData=(unique(data[,c('TXNAME', 'GENEID',keep.extra.columns)]))
     mcols(grlist) <- DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
     
   }
