@@ -259,6 +259,8 @@ bambu.quantify <- function(readClass, annotations, emParameters, min.exonDistanc
   readClass <- isore.estimateDistanceToAnnotations(readClass, annotations, min.exonDistance = min.exonDistance, verbose = verbose)
   gc(verbose=FALSE)
   readClassDt <- getEmptyClassFromSE(readClass, annotations)
+  readClassDt <- modifyReadClassWtFullLengthTranscript(readClassDt, annotations)
+  
   colNameRC <- colnames(readClass)
   colDataRC <- colData(readClass)
   rm(readClass)
@@ -266,16 +268,40 @@ bambu.quantify <- function(readClass, annotations, emParameters, min.exonDistanc
   counts <- bambu.quantDT(readClassDt,emParameters = emParameters, ncore = ncore, verbose = verbose)
   rm(readClassDt)
   gc(verbose=FALSE)
+  counts <- counts[estimates!=0] # be careful of this step, cause it might remove all fulllength reads
+  
+  counts[, estimate_type := ifelse(grepl("Start",tx_name),"FullLength", "PartialLength")]
+  counts[, tx_name:=gsub("Start","",tx_name)]
+  
+  countsEstimates <- dcast(counts, tx_name ~ estimate_type, value.var = "estimates")
+  setnames(countsEstimates, c("FullLength","PartialLength"), paste0(c("FullLength","PartialLength"),"Counts"))
+  countsCPM <- dcast(counts, tx_name ~ estimate_type, value.var = "CPM")
+  setnames(countsCPM, c("FullLength","PartialLength"), paste0(c("FullLength","PartialLength"),"CPM"))
+  
+  counts <- merge(countsEstimates, countsCPM, by = c("tx_name"))
+  counts[is.na(FullLengthCounts),`:=`(FullLengthCounts = 0, FullLengthCPM = 0) ]
+  counts[is.na(PartialLengthCounts),`:=`(PartialLengthCounts = 0, PartialLengthCPM = 0) ]
+  counts[, `:=`(estimates = FullLengthCounts+PartialLengthCounts,
+                CPM = FullLengthCPM+PartialLengthCPM)]
   if(length(setdiff(counts$tx_name,names(annotations)))>0){
     stop("The provided annotation is incomplete")
   }
   counts <- counts[data.table(tx_name = names(annotations)),  on = 'tx_name']
   rm(annotations)
   gc(verbose=FALSE)
-  counts[is.na(estimates),`:=`(estimates = 0, CPM = 0) ]
+  counts[is.na(estimates),`:=`(estimates = 0, 
+                               CPM = 0,
+                               FullLengthCounts = 0,
+                               PartialLengthCounts = 0,
+                               FullLengthCPM = 0,
+                               PartialLengthCPM = 0)]
+  
+  
   
   seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(counts = matrix(counts$estimates,ncol = 1, dimnames = list(NULL, colNameRC)),
-                                                                             CPM = matrix(counts$CPM, ncol =  1, dimnames = list(NULL, colNameRC))),
+                                                                             CPM = matrix(counts$CPM, ncol =  1, dimnames = list(NULL, colNameRC)),
+                                                                             fullLengthCounts = matrix(counts$FullLengthCounts,ncol = 1, dimnames = list(NULL, colNameRC)),
+                                                                             partialLengthCounts = matrix(counts$PartialLengthCounts,ncol = 1, dimnames = list(NULL, colNameRC))),
                                                          colData = colDataRC)
   return(seOutput)
 }
