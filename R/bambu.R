@@ -268,7 +268,6 @@ bambu.quantify <- function(readClass, annotations, emParameters, min.exonDistanc
   counts <- bambu.quantDT(readClassDt,emParameters = emParameters, ncore = ncore, verbose = verbose)
   rm(readClassDt)
   gc(verbose=FALSE)
-  counts <- counts[estimates!=0] # be careful of this step, cause it might remove all fulllength reads
   
   counts[, estimate_type := ifelse(grepl("Start",tx_name),"FullLength", "PartialLength")]
   counts[, tx_name:=gsub("Start","",tx_name)]
