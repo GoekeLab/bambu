@@ -361,13 +361,13 @@ modifyReadClassWtFullLengthTranscript <- function(readClassDt, annotationGranges
   setnames(rcAnnotations, c("eqClass","GENEID"),c("read_class_id","gene_id"))
   
   # match to read class
-  readClassDt_tmp <- rcAnnotations[readClassDt, on = c("read_class_id","gene_id")]
+  readClassDtMatched <- rcAnnotations[readClassDt, on = c("read_class_id","gene_id")]
   
   # change concatenating symbol to & to avoid mis-spliting for novel transcript 
   # find the possible first characters in the tx_id
   uni_charVec <- unique(substr(readClassDt$tx_id,1,1))
   for(uni_char in uni_charVec){
-    readClassDt_tmp[, read_class_id := gsub(paste0("\\.",uni_char,""),paste0("\\&",uni_char,""), read_class_id)]
+    readClassDtMatched[, read_class_id := gsub(paste0("\\.",uni_char,""),paste0("\\&",uni_char,""), read_class_id)]
   }
   
   
@@ -375,24 +375,27 @@ modifyReadClassWtFullLengthTranscript <- function(readClassDt, annotationGranges
   # of the minimal subset transcript indicated by original transcript followed by Start
   # this set by right, should be able to find all shared read class with a subset transcript matching and all transcript with unique 
   # splicing 
-  readClassDt_tmp[!is.na(newTxClass), read_class_id_new:= paste0(read_class_id, "&", paste0(TXNAME,"Start")), by = read_class_id]
+  readClassDtMatched[!is.na(newTxClass), read_class_id_new:= paste0(read_class_id, "&", paste0(TXNAME,"Start")), by = read_class_id]
   
   # transcripts that are subset of shared read class, if they have a read class for themseleves, 
   # modify by adding a full length version as well
-  readClassDt_tmp[!grepl(paste(paste0("(\\&",uni_charVec,")"), collapse = "|"), read_class_id)&(is.na(newTxClass)), read_class_id_new:=paste0(read_class_id, "&", paste0(tx_id,"Start"))]
+  readClassDtMatched[!grepl(paste(paste0("(\\&",uni_charVec,")"), collapse = "|"), read_class_id)&(is.na(newTxClass)), read_class_id_new:=paste0(read_class_id, "&", paste0(tx_id,"Start"))]
   
   # for shared read class that do not have a subset transcript that is fully compatible with the splicing patterns, 
   # do not modify 
-  readClassDt_tmp[is.na(read_class_id_new), read_class_id_new:=read_class_id]
+  readClassDtMatched[is.na(read_class_id_new), read_class_id_new:=read_class_id]
   
-  readClassDt_tmp[, `:=`(TXNAME = NULL, newTxClass = NULL, read_class_id = NULL, tx_id = NULL)]
-  readClassDt_tmp <- unique(readClassDt_tmp)
-  setnames(readClassDt_tmp, "read_class_id_new", "read_class_id")
+  readClassDtMatched[, `:=`(TXNAME = NULL, newTxClass = NULL, read_class_id = NULL, tx_id = NULL)]
+  readClassDtMatched <- unique(readClassDtMatched)
+  setnames(readClassDtMatched, "read_class_id_new", "read_class_id")
   
   # split the new modify read class to obtain all matching transcripts
-  readClassDt <- unique(readClassDt_tmp[, list(tx_id = unlist(strsplit(read_class_id, "\\&"))), by = list(gene_id, nobs, read_class_id)],by=NULL)
+  readClassDtNew <- unique(readClassDtMatched[, list(tx_id = unlist(strsplit(read_class_id, "\\&"))), by = list(gene_id, nobs, read_class_id)],by=NULL)
   
-  # for transcript that do not have an read class equal to the transcript, create the empty read class for that
+  readClassDtNew[,sum_nobs:=sum(nobs), by = list(gene_id, tx_id)]
+  
+  readClassDt <- unique(readClassDtNew[sum_nobs>0,.(gene_id, read_class_id, nobs,tx_id)])
+  
   
   
   # change concatenating symbol back to .
