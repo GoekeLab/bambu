@@ -26,7 +26,7 @@ bambu(
 
 \item{readClass.outputDir}{A string variable specifying the path to where read class files will be saved.}
 
-\item{annotations}{A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}} or \code{\link{prepareAnnotationsFromGTF}}.}
+\item{annotations}{A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}}.}
 
 \item{genomeSequence}{A fasta file or a BSGenome object.}
 
