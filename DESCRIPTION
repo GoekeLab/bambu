@@ -58,10 +58,10 @@ Imports:
     S4Vectors(>= 0.22.1), 
     IRanges, 
     GenomicAlignments,
-    BSgenome,
     glmnet,
     Rsamtools,
     Rcpp,
+    BSgenome,
     RcppArmadillo,
     RcppProgress,
     progress
