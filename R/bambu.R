@@ -6,7 +6,7 @@
 #' @param reads A string or a vector of strings specifying the paths of bam files for genomic alignments, or a \code{\link{BamFile}} object or a \code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).
 #' @param readClass.file A string or a vector of strings specifying the read class files that are saved during previous run of \code{\link{bambu}}.
 #' @param readClass.outputDir A string variable specifying the path to where read class files will be saved.
-#' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}} or \code{\link{prepareAnnotationsFromGTF}}.
+#' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}}.
 #' @param genomeSequence A fasta file or a BSGenome object.
 #' @param stranded A boolean for strandedness, defaults to FALSE.
 #' @param ncore specifying number of cores used when parallel processing is used, defaults to 1.
