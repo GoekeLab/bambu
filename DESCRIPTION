@@ -22,6 +22,7 @@ Suggests:
     knitr,
     fs,
     testthat,
+    devtools,
     ComplexHeatmap,
     circlize,
     ggbio,
@@ -32,7 +33,10 @@ Suggests:
     AnnotationDbi,
     BiocGenerics,
     BiocParallel,
-    Biostrings
+    Biostrings,
+    DESeq2,
+    apeglm,
+    DEXSeq
 Enhances: parallel
 SystemRequirements:
 biocViews: 
@@ -49,7 +53,7 @@ biocViews:
     Transcriptomics
 bugReports: https://github.com/GoekeLab/bambu/issues
 URL: https://github.com/GoekeLab/bambu   
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 LinkingTo: 
     Rcpp,
     RcppArmadillo,
