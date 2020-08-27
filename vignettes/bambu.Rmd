@@ -5,6 +5,7 @@ output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{bambu}
   %\VignetteEngine{knitr::rmarkdown}
+  % \VignettePackage{bambu}
   %\VignetteEncoding{UTF-8}
 ---
 
@@ -90,7 +91,7 @@ To demonstrate the usage of Bambu, we used long-read RNA-Seq data generated usin
 *bambu* takes genomic alignments saved in bam files. Here we use bam-files from the *NanoporeRNASeq* package, which contains reads aligned to the first half of the human chromosome 22 using *minimap2*. 
 ```{r}
 library(bambu)
-devtools::install_github("GoekeLab/NanoporeRNASeq")
+devtools::install_github("GoekeLab/NanoporeRNASeq", dependencies = FALSE)
 library(NanoporeRNASeq)
 
 data("sample_info")
@@ -163,6 +164,21 @@ seUnextended
 
 ### Visualise results {#visualise-results}               
 *bambu* provides functions to visualise and explore the results. When multiple samples are used, we can visualise the correlation and clustering of all samples with a heatmap:
+
+```{r, include = FALSE}
+# credit to https://gist.github.com/stevenworthington/3178163
+ipak <- function(pkg){
+    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+    if (length(new.pkg)) 
+        BiocManager::install(new.pkg, dependencies = TRUE)
+    sapply(pkg, require, character.only = TRUE)
+}
+
+# usage
+packages <- c("ggbio", "circlize", "ComplexHeatmap","apeglm")
+ipak(packages)
+```
+
 
 ```{r, fig.width = 8, fig.height = 6}
 plot.bambu(se, group.variable = "condition", type = "heatmap")
