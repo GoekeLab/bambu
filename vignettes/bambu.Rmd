@@ -175,7 +175,7 @@ ipak <- function(pkg){
 }
 
 # usage
-packages <- c("ggbio", "circlize", "ComplexHeatmap","apeglm")
+packages <- c("ggbio", "circlize", "ComplexHeatmap","apeglm","rlang")
 ipak(packages)
 ```
 
