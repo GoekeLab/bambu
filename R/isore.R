@@ -51,9 +51,9 @@ isore.constructReadClasses <- function(readGrgList,
     unlisted_junctions <- keepSeqlevels(unlisted_junctions,
                                         value = seqlevels(unlisted_junctions)[seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions)],
                                         pruning.mode = 'coarse')
-    readGrgList <- keepSeqlevels(readGrgList,
-                                 value = seqlevels(readGrgList)[seqlevels(readGrgList) %in% seqlevels(uniqueJunctions)],
-                                 pruning.mode = 'coarse')
+    # readGrgList <- keepSeqlevels(readGrgList,
+    #                              value = seqlevels(readGrgList)[seqlevels(readGrgList) %in% seqlevels(uniqueJunctions)],
+    #                              pruning.mode = 'coarse')
   }
 
   #the seqleels will be made comparable for all ranges, warning is shown if annotation is missing some
@@ -129,6 +129,18 @@ isore.constructReadClasses <- function(readGrgList,
                                                           unlisted_junctions = unlisted_junctions,
                                                           readGrgList = readGrgList,
                                                           stranded = stranded)
+  
+  
+  readClasses = readClassListSpliced$readClasses
+  indices = readClassListSpliced$indices
+  readIds = readClassListSpliced$readIds
+  readMatrix=matrix(nrow=length(readGrgList),ncol=3)
+  #rownames(readMatrix)=names(readGrgList)
+  readMatrix[readIds,1]=readClasses$readClassId[indices]
+  readMatrix[readIds,2]=indices 
+  allReadClasses = cbind(readClasses$readClassId,readClasses[,1:7])
+  readClassesList = readClassListSpliced$readClassList
+  
   end.ptm <- proc.time()
   if(verbose)  message('Finished create transcript models (read classes) for reads with spliced junctions in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   rm(list = c('uniqueJunctions','unlisted_junctions'))
@@ -138,18 +150,36 @@ isore.constructReadClasses <- function(readGrgList,
   start.ptm <- proc.time()
 
   # seqlevels are made equal (added for chromosomes missing in any of them)
-  # seqlevels(readClassListSpliced) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
+  # seqlevels(readClassesList) <- unique(c(seqlevels(readGrgList), seqlevels(annotationGrangesList)))
 
-  singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1], use.names=FALSE)
+  singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList)==1], use.names=T)
   mcols(singleExonReads)$id <- mcols(readGrgList[elementNROWS(readGrgList)==1])$id
 
-  referenceExons <- unique(c(granges(unlist(readClassListSpliced[mcols(readClassListSpliced)$confidenceType=='highConfidenceJunctionReads' & mcols(readClassListSpliced)$strand.rc!='*'], use.names=FALSE)), granges(unlist(annotationGrangesList, use.names=FALSE))))
+  referenceExons <- unique(c(granges(unlist(readClassesList[mcols(readClassesList)$confidenceType=='highConfidenceJunctionReads' & mcols(readClassesList)$strand.rc!='*'], use.names=FALSE)), granges(unlist(annotationGrangesList, use.names=FALSE))))
 
   readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(granges = singleExonReads,
                                                                         grangesReference = referenceExons,
                                                                         confidenceType = 'unsplicedWithin',
                                                                         stranded = stranded)
 
+  
+  readClasses = readClassListUnsplicedWithAnnotation$exonsByReadClass
+  readClassesList = c(readClassesList,readClasses)
+  
+  #covert read classes to matrix
+  x = unlist(readClasses)
+  x = cbind(names(x), as.character(seqnames(x)), as.character(strand(x)), start(ranges(x)), end(ranges(x)), as.character(table(names(x))[names(x)]), start(ranges(x)), end(ranges(x)))
+  colnames(x)=colnames(allReadClasses)
+  readIds = readClassListUnsplicedWithAnnotation$readIds 
+  indices = readClassListUnsplicedWithAnnotation$indices
+  indices2 = readClassListUnsplicedWithAnnotation$indices + nrow(allReadClasses)
+  readMatrix[readIds,1]=x[,1][indices]
+  readMatrix[readIds,2]=indices2
+  allReadClasses = rbind(allReadClasses, x)
+  
+  
+  
+  #assign reads to read classes that are unique
   singleExonReads <- singleExonReads[! mcols(singleExonReads)$id %in% readClassListUnsplicedWithAnnotation$readIds]
 
   referenceExons <- reduce(singleExonReads, ignore.strand =! stranded)
@@ -157,17 +187,9 @@ isore.constructReadClasses <- function(readGrgList,
                                                                  grangesReference =  referenceExons,
                                                                  confidenceType = 'unsplicedNew',
                                                                  stranded = stranded)
-  rm(list = c('singleExonReads', 'referenceExons', 'readGrgList'))
-
-  end.ptm <- proc.time()
-  if(verbose)  message('Finished create single exon transcript models (read classes) in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
 
 
-  exonsByReadClass <- c(readClassListSpliced, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
-
-  rm(list = c('readClassListSpliced', 'readClassListUnsplicedWithAnnotation', 'readClassListUnsplicedReduced'))
-  #gc(verbose = FALSE)
-
+  exonsByReadClass <- c(readClassListSpliced$readClassList, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
   counts <- matrix(mcols(exonsByReadClass)$readCount, dimnames = list(names(exonsByReadClass), runName))
   colDataDf <- DataFrame(name = runName, row.names = runName)
   mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c('chr.rc', 'strand.rc', 'intronStarts', 'intronEnds', 'confidenceType')]
@@ -175,10 +197,23 @@ isore.constructReadClasses <- function(readGrgList,
                              rowRanges = exonsByReadClass,
                              colData = colDataDf)
 
+  readClasses = readClassListUnsplicedReduced$exonsByReadClass
+  readClassesList = c(readClassesList,readClasses)
+  #covert read classes to matrix
+  x = unlist(readClasses)
+  x = cbind(names(x), as.character(seqnames(x)), as.character(strand(x)), start(ranges(x)), end(ranges(x)), as.character(table(names(x))[names(x)]), start(ranges(x)), end(ranges(x)))
+  colnames(x)=colnames(allReadClasses)
+  readIds = readClassListUnsplicedReduced$readIds
+  indices = readClassListUnsplicedReduced$indices
+  indices2 = readClassListUnsplicedReduced$indices + nrow(allReadClasses)
+  readMatrix[readIds,1]=x[,1][indices]
+  readMatrix[readIds,2]=indices2 
+  allReadClasses = rbind(allReadClasses, x)
+  rownames(allReadClasses) = allReadClasses$readClasses.readClassId
 
   rm(list=c('counts', 'exonsByReadClass'))
   #gc(verbose = FALSE)
-  return(se)
+  return(list(se=se, readMatrix = readMatrix, allReadClasses = allReadClasses, readClassesList = readClassesList))
 }
 
 
@@ -706,7 +741,7 @@ seqlevels(exonsByReadClassUnspliced) <-  unique(c(seqlevels(exonsByReadClassUnsp
     mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <- minEqClasses$eqClass[match(names(extendedAnnotationRanges[geneListWithNewTx]), minEqClasses$queryTxId)]
     mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
 
-    return(extendedAnnotationRanges)
+    return(list(extendedAnnotationRanges=extendedAnnotationRanges, seCombinedFiltered=seCombinedFiltered))
   } else {
     return(annotationGrangesList)
   }

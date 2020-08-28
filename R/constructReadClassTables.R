@@ -7,7 +7,9 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   
   uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
   if(any(order(uniqueReadIds) != 1:length(uniqueReadIds))) warning('read Id not sorted, can result in wrong assignments. Please report error')
+  #here is where the readGrgList gets desynced
   readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
+  nameOrder = mcols(readGrgList)$id
   firstseg <- start(PartitioningByWidth(readGrgList))
   allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
                                                      uniqueJunctions,type = 'equal',
@@ -66,6 +68,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   lowConfidenceReads <- which(sum(is.na(splitAsList(uniqueJunctions$mergedHighConfJunctionId[subjectHits(allJunctionToUniqueJunctionOverlap)],mcols(unlisted_junctions)$id)))>0)
   
   readTable[lowConfidenceReads, 'confidenceType'] <- 'lowConfidenceJunctionReads'
+  indices=group_indices(readTable %>% group_by(chr, strand, intronEnds, intronStarts))
   
   
   
@@ -77,11 +80,11 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
               start=nth(x=start, n=ceiling(readCount/5), order_by = start), 
               end=nth(x=end, n=ceiling(readCount/1.25), order_by = end), 
               confidenceType= dplyr::first(confidenceType)) %>%
-    ungroup() %>%
-    arrange(chr, start, end)
+    ungroup() #%>%
+  #arrange(chr, start, end)
   
-  readTable$readClassId <- paste('rc', 1:nrow(readTable), sep = '.')
-  
+  readTable$readClassId <- paste('rc', 1:nrow(readTable), sep = '.') #make this based on indices I created, group_by read-id
+  ####################################
   exonEndsShifted <- paste(readTable$intronStarts, readTable$end + 1, sep = ',')
   exonStartsShifted <- paste(readTable$start - 1, readTable$intronEnds, sep = ',')
   
@@ -107,15 +110,15 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   
   exonsByReadClass <- relist(unlistData, partitioning)
   
-  readTable <- readTable %>%
+  readTable2 <- readTable %>%
     dplyr::select(chr.rc = chr, strand.rc = strand, intronStarts, intronEnds, confidenceType, readCount)
-  
-  mcols(exonsByReadClass) <- readTable
- # seqlevels(exonsByReadClass) <- seqLevelList
-  options(scipen = 0)
-  return(exonsByReadClass)
-}
 
+  mcols(exonsByReadClass) <- readTable2
+
+
+  return(list(readClasses = readTable, readIds = nameOrder, indices = indices, readClassList = exonsByReadClass))
+}
+  
 
 #' reconstruct read classes using unspliced reads that fall within exons from annotations
 #' @noRd
@@ -153,6 +156,8 @@ constructUnsplicedReadClasses <- function(granges,
     ungroup()
   
   readIds <-mcols(granges[hitsDF$queryHits])$id
+  nameOrder = names(granges[hitsDF$queryHits])
+  indices=group_indices(hitsDF %>% group_by(readClassId))
   
   hitsDF <- hitsDF %>%
     dplyr::select(chr, start, end, strand, readClassId) %>%
@@ -185,6 +190,6 @@ constructUnsplicedReadClasses <- function(granges,
                           readCount)
   
   mcols(exByReadClassUnspliced) <- hitsDF
- # seqlevels(exByReadClassUnspliced) <- seqLevelList
-  return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
+  # seqlevels(exByReadClassUnspliced) <- seqLevelList
+  return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds, indices = indices))
 }
