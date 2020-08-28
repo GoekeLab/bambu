@@ -45,7 +45,7 @@ prepareDataFromBam <- function(bamFile, yieldSize=NULL, verbose = FALSE, ncore =
     readGrgList <- readGrgList[[1]]
   }
   readGrgList <- readGrgList[GenomicRanges::width(readGrgList)>1]  # remove microexons of width 1bp from list
-  mcols(readGrgList)$id = 1:length(readGrgList) 
+  mcols(readGrgList)$id = seq_along(readGrgList) 
   return(readGrgList)
 }
 

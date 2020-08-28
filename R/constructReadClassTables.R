@@ -6,7 +6,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
  # seqLevelList <- unique(c(seqlevels(uniqueJunctions), seqlevels(unlisted_junctions), seqlevels(readGrgList)))
   
   uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
-  if(any(order(uniqueReadIds) != 1:length(uniqueReadIds))) warning('read Id not sorted, can result in wrong assignments. Please report error')
+  if(any(order(uniqueReadIds) != seq_along(uniqueReadIds))) warning('read Id not sorted, can result in wrong assignments. Please report error')
   readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
   firstseg <- start(PartitioningByWidth(readGrgList))
   allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
@@ -80,7 +80,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
     ungroup() %>%
     arrange(chr, start, end)
   
-  readTable$readClassId <- paste('rc', 1:nrow(readTable), sep = '.')
+  readTable$readClassId <- paste('rc', seq_len(nrow(readTable)), sep = '.')
   
   exonEndsShifted <- paste(readTable$intronStarts, readTable$end + 1, sep = ',')
   exonStartsShifted <- paste(readTable$start - 1, readTable$intronEnds, sep = ',')
@@ -172,7 +172,7 @@ constructUnsplicedReadClasses <- function(granges,
   
   exByReadClassUnspliced$exon_rank <- 1
   exByReadClassUnspliced$exon_endRank <- 1
-  partitioning <- PartitioningByEnd(1:length(exByReadClassUnspliced))
+  partitioning <- PartitioningByEnd(seq_along(exByReadClassUnspliced))
   exByReadClassUnspliced <- relist(exByReadClassUnspliced,partitioning)
   names(exByReadClassUnspliced) <- hitsDF$readClassId
   

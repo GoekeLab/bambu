@@ -196,7 +196,7 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALS
   candidateList <- candidateList %>%
     filter(! queryHits %in% subjectHits) %>%
     arrange(queryHits, subjectHits)
-  idToAdd <- (which(!(1:length(exByTx) %in% unique(candidateList$subjectHits))))
+  idToAdd <- (which(!(seq_along(exByTx) %in% unique(candidateList$subjectHits))))
 
   candidateList <- rbind(candidateList, tibble(queryHits=idToAdd, subjectHits=idToAdd)) %>%
     arrange(queryHits, subjectHits) %>%
@@ -263,7 +263,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
     mutate(dist=uniqueLengthQuery + uniqueLengthSubject) %>%
     mutate(txNumber=n())
 
-  txToAnTableRest$queryHits <- (1:length(exByTx))[-setTMP][txToAnTableRest$queryHits]  # reassign IDs based on unfiltered list length
+  txToAnTableRest$queryHits <- (seq_along(exByTx))[-setTMP][txToAnTableRest$queryHits]  # reassign IDs based on unfiltered list length
 
   # todo: check filters, what happens to reads with only start and end match?
   txToAnTableRest <- txToAnTableRest %>%
@@ -292,7 +292,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, primarySe
         mutate(dist = uniqueLengthQuery + uniqueLengthSubject + uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
         mutate(txNumber = n())
       
-      txToAnTableRestStartEnd$queryHits <- (1:length(exByTx))[-setTMPRest][txToAnTableRestStartEnd$queryHits]  # reassign IDs based on unfiltered list length
+      txToAnTableRestStartEnd$queryHits <- (seq_along(exByTx))[-setTMPRest][txToAnTableRestStartEnd$queryHits]  # reassign IDs based on unfiltered list length
       
       # todo: check filters, what happens to reads with only start and end match?
       txToAnTableRestStartEnd <- txToAnTableRestStartEnd %>%

@@ -105,10 +105,10 @@ plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","he
     if(type == "pca"){
       if(!is.null(group.variable)){
         sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",group.variable)]))
-        setnames(sample.info, 1:2, c("runname","groupVar"))
+        setnames(sample.info, seq_len(2), c("runname","groupVar"))
 
         pca_result <- prcomp(t(as.matrix(count.data))) ## can't really cluster them nicely
-        plotData <- data.table(pca_result$x[,1:2],keep.rownames = TRUE)
+        plotData <- data.table(pca_result$x[,seq_len(2)],keep.rownames = TRUE)
         setnames(plotData, 'rn','runname')
         if(!all(plotData$runname %in% sample.info$runname)){
           stop("all(plotData$runname %in% sample.info$runname) is not satisfied!")
@@ -123,7 +123,7 @@ plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","he
 
       }else{
         pca_result <- prcomp(t(as.matrix(count.data))) ## can't really cluster them nicely
-        plotData <- data.table(pca_result$x[,1:2],keep.rownames = TRUE)
+        plotData <- data.table(pca_result$x[,seq_len(2)],keep.rownames = TRUE)
         setnames(plotData, 'rn','runname')
 
         p <- ggplot(plotData, aes(x = PC1, y = PC2))+
@@ -144,7 +144,7 @@ plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","he
 
     if(!is.null(group.variable)){
       sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",group.variable)]))
-      setnames(sample.info, 1:2, c("runname","groupVar"))
+      setnames(sample.info, seq_len(2), c("runname","groupVar"))
       
       if(!all(colnames(count.data) %in% sample.info$runname)){
         stop("all(colnames(count.data) %in% sample.info$runname) is not satisfied!")

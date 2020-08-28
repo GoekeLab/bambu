@@ -48,7 +48,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
 
   unstranded_unlisted_junctions <- unstrand(unlisted_junction_granges)
   uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
-  names(uniqueJunctions) <- paste('junc',1:length(uniqueJunctions),sep='.') ##replace with integer later (or only use indices if possible)
+  names(uniqueJunctions) <- paste('junc',seq_along(uniqueJunctions),sep='.') ##replace with integer later (or only use indices if possible)
 
   #calculate stranded read counts
   junctionMatchList <- as(findMatches(uniqueJunctions, unstranded_unlisted_junctions), "List")
@@ -91,7 +91,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
                                       junctionEndName = junctionEndName,
                                       startScore = startScore,
                                       endScore=endScore,
-                                      id=1:length(uniqueJunctions))
+                                      id=seq_along(uniqueJunctions))
 
   strand(uniqueJunctions)<-uniqueJunctions$spliceStrand
   if(original_seqlevelstyle != seqlevelsStyle(unlisted_junction_granges)[1]){
@@ -240,7 +240,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     
     myData=data.frame(annotatedJunctionsStart$startScore/(annotatedJunctionsStart$startScore.start+annotatedJunctionsStart$startScore),annotatedJunctionsStart$startScore,annotatedJunctionsStart$distStart.start,(annotatedJunctionsStart$spliceStrand.start=='+'),annotatedJunctionsStart$spliceStrand.start=='-',(annotatedJunctionsStart$spliceStrand=='+'))[mySet.all,]
     
-    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    colnames(myData) <- paste('A',seq_len(ncol(myData)),sep='.')
     
     modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
     
@@ -272,7 +272,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     
     
     myData=data.frame(annotatedJunctionsStart$startScore/(annotatedJunctionsStart$startScore.end+annotatedJunctionsStart$startScore),annotatedJunctionsStart$startScore,annotatedJunctionsStart$distStart.end,(annotatedJunctionsStart$spliceStrand.end=='+'),(annotatedJunctionsStart$spliceStrand.end=='-'),(annotatedJunctionsStart$spliceStrand=='+'))[mySet.all,]
-    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    colnames(myData) <- paste('A',seq_len(ncol(myData)),sep='.')
     
     modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
     if(is.null(junctionModel))
@@ -306,7 +306,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     
     myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.start+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.start,(annotatedJunctionsEnd$spliceStrand.start=='+'),annotatedJunctionsEnd$spliceStrand.start=='-',(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
     
-    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    colnames(myData) <- paste('A',seq_len(ncol(myData)),sep='.')
     modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData))) #+A.6+A.7+A.8+A.9+A.10
     if(is.null(junctionModel))
     {
@@ -335,7 +335,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     
     myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.end+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.end ,annotatedJunctionsEnd$distEnd.end,(annotatedJunctionsEnd$spliceStrand.end=='+'),(annotatedJunctionsEnd$spliceStrand.end=='-'),(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
     
-    colnames(myData) <- paste('A',1:ncol(myData),sep='.')
+    colnames(myData) <- paste('A',seq_len(ncol(myData)),sep='.')
     modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
     if(is.null(junctionModel))
     {
@@ -367,7 +367,7 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
 {
   if(show.cv)
   {
-    mySample=sample(1:length(labels.train),min(floor(length(labels.train)/2),maxSize.cv))
+    mySample=sample(seq_along(labels.train),min(floor(length(labels.train)/2),maxSize.cv))
     data.train.cv=data.train[mySample,]
     labels.train.cv=labels.train[mySample]
     data.train.cv.test=data.train[-mySample,]
@@ -490,7 +490,7 @@ evalutePerformance <- function(labels, scores, decreasing = TRUE){
   results <- list()
   results[['TPR']] <- cumsum(labels)/sum(labels)  # TP/(TP+FP); True Positive Rate;Sensitivity; recall
   results[['FPR']] <- cumsum(!labels)/sum(!labels)  # FP/(FP+TN); False Positive Rate;1-Specificity
-  results[['precision']] <- cumsum(labels)/(1:length(labels))  # TP/(TP+FP); positive predictive value;precision
+  results[['precision']] <- cumsum(labels)/(seq_along(labels))  # TP/(TP+FP); positive predictive value;precision
   results[['AUC']] <- sum(results[['TPR']][!duplicated( results[['FPR']], fromLast=TRUE)]/sum(!duplicated( results[['FPR']], fromLast=TRUE)))
   return(results)
 }

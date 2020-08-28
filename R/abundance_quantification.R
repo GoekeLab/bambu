@@ -35,8 +35,8 @@ abundance_quantification <- function(readClassDt,ncore = 1,
   
 
 
-  estimates <- list(do.call('rbind',lapply(1:length(emResultsList), function(x) emResultsList[[x]][[1]])),
-                    do.call('rbind',lapply(1:length(emResultsList), function(x) emResultsList[[x]][[2]])))
+  estimates <- list(do.call('rbind',lapply(seq_along(emResultsList), function(x) emResultsList[[x]][[1]])),
+                    do.call('rbind',lapply(seq_along(emResultsList), function(x) emResultsList[[x]][[2]])))
 
   return(estimates)
 }

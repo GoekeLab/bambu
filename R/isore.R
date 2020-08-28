@@ -230,12 +230,12 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 
 
     counts.splicedRef <- matrix(0,
-                                dimnames = list(1:nrow(rowData.spliced),
+                                dimnames = list(seq_len(nrow(rowData.spliced)),
                                                 rownames(colData(readClassSeRef))),
                                 ncol = nrow(colData(readClassSeRef)),
                                 nrow = nrow(rowData.spliced))
     start.splicedRef <- matrix(NA,
-                               dimnames = list(1:nrow(rowData.spliced),
+                               dimnames = list(seq_len(nrow(rowData.spliced)),
                                                rownames(colData(readClassSeRef))),
                                ncol = nrow(colData(readClassSeRef)),
                                nrow = nrow(rowData.spliced))
@@ -243,12 +243,12 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     end.splicedRef <- start.splicedRef
 
     counts.splicedNew <- matrix(0,
-                                dimnames = list(1:nrow(rowData.spliced),
+                                dimnames = list(seq_len(nrow(rowData.spliced)),
                                                 rownames(colData(readClassSe))),
                                 ncol = nrow(colData(readClassSe)),
                                 nrow = nrow(rowData.spliced))
     start.splicedNew <- matrix(NA,
-                               dimnames = list(1:nrow(rowData.spliced),
+                               dimnames = list(seq_len(nrow(rowData.spliced)),
                                                rownames(colData(readClassSe))),
                                ncol = nrow(colData(readClassSe)),
                                nrow = nrow(rowData.spliced))
@@ -353,24 +353,24 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
       summarise_all(max, na.rm=TRUE)
 
     counts.unsplicedRef <- matrix(0,
-                                  dimnames = list(1:nrow(rowData.unspliced),
+                                  dimnames = list(seq_len(nrow(rowData.unspliced)),
                                                   rownames(colData(readClassSeRef))),
                                   ncol = nrow(colData(readClassSeRef)),
                                   nrow = nrow(rowData.unspliced))
     start.unsplicedRef <- matrix(NA,
-                                 dimnames = list(1:nrow(rowData.unspliced),
+                                 dimnames = list(seq_len(nrow(rowData.unspliced)),
                                                  rownames(colData(readClassSeRef))),
                                  ncol = nrow(colData(readClassSeRef)),
                                  nrow = nrow(rowData.unspliced))
     end.unsplicedRef <- start.unsplicedRef
 
     counts.unsplicedNew <- matrix(0,
-                                  dimnames = list(1:nrow(rowData.unspliced),
+                                  dimnames = list(seq_len(nrow(rowData.unspliced)),
                                                   rownames(colData(readClassSe))),
                                   ncol = nrow(colData(readClassSe)),
                                   nrow = nrow(rowData.unspliced))
     start.unsplicedNew <- matrix(NA,
-                                 dimnames = list(1:nrow(rowData.unspliced),
+                                 dimnames = list(seq_len(nrow(rowData.unspliced)),
                                                  rownames(colData(readClassSe))),
                                  ncol = nrow(colData(readClassSe)),
                                  nrow = nrow(rowData.unspliced))
@@ -399,7 +399,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                        colData = colDataCombined)
 
   se.combined <- SummarizedExperiment::rbind(se.spliced, se.unspliced)
-  rownames(se.combined) <- 1:nrow(se.combined)
+  rownames(se.combined) <- seq_len(nrow(se.combined))
   rm(list = c("se.spliced", "se.unspliced"))
   gc(verbose = FALSE)
   return(se.combined)
@@ -438,7 +438,7 @@ isore.extendAnnotations <- function(se,
                                                               fragmentEnds=rowData(seFilteredSpliced)$intronEnds,
                                                               strand=rowData(seFilteredSpliced)$strand)
       
-      names(intronsByReadClass) <- 1:length(intronsByReadClass)
+      names(intronsByReadClass) <- seq_along(intronsByReadClass)
       seqlevels(intronsByReadClass) <-  unique(c(seqlevels(intronsByReadClass), seqlevels(annotationGrangesList)))
 
       exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts,
@@ -455,7 +455,7 @@ isore.extendAnnotations <- function(se,
      
       exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)  # correct junction to exon differences in coordinates
       
-      names(exonsByReadClass) <- 1:length(exonsByReadClass)
+      names(exonsByReadClass) <- seq_along(exonsByReadClass)
       
       # add exon start and exon end rank
       unlistData <- unlist(exonsByReadClass, use.names = FALSE)
@@ -586,7 +586,7 @@ isore.extendAnnotations <- function(se,
                                                         end=rowData(seFilteredUnspliced)$end),
                                          strand=rowData(seFilteredUnspliced)$strand)
 
-      partitioning <- PartitioningByEnd(1:length(exonsByReadClassUnspliced), names=NULL)
+      partitioning <- PartitioningByEnd(seq_along(exonsByReadClassUnspliced), names=NULL)
       exonsByReadClassUnspliced$exon_rank <- rep(1, length(exonsByReadClassUnspliced))
       exonsByReadClassUnspliced$exon_endRank <- rep(1, length(exonsByReadClassUnspliced))
       exonsByReadClassUnspliced <- relist(exonsByReadClassUnspliced, partitioning)
@@ -605,12 +605,12 @@ seqlevels(exonsByReadClassUnspliced) <-  unique(c(seqlevels(exonsByReadClassUnsp
       ## combined spliced and unspliced Tx candidates
       seCombined <- SummarizedExperiment::rbind(seFilteredSpliced, seFilteredUnspliced)
       exonRangesCombined<- c(exonsByReadClass, exonsByReadClassUnspliced)
-      names(exonRangesCombined) <- 1:length(exonRangesCombined)
+      names(exonRangesCombined) <- seq_along(exonRangesCombined)
 
     } else {
       seCombined <- seFilteredSpliced
       exonRangesCombined<- exonsByReadClass
-      names(exonRangesCombined) <- 1:length(exonRangesCombined)
+      names(exonRangesCombined) <- seq_along(exonRangesCombined)
     }
     end.ptm <- proc.time()
     if(verbose)  message('extended annotations for unspliced reads in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
@@ -683,7 +683,7 @@ seqlevels(exonsByReadClassUnspliced) <-  unique(c(seqlevels(exonsByReadClassUnsp
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     mcols(extendedAnnotationRanges) <- mcols(seCombinedFiltered)[, c('GENEID', 'newTxClass')]
     if(length(extendedAnnotationRanges) > 0){
-      mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx', prefix, '.', 1:length(extendedAnnotationRanges))
+      mcols(extendedAnnotationRanges)$TXNAME <- paste0('tx', prefix, '.', seq_along(extendedAnnotationRanges))
     }
 
     names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
