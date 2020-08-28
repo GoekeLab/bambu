@@ -63,6 +63,7 @@ Imports:
     IRanges, 
     GenomicAlignments,
     glmnet,
+    methods,
     Rsamtools,
     Rcpp,
     BSgenome,
