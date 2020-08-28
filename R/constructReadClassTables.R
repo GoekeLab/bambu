@@ -99,7 +99,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   unlistData <- unlist(exonsByReadClass, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names = NULL)
   
-  exon_rank <- sapply(width((partitioning)), seq, from = 1)
+  exon_rank <- vapply(width((partitioning)), seq, FUN.VALUE = numeric(length(partitioning)), from = 1)
   exon_rank[which(readTable$strand == '-')] <- lapply(exon_rank[which(readTable$strand == '-')], rev)  # * assumes positive for exon ranking
   exon_endRank <- lapply(exon_rank, rev)
   unlistData$exon_rank <- unlist(exon_rank)
