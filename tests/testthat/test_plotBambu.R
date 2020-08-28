@@ -1,5 +1,17 @@
 context("Visualization of estimates")
 
+# credit to https://gist.github.com/stevenworthington/3178163
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    BiocManager::install(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+# usage
+packages <- c("ggbio", "circlize", "ComplexHeatmap","apeglm","rlang")
+ipak(packages)
+
 test_that("visualization for transcript expression is successful",{
   seCombined <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 
