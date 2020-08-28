@@ -461,7 +461,7 @@ isore.extendAnnotations <- function(se,
       unlistData <- unlist(exonsByReadClass, use.names = FALSE)
       partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
 
-      exon_rank <- sapply(width((partitioning)), seq, from=1)
+      exon_rank <- vapply(width((partitioning)), seq,FUN.VALUE = numeric(1), from=1)
       exon_rank[which(rowData(seFilteredSpliced)$strand == '-')] <- lapply(exon_rank[which(rowData(seFilteredSpliced)$strand == '-')], rev)  # * assumes positive for exon ranking
       exon_endRank <- lapply(exon_rank, rev)
       unlistData$exon_rank <- unlist(exon_rank)
