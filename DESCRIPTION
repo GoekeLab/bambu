@@ -23,7 +23,6 @@ Suggests:
     fs,
     testthat,
     devtools,
-    NanoporeRNASeq,
     ComplexHeatmap,
     circlize,
     ggbio,
