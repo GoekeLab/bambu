@@ -6,7 +6,7 @@ Authors@R: c(person("Ying Chen", "Developer", role = "cre",email = "chen_ying@gi
              person("Jonathan Goeke", "Developer", role = "aut",
                      email = "gokej@gis.a-star.edu.sg"))
 Description: Multi-sample transcript discovery and quantification using long read RNA-Seq data. 
-License: GPL-3 
+License: GPL-3  + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: 
