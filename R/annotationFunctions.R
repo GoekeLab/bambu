@@ -129,8 +129,7 @@ includeOverlapReadClass <- function(candidateList,filteredOverlapList){
     dplyr::select(queryHits, subjectHits.y) %>%
     distinct() %>%
     dplyr::rename(subjectHits=subjectHits.y)
-  candidateList <- rbind(temp, candidateList)
-  return (candidateList)
+  return (temp)
 }
 #' Assign New Gene with Gene Ids
 #' @param exByTx exByTx
@@ -148,20 +147,20 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALS
                                    minoverlap=minoverlap,
                                    ignore.strand=ignore.strand)
   hitObject <- tbl_df(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
-  candidateList <- hitObject %>%
-    group_by(queryHits) %>%
-    filter(queryHits <= min(subjectHits), queryHits != subjectHits) %>%
-    ungroup()
+  candidateList <- hitObject %>% group_by(queryHits) %>%
+                   filter(queryHits <= min(subjectHits), queryHits != subjectHits) %>%
+                   ungroup()
   filteredOverlapList <- hitObject %>% filter(queryHits < subjectHits)
   rm(list=c('exonSelfOverlaps','hitObject'))
   gc(verbose = FALSE)
   length_tmp = 1
   while(nrow(candidateList) > length_tmp) {  # loop to include overlapping read classes which are not in order
     length_tmp <- nrow(candidateList)
-    candidateList <- includeOverlapReadClass(candidateList, filteredOverlapList)
-    while(nrow(temp)>0) {
-      ## annotated transcripts from unknown genes by new gene id
-      candidateList <- includeOverlapReadClass(candidateList, filteredOverlapList)
+    temp <- includeOverlapReadClass(candidateList, filteredOverlapList)
+    candidateList <- rbind(temp, candidateList)
+    while(nrow(temp)>0) { ## annotated transcripts from unknown genes by new gene id
+      temp <- includeOverlapReadClass(candidateList, filteredOverlapList)
+      candidateList <- rbind(temp, candidateList)
     } ## second loop
     tst <- candidateList %>%
       group_by(subjectHits) %>%
