@@ -62,8 +62,7 @@ run_parallel <- function(g,conv,bias,maxiter, readClassDt){
     rownames(a_mat) <- tmp_wide$tx_sid
 
     n.obs <- unique(tmp[,.(read_class_sid,nobs)],by=NULL)$nobs
-
-
+    
     ## using the Jiang and Salzman suggested value
     lambda <- sqrt(max(n.obs))#,25)
     est_output <- emWithL1(X = as.matrix(a_mat),
