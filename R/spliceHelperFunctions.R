@@ -1,13 +1,29 @@
 # Note: several of the functions in this file are adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
 # License	Artistic-2.0
 # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
-
-
+################################################################################
+#calculate distance between first and last exon matches (Sep 1, 2020)
+################################################################################
+#calculate distance between first and last exon matches:
+# distances corresponds to length of unique sequences in all matching exons
+# distance = width(element in query) + width(all matching elements in subject) - 2x width(intersection(query, subject)
+## subjectList <- unlist(subjectFull)
+calculateFirstLastExonsDist <- function(queryExon,subjectExon,subjectFull,subjectList){
+    ExonMatch <- poverlaps(unlist(queryExon), unlist(subjectExon))
+    queryExonList <- rep(unlist(queryExon),elementNROWS(subjectFull))
+    myId <- rep(seq_along(queryExon),elementNROWS(subjectFull))
+    byExonIntersect=pintersect(queryExonList,subjectList, resolve.empty='start.x')
+    ExonDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryExon)))
+    uniqueExonLengthQuery <-   sum(width(GenomicRanges::setdiff(queryExon, subjectFull)))
+    uniqueExonLengthSubject <-  ExonDist - uniqueExonLengthQuery
+    ExonMatchList <- list("match" = ExonMatch, 
+                          "uniqueExonLengthQuery" = uniqueExonLengthQuery,
+                          "uniqueExonLengthSubject" = uniqueExonLengthSubject)
+  return (ExonMatchList)
+}
 #' This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
 #' @noRd
 findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist = 5, type='within', firstLastSeparate = TRUE, dropRangesByMinLength=FALSE, cutStartEnd = TRUE) {
-
-  #  with this option the first and last exons are stored and the distance for each between query and subject hits is returned
   if(firstLastSeparate) {
     queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
     queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
@@ -15,9 +31,6 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
     subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
     subjectFull <- subject
   }
-
-
-  #this list is used to find candidate matches. allows ranges to be dropped from query (to find matches not strictly within). more matches>slower
   if(dropRangesByMinLength) {
     queryForOverlap <- dropGrangesListElementsByWidth(query, minWidth=maxDist, cutStartEnd=cutStartEnd)
   } else if(cutStartEnd) {
@@ -25,30 +38,19 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
   } else {
     queryForOverlap <- query
   }
-
-
-  # first and last exons are reduced to 2bp, internal exon and splice matches are emphasised
   query <- cutStartEndFromGrangesList(query)
-  #  subject <- cutStartEndFromGrangesList(subject)
-
-  #  queryExonsRemoved <- dropGrangesListElementsByWidth(query, minWidth=maxDist)
   subjectExtend <- extendGrangesListElements(subject, by=maxDist)
-
   olap <- findOverlaps(queryForOverlap, subjectExtend, ignore.strand=ignore.strand, type=type)
   olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject), ignore.strand=ignore.strand, type='equal')
-
   query <- query[queryHits(olap)]
   subject <- subject[subjectHits(olap)]
   splice <- myGaps(query)
-
-
   compatible <- rangesDist(query, subject, splice, maxDist)
   equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
   unique <- myOneMatch(compatible$compatible, queryHits(olap))
   strandSpecific <- all(strand(query) != "*")
   strandedMatch <- ((all(strand(query)=='-') & all(strand(subject)=='-'))| (all(strand(query)=='+') & all(strand(subject)=='+')))
   mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific, strandedMatch)
-
   if(firstLastSeparate) { ##NOTE: Check if there is an error with the start sequence ##
     if(length(olap)>0) {
       queryStart <- ranges(queryStart[queryHits(olap)])
@@ -56,43 +58,18 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
       queryEnd <- ranges(queryEnd[queryHits(olap)])
       subjectEnd <- ranges(subjectEnd[subjectHits(olap)])
       subjectFull <- ranges(subjectFull[subjectHits(olap)])
-      #queryFirstJunction <- ranges(selectStartExonsFromGrangesList(splice, exonNumber = 1))
-      #queryLastJunction <- ranges(selectEndExonsFromGrangesList(splice, exonNumber = 1))
-
-      startMatch <- poverlaps(unlist(queryStart), unlist(subjectStart))
-      endMatch <- poverlaps(unlist(queryEnd), unlist(subjectEnd))
-
-      #calculate distance between first and last exon matches:
-      # distances corresponds to length of unique sequences in all matching exons
-      # distance = width(element in query) + width(all matching elements in subject) - 2x width(intersection(query, subject)
       subjectList <- unlist(subjectFull)
-      queryStartList <- rep(unlist(queryStart),elementNROWS(subjectFull))
-      myId <- rep(seq_along(queryStart),elementNROWS(subjectFull))
-      byExonIntersect=pintersect(queryStartList,subjectList, resolve.empty='start.x')
-      startDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryStart)))
-      uniqueStartLengthQuery <-   sum(width(GenomicRanges::setdiff(queryStart, subjectFull)))
-      uniqueStartLengthSubject <-  startDist - uniqueStartLengthQuery
-
-
-
-      queryEndList <- rep(unlist(queryEnd),elementNROWS(subjectFull))
-      myId <- rep(seq_along(queryEnd),elementNROWS(subjectFull))
-      byExonIntersect=pintersect(queryEndList,subjectList, resolve.empty='start.x')
-      endDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryEnd)))
-      uniqueEndLengthQuery <-   sum(width(GenomicRanges::setdiff(queryEnd, subjectFull)))
-      uniqueEndLengthSubject <-  endDist - uniqueEndLengthQuery
+      startList <- calculateFirstLastExonsDist(queryStart,subjectStart,subjectFull,subjectList)
+      endList <- calculateFirstLastExonsDist(queryEnd,subjectEnd,subjectFull,subjectList)
     } else {
-      startMatch <- NULL
-      uniqueStartLengthQuery <- NULL
-      uniqueStartLengthSubject <- NULL
-      endMatch <- NULL
-      uniqueEndLengthQuery <- NULL
-      uniqueEndLengthSubject <- NULL
+      startList <- NULL
+      endList <- NULL
     }
-
-    mcols(olap) <- DataFrame( mcols(olap), startMatch, uniqueStartLengthQuery,uniqueStartLengthSubject,endMatch, uniqueEndLengthQuery,uniqueEndLengthSubject)
-  }
-
+    mcols(olap) <- DataFrame(mcols(olap), startMatch=startList$match,
+                             uniqueStartLengthQuery=startList$uniqueExonLengthQuery,uniqueStartLengthSubject=startList$uniqueExonLengthSubject,
+                             endMatch=endList$match,
+                             uniqueEndLengthQuery=endList$uniqueExonLengthQuery, uniqueEndLengthSubject=endList$uniqueExonLengthSubject)
+    } 
   olap
 }
 
@@ -158,7 +135,6 @@ myGaps <- function(x, start=NA, end=NA)
     ### FIXME: does not handle query.break column yet
     setdiff(range(x), x)
   }
-
 }
 #myGaps <- .GenomicAlignments:::.gaps
 
