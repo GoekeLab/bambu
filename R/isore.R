@@ -722,36 +722,27 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
   start.ptm <- proc.time()
   readClassTable <- as_tibble(rowData(seReadClass), rownames='readClassId') %>%
     dplyr::select(readClassId, confidenceType)
-
   ## note/todo: here the stranded mode should always be used as read classes are stranded as much as possible (* aligns with + and -).
   ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches (currently only stranded assignment possible)
   distTable <- calculateDistToAnnotation(rowRanges(seReadClass),annotationGrangesList,maxDist = min.exonDistance, primarySecondaryDist = 5, ignore.strand = FALSE)
-
   distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId,]  # should actually be stored in counts, but is here to  assign genes based on high read counts
-
-  ##### TODO: include additional filtering criteria to minimise the number of transcrips that each read class is assigned to.
-
-  if(additionalFiltering) {
+  if(additionalFiltering) {   ##### TODO: include additional filtering criteria to minimise the number of transcrips that each read class is assigned to.
     distTable <- left_join(distTable, dplyr::select(readClassTable, readClassId, confidenceType), by="readClassId") %>%
       mutate(relativeReadCount=readCount/txNumberFiltered)
   }
-
   distTable <- dplyr::select(distTable, annotationTxId, readClassId, readCount, compatible, equal)
   distTable <- left_join(distTable,
                          as_tibble(mcols(annotationGrangesList)[,c('TXNAME','GENEID')]),
                          by=c('annotationTxId'='TXNAME')) ## note: gene id still not unique, might need to assign after EM using empty read classes
   end.ptm <- proc.time()
   if(verbose)  message('calculated distance table in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
-
   readClassTable$equal <- readClassTable$readClassId %in% unlist((filter(distTable, equal) %>%
                                                                     dplyr::select(readClassId) %>%
                                                                     distinct()))
   readClassTable$compatible <- readClassTable$readClassId %in% unlist((filter(distTable, compatible) %>%
                                                                          dplyr::select(readClassId) %>%
                                                                          distinct()))
-
-  start.ptm <- proc.time()
-  # assign read classes to genes based on the highest read count per gene
+  start.ptm <- proc.time() # assign read classes to genes based on the highest read count per gene
   readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID, readCount) %>%
     group_by(GENEID) %>%
     mutate(geneCount = sum(readCount)) %>%
@@ -761,8 +752,6 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
     filter(row_number() == 1) %>%
     dplyr::select(readClassId, geneId=GENEID) %>%
     ungroup()
-
-
   newGeneCandidates <- (!readClassTable$readClassId %in% readClassToGeneIdTable$readClassId)
   readClassToGeneIdTableNew <- assignNewGeneIds(rowRanges(seReadClass)[newGeneCandidates],
                                                 prefix='.unassigned',
@@ -771,15 +760,11 @@ isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesLi
   readClassGeneTable <- rbind(readClassToGeneIdTable, readClassToGeneIdTableNew)
   readClassTable <- left_join(readClassTable, readClassGeneTable, by="readClassId") %>%
     dplyr::select(confidenceType, geneId, compatible, equal)
-
   rm(list = c('newGeneCandidates','readClassGeneTable'))
-
   end.ptm <- proc.time()
   if(verbose)  message('added gene Ids for each read class ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
-
   metadata(seReadClass) <- list(distTable=distTable)
   rowData(seReadClass) <- readClassTable
-
   rm(list=c('distTable','readClassTable'))
   return(seReadClass)
 }

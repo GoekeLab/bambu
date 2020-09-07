@@ -181,12 +181,12 @@ ipak(packages)
 
 
 ```{r, fig.width = 8, fig.height = 6}
-plot.bambu(se, group.variable = "condition", type = "heatmap")
+plot.bambu(se, type = "heatmap")
 ```
 
 Additionally, we can also visualise the correlation with a 2-dimmensional PCA plot.
 ```{r, fig.width = 8, fig.height = 6}
-plot.bambu(se, group.variable = "condition", type = "pca")
+plot.bambu(se, type = "pca")
 ```
 
 In addition to visualising the correlation between samples, *bambu* also provide a function to visualise the extended annotation and expression estimation for individual genes. Here we look at gene ENSG00000099968 and visualise the transcript coordinates for annotated and novel isoforms and expression levels for these isoforms across all samples. 
@@ -204,7 +204,7 @@ seGene
 We can again use the \code{plot.bambu} function to visualise the gene expression data across the 6 samples with a heatmap or PCA plot. As expected, samples from the same cell line showed higher correlation than across the cell lines.
 ```{r, fig.width = 8, fig.height = 6}
 colData(seGene)$groupVar <-  sample_info$cellLine
-plot.bambu(seGene, group.variable = "condition", type = "heatmap")
+plot.bambu(seGene, type = "heatmap")
 ```
 
 
