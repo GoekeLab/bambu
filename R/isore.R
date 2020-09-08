@@ -300,8 +300,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     rowData <- as_tibble(rowData(readClassSe))
     rowData$start <- rowMins(start)
     rowData$end <- rowMaxs(end)
-    rowData <- rowData %>% dplyr::select(chr=chr.rc, start, end, strand=strand.rc,
-                                         intronStarts, intronEnds, confidenceType)
+    rowData <- rowData %>% dplyr::select(chr=chr.rc, start, end, strand=strand.rc, intronStarts, intronEnds, confidenceType)
     readClassSeRef <- SummarizedExperiment(assays = SimpleList(counts=counts, start=start, end=end),
                                            rowData = rowData, colData = colData(readClassSe))
     return(readClassSeRef)
