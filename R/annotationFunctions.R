@@ -4,13 +4,10 @@
 #' @return A \code{\link{GRangesList}} object
 #' @export
 #' @examples
-#'  library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-#'  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
-#'  prepareAnnotations(x = txdb)
 #'  gtf.file <- system.file("extdata", 
 #'  "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
 #'  package = "bambu")
-#'  gr <- prepareAnnotations(x = gtf.file)
+#'  prepareAnnotations(x = gtf.file)
 prepareAnnotations <- function(x) {
   if(is(x,"TxDb")){
     exonsByTx = exonsBy(x,by='tx', use.names=TRUE)
@@ -146,7 +143,7 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALS
                                    select='all',
                                    minoverlap=minoverlap,
                                    ignore.strand=ignore.strand)
-  hitObject <- tbl_df(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
+  hitObject <- as_tibble(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
   candidateList <- hitObject %>% group_by(queryHits) %>%
                    filter(queryHits <= min(subjectHits), queryHits != subjectHits) %>%
                    ungroup()
@@ -193,11 +190,11 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALS
 genFilteredAnTable <- function(spliceOverlaps,primarySecondaryDist,exByTx = NULL,setTMP = NULL,DistCalculated = FALSE){
   ## initiate the table
   if (isFALSE(DistCalculated)){
-    txToAnTable <- tbl_df(spliceOverlaps) %>% group_by(queryHits)  %>%
+    txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits)  %>%
       mutate(dist = uniqueLengthQuery + uniqueLengthSubject) %>%
       mutate(txNumber = n())
   }else{
-    txToAnTable <- tbl_df(spliceOverlaps) %>% group_by(queryHits) %>%
+    txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
       mutate(dist = uniqueLengthQuery + uniqueLengthSubject + uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
       mutate(txNumber = n())
   }
