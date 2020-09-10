@@ -377,167 +377,6 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 #' @param seFilteredSpliced a SummarizedExperiment object for filtered spliced reads
 #' @param annotationGrangesList annotation GRangesList object
 #' @noRd
-<<<<<<< HEAD
-isore.extendAnnotations <- function(se,
-                                    annotationGrangesList,
-                                    remove.subsetTx = TRUE, # filter to remove read classes which are a subset of known transcripts. Also remove transcripts which are a subset of new transcripts (?)
-                                    min.readCount = 2,  # minimun read count to consider a read class valid in a sample
-                                    min.readFractionByGene = 0.05,  ## minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered
-                                    min.sampleNumber = 1,  # minimum sample number with minimum read count
-                                    min.exonDistance = 35,  # minum distance to known transcript to be considered valid as new
-                                    min.exonOverlap = 10, # minimum number of bases shared with annotation to be assigned to the same gene id
-                                    prefix='',
-                                    verbose=FALSE)  ## prefix for new gene Ids (genePrefix.number)
-{
-  start.ptm <- proc.time()  # timer for verbose output
-  filterSet1 = FALSE
-  if(nrow(se)>0){
-    filterSet1 <- rowSums(assays(se)$counts >= min.readCount) >= min.sampleNumber
-  }
-  if(sum(filterSet1) > 0){
-    if(any(rowData(se)$confidenceType == 'highConfidenceJunctionReads' & filterSet1)){
-
-      ## (1) Spliced Reads
-      seFilteredSpliced <- se[rowData(se)$confidenceType == 'highConfidenceJunctionReads' & filterSet1,]
-      mcols(seFilteredSpliced)$GENEID <- NA
-
-      intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(seFilteredSpliced)$chr,
-                                                              fragmentStarts=rowData(seFilteredSpliced)$intronStarts,
-                                                              fragmentEnds=rowData(seFilteredSpliced)$intronEnds,
-                                                              strand=rowData(seFilteredSpliced)$strand)
-      
-      names(intronsByReadClass) <- seq_along(intronsByReadClass)
-      seqlevels(intronsByReadClass) <-  unique(c(seqlevels(intronsByReadClass), seqlevels(annotationGrangesList)))
-
-      exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts,
-                              as.integer(rowData(seFilteredSpliced)$end + 1),
-                              sep=',')
-      exonStartsShifted <- paste(as.integer(rowData(seFilteredSpliced)$start - 1),
-                                 rowData(seFilteredSpliced)$intronEnds,
-                                 sep=',')
-      
-      exonsByReadClass <- makeGRangesListFromFeatureFragments(seqnames=rowData(seFilteredSpliced)$chr,
-                                                              fragmentStarts=exonStartsShifted,
-                                                              fragmentEnds=exonEndsShifted,
-                                                              strand=rowData(seFilteredSpliced)$strand)
-     
-      exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)  # correct junction to exon differences in coordinates
-      
-      names(exonsByReadClass) <- seq_along(exonsByReadClass)
-      
-      # add exon start and exon end rank
-      unlistData <- unlist(exonsByReadClass, use.names = FALSE)
-      partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)), names=NULL)
-
-      exon_rank <- lapply(width((partitioning)), seq, from=1)
-      exon_rank[which(rowData(seFilteredSpliced)$strand == '-')] <- lapply(exon_rank[which(rowData(seFilteredSpliced)$strand == '-')], rev)  # * assumes positive for exon ranking
-      exon_endRank <- lapply(exon_rank, rev)
-      unlistData$exon_rank <- unlist(exon_rank)
-      unlistData$exon_endRank <- unlist(exon_endRank)
-
-      exonsByReadClass <- relist(unlistData, partitioning)
-
-      seqlevels(exonsByReadClass) <-  unique(c(seqlevels(exonsByReadClass), seqlevels(annotationGrangesList)))
-      
-      ovExon <- findSpliceOverlapsQuick(cutStartEndFromGrangesList(exonsByReadClass),
-                                        cutStartEndFromGrangesList(annotationGrangesList))
-
-      # classificationTable will contain the different classes of new transcripts that are discovered
-      classificationTable <- data.frame(matrix('',
-                                               nrow=length(seFilteredSpliced),
-                                               ncol=9),
-                                        stringsAsFactors=FALSE)
-      colnames(classificationTable) <- c('equal',
-                                         'compatible',
-                                         'newWithin',
-                                         'newLastJunction',
-                                         'newFirstJunction',
-                                         'newJunction',
-                                         'allNew',
-                                         'newFirstExon',
-                                         'newLastExon')
-
-      classificationTable$equal[queryHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]] <- 'equal' # annotate as identical
-
-      classificationTable$compatible[queryHits(ovExon[mcols(ovExon)$compatible ])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]] <- 'compatible' ##compatible, ( same last exon/ different last exon can be separated later)
-      classificationTable$compatible[classificationTable$equal=='equal'] <- ''
-
-      ## annotate with transcript and gene Ids
-      mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$compatible][!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))])] <- mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$compatible])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]])$GENEID # annotate with compatible gene id,
-      mcols(seFilteredSpliced)$GENEID[queryHits(ovExon[mcols(ovExon)$equal][!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))])] <- mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]])$GENEID # annotate as identical,
-
-      ## using intron matches
-      unlistedIntrons <- unlist(intronsByReadClass, use.names=TRUE)
-      partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)), names=NULL)
-
-      unlistedIntronsAnnotations <- unlist(myGaps(annotationGrangesList))
-      mcols(unlistedIntronsAnnotations)$GENEID <- mcols(annotationGrangesList)$GENEID[match(names(unlistedIntronsAnnotations), mcols(annotationGrangesList)$TXNAME)]
-
-      intronMatches <- GenomicRanges::match(unlistedIntrons, unique(unlistedIntronsAnnotations), nomatch=0) > 0
-      intronMatchesList <- relist(intronMatches, partitioning)
-
-      ## new within annotations (all junctions known)
-      classificationTable$newWithin[all(intronMatchesList) & ! (classificationTable$compatible=='compatible' | classificationTable$equal == 'equal')] <- 'newWithin'
-
-      ## new with new junction internal (new splice variant)
-      ## new with new junction first (new TSS/first exons)
-      ## new with new junction last (new last exon)
-      lastJunctionMatch <- unlist(endoapply(endoapply(intronMatchesList, rev), '[[', 1))
-      firstJunctionMatch <- unlist(endoapply(intronMatchesList, '[[', 1))
-
-      classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand == '+' & !lastJunctionMatch & any(intronMatchesList))] <- 'newLastJunction'
-      classificationTable$newLastJunction[which(rowData(seFilteredSpliced)$strand == '-' & (!firstJunctionMatch & any(intronMatchesList)))] <- 'newLastJunction'
-
-      classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand == '+' & !firstJunctionMatch & any(intronMatchesList))] <- 'newFirstJunction'
-      classificationTable$newFirstJunction[which(rowData(seFilteredSpliced)$strand == '-' & (!lastJunctionMatch & any(intronMatchesList)))] <- 'newFirstJunction'
-
-      classificationTable$newJunction[ (sum(!intronMatchesList) > !firstJunctionMatch + !lastJunctionMatch) & any(intronMatchesList)] <- 'newJunction'
-
-      classificationTable$allNew[!any(intronMatchesList)] <- 'allNew'
-
-
-      ## assign gene ids based on the maximum number of matching introns/splice junctions
-      overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,
-                                                         unlistedIntronsAnnotations,
-                                                         type='equal',
-                                                         select='all',
-                                                         ignore.strand=FALSE)
-      if(length(overlapsNewIntronsAnnotatedIntrons)>0){
-      maxGeneCountPerNewTx <-  as_tibble(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
-                                                geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)],
-                                                stringsAsFactors=FALSE)) %>%
-        group_by(txId, geneId) %>%
-        summarise(geneCount=n()) %>%
-        group_by(txId) %>%
-        filter(geneCount == max(geneCount)) %>%
-        filter(!duplicated(txId)) %>%
-        ungroup()
-
-
-      geneIdByIntron <- rep(NA,length(exonsByReadClass))
-      geneIdByIntron <- maxGeneCountPerNewTx$geneId[match(names(exonsByReadClass), maxGeneCountPerNewTx$txId)]
-      mcols(seFilteredSpliced)$GENEID[is.na(mcols(seFilteredSpliced)$GENEID)] <- geneIdByIntron[is.na(mcols(seFilteredSpliced)$GENEID)]
-
-      distNewTx <- calculateDistToAnnotation(exByTx=exonsByReadClass,
-                                             exByTxRef=annotationGrangesList,
-                                             maxDist=min.exonDistance,
-                                             primarySecondaryDist=5,
-                                             ignore.strand=FALSE)
-      distNewTxByQuery <- distNewTx %>%
-        group_by(queryHits) %>%
-        summarise(minDist=min(dist),
-                  startMatch=any(startMatch),
-                  endMatch=any(endMatch),
-                  compatible=any(compatible))  ## note: here is more information that can be used to filter and annotate!
-
-      classificationTable$compatible[distNewTxByQuery$queryHits[distNewTxByQuery$compatible]] <- 'compatible'
-
-      classificationTable$newFirstExon[distNewTxByQuery$queryHits[!distNewTxByQuery$startMatch]] <- 'newFirstExon'
-      classificationTable$newFirstExon[classificationTable$newFirstJunction != 'newFirstJunction'] <- ''
-
-      classificationTable$newLastExon[distNewTxByQuery$queryHits[!distNewTxByQuery$endMatch]] <- 'newLastExon'
-      classificationTable$newLastExon[classificationTable$newLastJunction != 'newLastJunction'] <- ''
-=======
 createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList){
   exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts, as.integer(rowData(seFilteredSpliced)$end + 1), sep=',')
   exonStartsShifted <- paste(as.integer(rowData(seFilteredSpliced)$start - 1), rowData(seFilteredSpliced)$intronEnds, sep=',')
@@ -558,7 +397,6 @@ createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList){
   exonsByReadClass <- relist(unlistData, partitioning)
   seqlevels(exonsByReadClass) <-  unique(c(seqlevels(exonsByReadClass), seqlevels(annotationGrangesList)))
   return (exonsByReadClass)
->>>>>>> origin/master
 }
 
 #' extended annotations for spliced reads
@@ -656,7 +494,7 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons, unlistedIntronsAnnotations,
 #' @param filterSet1 filterSet1
 #' @param min.exonOverlap min.exonOverlap
 #' @param verbose verbose
-#' noRd
+#' @noRd
 extdannotateUnsplicedReads <- function(se, seFilteredSpliced, exonsByReadClass, 
                                        annotationGrangesList, filterSet1, 
                                        min.exonOverlap, verbose){
