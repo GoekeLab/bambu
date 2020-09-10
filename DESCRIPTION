@@ -10,14 +10,8 @@ License: GPL-3  + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R(>= 4.0.0), 
-    data.table(>= 1.1.8), 
-    dplyr, 
-    SummarizedExperiment(>= 1.1.6),
-    GenomicRanges,
-    BiocManager,
-    GenomicFeatures,
-    ggplot2
+    R(>= 4.0.0),
+    SummarizedExperiment (>= 1.1.6)
 Suggests: 
     knitr,
     fs,
@@ -30,8 +24,6 @@ Suggests:
     gridExtra,
     BSgenome.Hsapiens.NCBI.GRCh38,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
-    AnnotationDbi,
-    BiocGenerics,
     BiocParallel,
     Biostrings,
     DESeq2,
@@ -59,6 +51,15 @@ LinkingTo:
     RcppArmadillo,
     RcppProgress
 Imports:
+    data.table,
+    dplyr,
+    AnnotationDbi,
+    GenomicRanges,
+    GenomeInfoDb,
+    BiocGenerics,
+    BiocManager,
+    GenomicFeatures,
+    ggplot2,
     S4Vectors(>= 0.22.1), 
     IRanges, 
     GenomicAlignments,
