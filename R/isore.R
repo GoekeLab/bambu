@@ -535,7 +535,7 @@ isore.extendAnnotations <- function(se,
                                                          select='all',
                                                          ignore.strand=FALSE)
       if(length(overlapsNewIntronsAnnotatedIntrons)>0){
-      maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
+      maxGeneCountPerNewTx <-  as_tibble(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
                                                 geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)],
                                                 stringsAsFactors=FALSE)) %>%
         group_by(txId, geneId) %>%
