@@ -4,7 +4,7 @@
 createReadTable <- function(uniqueJunctions,unlisted_junctions,readGrgList,
                             firstseg,intronStartTMP,intronEndTMP,readStrand,
                             allJunctionToUniqueJunctionOverlap){
-  readTable <- tbl_df(data.frame(matrix(ncol = 7, nrow = length(readGrgList))))
+  readTable <- as_tibble(data.frame(matrix(ncol = 7, nrow = length(readGrgList))))
   colnames(readTable) <- c('chr', 'start', 'end', 'strand', 'intronEnds', 'intronStarts', 'confidenceType')
   # chr
   readTable[, 'chr'] <- as.factor(seqnames(unlist(readGrgList)[firstseg]))
@@ -85,7 +85,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 #initiate the hits dataframe (Sep 2, 2020)
 ################################################################################
 initiateHitsDF <- function(hitsWithin, grangesReference, stranded){
-  hitsDF <- tbl_df(hitsWithin)
+  hitsDF <- as_tibble(hitsWithin)
   hitsDF$chr <- as.factor(seqnames(grangesReference)[subjectHits(hitsWithin)])
   hitsDF$start <- start(grangesReference)[subjectHits(hitsWithin)]
   hitsDF$end <- end(grangesReference)[subjectHits(hitsWithin)]
@@ -118,7 +118,7 @@ constructUnsplicedReadClasses <- function(granges,
     group_by(queryHits, chr, strand) %>%
     summarise(start=max(start), end = min(end)) %>%
     group_by(chr, start, end, strand) %>%
-    mutate(readClassId = paste0('rc',confidenceType,'.', group_indices())) %>%
+    mutate(readClassId = paste0('rc',confidenceType,'.', cur_group_id())) %>%
     ungroup()
   readIds <-mcols(granges[hitsDF$queryHits])$id
   hitsDF <- hitsDF %>%
