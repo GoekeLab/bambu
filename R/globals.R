@@ -8,7 +8,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c('GENEID','PC1', 'PC2', '
                                                         'runname','seqlengths','startMatch','strand.rc','subjectCount','subjectElementsOutsideMaxDist',
                                                         'subjectHits.y','sum_nobs','txId','txNumberFiltered','tx_id','tx_name','tx_sid','uniqueEndLengthQuery',
                                                         'uniqueLengthQuery','uniqueLengthSubject','uniqueStartLengthQuery','value','valueGene','valueGeneCPM',
-                                                        'variable','.insertGaps','.'))
+                                                        'variable','junctionMatchList','readClass.file', 'start.ptm' ,'verbose','.insertGaps','.'))
 
           
            
