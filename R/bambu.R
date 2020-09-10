@@ -1,36 +1,58 @@
 #' Main function
 #' @title long read isoform reconstruction and quantification
-#' @description This function takes bam file of genomic alignments and performs isoform recontruction and gene and transcript expression quantification.
-#' It also allows saving of read class files of alignments, extending provided annotations, and quantification based on extended annotations.
-#' When multiple samples are provided, extended annotations will be combined across samples to allow comparison.
-#' @param reads A string or a vector of strings specifying the paths of bam files for genomic alignments, or a \code{\link{BamFile}} object or a \code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).
-#' @param readClass.file A string or a vector of strings specifying the read class files that are saved during previous run of \code{\link{bambu}}.
-#' @param readClass.outputDir A string variable specifying the path to where read class files will be saved.
-#' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}}.
+#' @description This function takes bam file of genomic alignments and performs 
+#' isoform recontruction and gene and transcript expression quantification.
+#' It also allows saving of read class files of alignments, extending provided 
+#' annotations, and quantification based on extended annotations. When multiple 
+#' samples are provided, extended annotations will be combined across samples to 
+#' allow comparison.
+#' @param reads A string or a vector of strings specifying the paths of bam files 
+#' for genomic alignments, or a \code{\link{BamFile}} object or a 
+#' \code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).
+#' @param readClass.file A string or a vector of strings specifying the read class
+#' files that are saved during previous run of \code{\link{bambu}}.
+#' @param readClass.outputDir A string variable specifying the path to where read 
+#' class files will be saved.
+#' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained 
+#' by \code{\link{prepareAnnotations}}.
 #' @param genomeSequence A fasta file or a BSGenome object.
 #' @param stranded A boolean for strandedness, defaults to FALSE.
-#' @param ncore specifying number of cores used when parallel processing is used, defaults to 1.
+#' @param ncore specifying number of cores used when parallel processing is used, 
+#' defaults to 1.
 #' @param yieldSize see \code{\link{Rsamtools}}.
-#' @param isoreParameters A list of controlling parameters for isoform reconstruction process:
+#' @param isoreParameters A list of controlling parameters for isoform 
+#' reconstruction process:
 #' \itemize{
-#'   \item prefix specifying prefix for new gene Ids (genePrefix.number), defaults to empty
-#'   \item remove.subsetTx indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
-#'   \item min.readCount specifying minimun read count to consider a read class valid in a sample, defaults to 2
-#'   \item min.readFractionByGene specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05
-#'   \item min.sampleNumber specifying minimum sample number with minimum read count, defaults to 1
-#'   \item min.exonDistance specifying minum distance to known transcript to be considered valid as new, defaults to 35
-#'   \item min.exonOverlap specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults 10 base pairs
+#'   \item prefix specifying prefix for new gene Ids (genePrefix.number), 
+#'   defaults to empty
+#'   \item remove.subsetTx indicating whether filter to remove read classes which are 
+#'   a subset of known transcripts(), defaults to TRUE
+#'   \item min.readCount specifying minimun read count to consider a read class valid 
+#'   in a sample, defaults to 2
+#'   \item min.readFractionByGene specifying minimum relative read count per gene, 
+#'   highly expressed genes will have many high read count low relative abundance 
+#'   transcripts that can be filtered, defaults to 0.05
+#'   \item min.sampleNumber specifying minimum sample number with minimum read count,
+#'    defaults to 1
+#'   \item min.exonDistance specifying minum distance to known transcript to be 
+#'   considered valid as new, defaults to 35
+#'   \item min.exonOverlap specifying minimum number of bases shared with annotation
+#'    to be assigned to the same gene id, defaults 10 base pairs
 #' }
-#' @param emParameters A list of controlling parameters for quantification algorithm estimation process:
+#' @param emParameters A list of controlling parameters for quantification algorithm
+#'  estimation process:
 #' \itemize{
 #'   \item maxiter specifying maximum number of run interations, defaults to 10000.
 #'   \item bias specifying whether to correct for bias, defaults to FALSE.
 #'   \item conv specifying the covergence trheshold control, defaults to 0.0001.
 #' }
-#' @param extendAnnotations A logical variable indicating whether annotations are to be extended for quantification.
-#' @param verbose A logical variable indicating whether processing messages will be printed.
+#' @param extendAnnotations A logical variable indicating whether annotations are 
+#' to be extended for quantification.
+#' @param verbose A logical variable indicating whether processing messages will 
+#' be printed.
 #' @details
-#' @return A list of two SummarizedExperiment object for transcript expression and gene expression.
+#' @return A list of two SummarizedExperiment object for transcript expression 
+#' and gene expression.
 #' @examples
 #' 
 #' ## =====================
@@ -65,16 +87,20 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
   emParameters <- checkParameters(emParameters, emParameters.default)
   rm.readClassSe <- FALSE  # indicator to remove temporary read class files
   bpParameters <- BiocParallel::bpparam()
-  #===# set parallel options: If more CPUs than samples available, use parallel computing on each sample, otherwise use parallel to distribute samples (more efficient)
+  #===# set parallel options: If more CPUs than samples available, use parallel 
+  # computing on each sample, otherwise use parallel to distribute samples (more efficient)
   bpParameters$workers <- ifelse(length(reads)==1, 1, ncore)
   bpParameters$progressbar <- (!verbose)
   if(bpParameters$workers>1){
     ncore <- 1
   }
-  readClassList <- processReads(reads, annotations, genomeSequence, readClass.outputDir,
-                                yieldSize, bpParameters, stranded, ncore, verbose)
+  readClassList <- processReads(reads, annotations, genomeSequence, 
+                                readClass.outputDir,
+                                yieldSize, bpParameters, stranded, 
+                                ncore, verbose)
   if(extendAnnotations) {
-    annotations <- bambu.extendAnnotations(readClassList, annotations, isoreParameters, verbose=verbose)
+    annotations <- bambu.extendAnnotations(readClassList, annotations,
+                                           isoreParameters, verbose=verbose)
     if(!verbose) message("Finished extending annotations.")
     gc(verbose = FALSE)
   }
@@ -108,7 +134,8 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
 #' @param ncore ncore
 #' @param verbose verbose
 #' noRd
-processReads <- function(reads, annotations, genomeSequence, readClass.outputDir,
+processReads <- function(reads, annotations, genomeSequence,
+                         readClass.outputDir,
                          yieldSize, bpParameters, stranded, ncore, verbose){
   if(!is.null(reads)){  # calculate readClass objects
     #===# create BamFileList object from character #===#
@@ -138,7 +165,8 @@ processReads <- function(reads, annotations, genomeSequence, readClass.outputDir
     #===# When more than 10 samples are provided, files will be written to a temporary directory
     if(length(reads)>10 &(is.null(readClass.outputDir))){
       readClass.outputDir <- tempdir()
-      message(paste0("There are more than 10 samples, read class files will be temporarily saved to ",readClass.outputDir, " for more efficient processing"))
+      message(paste0("There are more than 10 samples, read class files 
+                     will be temporarily saved to ",readClass.outputDir, " for more efficient processing"))
       rm.readClassSe <- TRUE # remove temporary read class files from system
     }
     if(!verbose) message("Start generating read class files")
@@ -187,7 +215,8 @@ checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir)
     }else if(is(annotations,"CompressedGRangesList")){
       ## check if annotations is as expected
       if(!all(c("TXNAME","GENEID","eqClass") %in% colnames(mcols(annotations)))){
-        stop("The annotations is not properly prepared.\nPlease prepareAnnnotations using prepareAnnotations or prepareAnnotationsFromGTF functions.")
+        stop("The annotations is not properly prepared.\nPlease prepareAnnnotations 
+             using prepareAnnotations or prepareAnnotationsFromGTF functions.")
       }
     }else{
       stop("The annotations is not a GRangesList object.")
@@ -217,7 +246,8 @@ checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir)
 #' Extend annotations
 #' @inheritParams bambu
 #' @noRd
-bambu.extendAnnotations <- function(readClassList, annotations, isoreParameters, verbose = FALSE){
+bambu.extendAnnotations <- function(readClassList, annotations, 
+                                    isoreParameters, verbose = FALSE){
   combinedTxCandidates = NULL
   start.ptm <- proc.time()
   for(readClassIndex in seq_along(readClassList)){
@@ -226,7 +256,8 @@ bambu.extendAnnotations <- function(readClassList, annotations, isoreParameters,
       readClass <- readRDS(file=readClass)
       seqlevelsStyle(readClass) <- seqlevelsStyle(annotations)[1]
     }
-    combinedTxCandidates <- isore.combineTranscriptCandidates(readClass, readClassSeRef = combinedTxCandidates, verbose = verbose)
+    combinedTxCandidates <- isore.combineTranscriptCandidates(readClass, 
+                                                              readClassSeRef = combinedTxCandidates, verbose = verbose)
     rm(readClass)
     gc(verbose=FALSE)
   }
@@ -250,13 +281,15 @@ bambu.extendAnnotations <- function(readClassList, annotations, isoreParameters,
 #' Perform quantification
 #' @inheritParams bambu
 #' @noRd
-bambu.quantify <- function(readClass, annotations, emParameters, min.exonDistance=35, ncore = 1, verbose = FALSE){
+bambu.quantify <- function(readClass, annotations, emParameters, 
+                           min.exonDistance=35, ncore = 1, verbose = FALSE){
   if(is.character(readClass)){
     readClass <- readRDS(file=readClass)
     seqlevelsStyle(readClass) <- seqlevelsStyle(annotations)[1]
   }
   
-  readClass <- isore.estimateDistanceToAnnotations(readClass, annotations, min.exonDistance = min.exonDistance, verbose = verbose)
+  readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
+                                                   min.exonDistance = min.exonDistance, verbose = verbose)
   gc(verbose=FALSE)
   readClassDt <- getEmptyClassFromSE(readClass, annotations)
   colNameRC <- colnames(readClass)
@@ -274,7 +307,8 @@ bambu.quantify <- function(readClass, annotations, emParameters, min.exonDistanc
   gc(verbose=FALSE)
   counts[is.na(estimates),`:=`(estimates = 0, CPM = 0) ]
   
-  seOutput <- SummarizedExperiment::SummarizedExperiment(assays = SimpleList(counts = matrix(counts$estimates,ncol = 1, dimnames = list(NULL, colNameRC)),
+  seOutput <- SummarizedExperiment::SummarizedExperiment(assays = 
+                                                           SimpleList(counts = matrix(counts$estimates,ncol = 1, dimnames = list(NULL, colNameRC)),
                                                                              CPM = matrix(counts$CPM, ncol =  1, dimnames = list(NULL, colNameRC))),
                                                          colData = colDataRC)
   return(seOutput)
@@ -283,7 +317,8 @@ bambu.quantify <- function(readClass, annotations, emParameters, min.exonDistanc
 #' Preprocess bam files and save read class files
 #' @inheritParams bambu
 #' @noRd
-bambu.constructReadClass <- function(bam.file, genomeSequence, annotations, readClass.outputDir=NULL, stranded=FALSE, ncore=1, verbose=FALSE){
+bambu.constructReadClass <- function(bam.file, genomeSequence, annotations, 
+                                     readClass.outputDir=NULL, stranded=FALSE, ncore=1, verbose=FALSE){
   
 
   readGrgList <- prepareDataFromBam(bam.file[[1]], ncore=ncore, verbose = verbose)
@@ -314,10 +349,12 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations, read
 #' @param readClassDt A data.table object
 #' @inheritParams bambu
 #' @noRd
-bambu.quantDT <- function(readClassDt = readClassDt,emParameters = NULL,ncore = 1, verbose = FALSE){
+bambu.quantDT <- function(readClassDt = readClassDt,emParameters = NULL,
+                          ncore = 1, verbose = FALSE){
   if(is.null(readClassDt)){
     stop("Input object is missing.")
-  }else if(any(!(c('gene_id','tx_id','read_class_id','nobs') %in% colnames(readClassDt)))){
+  }else if(any(!(c('gene_id','tx_id','read_class_id',
+                   'nobs') %in% colnames(readClassDt)))){
     stop("Columns gene_id, tx_id, read_class_id, nobs, are missing from object.")
   }
   ## check quantification parameters
@@ -354,7 +391,8 @@ bambu.quantDT <- function(readClassDt = readClassDt,emParameters = NULL,ncore = 
                                       maxiter = emParameters[["maxiter"]],
                                       conv = emParameters[["conv"]])
   end.time <- proc.time()
-  if(verbose)   message('Finished EM estimation in ', round((end.time-start.time)[3]/60,1), ' mins.')
+  if(verbose)   message('Finished EM estimation in ', 
+                        round((end.time-start.time)[3]/60,1), ' mins.')
 
   theta_est <- outList[[1]]
   theta_est[, `:=`(tx_name = txVec[as.numeric(tx_sid)],
