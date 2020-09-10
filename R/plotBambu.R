@@ -1,11 +1,17 @@
 #' redefine plot for plot.bambu
 #' @title plot
-#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.
+#' @param se An summarized experiment object obtained from \code{\link{bambu}} 
+#' or \code{\link{transcriptToGeneExpression}}.
 #' @param ... Additional arguments
-#' @param group.variable Variable for grouping in plot, has be to provided if choosing to plot PCA.
-#' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see details.
-#' @param gene_id specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".
-#' @param transcript_id specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"
+#' @param group.variable Variable for grouping in plot, has be to provided
+#'  if choosing to plot PCA.
+#' @param type plot type variable, a values of annotation for a single gene 
+#' with heatmap for isoform expressions,  pca,  or heatmap, see details.
+#' @param gene_id specifying the gene_id for plotting gene annotation, either 
+#' gene_id or transcript_id has to be provided when type = "annotation".
+#' @param transcript_id specifying the transcript_id for plotting transcript
+#' annotation, either gene_id or transcript_id has to be provided when type 
+#' is "annotation"
 #' @return A heatmap plot for all samples
 #' @example 
 #' se <- readRDS(system.file("extdata", 
@@ -17,7 +23,8 @@
 #' plot(se, type = "heatmap")
 #' @export
 
-plot <- function(se, ...,group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+plot <- function(se, ...,group.variable = NULL, type = c("annotation",
+                "pca","heatmap"), gene_id = NULL, transcript_id = NULL){
     UseMethod("plot")
    }
 
@@ -29,17 +36,20 @@ plot <- function(se, ...,group.variable = NULL, type = c("annotation","pca","hea
 #' @noRd
 plotAnnotation <- function(se, gene_id, transcript_id){
   if(is.null(gene_id)&(is.null(transcript_id))){
-    stop("Please provide the gene_id(s) of the gene of interest or transcript_id(s) for the transcripts of interest!")
+    stop("Please provide the gene_id(s) of the gene of interest or
+         transcript_id(s) for the transcripts of interest!")
   }
   if(ncol(rowData(se))==0){
     if(is.null(gene_id)){
-      stop("Please provide the gene_id(s) of the gene of interest when gene expression are provided!")
+      stop("Please provide the gene_id(s) of the gene of interest 
+           when gene expression are provided!")
     }
     if(!all(gene_id %in% rownames(se))){
       stop("all(gene_id %in% rownames(se)) condition is not satisfied!")
     }
     geneRanges <- rowRanges(se)[gene_id]
-    names(geneRanges) <- paste0(gene_id,":", unlist(lapply(strand(geneRanges),function(x) unique(as.character(x)))))
+    names(geneRanges) <- paste0(gene_id,":", unlist(lapply(strand(geneRanges),
+                                                           function(x) unique(as.character(x)))))
     p_annotation <- ggbio::autoplot(geneRanges, group.selfish = TRUE)
     p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[gene_id,]+1)))
     p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression)
@@ -50,11 +60,14 @@ plotAnnotation <- function(se, gene_id, transcript_id){
         stop("all(transcript_id %in% rownames(se)) condition is not satisfied!")
       }
       txRanges <- rowRanges(se)[transcript_id]
-      names(txRanges) <- paste0(transcript_id,":", unlist(lapply(strand(txRanges),function(x) unique(as.character(x)))))
+      names(txRanges) <- paste0(transcript_id,":", unlist(lapply(strand(txRanges),
+                                                                 function(x) unique(as.character(x)))))
       p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
-      p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[transcript_id,]+1)),axis.text.angle = 45)
+      p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[transcript_id,
+                                                                    ]+1)),axis.text.angle = 45)
       
-      p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, heights = c(1,1))
+      p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, 
+                                   heights = c(1,1))
       return(p)
     }else{
       if(!all(gene_id %in% rowData(se)$GENEID)){
@@ -63,10 +76,13 @@ plotAnnotation <- function(se, gene_id, transcript_id){
       p <- lapply(gene_id, function(g){
         txVec <- rowData(se)[rowData(se)$GENEID == g,]$TXNAME
         txRanges <- rowRanges(se)[txVec]
-        names(txRanges) <- paste0(txVec,":", unlist(lapply(strand(txRanges),function(x) unique(as.character(x)))))
+        names(txRanges) <- paste0(txVec,":", unlist(lapply(strand(txRanges),
+                                                           function(x) unique(as.character(x)))))
         p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
-        p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec,]+1)),axis.text.angle = 45, hjust = 1)
-        p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, top = g, heights = c(1,1))
+        p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec,]+1)),
+                                        axis.text.angle = 45, hjust = 1)
+        p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression, top = g, 
+                                     heights = c(1,1))
         return(p)
       })
       return(p)
@@ -81,9 +97,10 @@ plotAnnotation <- function(se, gene_id, transcript_id){
 #' @noRd
 plotPCA <- function(se, count.data, group.variable){
   if(!is.null(group.variable)){
-    sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",group.variable)]))
+    sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",
+                                                              group.variable)]))
     setnames(sample.info, seq_len(2), c("runname","groupVar"))
-    pca_result <- prcomp(t(as.matrix(count.data))) ## can't really cluster them nicely
+    pca_result <- prcomp(t(as.matrix(count.data))) 
     plotData <- data.table(pca_result$x[,seq_len(2)],keep.rownames = TRUE)
     setnames(plotData, 'rn','runname')
     if(!all(plotData$runname %in% sample.info$runname)){
@@ -114,29 +131,40 @@ plotPCA <- function(se, count.data, group.variable){
 #' @noRd
 plotHeatmap <- function(se, count.data, group.variable){
   corData <- cor(count.data,method = "spearman")
-  col_fun = circlize::colorRamp2(seq(floor(range(corData)[1]*10)/10,ceiling(range(corData)[2]*10)/10,length.out = 8), RColorBrewer::brewer.pal(8,"Blues"))
+  col_fun = circlize::colorRamp2(seq(floor(range(corData)[1]*10)/10,
+                                     ceiling(range(corData)[2]*10)/10,length.out = 8), 
+                                 RColorBrewer::brewer.pal(8,"Blues"))
   if(!is.null(group.variable)){
     sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",group.variable)]))
     setnames(sample.info, seq_len(2), c("runname","groupVar"))
     if(!all(colnames(count.data) %in% sample.info$runname)){
       stop("all(colnames(count.data) %in% sample.info$runname) is not satisfied!")
     }
-    topAnnotation <- ComplexHeatmap::HeatmapAnnotation(group = sample.info[match(colnames(count.data), runname)]$groupVar)
+    topAnnotation <- ComplexHeatmap::HeatmapAnnotation(group = 
+                                                         sample.info[match(colnames(count.data), runname)]$groupVar)
     p <- ComplexHeatmap::Heatmap(corData, name = "Sp.R", col = col_fun,
-                                 top_annotation = topAnnotation, show_row_names = FALSE,column_names_gp = grid::gpar(fontsize = 9))
+                                 top_annotation = topAnnotation, show_row_names = FALSE,
+                                 column_names_gp = grid::gpar(fontsize = 9))
   }else{
-    p <- ComplexHeatmap::Heatmap(corData, name = "Sp.R", col = col_fun, show_row_names = FALSE,column_names_gp = grid::gpar(fontsize = 9))
+    p <- ComplexHeatmap::Heatmap(corData, name = "Sp.R", col = col_fun, 
+                                 show_row_names = FALSE,column_names_gp = grid::gpar(fontsize = 9))
   }
   return(p)
 }
 #' plotSEOuptut
 #' @title plot.bambu
-#' @param se An summarized experiment object obtained from \code{\link{bambu}} or \code{\link{transcriptToGeneExpression}}.
-#' @param group.variable Variable for grouping in plot, has be to provided if choosing to plot PCA.
-#' @param type plot type variable, a values of annotation for a single gene with heatmap for isoform expressions,  pca,  or heatmap, see details.
-#' @param gene_id specifying the gene_id for plotting gene annotation, either gene_id or transcript_id has to be provided when type = "annotation".
-#' @param transcript_id specifying the transcript_id for plotting transcript annotation, either gene_id or transcript_id has to be provided when type = "annotation"
-#' @details \code{\link{type}} indicates the type of plots to be plotted. There are two types of plots can be chosen, PCA or heatmap.
+#' @param se An summarized experiment object obtained from \code{\link{bambu}} 
+#' or \code{\link{transcriptToGeneExpression}}.
+#' @param group.variable Variable for grouping in plot, has be to provided if 
+#' choosing to plot PCA.
+#' @param type plot type variable, a values of annotation for a single gene with 
+#' heatmap for isoform expressions,  pca,  or heatmap, see details.
+#' @param gene_id specifying the gene_id for plotting gene annotation, either 
+#' gene_id or transcript_id has to be provided when type = "annotation".
+#' @param transcript_id specifying the transcript_id for plotting transcript
+#' annotation, either gene_id or transcript_id has to be provided when type = "annotation"
+#' @details \code{\link{type}} indicates the type of plots to be plotted. There 
+#' are two types of plots can be chosen, PCA or heatmap.
 #' @return A heatmap plot for all samples
 #' @importFrom stats prcomp
 #' @importFrom ggplot2 ggplot
@@ -154,7 +182,8 @@ plotHeatmap <- function(se, count.data, group.variable){
 #' assays(se)$CPM[,2]  <- pmax(0, rnorm(length(assays(se)$CPM[,2]),
 #' assays(se)$CPM[,2],10))
 #' plot.bambu(se, type = "heatmap")
-plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","heatmap"), gene_id = NULL, transcript_id = NULL){
+plot.bambu <- function(se,group.variable = NULL, type = c("annotation","pca","heatmap"),
+                       gene_id = NULL, transcript_id = NULL){
   if(type == "annotation"){
     p <- plotAnnotation(se, gene_id, transcript_id)    
     return(p)
