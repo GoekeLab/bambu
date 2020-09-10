@@ -1,6 +1,13 @@
-################################################################################
-#calculate distance between first and last exon matches (Sep 1, 2020)
-################################################################################
+#' calculate distance between first and last exon matches
+#' @param uniqueJunctions uniqueJunctions
+#' @param unlisted_junctions unlisted_junctions
+#' @param readGrgList reads GRangesList
+#' @param firstseg firstseg
+#' @param intronStartTMP intronStartTMP
+#' @param intronEndTMP intronEndTMP
+#' @param readStrand readStrand
+#' @param allJunctionToUniqueJunctionOverlap allJunctionToUniqueJunctionOverlap
+#' @noRd
 createReadTable <- function(uniqueJunctions,unlisted_junctions,readGrgList,
                             firstseg,intronStartTMP,intronEndTMP,readStrand,
                             allJunctionToUniqueJunctionOverlap){
@@ -81,9 +88,12 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
   options(scipen = 0)
   return(exonsByReadClass)
 }
-################################################################################
-#initiate the hits dataframe (Sep 2, 2020)
-################################################################################
+
+#' initiate the hits dataframe
+#' @param hitsWithin hitsWithin
+#' @param grangesReference grangesReference
+#' @param stranded stranded
+#' @noRd
 initiateHitsDF <- function(hitsWithin, grangesReference, stranded){
   hitsDF <- tbl_df(hitsWithin)
   hitsDF$chr <- as.factor(seqnames(grangesReference)[subjectHits(hitsWithin)])
