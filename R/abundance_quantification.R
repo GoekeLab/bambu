@@ -1,6 +1,7 @@
 #' Nanopore transcript abundance quantification
 #' @title transcript_abundance_quantification
-#' @param method A string variable indicates the whether a one-step or two-step approach will be used. See \code{Details}
+#' @param method A string variable indicates the whether a one-step or two-step 
+#' approach will be used. See \code{Details}
 #' for details on one-step and two-step approach.
 #' @param readClassDt A \code{data.table} with columns
 #' @importFrom BiocParallel bplapply
@@ -35,8 +36,10 @@ abundance_quantification <- function(readClassDt,ncore = 1,
   
 
 
-  estimates <- list(do.call('rbind',lapply(seq_along(emResultsList), function(x) emResultsList[[x]][[1]])),
-                    do.call('rbind',lapply(seq_along(emResultsList), function(x) emResultsList[[x]][[2]])))
+  estimates <- list(do.call('rbind',lapply(seq_along(emResultsList), 
+                                           function(x) emResultsList[[x]][[1]])),
+                    do.call('rbind',lapply(seq_along(emResultsList), 
+                                           function(x) emResultsList[[x]][[2]])))
 
   return(estimates)
 }
@@ -54,7 +57,8 @@ run_parallel <- function(g,conv,bias,maxiter, readClassDt){
                                gene_sid = g,
                                ntotal = sum(tmp$nobs)))
   }else{
-    tmp_wide <- dcast(tmp[order(nobs)], tx_sid~read_class_sid, fun.aggregate = length,
+    tmp_wide <- dcast(tmp[order(nobs)], tx_sid~read_class_sid, 
+                      fun.aggregate = length,
                       value.var = 'nobs')
     a_mat <- tmp_wide[,-1,with=FALSE]
     setDF(a_mat)
