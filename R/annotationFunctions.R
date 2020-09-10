@@ -138,7 +138,7 @@ includeOverlapReadClass <- function(candidateList,filteredOverlapList){
 #' @noRd
 assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALSE){
   if(is.null(names(exByTx))){
-    names(exByTx) <- 1:length(exByTx)
+    names(exByTx) <- seq_along(exByTx)
   }
   exonSelfOverlaps <- findOverlaps(exByTx,
                                    exByTx,
