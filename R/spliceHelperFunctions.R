@@ -99,21 +99,19 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
 #' annotate splice overlap by distance
 #' @noRd
 annotateSpliceOverlapsByDist <-function(query, subject) {
-  queryStartRng <- ranges(selectStartExonsFromGrangesList(query, exonNumber = 1))
-  subjectStartRng <- ranges(selectStartExonsFromGrangesList(subject, exonNumber = 1))
-  queryEndRng<- ranges(selectEndExonsFromGrangesList(query, exonNumber = 1))
-  subjectEndRng <- ranges(selectEndExonsFromGrangesList(subject, exonNumber = 1))
   subjectFullRng <- ranges(subject)
   queryFullRng <- ranges(query)
+  strand <- as.character(unlist(unique(strand(query))))
+  queryStartRng <- selectStartExonFromRangesList(queryFullRng, strand)
+  subjectStartRng <- selectStartExonFromRangesList(subjectFullRng, strand)
+  queryEndRng <- selectEndExonFromRangesList(queryFullRng, strand)
+  subjectEndRng <- selectEndExonFromRangesList(subjectFullRng, strand)
   querySpliceRng <- ranges(myGaps(query))
   querySpliceRng[elementNROWS(querySpliceRng)==0] <- IRanges(start=1,end=1) # add mock intron
   subjectSpliceRng <- ranges(myGaps(subject))
   subjectSpliceRng[elementNROWS(subjectSpliceRng)==0] <- IRanges(start=1,end=1)# add mock intron
-  ## start end 
-  annotatedTable <- tibble(queryId = names(query),
-                           subjectId = names(subject),
-                           strand = as.character(unlist(unique(strand(query)))))
   ###############################################################################
+  annotatedTable <- tibble(queryId = names(query), subjectId = names(subject), strand = strand)
   # calculate alternative First/last exons and annotate internal start and end first exons
   alterEndTable <- annotateAlterEndExons(queryStartRng, queryEndRng, queryFullRng,
                                          subjectStartRng, subjectEndRng, subjectFullRng, annotatedTable$strand)
@@ -477,9 +475,33 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=
   return(relist(unlistedExons, partitioning))
 }
 
+#' Function that selects the first exon from an IRangesList object (exon_rank is required)
+#' @param range IRangesList
+#' @param stand strand
+#' @noRd
+selectStartExonFromRangesList <- function(range, strand){
+  strand <- as.character(unlist(unique(strand(query))))
+  posStrandRng <- range[which(strand == "+")]
+  posStrandRng <- posStrandRng[which(start(posStrandRng) == min(start(posStrandRng)))]
+  negStrandRng <- range[which(strand == "-")]
+  negStrandRng <- negStrandRng[which(end(negStrandRng) == max(end(negStrandRng)))]
+  startRng <- merge(posStrandRng,negStrandRng)
+  return (startRng)
+}
 
-
-
+#' Function that selects the last exon from an IRangesList object (exon_rank is required)
+#' @param range IRangesList
+#' @param stand strand
+#' @noRd
+selectEndExonFromRangesList <- function(range, strand){
+  strand <- as.character(unlist(unique(strand(query))))
+  posStrandRng <- range[which(strand == "+")]
+  posStrandRng <- posStrandRng[which(end(posStrandRng) == max(end(posStrandRng)))]
+  negStrandRng <- range[which(strand == "-")]
+  negStrandRng <- negStrandRng[which(start(negStrandRng) == min(start(negStrandRng)))]
+  startRng <- merge(posStrandRng,negStrandRng)
+  return (startRng)
+}
 
 #' Function that selects the first N exons from a grangeslist object (exon_rank is required)
 #' @param grangesList grangesList
