@@ -34,8 +34,6 @@
 #' @examples
 #' 
 #' ## =====================
-#' ## Minimum read support 5
-#' ## Increase EM convergence threshold to 10^(-6)
 #'  test.bam <- system.file("extdata", 
 #'  "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", 
 #'  package = "bambu")
