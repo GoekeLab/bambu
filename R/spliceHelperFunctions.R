@@ -480,12 +480,12 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=
 #' @param stand strand
 #' @noRd
 selectStartExonFromRangesList <- function(range, strand){
-  strand <- as.character(unlist(unique(strand(query))))
   posStrandRng <- range[which(strand == "+")]
-  posStrandRng <- posStrandRng[which(start(posStrandRng) == min(start(posStrandRng)))]
   negStrandRng <- range[which(strand == "-")]
   negStrandRng <- negStrandRng[which(end(negStrandRng) == max(end(negStrandRng)))]
-  startRng <- merge(posStrandRng,negStrandRng)
+  startRng <- c(posStrandRng[which(start(posStrandRng) == min(start(posStrandRng)))],
+                negStrandRng[which(end(negStrandRng) == max(end(negStrandRng)))])
+  startRng <- startRng[sort(order(startRng)[names(range)])]
   return (startRng)
 }
 
@@ -494,13 +494,12 @@ selectStartExonFromRangesList <- function(range, strand){
 #' @param stand strand
 #' @noRd
 selectEndExonFromRangesList <- function(range, strand){
-  strand <- as.character(unlist(unique(strand(query))))
   posStrandRng <- range[which(strand == "+")]
-  posStrandRng <- posStrandRng[which(end(posStrandRng) == max(end(posStrandRng)))]
   negStrandRng <- range[which(strand == "-")]
-  negStrandRng <- negStrandRng[which(start(negStrandRng) == min(start(negStrandRng)))]
-  startRng <- merge(posStrandRng,negStrandRng)
-  return (startRng)
+  endRng <- c(posStrandRng[which(end(posStrandRng) == max(end(posStrandRng)))], 
+              negStrandRng[which(start(negStrandRng) == min(start(negStrandRng)))])
+  endRng <- endRng[sort(order(endRng)[names(range)])]
+  return (endRng)
 }
 
 #' Function that selects the first N exons from a grangeslist object (exon_rank is required)
