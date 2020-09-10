@@ -10,8 +10,7 @@ test_that("isore.constructReadClasses completes successfully", {
 
   seReadClassUnstrandedExpected <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
   seReadClassStrandedExpected <- readRDS(system.file("extdata", "seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-  seReadClassFromBsgenomeExpected <- readRDS(system.file("extdata", "seReadClassBsgenomeStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-
+ 
   seReadClassUnstranded <- isore.constructReadClasses(readGrgList = readGrgList,
                                                       runName ='SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_unstranded',
                                                       annotationGrangesList = gr,
@@ -35,17 +34,6 @@ test_that("isore.constructReadClasses completes successfully", {
   names(seReadClassStranded@rowRanges@elementMetadata@listData$intronStarts) <- NULL
   names(seReadClassStranded@rowRanges@elementMetadata@listData$intronEnds) <- NULL
   expect_equal(seReadClassStranded, seReadClassStrandedExpected)
-
-  seReadClassFromBsgenome <- isore.constructReadClasses(readGrgList = readGrgList,
-                                                        runName = 'SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_stranded',
-                                                        annotationGrangesList = gr,
-                                                        genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38",
-                                                        stranded = TRUE,
-                                                        ncore = 1,
-                                                        verbose = FALSE)
-  names(seReadClassFromBsgenome@rowRanges@elementMetadata@listData$intronStarts) <- NULL
-  names(seReadClassFromBsgenome@rowRanges@elementMetadata@listData$intronEnds) <- NULL
-  expect_equal(seReadClassFromBsgenome,seReadClassFromBsgenomeExpected)
 
 })
 
