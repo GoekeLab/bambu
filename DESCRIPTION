@@ -32,10 +32,14 @@ Suggests:
 Enhances: parallel
 SystemRequirements:
 biocViews: 
+    Alignment,
+    Coverage, 
+    DifferentialExpression, 
     FeatureExtraction, 
     GeneExpression, 
     GenomeAnnotation,
     ImmunoOncology,
+    MultipleComparison,
     Normalization, 
     RNASeq, 
     Regression, 
