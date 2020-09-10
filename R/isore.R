@@ -622,7 +622,7 @@ extdannotateSplicedReads <- function(exonsByReadClass, intronsByReadClass, annot
 assignGeneIDbyMaxMatch <- function(unlistedIntrons, unlistedIntronsAnnotations, 
                                    overlapsNewIntronsAnnotatedIntrons, exonsByReadClass,
                                    seFilteredSpliced, annotationGrangesList, min.exonDistance){
-  maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
+  maxGeneCountPerNewTx <- as_tibble(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
                                             geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)],
                                             stringsAsFactors=FALSE)) %>% 
     group_by(txId, geneId) %>%
