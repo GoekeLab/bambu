@@ -1,6 +1,10 @@
-################################################################################
-#calculate stranded read counts (Sep 8, 2020)
-################################################################################
+#' calculate stranded read counts
+#' @param uniqueJunctions uniqueJunctions
+#' @param junctionMatchList junctionMatchList
+#' @param genomeSequence genomeSequence
+#' @param unstranded_unlisted_junctions unstranded_unlisted_junctions
+#' @param unlisted_junction_granges unlisted_junction_granges
+#' @noRd
 calculateStrandedReadCounts <- function(uniqueJunctions, junctionMatchList, genomeSequence,
                                         unstranded_unlisted_junctions, unlisted_junction_granges){
   junctionMatchList <- as(findMatches(uniqueJunctions, unstranded_unlisted_junctions), "List")
@@ -38,6 +42,7 @@ calculateStrandedReadCounts <- function(uniqueJunctions, junctionMatchList, geno
   strand(uniqueJunctions)<-uniqueJunctions$spliceStrand
   return (uniqueJunctions)
 }
+
 #' Create Junction tables from unlisted junction granges
 #' @importFrom BiocParallel bppram bpvec
 #' @noRd
@@ -91,9 +96,15 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
   }
   return(uniqueJunctions)
 }
-#############################################################################################
-# update junctions object if strand prediction improves overlap with annotations(Sep 8, 2020)
-#############################################################################################
+
+#' update junctions object if strand prediction improves overlap with annotations
+#' @param annotatedIntronNumber annotatedIntronNumber
+#' @param uniqueJunctions uniqueJunctions
+#' @param uniqueJunctionsUpdate uniqueJunctionsUpdate
+#' @param uniqueAnnotatedIntrons uniqueAnnotatedIntrons
+#' @param strandStep strandStep
+#' @param verbose verbose
+#' @noRd
 updateJunctionwimprove <- function(annotatedIntronNumber, uniqueJunctions,
                                    uniqueJunctionsUpdate, uniqueAnnotatedIntrons, 
                                    strandStep, verbose){
@@ -177,10 +188,11 @@ evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons, ignore.s
   return(table(!is.na(GenomicRanges::match(intronRanges, uniqueAnnotatedIntrons,ignore.strand=ignore.strand))))
 }
 
-
-#############################################################################################
-# test start/end splice site given close by splice site (Sep 8, 2020)
-#############################################################################################
+#' test start splice site given close by splice site
+#' @param annotatedJunctionsStart annotatedJunctionsStart
+#' @param annotatedJunctions annotatedJunctions
+#' @param junctionModel junctionModel
+#' @noRd
 testStartSpliceSites <- function(annotatedJunctionsStart, annotatedJunctions, junctionModel){
   mySet.all=((annotatedJunctionsStart$distStart.start!=0)&annotatedJunctionsStart$spliceStrand!='*'&annotatedJunctionsStart$startScore>0&(annotatedJunctionsStart$distStart.start<15))
   annotatedJunctions$spliceSitePredictionStart.start <- rep(NA, length(annotatedJunctions))
@@ -225,6 +237,12 @@ testStartSpliceSites <- function(annotatedJunctionsStart, annotatedJunctions, ju
   outputList <- list("annotatedJunctions" = annotatedJunctions, "junctionModel" = junctionModel)
   return (outputList)
 }
+
+#' test end splice site given close by splice site
+#' @param annotatedJunctionsEnd annotatedJunctionsEnd
+#' @param annotatedJunctions annotatedJunctions
+#' @param junctionModel junctionModel
+#' @noRd
 testEndSpliceSites <- function(annotatedJunctionsEnd, annotatedJunctions, junctionModel){
   mySet.all=(annotatedJunctionsEnd$distEnd.start!=0&annotatedJunctionsEnd$spliceStrand!='*'&annotatedJunctionsEnd$endScore>0&(annotatedJunctionsEnd$distEnd.start<15))
   annotatedJunctions$spliceSitePredictionEnd.start <- rep(NA, length(annotatedJunctions))
@@ -269,6 +287,7 @@ testEndSpliceSites <- function(annotatedJunctionsEnd, annotatedJunctions, juncti
   outputList <- list("annotatedJunctions" = annotatedJunctions, "junctionModel" = junctionModel)
   return (outputList)
 }
+
 #' Predict splicing junctions
 #' @noRd
 predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbose = FALSE){
@@ -338,9 +357,11 @@ fitBinomialModel <- function(labels.train, data.train, data.test, show.cv=TRUE, 
   return(list(predictions,cv.fit))
 }
 
-################################################################################
-# use reference junction with higher read count/score for conflict (Sep 8, 2020)
-################################################################################
+#' use reference junction with higher read count/score for conflict
+#' @param junctions junctions
+#' @param candidateJunctionsMinus candidateJunctionsMinus
+#' @param candidateJunctionsPlus candidateJunctionsPlus
+#' @noRd
 useRefJunctionForConflict <- function(junctions, candidateJunctionsMinus, candidateJunctionsPlus){
   conflictJunctions <- junctions[names(candidateJunctionsMinus[!is.na(candidateJunctionsMinus$mergedHighConfJunctionId)][which(names(candidateJunctionsMinus)[!is.na(candidateJunctionsMinus$mergedHighConfJunctionId)] %in% names(candidateJunctionsPlus)[!is.na(candidateJunctionsPlus$mergedHighConfJunctionId)])])]
   scoreDiff <- junctions[candidateJunctionsPlus[names(conflictJunctions)]$mergedHighConfJunctionId]$score - junctions[candidateJunctionsMinus[names(conflictJunctions)]$mergedHighConfJunctionId]$score
@@ -361,6 +382,7 @@ useRefJunctionForConflict <- function(junctions, candidateJunctionsMinus, candid
   junctions$mergedHighConfJunctionId <-  as.character(mergedHighConfJunctionId) 
   return (junctions)
 }
+
 #'  this function adds "mergedHighConfJunctionId" to the junciton list which contains the ID of the most likely high confident junction that each junction originates from
 #' @noRd
 findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALSE) {
@@ -412,7 +434,6 @@ findHighConfidenceJunctions <- function(junctions, junctionModel, verbose = FALS
   }
   return(junctions[,'mergedHighConfJunctionId'])
 }
-
 
 #' Evaluate performance
 #' @noRd

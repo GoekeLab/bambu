@@ -17,9 +17,14 @@
 ## include test cases to measure accuracy against default??
 ## better strand prediction for transcripts without clear strand from junction
 
-################################################################################
-#create transcript model for splice junction reads (Sep 6, 2020)
-################################################################################
+#' create transcript model for splice junction reads
+#' @param readGrgList reads GRangesList
+#' @param annotationGrangesList annotation GRangesList
+#' @param unlisted_junctions unlisted_junctions
+#' @param uniqueJunctions uniqueJunctions
+#' @param stranded stranded
+#' @param verbose verbose
+#' @noRd
 createModelforJunctionReads <- function(readGrgList, annotationGrangesList, unlisted_junctions,
                                         uniqueJunctions, stranded, verbose){
   seqlevels(unlisted_junctions) <- seqlevels(readGrgList)
@@ -53,7 +58,11 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList, unli
   #gc(verbose = FALSE) 
   return (readClassListSpliced)
 }
-#Nested within the function above#
+
+#' correct junction from prediction
+#' @param uniqueJunctions uniqueJunctions
+#' @param verbose verbose
+#' @noRd
 correctJunctionFromPrediction <- function(uniqueJunctions,verbose){
   start.ptm <- proc.time()
   if(sum(uniqueJunctions$annotatedJunction)>5000 &sum(!uniqueJunctions$annotatedJunction)>4000){  ## these thresholds ensure that enough data is present to estimate model parameters for junction correction
@@ -88,7 +97,7 @@ correctJunctionFromPrediction <- function(uniqueJunctions,verbose){
   #gc(verbose = FALSE)
   return (uniqueJunctions)
 }
-#####
+
 #' Isoform reconstruction using genomic alignments
 #' @param readGrgList readGrgList
 #' @param runName runName
@@ -147,9 +156,12 @@ isore.constructReadClasses <- function(readGrgList, runName='sample1', annotatio
   return(se)
 }
 
-################################################################################
-#create SE object for spliced Tx (Sep 6, 2020)
-################################################################################
+#' create SE object for spliced Tx
+#' @param rowData.spliced rowData.spliced
+#' @param readClassSeRef reference readClass SummarizedExperiment
+#' @param readClassSe readClass SummarizedExperiment
+#' @param colDataCombined colDataCombined
+#' @noRd
 createSEforSplicedTx <- function(rowData.spliced, readClassSeRef, readClassSe, colDataCombined){
   counts.splicedRef <- matrix(0, dimnames = list(seq_len(nrow(rowData.spliced)),
                                                  rownames(colData(readClassSeRef))),
@@ -194,9 +206,14 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef, readClassSe, c
   gc(verbose = FALSE)
   return (se.spliced)
 }
-################################################################################
-#create SE for unspliced Tx (Sep 6, 2020)
-################################################################################
+
+#' prepare SE for unspliced Tx
+#' @param unsplicedRanges unsplicedRanges
+#' @param combinedSingleExonRanges combinedSingleExonRanges 
+#' @param readClass readClass
+#' @param stranded stranded
+#' @param readClassSeTBL default NULL
+#' @noRd
 prepSEforUnsplicedTx <- function(unsplicedRanges, combinedSingleExonRanges, readClass, stranded, readClassSeTBL = NULL){
   overlapToCombined <-findOverlaps(unsplicedRanges,
                                    combinedSingleExonRanges,
@@ -235,6 +252,18 @@ prepSEforUnsplicedTx <- function(unsplicedRanges, combinedSingleExonRanges, read
                     "end.unsplicedSum" = end.unsplicedSum)
   return (tableList)
 }
+
+#' create SE object for spliced Tx
+#' @param readClassSeRef reference readClass SummarizedExperiment
+#' @param readClassSe readClass SummarizedExperiment
+#' @param readClassSeTBL readClassSeTBL
+#' @param unsplicedRangesRef unsplicedRangesRef
+#' @param unsplicedRangesNew unsplicedRangesNew
+#' @param combinedSingleExonRanges combinedSingleExonRanges
+#' @param rowData.unspliced rowData.unspliced
+#' @param stranded stranded
+#' @param colDataCombined colDataCombined
+#' @noRd
 createSEforUnsplicedTx <- function(readClassSeRef, readClassSe, readClassSeTBL,
                                    unsplicedRangesRef, unsplicedRangesNew, 
                                    combinedSingleExonRanges, colDataCombined, 
@@ -285,7 +314,7 @@ createSEforUnsplicedTx <- function(readClassSeRef, readClassSe, readClassSeTBL,
                                        colData = colDataCombined)
   return (se.unspliced)
 }
-####
+
 #' Combine transcript candidates across samples
 #' @param readClassSe readClassSe
 #' @param readClassRef readClassRef
@@ -343,9 +372,11 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
   }
 }
 
-################################################################################
-#create exonsByReadClass (Sep 7, 2020)
-################################################################################
+
+#' create exonsByReadClass
+#' @param seFilteredSpliced a SummarizedExperiment object for filtered spliced reads
+#' @param annotationGrangesList annotation GRangesList object
+#' @noRd
 createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList){
   exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts, as.integer(rowData(seFilteredSpliced)$end + 1), sep=',')
   exonStartsShifted <- paste(as.integer(rowData(seFilteredSpliced)$start - 1), rowData(seFilteredSpliced)$intronEnds, sep=',')
@@ -367,9 +398,15 @@ createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList){
   seqlevels(exonsByReadClass) <-  unique(c(seqlevels(exonsByReadClass), seqlevels(annotationGrangesList)))
   return (exonsByReadClass)
 }
-################################################################################
-#extended annotations for spliced reads (Sep 6, 2020)
-################################################################################
+
+#' extended annotations for spliced reads
+#' @param exonsByReadClass exonsByReadClass
+#' @param intronsByReadClass intronsByReadClass
+#' @param annotationGrangesList annotationGrangesList
+#' @param seFilteredSpliced seFilteredSpliced
+#' @param min.exonDistance min.exonDistance
+#' @param verbose verbose
+#' noRd
 extdannotateSplicedReads <- function(exonsByReadClass, intronsByReadClass, annotationGrangesList, 
                                      seFilteredSpliced, min.exonDistance, verbose){
   ovExon <- findSpliceOverlapsQuick(cutStartEndFromGrangesList(exonsByReadClass),
@@ -449,9 +486,15 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons, unlistedIntronsAnnotations,
   return (distNewTxByQuery)
 }
 
-################################################################################
-#extended annotations for unspliced reads (Sep 6, 2020)
-################################################################################
+#' extended annotations for unspliced reads
+#' @param se a summarized experient object
+#' @param seFilteredSpliced seFilteredSpliced
+#' @param exonsByReadClass exonsByReadClass
+#' @param annotationGrangesList annotationGrangesList
+#' @param filterSet1 filterSet1
+#' @param min.exonOverlap min.exonOverlap
+#' @param verbose verbose
+#' noRd
 extdannotateUnsplicedReads <- function(se, seFilteredSpliced, exonsByReadClass, 
                                        annotationGrangesList, filterSet1, 
                                        min.exonOverlap, verbose){
@@ -490,9 +533,15 @@ extdannotateUnsplicedReads <- function(se, seFilteredSpliced, exonsByReadClass,
   outputList <- list("seCombined" = seCombined, "exonRangesCombined" = exonRangesCombined)
   return (outputList)
 }
-################################################################################
-#assigned read classes to annotated and new gene IDs (Sep 6, 2020)
-################################################################################
+
+#' assigned read classes to annotated and new gene IDs
+#' @param seCombined seCombined
+#' @param exonRangesCombined exonRangesCombined
+#' @param annotationGrangesList annotationGrangesList
+#' @param min.exonOverlap min.exonOverlap
+#' @param prefix prefix
+#' @param verbose verbose
+#' @noRd
 assignGeneIDexonMatch <- function(seCombined, exonRangesCombined, annotationGrangesList, 
                                   min.exonOverlap, prefix, verbose){
   tart.ptm <- proc.time()
@@ -523,9 +572,17 @@ assignGeneIDexonMatch <- function(seCombined, exonRangesCombined, annotationGran
   if(verbose)  message('assigned read classes to annotated and new gene IDs in ', round((end.ptm-start.ptm)[3]/60,1), ' mins.')
   return (seCombined)
 }
-################################################################################
-# calculated minimum equivalent classes for extended annotations (Sep 6, 2020)
-################################################################################
+
+#' calculate minimum equivalent classes for extended annotations
+#' @param seCombined seCombined
+#' @param annotationGrangesList annotationGrangesList
+#' @param exonRangesCombined exonRangesCombined
+#' @param prefix prefix
+#' @param min.readFractionByGene min.readFractionByGene
+#' @param min.sampleNumber min.sampleNumber
+#' @param remove.subsetTx remove.subsetTx
+#' @param verbose verbose
+#' @noRd
 filterTranscripts <- function(seCombined, annotationGrangesList, exonRangesCombined, prefix,
                               min.readFractionByGene, min.sampleNumber, remove.subsetTx, verbose){
   start.ptm <- proc.time()
@@ -574,6 +631,7 @@ filterTranscripts <- function(seCombined, annotationGrangesList, exonRangesCombi
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, c('TXNAME', 'GENEID', 'eqClass', 'newTxClass')]
   return (extendedAnnotationRanges)
 }
+
 #' Extend annotations
 #' @inheritParams bambu
 #' @noRd

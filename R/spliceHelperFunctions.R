@@ -1,14 +1,17 @@
 # Note: several of the functions in this file are adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
 # License	Artistic-2.0
 # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
-################################################################################
-#calculate distance between first and last exon matches (Sep 1, 2020)
-################################################################################
-#calculate distance between first and last exon matches:
-# distances corresponds to length of unique sequences in all matching exons
-# distance = width(element in query) + width(all matching elements in subject) - 2x width(intersection(query, subject)
-## subjectList <- unlist(subjectFull)
+
+#' calculate distance between first and last exon matches
+#' @param queryExon a query start or end exon ranges
+#' @param subjectExon a subject start or end exon ranges
+#' @param subjectFull a full subject ranges object
+#' @param subjectList a full subject list
+#' @noRd
 calculateFirstLastExonsDist <- function(queryExon,subjectExon,subjectFull,subjectList){
+    # distances corresponds to length of unique sequences in all matching exons
+    # distance = width(element in query) + width(all matching elements in subject) - 2x width(intersection(query, subject)
+    ## subjectList <- unlist(subjectFull)
     ExonMatch <- poverlaps(unlist(queryExon), unlist(subjectExon))
     queryExonList <- rep(unlist(queryExon),elementNROWS(subjectFull))
     myId <- rep(seq_along(queryExon),elementNROWS(subjectFull))

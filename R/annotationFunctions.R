@@ -118,9 +118,11 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
   
   return( tibble(queryTxId = names(eqClass), eqClass=unname(eqClass)))
 }
-################################################################################
-#calculate distance between first and last exon matches (Sep 2, 2020)
-################################################################################
+
+#' calculate distance between first and last exon matches
+#' @param candidateList candidateList
+#' @param filteredOverlapList filteredOverlapList
+#' @noRd
 includeOverlapReadClass <- function(candidateList,filteredOverlapList){
   temp <- left_join(candidateList, filteredOverlapList, by=c("subjectHits"="queryHits")) %>%
     group_by(queryHits) %>%
@@ -187,9 +189,14 @@ assignNewGeneIds <- function(exByTx, prefix='', minoverlap=5, ignore.strand=FALS
   candidateList <- dplyr::select(candidateList, readClassId, geneId)
   return(candidateList)
 }
-################################################################################
-#generate filtered annotation table (Sep 2, 2020)
-################################################################################
+
+#' generate filtered annotation table
+#' @param spliceOverlaps an output from  findSpliceOverlapsByDist()
+#' @param primarySecondaryDist default 5
+#' @param exByTx default NULL
+#' @param setTMP default NULL
+#' @param DistCalculated default FALSE
+#' @noRd
 genFilteredAnTable <- function(spliceOverlaps,primarySecondaryDist,exByTx = NULL,setTMP = NULL,DistCalculated = FALSE){
   ## initiate the table
   if (isFALSE(DistCalculated)){

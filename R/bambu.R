@@ -98,7 +98,18 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
   }
   return(countsSe)
 }
-#####functions used in bambu####
+
+#' process reads
+#' @param reads path to BAM file(s)
+#' @param annotations path to GTF file or TxDb object
+#' @param genomeSequence path to FA file or BSgenome object
+#' @param readClass.outputDir path to readClass output directory
+#' @param yieldSize yieldSize
+#' @param bpParameters BioParallel parameter
+#' @param stranded stranded
+#' @param ncore ncore
+#' @param verbose verbose
+#' noRd
 processReads <- function(reads, annotations, genomeSequence, readClass.outputDir,
                          yieldSize, bpParameters, stranded, ncore, verbose){
   if(!is.null(reads)){  # calculate readClass objects
@@ -149,6 +160,11 @@ processReads <- function(reads, annotations, genomeSequence, readClass.outputDir
   }
   return (readClassList)
 }
+
+#' check parameters for isore and em
+#' @param Parameters parameters inputted by user
+#' @param Parameters.default default parameters
+#' @noRd
 checkParameters <- function(Parameters, Parameters.default){
   if(!is.null(Parameters)){
     for(i in names(Parameters)) {
@@ -158,6 +174,13 @@ checkParameters <- function(Parameters, Parameters.default){
   Parameters <- Parameters.default
   return (Parameters)
 }
+
+#' check valid inputs
+#' @param annotations path to GTF file or TxDb object
+#' @param reads path to BAM file(s)
+#' @param readClass.file path to readClass file(s)
+#' @param readClass.outputDir path to readClass output directory
+#' @noRd
 checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir){
   #===# Check annotation inputs #===#
   if(!is.null(annotations)){
@@ -192,7 +215,7 @@ checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir)
   }
   return (annotations)
 }
-#####
+
 #' Extend annotations
 #' @inheritParams bambu
 #' @noRd

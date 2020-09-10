@@ -12,9 +12,12 @@ plot <- function(se, ...,group.variable = NULL, type = c("annotation","pca","hea
     UseMethod("plot")
    }
 
-################################################################################
-#plot annotation (Sep 2, 2020)
-################################################################################
+
+#' plot annotation
+#' @param se a SummarizedExperiment object
+#' @param gene_id a list of gene id(s)
+#' @param transcript_id a list of transcript id(s)
+#' @noRd
 plotAnnotation <- function(se, gene_id, transcript_id){
   if(is.null(gene_id)&(is.null(transcript_id))){
     stop("Please provide the gene_id(s) of the gene of interest or transcript_id(s) for the transcripts of interest!")
@@ -61,9 +64,12 @@ plotAnnotation <- function(se, gene_id, transcript_id){
     }
   }
 }
-################################################################################
-#plot PCA (Sep 2, 2020)
-################################################################################
+
+#' plot PCA
+#' @param se a SummarizedExperiment object
+#' @param count.data a dataframe of log2CPM
+#' @param group.variable the sample groups
+#' @noRd
 plotPCA <- function(se, count.data, group.variable){
   if(!is.null(group.variable)){
     sample.info <- as.data.table(as.data.frame(colData(se)[,c("name",group.variable)]))
@@ -92,9 +98,11 @@ plotPCA <- function(se, count.data, group.variable){
   }
   return(p)
 }
-################################################################################
-#plot heatmap  (Sep 2, 2020)
-################################################################################
+#' plot heatmap
+#' @param se a SummarizedExperiment object
+#' @param count.data a dataframe of log2CPM
+#' @param group.variable the sample groups
+#' @noRd
 plotHeatmap <- function(se, count.data, group.variable){
   corData <- cor(count.data,method = "spearman")
   col_fun = circlize::colorRamp2(seq(floor(range(corData)[1]*10)/10,ceiling(range(corData)[2]*10)/10,length.out = 8), RColorBrewer::brewer.pal(8,"Blues"))
