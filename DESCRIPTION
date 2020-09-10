@@ -55,25 +55,28 @@ LinkingTo:
     RcppArmadillo,
     RcppProgress
 Imports:
-    data.table,
-    dplyr,
     AnnotationDbi,
-    GenomicRanges,
-    GenomeInfoDb,
     BiocGenerics,
     BiocManager,
-    GenomicFeatures,
-    ggplot2,
-    S4Vectors(>= 0.22.1), 
-    IRanges, 
+    BSgenome,
+    data.table,
+    dplyr,
     GenomicAlignments,
+    GenomicFeatures,
+    GenomeInfoDb,
+    GenomicRanges,
+    ggplot2,
     glmnet,
+    graphics,
+    IRanges, 
     methods,
+    progress,
     Rsamtools,
     Rcpp,
-    BSgenome,
     RcppArmadillo,
     RcppProgress,
-    progress
+    S4Vectors(>= 0.22.1),
+    stats,
+    utils
 VignetteBuilder: 
     knitr
