@@ -480,30 +480,21 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=
 #' @param stand strand
 #' @noRd
 selectStartExonFromRangesList <- function(range, strand){
-  for (i in 1:length(range)){
-    if (strand[i] != "-"){
-      range[i] <- range[i][start(range[i]) == min(start(range[i]))]
-    }else if (strand[i] == "-"){
-      range[i] <- range[i][end(range[i]) == max(end(range[i]))]
-    }
-  }
-  return (range)
+  startRng <- range[start(range) == min(start(range))]
+  startRng[which(strand == "-")] <- range[which(strand == "-")]
+  startRng <- startRng[end(startRng) == max(end(startRng))]
+  return (startRng)
 }
-
 
 #' Function that selects the last exon from an IRangesList object (exon_rank is required)
 #' @param range IRangesList
 #' @param stand strand
 #' @noRd
 selectEndExonFromRangesList <- function(range, strand){
-  for (i in 1:length(range)){
-    if (strand[i] != "-"){
-      range[i] <- range[i][end(range[i]) == max(end(range[i]))]
-    }else if (strand[i] == "-"){
-      range[i] <- range[i][start(range[i]) == min(start(range[i]))]
-    }
-  }
-  return (range)
+  endRng <- range[end(range) == max(end(range))]
+  endRng[which(strand == "-")] <- range[which(strand == "-")]
+  endRng <- endRng[start(endRng) == min(start(endRng))]
+  return(endRng)
 }
 
 #' Function that selects the first N exons from a grangeslist object (exon_rank is required)
