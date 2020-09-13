@@ -480,26 +480,30 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=
 #' @param stand strand
 #' @noRd
 selectStartExonFromRangesList <- function(range, strand){
-  posStrandRng <- range[which(strand == "+")]
-  negStrandRng <- range[which(strand == "-")]
-  negStrandRng <- negStrandRng[which(end(negStrandRng) == max(end(negStrandRng)))]
-  startRng <- c(posStrandRng[which(start(posStrandRng) == min(start(posStrandRng)))],
-                negStrandRng[which(end(negStrandRng) == max(end(negStrandRng)))])
-  startRng <- startRng[sort(order(startRng)[names(range)])]
-  return (startRng)
+  for (i in 1:length(range)){
+    if (strand[i] != "-"){
+      range[i] <- range[i][start(range[i]) == min(start(range[i]))]
+    }else if (strand[i] == "-"){
+      range[i] <- range[i][end(range[i]) == max(end(range[i]))]
+    }
+  }
+  return (range)
 }
+
 
 #' Function that selects the last exon from an IRangesList object (exon_rank is required)
 #' @param range IRangesList
 #' @param stand strand
 #' @noRd
 selectEndExonFromRangesList <- function(range, strand){
-  posStrandRng <- range[which(strand == "+")]
-  negStrandRng <- range[which(strand == "-")]
-  endRng <- c(posStrandRng[which(end(posStrandRng) == max(end(posStrandRng)))], 
-              negStrandRng[which(start(negStrandRng) == min(start(negStrandRng)))])
-  endRng <- endRng[sort(order(endRng)[names(range)])]
-  return (endRng)
+  for (i in 1:length(range)){
+    if (strand[i] != "-"){
+      range[i] <- range[i][end(range[i]) == max(end(range[i]))]
+    }else if (strand[i] == "-"){
+      range[i] <- range[i][start(range[i]) == min(start(range[i]))]
+    }
+  }
+  return (range)
 }
 
 #' Function that selects the first N exons from a grangeslist object (exon_rank is required)
