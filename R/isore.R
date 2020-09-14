@@ -1,30 +1,3 @@
-######
-## Todo (2020-03-19 JG):
-
-## 1) assign read classes to genes (read classes might be assigned to a gene
-## but not to a transcript, for example very low quality reads)
-## 2) add eqClass to mcols, and don't return distance table (only used for
-## internal filtering?) then the gene Id can also be returned for read
-## classes that don't match any transcript but that match a gene
-## 3) add filter options to bambu parameters
-##    currently some filters are still missing:
-##    a) new transcripts which are a subset of a new transcript
-##    b) single exon transcripts which overlap with new genes
-##    c) some filters might be too strict
-##    d) single exon new transcripts are still an issue
-## 4) (optional) summarise statistics: how many reads assigned
-## to known transcripts, how many assigned to new transcripts,
-## how many new transcripts, ... some other meaningful statistics?
-## 5) test cases
-## 6) clean up code
-
-## todo: add option to output reads corrected and stranded as bed file
-## todo: check code for unncecceary commands, columns that are not needed,
-## ways to improve speed remove redundancy
-## include test cases to measure accuracy against default??
-## better strand prediction for transcripts without clear strand from
-## junction
-
 #' create transcript model for splice junction reads
 #' @param readGrgList reads GRangesList
 #' @param annotationGrangesList annotation GRangesList
