@@ -58,6 +58,7 @@ plotAnnotation <- function(se, gene_id, transcript_id) {
         p_expression <- ggbio::autoplot(as.matrix(log2(assays(se)$CPM[gene_id, ] + 1)))
         p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression)
         return(p)
+        
     } else {
         if (!is.null(transcript_id)) {
             if (!all(transcript_id %in% rownames(se))) {
