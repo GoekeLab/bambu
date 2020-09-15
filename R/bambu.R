@@ -315,10 +315,13 @@ bambu.quantify <- function(readClass, annotations, emParameters,
 #' @inheritParams bambu
 #' @noRd
 bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, stranded = FALSE,ncore = 1, verbose = FALSE) {
+    readClass.outputDir = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore,
         verbose = verbose)
-    seqlevelsStyle(readGrgList) <- seqlevelsStyle(annotations)[1]
+    
+    if ( length(intersect(selevels(readGrgList),seqlevels(annotations))) == 0 )
+      stop("Error: please provide annotation with matched seqlevel styles.")
+    
     se <- isore.constructReadClasses(
         readGrgList = readGrgList,
         runName = names(bam.file)[1],
