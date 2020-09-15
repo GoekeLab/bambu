@@ -73,56 +73,41 @@
 #'     genomeSequence = fa.file, extendAnnotations = FALSE
 #' )
 #' @export
-bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NULL,
-                  annotations = NULL, genomeSequence = NULL, stranded = FALSE,
-                  ncore = 1, yieldSize = NULL, isoreParameters = NULL,
-                  emParameters = NULL, extendAnnotations = TRUE, verbose = FALSE) {
-    annotations <- checkInputs(annotations, reads, readClass.file, readClass.outputDir)
+bambu <- function(reads = NULL, readClass.file = NULL,
+    readClass.outputDir = NULL, annotations = NULL, genomeSequence = NULL,
+    stranded = FALSE, ncore = 1, yieldSize = NULL, isoreParameters = NULL,
+    emParameters = NULL, extendAnnotations = TRUE, verbose = FALSE) {
+    annotations <-
+      checkInputs(annotations, reads, readClass.file, readClass.outputDir)
     # ===# set default controlling parameters for isoform reconstruction  #===#
     isoreParameters.default <- list(
-        remove.subsetTx = TRUE, #
-        min.readCount = 2, #
-        min.readFractionByGene = 0.05, ##
-        min.sampleNumber = 1, #
-        min.exonDistance = 35, #
-        min.exonOverlap = 10, #
-        prefix = ""
-    ) ##
+        remove.subsetTx = TRUE, min.readCount = 2,
+        min.readFractionByGene = 0.05, min.sampleNumber = 1,
+        min.exonDistance = 35, min.exonOverlap = 10, prefix = "") 
     isoreParameters <- checkParameters(isoreParameters, isoreParameters.default)
     emParameters.default <- list(bias = TRUE, maxiter = 10000, conv = 10^(-4))
     emParameters <- checkParameters(emParameters, emParameters.default)
     rm.readClassSe <- FALSE # indicator to remove temporary read class files
     bpParameters <- BiocParallel::bpparam()
-    # ===# set parallel options: If more CPUs than samples available, use parallel
-    # computing on each sample, otherwise use parallel to distribute samples (more efficient)
+    #===# set parallel options: otherwise use parallel to distribute samples
     bpParameters$workers <- ifelse(length(reads) == 1, 1, ncore)
     bpParameters$progressbar <- (!verbose)
-    if (bpParameters$workers > 1) {
-        ncore <- 1
-    }
-    readClassList <- processReads(
-        reads, annotations, genomeSequence,
-        readClass.outputDir,
-        yieldSize, bpParameters, stranded,
-        ncore, verbose
-    )
+    if (bpParameters$workers > 1) ncore <- 1
+    readClassList <- processReads( reads, annotations, genomeSequence,
+        readClass.outputDir,yieldSize, bpParameters, stranded,
+        ncore, verbose)
     if (extendAnnotations) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
-            isoreParameters,
-            verbose = verbose
-        )
+            isoreParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
         gc(verbose = FALSE)
     }
     if (!verbose) message("Start isoform quantification")
     countsSe <- BiocParallel::bplapply(readClassList,
-        bambu.quantify,
-        annotations = annotations,
+        bambu.quantify,annotations = annotations,
         min.exonDistance = isoreParameters[["min.exonDistance"]],
-        emParameters = emParameters,
-        ncore = ncore,
-        verbose = verbose,
-        BPPARAM = bpParameters
+        emParameters = emParameters, ncore = ncore,
+        verbose = verbose, BPPARAM = bpParameters
     )
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
     rowRanges(countsSe) <- annotations
@@ -146,8 +131,7 @@ bambu <- function(reads = NULL, readClass.file = NULL, readClass.outputDir = NUL
 #' @param verbose verbose
 #' noRd
 processReads <- function(reads, annotations, genomeSequence,
-                         readClass.outputDir,
-                         yieldSize, bpParameters, stranded, ncore, verbose) {
+    readClass.outputDir, yieldSize, bpParameters, stranded, ncore, verbose) {
     if (!is.null(reads)) { # calculate readClass objects
         # ===# create BamFileList object from character #===#
         if (is(reads, "BamFile")) {
@@ -156,8 +140,8 @@ processReads <- function(reads, annotations, genomeSequence,
             } else {
                 yieldSize <- Rsamtools::yieldSize(reads)
             }
-            reads <- Rsamtools::BamFileList(reads)
-            names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
+        reads <- Rsamtools::BamFileList(reads)
+        names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
         } else if (is(reads, "BamFileList")) {
             if (!is.null(yieldSize)) {
                 Rsamtools::yieldSize(reads) <- yieldSize
@@ -167,34 +151,28 @@ processReads <- function(reads, annotations, genomeSequence,
         } else if (any(!grepl("\\.bam$", reads))) {
             stop("Bam file is missing from arguments.")
         } else {
-            if (is.null(yieldSize)) {
-                yieldSize <- NA
-            }
-            reads <- Rsamtools::BamFileList(reads, yieldSize = yieldSize)
-            names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
+            if (is.null(yieldSize)) yieldSize <- NA
+        reads <- Rsamtools::BamFileList(reads, yieldSize = yieldSize)
+        names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
         }
-        # ===# When more than 10 samples are provided, files will be written to a temporary directory
+        #===# When more than 10 samples, files saved to temporary directory
         if (length(reads) > 10 & (is.null(readClass.outputDir))) {
             readClass.outputDir <- tempdir()
             message(paste0("There are more than 10 samples, read class files
-                     will be temporarily saved to ", readClass.outputDir, " for more efficient processing"))
-            rm.readClassSe <- TRUE # remove temporary read class files from system
+                     will be temporarily saved to ", readClass.outputDir,
+                " for more efficient processing"))
+            rm.readClassSe <- TRUE # remove temporary read class files 
         }
         if (!verbose) message("Start generating read class files")
-        readClassList <- BiocParallel::bplapply(names(reads), function(bamFileName) {
-            bambu.constructReadClass(
-                bam.file = reads[bamFileName],
+        readClassList <- BiocParallel::bplapply(names(reads),
+          function(bamFileName) {
+            bambu.constructReadClass(bam.file = reads[bamFileName],
                 readClass.outputDir = readClass.outputDir,
-                genomeSequence = genomeSequence,
-                annotations = annotations,
-                stranded = stranded,
-                ncore = ncore,
-                verbose = verbose
-            )
-        },
-        BPPARAM = bpParameters
-        )
-        if (!verbose) message("Finished generating read classes from genomic alignments.")
+                genomeSequence = genomeSequence,annotations = annotations,
+                stranded = stranded,ncore = ncore,verbose = verbose)},
+        BPPARAM = bpParameters)
+        if (!verbose)
+          message("Finished generating read classes from genomic alignments.")
     } else {
         readClassList <- readClass.file
     }
@@ -228,10 +206,11 @@ checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir)
             annotations <- prepareAnnotations(annotations)
         } else if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
-            if (!all(c("TXNAME", "GENEID", "eqClass") %in% colnames(mcols(annotations)))) {
-                stop("The annotations is not properly prepared.\nPlease prepareAnnnotations
-             using prepareAnnotations or prepareAnnotationsFromGTF functions.")
-            }
+            if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
+                colnames(mcols(annotations)))) 
+                stop("The annotations is not properly prepared.\nPlease 
+                prepareAnnnotations using prepareAnnotations or 
+                prepareAnnotationsFromGTF functions.")
         } else {
             stop("The annotations is not a GRangesList object.")
         }
@@ -239,20 +218,17 @@ checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir)
         stop("Annotations is missing.")
     }
     ## When SE object from bambu.quantISORE is provided ##
-    if (!is.null(reads) & (!is.null(readClass.file))) {
-        stop("At least bam file or path to readClass file needs to be provided.")
-    }
+    if (!is.null(reads) & (!is.null(readClass.file))) stop("At least bam file or
+        path to readClass file needs to be provided.")
     # ===# Check whether provided readClass.outputDir exists  #===#
     if (!is.null(readClass.outputDir)) {
-        if (!dir.exists(readClass.outputDir)) {
+        if (!dir.exists(readClass.outputDir)) 
             stop("output folder does not exist")
-        }
     }
     # ===# Check whether provided readclass files are all in rds format #===#
     if (!is.null(readClass.file)) {
-        if (!all(grepl(".rds", readClass.file))) {
+        if (!all(grepl(".rds", readClass.file))) 
             stop("Read class files should be provided in rds format.")
-        }
     }
     return(annotations)
 }
@@ -261,7 +237,7 @@ checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir)
 #' @inheritParams bambu
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations,
-                                    isoreParameters, verbose = FALSE) {
+                                isoreParameters, verbose = FALSE) {
     combinedTxCandidates <- NULL
     start.ptm <- proc.time()
     for (readClassIndex in seq_along(readClassList)) {
@@ -277,7 +253,8 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         gc(verbose = FALSE)
     }
     end.ptm <- proc.time()
-    if (verbose) message("combining transcripts in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    if (verbose) message("combining transcripts in ",
+        round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     annotations <- isore.extendAnnotations(
         se = combinedTxCandidates,
         annotationGrangesList = annotations,
@@ -299,27 +276,27 @@ bambu.extendAnnotations <- function(readClassList, annotations,
 #' @inheritParams bambu
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters,
-                           min.exonDistance = 35, ncore = 1, verbose = FALSE) {
+    min.exonDistance = 35, ncore = 1, verbose = FALSE) {
     if (is.character(readClass)) {
         readClass <- readRDS(file = readClass)
         seqlevelsStyle(readClass) <- seqlevelsStyle(annotations)[1]
     }
 
     readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
-        min.exonDistance = min.exonDistance, verbose = verbose
-    )
+        min.exonDistance = min.exonDistance, verbose = verbose)
     gc(verbose = FALSE)
     readClassDt <- getEmptyClassFromSE(readClass, annotations)
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
     rm(readClass)
     gc(verbose = FALSE)
-    counts <- bambu.quantDT(readClassDt, emParameters = emParameters, ncore = ncore, verbose = verbose)
+    counts <- bambu.quantDT(readClassDt,
+        emParameters = emParameters,
+        ncore = ncore, verbose = verbose)
     rm(readClassDt)
     gc(verbose = FALSE)
-    if (length(setdiff(counts$tx_name, names(annotations))) > 0) {
+    if (length(setdiff(counts$tx_name, names(annotations))) > 0) 
         stop("The provided annotation is incomplete")
-    }
     counts <- counts[data.table(tx_name = names(annotations)), on = "tx_name"]
     rm(annotations)
     gc(verbose = FALSE)
@@ -327,12 +304,10 @@ bambu.quantify <- function(readClass, annotations, emParameters,
 
     seOutput <- SummarizedExperiment::SummarizedExperiment(
         assays =
-            SimpleList(
-                counts = matrix(counts$estimates, ncol = 1, dimnames = list(NULL, colNameRC)),
-                CPM = matrix(counts$CPM, ncol = 1, dimnames = list(NULL, colNameRC))
-            ),
-        colData = colDataRC
-    )
+            SimpleList(counts = matrix(counts$estimates, ncol = 1,
+                dimnames = list(NULL, colNameRC)),CPM = matrix(counts$CPM,
+                ncol = 1, dimnames = list(NULL, colNameRC))),
+        colData = colDataRC)
     return(seOutput)
 }
 
@@ -340,8 +315,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,
 #' @inheritParams bambu
 #' @noRd
 bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
-                                     readClass.outputDir = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
-    readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore, verbose = verbose)
+    readClass.outputDir = NULL, stranded = FALSE,ncore = 1, verbose = FALSE) {
+    readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore,
+        verbose = verbose)
     seqlevelsStyle(readGrgList) <- seqlevelsStyle(annotations)[1]
     se <- isore.constructReadClasses(
         readGrgList = readGrgList,
@@ -354,9 +330,13 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
     )
     seqlevels(se) <- unique(c(seqlevels(se), seqlevels(annotations)))
     if (!is.null(readClass.outputDir)) {
-        readClassFile <- fs::path(readClass.outputDir, paste0(names(bam.file), "_readClassSe"), ext = "rds")
+        readClassFile <- fs::path(readClass.outputDir, paste0(
+            names(bam.file),
+            "_readClassSe"
+        ), ext = "rds")
         if (file.exists(readClassFile)) {
-            show(paste(readClassFile, "exists, will be overwritten")) # warning is not printed, use show in addition
+            show(paste(readClassFile, "exists, will be overwritten"))
+            # warning is not printed, use show in addition
             warning(paste(readClassFile, "exists, will be overwritten"))
         }
         saveRDS(se, file = readClassFile)
@@ -372,21 +352,16 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
 #' @inheritParams bambu
 #' @noRd
 bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
-                          ncore = 1, verbose = FALSE) {
+    ncore = 1, verbose = FALSE) {
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
-    } else if (any(!(c(
-        "gene_id", "tx_id", "read_class_id",
-        "nobs"
-    ) %in% colnames(readClassDt)))) {
-        stop("Columns gene_id, tx_id, read_class_id, nobs, are missing from object.")
+    } else if (any(!(c("gene_id", "tx_id", "read_class_id","nobs") %in% 
+        colnames(readClassDt)))) {
+        stop("Columns gene_id, tx_id, read_class_id, nobs,
+          are missing from object.")
     }
     ## check quantification parameters
-    emParameters.default <- list(
-        bias = FALSE,
-        maxiter = 10000,
-        conv = 10^(-4)
-    )
+    emParameters.default <- list(bias = FALSE,maxiter = 10000,conv = 10^(-4))
     if (!is.null(emParameters)) {
         for (i in names(emParameters)) {
             emParameters.default[[i]] <- emParameters[[i]]
@@ -401,7 +376,6 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
     readClassDt[, gene_sid := match(gene_id, geneVec)]
     readClassDt[, tx_sid := match(tx_id, txVec)]
     readClassDt[, read_class_sid := match(read_class_id, readclassVec)]
-
     readClassDt[, `:=`(tx_id = NULL, gene_id = NULL, read_class_id = NULL)]
 
     ## ----step3: aggregate read class
@@ -411,25 +385,16 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
 
     ## ----step4: quantification
     start.time <- proc.time()
-    outList <- abundance_quantification(readClassDt,
-        ncore = ncore,
-        bias = emParameters[["bias"]],
-        maxiter = emParameters[["maxiter"]],
-        conv = emParameters[["conv"]]
-    )
+    outList <- abundance_quantification(readClassDt,ncore = ncore,
+        bias = emParameters[["bias"]], maxiter = emParameters[["maxiter"]],
+        conv = emParameters[["conv"]])
     end.time <- proc.time()
-    if (verbose) {
-        message(
-            "Finished EM estimation in ",
-            round((end.time - start.time)[3] / 60, 1), " mins."
-        )
-    }
+    if (verbose) message("Finished EM estimation in ",
+      round((end.time - start.time)[3] / 60, 1), " mins.")
 
     theta_est <- outList[[1]]
-    theta_est[, `:=`(
-        tx_name = txVec[as.numeric(tx_sid)],
-        gene_name = geneVec[gene_sid]
-    )]
+    theta_est[, `:=`(tx_name = txVec[as.numeric(tx_sid)],
+      gene_name = geneVec[gene_sid])]
     theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
     theta_est <- theta_est[, .(tx_name, estimates)]
     theta_est[, `:=`(CPM = estimates / sum(estimates) * (10^6))]
