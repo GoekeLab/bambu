@@ -57,7 +57,7 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
     if (verbose) {
         message(
             "Finished create transcript models
-                       (read classes) for reads with spliced junctions in ",
+                    (read classes) for reads with spliced junctions in ",
             round((end.ptm - start.ptm)[3] / 60, 1), " mins."
         )
     }
@@ -144,8 +144,8 @@ correctJunctionFromPrediction <- function(uniqueJunctions, verbose) {
 #' @inheritParams bambu
 #' @noRd
 isore.constructReadClasses <- function(readGrgList,
-                                       runName = "sample1", annotationGrangesList,
-                                       genomeSequence = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
+    runName = "sample1", annotationGrangesList,
+    genomeSequence = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
     ## todo: which preprocessed junction correction model to use?
     # standardJunctionModels_temp
     unlisted_junctions <- unlistIntrons(readGrgList,
@@ -261,7 +261,7 @@ isore.constructReadClasses <- function(readGrgList,
 #' @param colDataCombined colDataCombined
 #' @noRd
 createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
-                                 readClassSe, colDataCombined) {
+    readClassSe, colDataCombined) {
     counts.splicedRef <- matrix(0,
         dimnames = list(
             seq_len(nrow(rowData.spliced)),
@@ -354,8 +354,8 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
 #' @param readClassSeTBL default NULL
 #' @noRd
 prepSEforUnsplicedTx <- function(unsplicedRanges,
-                                 combinedSingleExonRanges, readClass,
-                                 stranded, readClassSeTBL = NULL) {
+    combinedSingleExonRanges, readClass,
+    stranded, readClassSeTBL = NULL) {
     overlapToCombined <- findOverlaps(unsplicedRanges,
         combinedSingleExonRanges,
         type = "within",
@@ -415,9 +415,9 @@ prepSEforUnsplicedTx <- function(unsplicedRanges,
 #' @param colDataCombined colDataCombined
 #' @noRd
 createSEforUnsplicedTx <- function(readClassSeRef, readClassSe,
-                                   readClassSeTBL, unsplicedRangesRef,
-                                   unsplicedRangesNew, combinedSingleExonRanges,
-                                   colDataCombined, rowData.unspliced, stranded) {
+    readClassSeTBL, unsplicedRangesRef,
+    unsplicedRangesNew, combinedSingleExonRanges,
+    colDataCombined, rowData.unspliced, stranded) {
     refTables <- prepSEforUnsplicedTx(
         unsplicedRangesRef,
         combinedSingleExonRanges, readClassSeRef, stranded
