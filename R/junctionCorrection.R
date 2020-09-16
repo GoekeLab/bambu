@@ -72,7 +72,8 @@ createJunctionTable <- function(unlisted_junction_granges,
         }
     }
     
-    if (!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
+    if (!all(seqlevels(unlisted_junction_granges) %in%
+        seqlevels(genomeSequence))) {
         message("not all chromosomes present in reference genome sequence,
             ranges are dropped")
         unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
@@ -102,12 +103,9 @@ createJunctionTable <- function(unlisted_junction_granges,
 #' @param verbose verbose
 #' @noRd
 updateJunctionwimprove <- function(annotatedIntronNumber, uniqueJunctions,
-                                   uniqueJunctionsUpdate, uniqueAnnotatedIntrons,
-                                   strandStep, verbose) {
+    uniqueJunctionsUpdate, uniqueAnnotatedIntrons, strandStep, verbose) {
     annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate,
-        uniqueAnnotatedIntrons,
-        ignore.strand = FALSE
-    )["TRUE"]
+        uniqueAnnotatedIntrons, ignore.strand = FALSE)["TRUE"]
     if (annotatedIntronNumberNew > annotatedIntronNumber & !is.na(
         annotatedIntronNumber
     )) {
@@ -135,115 +133,90 @@ updateJunctionwimprove <- function(annotatedIntronNumber, uniqueJunctions,
 #' JUNCTIONSTRANDCORRECTION
 #' @noRd
 junctionStrandCorrection <- function(uniqueJunctions,
-                                     unlisted_junction_granges,
-                                     uniqueAnnotatedIntrons, stranded,
-                                     verbose = FALSE) {
-    ## note: the strand is not always correctly infered based on motifs,
-    ## it might introduce systematic errors due to alignment (which is biased towards splice motifs)
+    unlisted_junction_granges,uniqueAnnotatedIntrons,
+    stranded, verbose = FALSE) {
+    # note: strand sometimes incorrectly infered based on motifs, might 
+    # introduce systematic errors due to alignment (biased to splice motifs)
     allJunctionToUniqueJunctionOverlap <-
         findOverlaps(unlisted_junction_granges, uniqueJunctions,
-            type = "equal", ignore.strand = TRUE
-        )
+            type = "equal", ignore.strand = TRUE)
     uniqueJunctionsUpdate <- uniqueJunctions
     # make a copy to revert to if strand correction does not improve results
     annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions,
-        uniqueAnnotatedIntrons,
-        ignore.strand = FALSE
-    )["TRUE"]
+        uniqueAnnotatedIntrons,ignore.strand = FALSE)["TRUE"]
     if (verbose) {
         message("before strand correction, annotated introns:")
         message(annotatedIntronNumber)
         message(annotatedIntronNumber / length(uniqueJunctions))
     }
     # infer strand for each read based on strand of junctions
-    if (stranded == FALSE) {
         strandStep <- TRUE
-        while (strandStep) {
-            # iterate this 2 times to predict strand more accurately using the mean junction counts
-            # annotated strand of jucntions for each read based on the infered read strand
-            unlisted_junction_granges_strand <-
-                as.character(strand(uniqueJunctionsUpdate)[subjectHits(
-                    allJunctionToUniqueJunctionOverlap
-                )])
-            unlisted_junction_granges_strandList <-
-                splitAsList(
-                    unlisted_junction_granges_strand,
-                    mcols(unlisted_junction_granges)$id
-                )
-            strandJunctionSum <-
-                sum(unlisted_junction_granges_strandList == "-") -
-                sum(unlisted_junction_granges_strandList == "+")
-            readStrand <- rep(
-                "*",
-                length(unlisted_junction_granges_strandList)
-            )
-            readStrand[strandJunctionSum < 0] <- "+"
-            readStrand[strandJunctionSum > 0] <- "-"
-            strand(unlisted_junction_granges) <-
-                readStrand[match(
-                    mcols(unlisted_junction_granges)$id,
-                    as.integer(names(unlisted_junction_granges_strandList))
-                )]
-            unstranded_unlisted_junction_granges <-
-                unstrand(unlisted_junction_granges)
-            junctionMatchList <- as(findMatches(
-                uniqueJunctions,
-                unstranded_unlisted_junction_granges
-            ), "List")
-            tmp <- extractList(
-                strand(unlisted_junction_granges),
-                junctionMatchList
-            )
-            uniqueJunctionsUpdate$plus_score_inferedByRead <- sum(tmp == "+")
-            uniqueJunctionsUpdate$minus_score_inferedByRead <- sum(tmp == "-")
-            strandScoreByRead <-
+        while (strandStep) { # iterate twice to improve strand prediction w.t.
+          # mean junction counts, annotate junction strand with read strand
+            if ( strand ) { # update junction strand score
+                uniqueJunctionsUpdate <- 
+                    updateStrandScoreByRead(unlisted_junction_granges,
+                        uniqueJunctionsUpdate, uniqueJunctions, stranded, 
+                        allJunctionToUniqueJunctionOverlap)
+                strandScoreByRead <-
                 uniqueJunctionsUpdate$minus_score_inferedByRead -
                 uniqueJunctionsUpdate$plus_score_inferedByRead
-            strand(uniqueJunctionsUpdate[strandScoreByRead < 0]) <- "+"
-            ## here we overwrite the information from the motif which
-            ## increases overlap with known junctions
-            strand(uniqueJunctionsUpdate[strandScoreByRead > 0]) <- "-"
-            updatedList <- updateJunctionwimprove(
-                annotatedIntronNumber,
-                uniqueJunctions, uniqueJunctionsUpdate, uniqueAnnotatedIntrons,
-                strandStep, verbose
-            )
-            annotatedIntronNumber <- updatedList$annotatedIntronNumber
-            uniqueJunctions <- updatedList$uniqueJunctions
-            strandStep <- updatedList$strandStep
-        }
-    } else { # correct strand for stranded data using read counts
-        strandStep <- TRUE
-        while (strandStep) {
-            strandScoreByRead <- uniqueJunctionsUpdate$minus_score -
+            }else{
+                strandScoreByRead <- uniqueJunctionsUpdate$minus_score -
                 uniqueJunctionsUpdate$plus_score
+            }
+            # overwrite info from motif which increases overlap with known junc
+            strand(uniqueJunctionsUpdate[strandScoreByRead < 0]) <- "+"
             strand(uniqueJunctionsUpdate[strandScoreByRead > 0]) <- "-"
-            ## here we verwrite the information from the motif which increases overlap with known junctions
-            strand(uniqueJunctionsUpdate[strandScoreByRead < (0)]) <- "+"
-            updatedList <- updateJunctionwimprove(
-                annotatedIntronNumber,
+            updatedList <- updateJunctionwimprove(annotatedIntronNumber,
                 uniqueJunctions, uniqueJunctionsUpdate, uniqueAnnotatedIntrons,
-                strandStep, verbose
-            )
+                strandStep, verbose)
             annotatedIntronNumber <- updatedList$annotatedIntronNumber
             uniqueJunctions <- updatedList$uniqueJunctions
             strandStep <- updatedList$strandStep
         }
-    }
-    return(list(
-        uniqueJunctions = uniqueJunctions,
-        unlisted_junctions = unlisted_junction_granges
-    ))
+    return(list(uniqueJunctions = uniqueJunctions,
+        unlisted_junctions = unlisted_junction_granges))
+}
+
+#' updateStrandScoreByRead
+#' @noRd
+updateStrandScoreByRead <- function(unlisted_junction_granges,
+    uniqueJunctionsUpdate, uniqueJunctions, stranded, 
+    allJunctionToUniqueJunctionOverlap){
+    unlisted_junction_granges_strand <-
+        as.character(strand(uniqueJunctionsUpdate)[subjectHits(
+        allJunctionToUniqueJunctionOverlap)])
+    unlisted_junction_granges_strandList <-
+        splitAsList(unlisted_junction_granges_strand,
+        mcols(unlisted_junction_granges)$id)
+    strandJunctionSum <-
+        sum(unlisted_junction_granges_strandList == "-") -
+        sum(unlisted_junction_granges_strandList == "+")
+    readStrand <- rep("*", length(unlisted_junction_granges_strandList))
+    readStrand[strandJunctionSum < 0] <- "+"
+    readStrand[strandJunctionSum > 0] <- "-"
+    strand(unlisted_junction_granges) <-
+        readStrand[match(mcols(unlisted_junction_granges)$id,
+        as.integer(names(unlisted_junction_granges_strandList)))]
+    unstranded_unlisted_junction_granges <-
+        unstrand(unlisted_junction_granges)
+    junctionMatchList <- as(findMatches(uniqueJunctions,
+        unstranded_unlisted_junction_granges), "List")
+    tmp <- extractList(strand(unlisted_junction_granges),
+        junctionMatchList)
+    uniqueJunctionsUpdate$plus_score_inferedByRead <- sum(tmp == "+")
+    uniqueJunctionsUpdate$minus_score_inferedByRead <- sum(tmp == "-")
+    return(uniqueJunctionsUpdate)
 }
 
 
 #' Evaluate annoation overlap
 #' @noRd
 evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
-                                  ignore.strand = FALSE) {
-    return(table(!is.na(GenomicRanges::match(intronRanges, uniqueAnnotatedIntrons,
-        ignore.strand = ignore.strand
-    ))))
+    ignore.strand = FALSE) {
+    return(table(!is.na(GenomicRanges::match(intronRanges,
+      uniqueAnnotatedIntrons, ignore.strand = ignore.strand ))))
 }
 
 #' test start splice site given close by splice site
@@ -252,45 +225,28 @@ evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
 #' @param junctionModel junctionModel
 #' @noRd
 testStartSpliceSites <- function(annotatedJunctionsStart, annotatedJunctions,
-                                 junctionModel) {
-    mySet.all <- ((annotatedJunctionsStart$distStart.start != 0) &
+    junctionModel) {
+  for(i in 1:2){ # distStart.start/distStart.end
+    tmp_distStart <- annotatedJunctionsStart$`paste0("distStart.start")`
+
+    mySet.all <- ((tmp_distStart != 0) &
         annotatedJunctionsStart$spliceStrand != "*" &
         annotatedJunctionsStart$startScore > 0 &
-        (annotatedJunctionsStart$distStart.start < 15))
-    annotatedJunctions$spliceSitePredictionStart.start <- rep(
-        NA,
-        length(annotatedJunctions)
-    )
+        tmp_distStart < 15)
+    
+    if (i == 1) {
+        annotatedJunctions$spliceSitePredictionStart.start <- rep(NA,
+        length(annotatedJunctions))
+    } else {
+        annotatedJunctions$spliceSitePredictionStart.end <- rep(NA,
+        length(annotatedJunctions))
+    }
+  }
+    
     if (any(mySet.all)) {
-        mySet.training <- (annotatedJunctionsStart$annotatedStart.start |
-            annotatedJunctionsStart$annotatedStart)[mySet.all]
-        myData <- data.frame(
-            annotatedJunctionsStart$startScore /
-                (annotatedJunctionsStart$startScore.start + annotatedJunctionsStart$startScore),
-            annotatedJunctionsStart$startScore, annotatedJunctionsStart$distStart.start,
-            (annotatedJunctionsStart$spliceStrand.start == "+"),
-            annotatedJunctionsStart$spliceStrand.start == "-",
-            (annotatedJunctionsStart$spliceStrand == "+")
-        )[mySet.all, ]
-        colnames(myData) <- paste("A", seq_len(ncol(myData)), sep = ".")
-        modelmatrix <- model.matrix(~ A.1 + A.2 + A.3 + A.4 + A.5, data = data.frame((myData)))
-        if (is.null(junctionModel)) {
-            myResults <- fitBinomialModel(
-                labels.train =
-                    as.integer(annotatedJunctionsStart$annotatedStart)[mySet.all][mySet.training],
-                data.train = modelmatrix[mySet.training, ], data.test = modelmatrix,
-                show.cv = verbose, maxSize.cv = 10000
-            )
-            junctionModelList[["spliceSitePredictionStart.start"]] <- myResults[[2]]
-            predictions <- myResults[[1]]
-        }
-        else {
-            predictions <-
-                glmnet:::predict.cv.glmnet(junctionModel[["spliceSitePredictionStart.start"]],
-                    newx = modelmatrix, s = "lambda.min"
-                )
-        }
-        spliceSitePredictionStart.start <- rep(NA, length(annotatedJunctionsStart))
+        
+        spliceSitePredictionStart.start <- 
+            rep(NA, length(annotatedJunctionsStart))
         names(spliceSitePredictionStart.start) <- annotatedJunctionsStart$junctionStartName
         spliceSitePredictionStart.start[mySet.all] <- predictions
         annotatedJunctions$spliceSitePredictionStart.start <-
@@ -345,6 +301,41 @@ testStartSpliceSites <- function(annotatedJunctionsStart, annotatedJunctions,
     )
     return(outputList)
 }
+
+annotationStartEndpredictionModels <- function(){
+  mySet.training <- (tmp_distStart |
+            tmp_distStart)[mySet.all]
+        myData <- data.frame(
+            annotatedJunctionsStart$startScore /
+                (annotatedJunctionsStart$startScore.start +
+                annotatedJunctionsStart$startScore),
+            annotatedJunctionsStart$startScore, 
+            annotatedJunctionsStart$distStart.start,
+            (annotatedJunctionsStart$spliceStrand.start == "+"),
+            annotatedJunctionsStart$spliceStrand.start == "-",
+            (annotatedJunctionsStart$spliceStrand == "+")
+        )[mySet.all, ]
+        colnames(myData) <- paste("A", seq_len(ncol(myData)), sep = ".")
+        modelmatrix <- model.matrix(~ A.1 + A.2 + A.3 + A.4 + A.5,
+          data = data.frame((myData)))
+        if (is.null(junctionModel)) {
+            myResults <- fitBinomialModel(
+                labels.train =
+                    as.integer(annotatedJunctionsStart$annotatedStart
+                        )[mySet.all][mySet.training],
+                data.train = modelmatrix[mySet.training, ],
+                data.test = modelmatrix,
+                show.cv = verbose, maxSize.cv = 10000)
+            junctionModelList[["spliceSitePredictionStart.start"]] <-
+                myResults[[2]]
+            predictions <- myResults[[1]]
+        } else {
+            predictions <- glmnet:::predict.cv.glmnet(
+                junctionModel[["spliceSitePredictionStart.start"]],
+                newx = modelmatrix, s = "lambda.min")
+        }
+}
+
 
 #' test end splice site given close by splice site
 #' @param annotatedJunctionsEnd annotatedJunctionsEnd
