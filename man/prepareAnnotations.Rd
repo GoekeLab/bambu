@@ -16,11 +16,8 @@ A \code{\link{GRangesList}} object
 Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
 }
 \examples{
- library(TxDb.Hsapiens.UCSC.hg38.knownGene)
- txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
- prepareAnnotations(x = txdb)
  gtf.file <- system.file("extdata", 
  "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
  package = "bambu")
- gr <- prepareAnnotations(x = gtf.file)
+ prepareAnnotations(x = gtf.file)
 }

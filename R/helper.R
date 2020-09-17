@@ -3,5 +3,6 @@
 NULL
 
 #' @noRd
-.onUnload <- function (libpath) { library.dynam.unload("bambu", libpath) }
-
+.onUnload <- function(libpath) {
+    library.dynam.unload("bambu", libpath)
+}

@@ -1,23 +1,21 @@
 Package: bambu
 Type: Package
-Title: Reference-guided isoform reconstruction and quantification for long read RNA-Seq data
-Version: 0.99.3
+Title: Reference-guided isoform reconstruction and quantification for long read 
+    RNA-Seq data
+Version: 0.99.4
 Authors@R: c(person("Ying Chen", "Developer", role = "cre",email = "chen_ying@gis.a-star.edu.sg"),
-             person("Jonathan Goeke", "Developer", role = "aut",
-                     email = "gokej@gis.a-star.edu.sg"))
-Description: Multi-sample transcript discovery and quantification using long read RNA-Seq data. 
+             person("Jonathan Goeke", "Developer", role = "aut",email = "gokej@gis.a-star.edu.sg"))
+Description: bambu is a R package for multi-sample transcript discovery and 
+    quantification using long read RNA-Seq data. You can use bambu after read 
+    alignment to obtain expression estimates for known and novel transcripts and 
+    genes. The output from bambu can directly be used for visualisation and 
+    downstream analysis such as differential gene expression or transcript usage. 
 License: GPL-3  + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R(>= 4.0.0), 
-    data.table(>= 1.1.8), 
-    dplyr, 
-    SummarizedExperiment(>= 1.1.6),
-    GenomicRanges,
-    BiocManager,
-    GenomicFeatures,
-    ggplot2
+    R(>= 4.0.0),
+    SummarizedExperiment (>= 1.1.6)
 Suggests: 
     knitr,
     fs,
@@ -30,8 +28,6 @@ Suggests:
     gridExtra,
     BSgenome.Hsapiens.NCBI.GRCh38,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
-    AnnotationDbi,
-    BiocGenerics,
     BiocParallel,
     Biostrings,
     DESeq2,
@@ -40,10 +36,14 @@ Suggests:
 Enhances: parallel
 SystemRequirements:
 biocViews: 
+    Alignment,
+    Coverage, 
+    DifferentialExpression, 
     FeatureExtraction, 
     GeneExpression, 
     GenomeAnnotation,
     ImmunoOncology,
+    MultipleComparison,
     Normalization, 
     RNASeq, 
     Regression, 
@@ -59,16 +59,28 @@ LinkingTo:
     RcppArmadillo,
     RcppProgress
 Imports:
-    S4Vectors(>= 0.22.1), 
-    IRanges, 
+    AnnotationDbi,
+    BiocGenerics,
+    BiocManager,
+    BSgenome,
+    data.table,
+    dplyr,
     GenomicAlignments,
+    GenomicFeatures,
+    GenomeInfoDb,
+    GenomicRanges,
+    ggplot2,
     glmnet,
+    graphics,
+    IRanges, 
     methods,
+    progress,
     Rsamtools,
     Rcpp,
-    BSgenome,
     RcppArmadillo,
     RcppProgress,
-    progress
+    S4Vectors(>= 0.22.1),
+    stats,
+    utils
 VignetteBuilder: 
     knitr
