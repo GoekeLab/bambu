@@ -134,13 +134,15 @@ annotateSpliceOverlapsByDist <-function(query, subject) {
 }
 
 #' ranges pre-processing                                  
-expandMatchedRanges <- function(unprocessedRng,comparedRng){ 
-  processedRng <- rep(unlist(unprocessedRng, use.names=F),rep(elementNROWS(comparedRng),times=elementNROWS(unprocessedRng)))
-  mcols(processedRng)$IdMap <- rep(1:length(unprocessedRng),elementNROWS(unprocessedRng)*elementNROWS(comparedRng))
-  mcols(processedRng)$matchRng <- unlist(rep(comparedRng, times= elementNROWS(unprocessedRng)), use.names=F)
+expandMatchedRanges <- function(unexpandedRng,targetRng){ 
+  processedRng <- rep(unlist(unexpandedRng, use.names=F),rep(elementNROWS(targetRng),times=elementNROWS(unexpandedRng)))
+  mcols(processedRng)$IdMap <- rep(1:length(unexpandedRng),elementNROWS(unexpandedRng)*elementNROWS(targetRng))
+  mcols(processedRng)$matchRng <- unlist(rep(targetRng, times= elementNROWS(unexpandedRng)), use.names=F)
   return (processedRng)
 }
 
+#' annotate alternative First/last exons and TSS/TES                                  
+#' @noRd
 #' annotate alternative First/last exons and TSS/TES                                  
 #' @noRd
 annotateAlterEndExons <- function(queryStartRng, queryEndRng, queryFullRng,
@@ -168,11 +170,11 @@ annotateAlterEndExons <- function(queryStartRng, queryEndRng, queryFullRng,
                                                                   start.last.subject-start.last.query)*!alternativeLastExon)
   alterEndTable <- alterEndTable %>% select(alternativeFirstExon, alternativeLastExon, alternativeTSS, alternativeTES)
   #internal start/end query 
-  alterEndTable$internalFirstExon.query <- annotateInternalStartEnd(queryStartRng, subjectFullRng, alterEndTable, "start")
-  alterEndTable$internalLastExon.query <- annotateInternalStartEnd(queryEndRng, subjectFullRng, alterEndTable, "end")
+  alterEndTable$internalFirstExon.query <- annotateInternalStartEnd(queryStartRng, subjectFullRng, alterEndTable$alternativeFirstExon, "start")
+  alterEndTable$internalLastExon.query <- annotateInternalStartEnd(queryEndRng, subjectFullRng, alterEndTable$alternativeLastExon, "end")
   #internal start/end subject
-  alterEndTable$internalFirstExon.subject <- annotateInternalStartEnd(subjectStartRng, queryFullRng, alterEndTable, "start")
-  alterEndTable$internalLastExon.subject <- annotateInternalStartEnd(subjectEndRng, queryFullRng, alterEndTable, "end")
+  alterEndTable$internalFirstExon.subject <- annotateInternalStartEnd(subjectStartRng, queryFullRng, alterEndTable$alternativeFirstExon, "start")
+  alterEndTable$internalLastExon.subject <- annotateInternalStartEnd(subjectEndRng, queryFullRng, alterEndTable$alternativeLastExon, "end")
   return (alterEndTable)
 }
 
@@ -480,10 +482,11 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth=5, cutStartEnd=
 #' @param stand strand
 #' @noRd
 selectStartExonFromRangesList <- function(range, strand){
-  startRng <- range[start(range) == min(start(range))]
-  startRng[which(strand == "-")] <- range[which(strand == "-")]
-  startRng <- startRng[end(startRng) == max(end(startRng))]
-  return (startRng)
+  partitioning<-PartitioningByEnd(cumsum(pmin(elementNROWS(range),1)), names=NULL)
+  largestExons <- as.numeric(cumsum(elementNROWS(range)))
+  startExonsSet <- c(1, largestExons[1:length(largestExons)-1]+1)
+  startExonsSet[strand == "-"] <- largestExons[strand == "-"]
+  return(relist(unlist(range, use.names = FALSE)[startExonsSet],partitioning))
 }
 
 #' Function that selects the last exon from an IRangesList object (exon_rank is required)
@@ -491,11 +494,27 @@ selectStartExonFromRangesList <- function(range, strand){
 #' @param stand strand
 #' @noRd
 selectEndExonFromRangesList <- function(range, strand){
-  endRng <- range[end(range) == max(end(range))]
-  endRng[which(strand == "-")] <- range[which(strand == "-")]
-  endRng <- endRng[start(endRng) == min(start(endRng))]
-  return(endRng)
+  partitioning<-PartitioningByEnd(cumsum(pmin(elementNROWS(range),1)), names=NULL)
+  endExonsSet <- as.numeric(cumsum(elementNROWS(range)))
+  smallestExons <- c(1, endExonsSet[1:length(endExonsSet)-1]+1)
+  endExonsSet[strand == "-"] <- smallestExons[strand == "-"]
+  return(relist(unlist(range, use.names = FALSE)[endExonsSet],partitioning))
 }
+####I tried this out to start with
+# selectStartExonFromRangesList <- function(range, strand){
+#   skeleton <- PartitioningByEnd(cumsum(pmin(elementNROWS(range), 1)), names=NULL)
+#   partitioning <- PartitioningByEnd(cumsum(pmax(elementNROWS(range), 1)), names=NULL)
+#   startExonsSet <- start(partitioning)
+#   startExonsSet[strand == "-"] <- end(partitioning)[strand == "-"]
+#   return (relist(unlist(range, use.names = FALSE)[startExonsSet],skeleton))
+# }
+# selectEndExonFromRangesList <- function(range, strand){
+#   skeleton <- PartitioningByEnd(cumsum(pmin(elementNROWS(range), 1)), names=NULL)
+#   partitioning <- PartitioningByEnd(cumsum(pmax(elementNROWS(range), 1)), names=NULL)
+#   endExonsSet <- end(partitioning)
+#   endExonsSet[strand == "-"] <- start(partitioning)[strand == "-"]
+#   return(relist(unlist(range, use.names = FALSE)[endExonsSet],skeleton))
+# }
 
 #' Function that selects the first N exons from a grangeslist object (exon_rank is required)
 #' @param grangesList grangesList
