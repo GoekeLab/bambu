@@ -319,7 +319,7 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
     readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore,
         verbose = verbose)
     
-    if ( length(intersect(selevels(readGrgList),seqlevels(annotations))) == 0 )
+    if ( length(intersect(seqlevels(readGrgList),seqlevels(annotations))) == 0 )
       stop("Error: please provide annotation with matched seqlevel styles.")
     
     se <- isore.constructReadClasses(
