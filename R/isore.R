@@ -240,7 +240,7 @@ createReadMatrix <- function(value, rowData, readClassSe){
     readMatrix <- matrix(value,dimnames = list(seq_len(nrow(rowData)),
                                        rownames(colData(readClassSe))),
                     ncol = nrow(colData(readClassSe)),
-                    row = nrow(rowData)
+                    nrow = nrow(rowData)
     )
     return (readMatrix)
 }
