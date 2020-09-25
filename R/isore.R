@@ -851,9 +851,8 @@ removeTranscriptsWIdenJunct <- function(seCombinedFiltered,
 #' @param verbose verbose
 #' @noRd
 filterTranscripts <- function(seCombined, annotationGrangesList,
-                              exonRangesCombined, prefix,
-                              min.readFractionByGene, min.sampleNumber,
-                              remove.subsetTx, verbose) {
+                              exonRangesCombined, prefix, min.readFractionByGene,
+                              min.sampleNumber, remove.subsetTx, verbose) {
     start.ptm <- proc.time() # (1) based on transcript usage
     countsTBL <- as_tibble(assays(seCombined)$counts,
         .name_repair = "unique") %>%
