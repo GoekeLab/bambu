@@ -1,9 +1,12 @@
 #' Outputs a GTF file, transcript-count file, and gene-count file from bambu
 #' @title Write bambu results to GTF and transcript/gene-count files
-#' @param se a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}
-#' @param path the destination of the output files (gtf, transcript counts, and gene counts)
+#' @param se a \code{\link{SummarizedExperiment}} object 
+#' from \code{\link{bambu}}.
+#' @param path the destination of the output files 
+#' (gtf, transcript counts, and gene counts)
 #' @param prefix the prefix of the output files
-#' @return The function will generate three files, a .gtf file for the annotations,
+#' @return The function will generate three files, 
+#' a .gtf file for the annotations,
 #' two .txt files for transcript and gene counts respectively.
 #' @export
 #' @examples
@@ -110,7 +113,8 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 #' @param file a .gtf file
 #' @return grlist a \code{\link{GRangesList}} object, with two columns
 #' \itemize{
-#'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
+#'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
+#'                defaults to empty
 #'   \item GENEID indicating whether filter to remove read classes which are
 #'                a subset of known transcripts(), defaults to TRUE
 #'   }
@@ -135,8 +139,7 @@ readFromGTF <- function(file) {
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
         grlist <- makeGRangesListFromDataFrame(
             data[, c("seqname", "start", "end", "strand", "TXNAME")],
-            split.field = "TXNAME", keep.extra.columns = TRUE
-        )
+            split.field = "TXNAME", keep.extra.columns = TRUE)
         grlist <- grlist[IRanges::order(start(grlist))]
 
         geneData <- (unique(data[, c("TXNAME", "GENEID")]))

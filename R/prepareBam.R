@@ -24,13 +24,13 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     counter <- 1
     while (Rsamtools::isIncomplete(bf)) {
         readGrgList[[counter]] <-
-          GenomicAlignments::grglist(GenomicAlignments::readGAlignments(bf,
+            GenomicAlignments::grglist(GenomicAlignments::readGAlignments(bf,
             param = Rsamtools::ScanBamParam(flag =
                 Rsamtools::scanBamFlag(isSecondaryAlignment = FALSE)),
             use.names = FALSE))
         # readGrgList<-c(readGrgList,GenomicAlignments::grglist(reads))
         if (verbose) show(min(length(readGrgList),
-          counter * yieldSize, na.rm = TRUE))
+            counter * yieldSize, na.rm = TRUE))
         counter <- counter + 1
     }
     close(bf)
@@ -51,8 +51,6 @@ helpFun <- function(chr, chrRanges, bamFile) {
         file = bamFile,
         param = Rsamtools::ScanBamParam(
             flag = Rsamtools::scanBamFlag(isSecondaryAlignment = FALSE),
-            which = chrRanges[chr]
-        ),
-        use.names = FALSE
-    )))
+            which = chrRanges[chr]),
+        use.names = FALSE)))
 }

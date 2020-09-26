@@ -19,21 +19,21 @@ transcriptToGeneExpression <- function(se) {
     counts <- rowDataSe[, .(TXNAME, GENEID)][counts, on = "TXNAME"]
     counts[, valueGene := sum(value), by = list(variable, GENEID)]
     counts[, valueGeneCPM := valueGene / max(sum(value), 1) * 10^6,
-      by = list(variable)]
+        by = list(variable)]
     ## counts
     counts_gene <- dcast(unique(counts[, .(GENEID, variable, valueGene)]),
-      GENEID ~ variable, value.var = "valueGene")
+        GENEID ~ variable, value.var = "valueGene")
     counts_gene_CPM <- dcast(unique(counts[, .(GENEID, variable,
-      valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
+        valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
     ## geneRanges
     exByGene <- txRangesToGeneRanges(rowRanges(se),
-      TXNAMEGENEID_Map = rowDataSe[, .(TXNAME, GENEID)])
+        TXNAMEGENEID_Map = rowDataSe[, .(TXNAME, GENEID)])
     if ("newTxClass" %in% colnames(rowDataSe)) {
         rowDataSe <- rowDataSe[, .(TXNAME, GENEID, newTxClass)]
         rowDataSe[, newGeneClass := ifelse(grepl("ENSG", GENEID),
-          "annotation", unique(newTxClass)), by = GENEID]
+            "annotation", unique(newTxClass)), by = GENEID]
         mcols(exByGene) <- unique(rowDataSe[, .(GENEID,
-          newGeneClass)])[match(names(exByGene), GENEID)]
+            newGeneClass)])[match(names(exByGene), GENEID)]
     }
     ## SE
     counts_gene <- setDF(counts_gene)
@@ -50,8 +50,7 @@ transcriptToGeneExpression <- function(se) {
                 counts_gene_CPM$GENEID), -1], ncol = length(ColNames),
                 dimnames = list(RowNames, ColNames))),
         rowRanges = exByGene[RowNames],
-        colData = colData(se)
-    )
+        colData = colData(se))
     return(seOutput)
 }
 
