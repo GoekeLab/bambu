@@ -116,7 +116,7 @@ correctReadTableStrand <- function(uniqueJunctions,
         readStrand <- rep("*", length(strandJunctionSum))
         readStrand[strandJunctionSum < 0] <- "+"
         readStrand[strandJunctionSum > 0] <- "-"
-    return(readStand)
+    return(readStrand)
 }
 
 
