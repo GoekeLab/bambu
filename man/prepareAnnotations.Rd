@@ -13,11 +13,13 @@ prepareAnnotations(x)
 A \code{\link{GRangesList}} object
 }
 \description{
-Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
+Function to prepare tables and genomic ranges for
+transript reconstruction using a txdb object
 }
 \examples{
- gtf.file <- system.file("extdata", 
- "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
- package = "bambu")
- prepareAnnotations(x = gtf.file)
+gtf.file <- system.file("extdata",
+    "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
+    package = "bambu"
+)
+prepareAnnotations(x = gtf.file)
 }

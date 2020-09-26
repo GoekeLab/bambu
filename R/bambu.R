@@ -130,7 +130,7 @@ bambu <- function(reads = NULL, readClass.file = NULL,
 #' @param stranded stranded
 #' @param ncore ncore
 #' @param verbose verbose
-#' noRd
+#' @noRd
 processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir, yieldSize, bpParameters, stranded, ncore, verbose) {
     if (!is.null(reads)) { # calculate readClass objects

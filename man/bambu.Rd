@@ -20,51 +20,74 @@ bambu(
 )
 }
 \arguments{
-\item{reads}{A string or a vector of strings specifying the paths of bam files for genomic alignments, or a \code{\link{BamFile}} object or a \code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).}
+\item{reads}{A string or a vector of strings specifying the paths of bam
+files for genomic alignments, or a \code{\link{BamFile}} object or a
+\code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).}
 
-\item{readClass.file}{A string or a vector of strings specifying the read class files that are saved during previous run of \code{\link{bambu}}.}
+\item{readClass.file}{A string or a vector of strings specifying the read
+class files that are saved during previous run of \code{\link{bambu}}.}
 
-\item{readClass.outputDir}{A string variable specifying the path to where read class files will be saved.}
+\item{readClass.outputDir}{A string variable specifying the path to where
+read class files will be saved.}
 
-\item{annotations}{A \code{\link{TxDb}} object or A GRangesList object obtained by \code{\link{prepareAnnotations}}.}
+\item{annotations}{A \code{\link{TxDb}} object or A GRangesList object
+obtained by \code{\link{prepareAnnotations}}.}
 
 \item{genomeSequence}{A fasta file or a BSGenome object.}
 
 \item{stranded}{A boolean for strandedness, defaults to FALSE.}
 
-\item{ncore}{specifying number of cores used when parallel processing is used, defaults to 1.}
+\item{ncore}{specifying number of cores used when parallel processing is used,
+defaults to 1.}
 
 \item{yieldSize}{see \code{\link{Rsamtools}}.}
 
-\item{isoreParameters}{A list of controlling parameters for isoform reconstruction process:
+\item{isoreParameters}{A list of controlling parameters for isoform
+reconstruction process:
 \itemize{
-  \item prefix specifying prefix for new gene Ids (genePrefix.number), defaults to empty
-  \item remove.subsetTx indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
-  \item min.readCount specifying minimun read count to consider a read class valid in a sample, defaults to 2
-  \item min.readFractionByGene specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05
-  \item min.sampleNumber specifying minimum sample number with minimum read count, defaults to 1
-  \item min.exonDistance specifying minum distance to known transcript to be considered valid as new, defaults to 35
-  \item min.exonOverlap specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults 10 base pairs
+  \item prefix specifying prefix for new gene Ids (genePrefix.number),
+  defaults to empty
+  \item remove.subsetTx indicating whether filter to remove read classes
+  which are a subset of known transcripts(), defaults to TRUE
+  \item min.readCount specifying minimun read count to consider a read class
+  valid in a sample, defaults to 2
+  \item min.readFractionByGene specifying minimum relative read count per
+  gene, highly expressed genes will have many high read count low relative
+  abundance transcripts that can be filtered, defaults to 0.05
+  \item min.sampleNumber specifying minimum sample number with minimum read
+  count, defaults to 1
+  \item min.exonDistance specifying minum distance to known transcript to be
+  considered valid as new, defaults to 35
+  \item min.exonOverlap specifying minimum number of bases shared with
+  annotation to be assigned to the same gene id, defaults 10 base pairs
 }}
 
-\item{emParameters}{A list of controlling parameters for quantification algorithm estimation process:
+\item{emParameters}{A list of controlling parameters for quantification
+algorithm estimation process:
 \itemize{
-  \item maxiter specifying maximum number of run interations, defaults to 10000.
+  \item maxiter specifying maximum number of run interations,
+                defaults to 10000.
   \item bias specifying whether to correct for bias, defaults to FALSE.
   \item conv specifying the covergence trheshold control, defaults to 0.0001.
 }}
 
-\item{extendAnnotations}{A logical variable indicating whether annotations are to be extended for quantification.}
+\item{extendAnnotations}{A logical variable indicating whether annotations
+are to be extended for quantification.}
 
-\item{verbose}{A logical variable indicating whether processing messages will be printed.}
+\item{verbose}{A logical variable indicating whether processing messages will
+be printed.}
 }
 \value{
-A list of two SummarizedExperiment object for transcript expression and gene expression.
+A list of two SummarizedExperiment object for transcript expression
+and gene expression.
 }
 \description{
-This function takes bam file of genomic alignments and performs isoform recontruction and gene and transcript expression quantification.
-It also allows saving of read class files of alignments, extending provided annotations, and quantification based on extended annotations.
-When multiple samples are provided, extended annotations will be combined across samples to allow comparison.
+This function takes bam file of genomic alignments and performs
+isoform recontruction and gene and transcript expression quantification.
+It also allows saving of read class files of alignments, extending provided
+annotations, and quantification based on extended annotations. When multiple
+samples are provided, extended annotations will be combined across samples to
+allow comparison.
 }
 \details{
 Main function
@@ -72,16 +95,20 @@ Main function
 \examples{
 
 ## =====================
- test.bam <- system.file("extdata", 
- "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", 
- package = "bambu")
- gr <- readRDS(system.file("extdata", 
- "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
- package = "bambu"))
- fa.file <- system.file("extdata", 
- "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", 
- package = "bambu")
- se = bambu(reads = test.bam,  annotations = gr, 
- genomeSequence = fa.file, extendAnnotations = FALSE)
-
+test.bam <- system.file("extdata",
+    "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
+    package = "bambu"
+)
+gr <- readRDS(system.file("extdata",
+    "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
+    package = "bambu"
+))
+fa.file <- system.file("extdata",
+    "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
+    package = "bambu"
+)
+se <- bambu(
+    reads = test.bam, annotations = gr,
+    genomeSequence = fa.file, extendAnnotations = FALSE
+)
 }

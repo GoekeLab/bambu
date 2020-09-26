@@ -12,16 +12,19 @@ readFromGTF(file)
 \value{
 grlist a \code{\link{GRangesList}} object, with two columns
 \itemize{
-  \item TXNAME specifying prefix for new gene Ids (genePrefix.number), defaults to empty
-  \item GENEID indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE
+  \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
+               defaults to empty
+  \item GENEID indicating whether filter to remove read classes which are
+               a subset of known transcripts(), defaults to TRUE
   }
 }
 \description{
 Outputs GRangesList object from reading a GTF file
 }
 \examples{
-gtf.file <- system.file("extdata", 
-"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
-package = "bambu")
+gtf.file <- system.file("extdata",
+    "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
+    package = "bambu"
+)
 readFromGTF(gtf.file)
 }
