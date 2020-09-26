@@ -4,6 +4,7 @@ Title: Reference-guided isoform reconstruction and quantification for long read
     RNA-Seq data
 Version: 0.99.4
 Authors@R: c(person("Ying Chen", "Developer", role = "cre",email = "chen_ying@gis.a-star.edu.sg"),
+             person("Yuk Kei Wan", "Developer", role = "aut",email = "ywan6@alumni.jh.edu"),
              person("Jonathan Goeke", "Developer", role = "aut",email = "gokej@gis.a-star.edu.sg"))
 Description: bambu is a R package for multi-sample transcript discovery and 
     quantification using long read RNA-Seq data. You can use bambu after read 
