@@ -12,11 +12,11 @@ readFromGTF(file)
 \value{
 grlist a \code{\link{GRangesList}} object, with two columns
 \itemize{
-  \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
-               defaults to empty
-  \item GENEID indicating whether filter to remove read classes which are
-               a subset of known transcripts(), defaults to TRUE
-  }
+    \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
+                defaults to empty
+    \item GENEID indicating whether filter to remove read classes which are
+                a subset of known transcripts(), defaults to TRUE
+    }
 }
 \description{
 Outputs GRangesList object from reading a GTF file

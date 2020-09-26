@@ -17,35 +17,36 @@
 #' obtained by \code{\link{prepareAnnotations}}.
 #' @param genomeSequence A fasta file or a BSGenome object.
 #' @param stranded A boolean for strandedness, defaults to FALSE.
-#' @param ncore specifying number of cores used when parallel processing is used,
-#' defaults to 1.
+#' @param ncore specifying number of cores used when parallel processing 
+#' is used, defaults to 1.
 #' @param yieldSize see \code{\link{Rsamtools}}.
 #' @param isoreParameters A list of controlling parameters for isoform
 #' reconstruction process:
 #' \itemize{
-#'   \item prefix specifying prefix for new gene Ids (genePrefix.number),
-#'   defaults to empty
-#'   \item remove.subsetTx indicating whether filter to remove read classes
-#'   which are a subset of known transcripts(), defaults to TRUE
-#'   \item min.readCount specifying minimun read count to consider a read class
-#'   valid in a sample, defaults to 2
-#'   \item min.readFractionByGene specifying minimum relative read count per
-#'   gene, highly expressed genes will have many high read count low relative
-#'   abundance transcripts that can be filtered, defaults to 0.05
-#'   \item min.sampleNumber specifying minimum sample number with minimum read
-#'   count, defaults to 1
-#'   \item min.exonDistance specifying minum distance to known transcript to be
-#'   considered valid as new, defaults to 35
-#'   \item min.exonOverlap specifying minimum number of bases shared with
-#'   annotation to be assigned to the same gene id, defaults 10 base pairs
+#'     \item prefix specifying prefix for new gene Ids (genePrefix.number),
+#'     defaults to empty
+#'     \item remove.subsetTx indicating whether filter to remove read classes
+#'     which are a subset of known transcripts(), defaults to TRUE
+#'     \item min.readCount specifying minimun read count to consider a read
+#'     class valid in a sample, defaults to 2
+#'     \item min.readFractionByGene specifying minimum relative read count per
+#'     gene, highly expressed genes will have many high read count low relative
+#'     abundance transcripts that can be filtered, defaults to 0.05
+#'     \item min.sampleNumber specifying minimum sample number with minimum read
+#'     count, defaults to 1
+#'     \item min.exonDistance specifying minum distance to known transcript 
+#'     to be considered valid as new, defaults to 35
+#'     \item min.exonOverlap specifying minimum number of bases shared with
+#'     annotation to be assigned to the same gene id, defaults 10 base pairs
 #' }
 #' @param emParameters A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \itemize{
-#'   \item maxiter specifying maximum number of run interations,
-#'                 defaults to 10000.
-#'   \item bias specifying whether to correct for bias, defaults to FALSE.
-#'   \item conv specifying the covergence trheshold control, defaults to 0.0001.
+#'     \item maxiter specifying maximum number of run interations,
+#'     defaults to 10000.
+#'     \item bias specifying whether to correct for bias, defaults to FALSE.
+#'     \item conv specifying the covergence trheshold control,
+#'     defaults to 0.0001.
 #' }
 #' @param extendAnnotations A logical variable indicating whether annotations
 #' are to be extended for quantification.

@@ -165,7 +165,8 @@ isore.constructReadClasses <- function(readGrgList,
     # all seqlevels should be consistent, and drop those not in uniqueJunctions
     if (!all(seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions))) {
         unlisted_junctions <- keepSeqlevels(unlisted_junctions,
-            value = seqlevels(unlisted_junctions)[seqlevels(unlisted_junctions) %in%
+            value = seqlevels(unlisted_junctions)[seqlevels(
+            unlisted_junctions) %in%
             seqlevels(uniqueJunctions)], pruning.mode = "coarse")
         readGrgList <- keepSeqlevels(readGrgList,
             value = seqlevels(readGrgList)[ seqlevels(readGrgList) %in%
@@ -176,7 +177,6 @@ isore.constructReadClasses <- function(readGrgList,
         message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
-  
     exonsByReadClass <- generateExonsByReadClass(readGrgList,
         annotationGrangesList, unlisted_junctions, uniqueJunctions,
         stranded, verbose)
@@ -660,7 +660,7 @@ extdannotateUnsplicedReads <- function(se, seFilteredSpliced, exonsByReadClass,
             exonsByReadClassUnspliced[is.na(overlapUnspliced)]
         ## combined spliced and unspliced Tx candidates
         seCombined <-
-          SummarizedExperiment::rbind(seFilteredSpliced, seFilteredUnspliced)
+            SummarizedExperiment::rbind(seFilteredSpliced, seFilteredUnspliced)
         exonRangesCombined <- c(exonsByReadClass, exonsByReadClassUnspliced)
         names(exonRangesCombined) <- seq_along(exonRangesCombined)
     } else {
@@ -708,8 +708,8 @@ assignGeneIDexonMatch <- function(seCombined, exonRangesCombined,
         geneIdByExon[is.na(mcols(seCombined)$GENEID)]
     if (any(is.na(mcols(seCombined)$GENEID))) {
         newGeneIds <-
-            assignNewGeneIds(exonRangesCombined[is.na(mcols(seCombined)$GENEID)],
-                prefix = prefix, minoverlap = 5, ignore.strand = FALSE)
+        assignNewGeneIds(exonRangesCombined[is.na(mcols(seCombined)$GENEID)],
+        prefix = prefix, minoverlap = 5, ignore.strand = FALSE)
         mcols(seCombined)$GENEID[as.integer(newGeneIds$readClassId)] <- 
             newGeneIds$geneId
     }

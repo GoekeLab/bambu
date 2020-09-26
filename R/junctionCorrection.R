@@ -65,7 +65,6 @@ createJunctionTable <- function(unlisted_junction_granges,
         }
     }
 
-   
     if (!all(seqlevels(unlisted_junction_granges) %in%
             seqlevels(genomeSequence))) {
     message("not all chromosomes present in reference genome sequence,
@@ -85,7 +84,8 @@ createJunctionTable <- function(unlisted_junction_granges,
     return(uniqueJunctions)
 }
 
-#' update junctions object if strand prediction improves overlap with annotations
+#' update junctions object if strand prediction improves overlap 
+#' with annotations
 #' @param annotatedIntronNumber annotatedIntronNumber
 #' @param uniqueJunctions uniqueJunctions
 #' @param uniqueJunctionsUpdate uniqueJunctionsUpdate
@@ -149,11 +149,11 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
         strandScoreByRead <-
             uniqueJunctionsUpdate$minus_score_inferedByRead -
             uniqueJunctionsUpdate$plus_score_inferedByRead
-      } else{ 
+    } else{ 
         strandScoreByRead <- uniqueJunctionsUpdate$minus_score -
                             uniqueJunctionsUpdate$plus_score
-      }
-      # overwrite info from motif which increases overlap with known junc
+    }
+        # overwrite info from motif which increases overlap with known junc
         strand(uniqueJunctionsUpdate[strandScoreByRead < 0]) <- "+"
         strand(uniqueJunctionsUpdate[strandScoreByRead > 0]) <- "-"
         updatedList <- updateJunctionwimprove(annotatedIntronNumber,
@@ -202,7 +202,7 @@ updateStrandScoreByRead <- function(unlisted_junction_granges,
 #' @noRd
 evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
                                     ignore.strand = FALSE) {
-  return(table(!is.na(GenomicRanges::match(intronRanges,
+    return(table(!is.na(GenomicRanges::match(intronRanges,
             uniqueAnnotatedIntrons, ignore.strand = ignore.strand ))))
 }
 
@@ -252,7 +252,7 @@ testSpliceSites <- function(data, splice = "Start", # End
     names(predictionSplice.prime) <- data[, paste0("junction",splice,"Name")]
     predictionSplice.prime[mySet.all] = predictions
     return(list(preds = predictionsSplice.prime, predsJ = predSplice.prime))
-  }
+    }
 }
 
 #' Create metadata for splice information
@@ -296,8 +296,8 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     ##note: readibility can be improved using dplyr
     annotatedJunctionsStart <-
         unique(GRanges(seqnames = seqnames(annotatedJunctions),
-          ranges = IRanges(start = start(annotatedJunctions),
-          end = start(annotatedJunctions)), strand = '*'))
+            ranges = IRanges(start = start(annotatedJunctions),
+            end = start(annotatedJunctions)), strand = '*'))
     annotatedJunctionsEnd <- 
         sort(unique(GRanges(seqnames = seqnames(annotatedJunctions),
             ranges = IRanges(start = end(annotatedJunctions),
@@ -394,8 +394,8 @@ useRefJunctionForConflict <- function(junctions, candidateJunctionsMinus,
 
     if (0 %in% scoreDiff) 
         candidateJunctionsPlus[conflictNames]$mergedHighConfJunctionId[
-          scoreDiff == 0] <- candidateJunctionsMinus[
-          conflictNames]$mergedHighConfJunctionId[scoreDiff == 0] <- NA
+            scoreDiff == 0] <- candidateJunctionsMinus[
+            conflictNames]$mergedHighConfJunctionId[scoreDiff == 0] <- NA
 
     mergedHighConfJunctionId <- rep(NA, length(junctions))
     names(mergedHighConfJunctionId) <- names(junctions)
@@ -403,7 +403,7 @@ useRefJunctionForConflict <- function(junctions, candidateJunctionsMinus,
                                 candidateJunctionsPlus$mergedHighConfJunctionId
     mergedHighConfJunctionId[names(candidateJunctionsMinus)] <- 
                                 candidateJunctionsMinus$mergedHighConfJunctionId
-    junctions$mergedHighConfJunctionId <- as.character(mergedHighConfJunctionId) 
+    junctions$mergedHighConfJunctionId <- as.character(mergedHighConfJunctionId)
     return(junctions)
 }
 

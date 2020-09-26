@@ -77,12 +77,12 @@ findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
             all(strand(subject) == "+")))
     mcols(olap) <- DataFrame(compatible, equal, unique,
         strandSpecific, strandedMatch)
-    
+
     ## NOTE: Check if there is an error with the start sequence ##
     if (firstLastSeparate)
         olap <- checkStartSequence(olap, firstLastSeparate, queryStart,
             subjectStart, queryEnd,subjectEnd, subjectFull, subjectList)
-    olap
+    return(olap)
 }
 
 
@@ -112,7 +112,7 @@ checkStartSequence <- function(olap, firstLastSeparate, queryStart,
         endMatch = endList$match,
         uniqueEndLengthQuery = endList$uniqueExonLengthQuery,
         uniqueEndLengthSubject = endList$uniqueExonLengthSubject)
-  return(olap)
+    return(olap)
 }
 
 #' Get intron ranges from exon ranges list
@@ -133,7 +133,7 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = TRUE) {
     gr <- GRanges(seqnms, unlist(gaps, use.names = use.names), strand)
     if (use.ids & !is.null(mcols(x, use.names = FALSE)$id)) 
         mcols(gr)$id <- rep(mcols(x)$id, elementNROWS(gaps))
-    gr
+    return(gr)
 }
 
 #' Get intron ranges from exon ranges list
@@ -219,11 +219,9 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand = FALSE) {
     if (length(olap) == 0L)
         return(GenomicAlignments:::.result(olap))
 
-
     query <- query[queryHits(olap)]
     subject <- subject[subjectHits(olap)]
     splice <- myGaps(query)
-
 
     compatible <- myCompatibleTranscription(query, subject, splice)
     strandSpecific <- all(strand(query) != "*")
@@ -235,7 +233,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand = FALSE) {
     unique <- myOneMatch(compatible, queryHits(olap))
 
     mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific)
-    olap
+    return(olap)
 }
 
 #' @param query query
@@ -312,7 +310,6 @@ extendGrangesListElements <- function(grangesList, by = 5) {
     end(unlistedExons) <-
         pmin(seqlengths(unlistedExons)[as.character(seqnames(unlistedExons))],
         end(unlistedExons) + by, na.rm = TRUE)
-
     return(relist(unlistedExons, partitioning))
 }
 
@@ -343,13 +340,8 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth = 5,
             start(unlistedExons[endExonsSet]) + 1
     }
     unlistedExons <- unlistedExons[exonWidth >= minWidth]
-
     return(relist(unlistedExons, partitioning))
 }
-
-
-
-
 
 #' Function that selects the first N exons from a grangeslist object
 #' (exon_rank is required)

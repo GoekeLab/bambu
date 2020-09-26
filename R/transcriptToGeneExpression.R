@@ -65,14 +65,14 @@ rename_duplicatedNames <- function(runnames){
         while (length(which(duplicated(runnames))) > 0) {
             if (iter == 1) {
                 runnames[which(duplicated(runnames))] <-
-                  paste0(runnames[which(duplicated(runnames))], "...", iter)
+                    paste0(runnames[which(duplicated(runnames))], "...", iter)
             } else {
                 runnames[which(duplicated(runnames))] <-
-                  gsub(paste0("...", iter - 1, "$"), paste0("...", iter),
+                    gsub(paste0("...", iter - 1, "$"), paste0("...", iter),
                     runnames[which(duplicated(runnames))])
             }
             iter <- iter + 1
         }
     }
-  return(runnames)
+    return(runnames)
 }

@@ -59,12 +59,12 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
 constructSplicedReadClassTables <- function(uniqueJunctions,
                         unlisted_junctions, readGrgList, stranded = FALSE) {
     options(scipen = 999)
-  
+
     uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
     
     if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
-       warning("read Id not sorted, can result in wrong assignments.
-           Please report error")
+        warning("read Id not sorted, can result in wrong assignments.
+            Please report error")
     
     readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
     

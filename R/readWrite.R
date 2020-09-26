@@ -24,7 +24,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
         outdir <- paste0(path, "/")
         if (!dir.exists(outdir))
             dir.create(outdir, recursive = TRUE)
-        
+
         transcript_grList <- rowRanges(se)
         transcript_gtffn <- paste(outdir, prefix,
             "extended_annotations.gtf", sep = "")
@@ -97,7 +97,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         frame = ".", attributes = paste(GENEID, group_name)) %>%
         dplyr::select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
-    
+
     gtf <- rbind(dfTx, dfExon) %>% group_by(group_name) %>%
         arrange(as.character(seqnames), start) %>% ungroup() %>%
         dplyr::select(seqnames, source, feature, start, end, score,
