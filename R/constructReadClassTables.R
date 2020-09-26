@@ -77,7 +77,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions,
     unlisted_junctions, allJunctionToUniqueJunctionOverlap)[[1]]
     
     intronEndTMP <- correctReadTableStrand(uniqueJunctions,
-    unlisted_junctions, allJunctionToUniqueJunctionOverlap)[[1]]
+    unlisted_junctions, allJunctionToUniqueJunctionOverlap)[[2]]
     
     if (!stranded) {
         readStrand <- correctReadTableStrand(uniqueJunctions,
