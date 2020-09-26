@@ -78,7 +78,7 @@ bambu <- function(reads = NULL, readClass.file = NULL,
     stranded = FALSE, ncore = 1, yieldSize = NULL, isoreParameters = NULL,
     emParameters = NULL, extendAnnotations = TRUE, verbose = FALSE) {
     annotations <-
-      checkInputs(annotations, reads, readClass.file, readClass.outputDir)
+        checkInputs(annotations, reads, readClass.file, readClass.outputDir)
     # ===# set default controlling parameters for isoform reconstruction  #===#
     isoreParameters.default <- list(
         remove.subsetTx = TRUE, min.readCount = 2,
@@ -199,7 +199,8 @@ checkParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.file path to readClass file(s)
 #' @param readClass.outputDir path to readClass output directory
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.file, readClass.outputDir) {
+checkInputs <- function(annotations, reads, readClass.file,
+    readClass.outputDir) {
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "TxDb")) {
