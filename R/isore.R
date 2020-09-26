@@ -7,20 +7,17 @@
 #' @param verbose verbose
 #' @noRd
 createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
-                                        unlisted_junctions,
-                                        uniqueJunctions, stranded, verbose) {
+    unlisted_junctions, uniqueJunctions, stranded, verbose) {
     seqlevels(unlisted_junctions) <- seqlevels(readGrgList)
     seqlevels(uniqueJunctions) <- seqlevels(readGrgList)
     end.ptm <- proc.time()
     if (verbose) message("Finished creating junction list with splice motif
-                        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList,
-        use.names = FALSE, use.ids = FALSE
-    ))
+        use.names = FALSE, use.ids = FALSE))
     junctionTables <- junctionStrandCorrection(uniqueJunctions,
         unlisted_junctions, uniqueAnnotatedIntrons,
-        stranded = stranded, verbose = verbose
-    )
+        stranded = stranded, verbose = verbose)
     uniqueJunctions <- junctionTables[[1]][, c("score", "spliceMotif",
         "spliceStrand", "junctionStartName", "junctionEndName",
         "startScore", "endScore", "id")]
@@ -40,10 +37,9 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
         readGrgList = readGrgList,
         stranded = stranded)
     end.ptm <- proc.time()
-    if (verbose) 
-        message("Finished create transcript models (read classes) for reads with
-            spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1),
-            " mins.")
+    if (verbose)
+    message("Finished create transcript models (read classes) for reads with
+    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
 
     rm(list = c("uniqueJunctions", "unlisted_junctions"))
     return(readClassListSpliced)
@@ -55,14 +51,12 @@ findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){
     predictSpliceSites <- predictSpliceJunctions(
         annotatedJunctions = uniqueJunctions,
         junctionModel = junctionModel,
-        verbose = verbose
-    )
+        verbose = verbose)
     uniqueJunctions <- predictSpliceSites[[1]][, c(
         "score", "spliceMotif",
         "spliceStrand", "junctionStartName", "junctionEndName",
         "startScore", "endScore", "annotatedJunction",
-        "annotatedStart", "annotatedEnd"
-    )]
+        "annotatedStart", "annotatedEnd")]
     return(list("uniqueJunctions" = uniqueJunctions, 
                 "predictSpliceSites" = predictSpliceSites))
 }
@@ -131,7 +125,7 @@ generateExonsByReadClass <- function(readGrgList, annotationGrangesList,
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
             "highConfidenceJunctionReads" &
             mcols(readClassListSpliced)$strand.rc != "*"], use.names = FALSE)), 
-      granges(unlist(annotationGrangesList, use.names = FALSE))))
+            granges(unlist(annotationGrangesList, use.names = FALSE))))
     readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
         granges = singleExonReads, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
@@ -201,9 +195,8 @@ isore.constructReadClasses <- function(readGrgList,
 #' @noRd
 createReadMatrix <- function(value, rowData, readClassSe){
     readMatrix <- matrix(value,dimnames = list(seq_len(nrow(rowData)),
-                                       rownames(colData(readClassSe))),
-                    ncol = nrow(colData(readClassSe)),
-                    nrow = nrow(rowData))
+        rownames(colData(readClassSe))), ncol = nrow(colData(readClassSe)),
+        nrow = nrow(rowData))
     return(readMatrix)
 }
 
@@ -243,12 +236,11 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
     rowData.spliced$start <- rowMins(start.spliced, na.rm = TRUE)
     rowData.spliced$end <- rowMaxs(end.spliced, na.rm = TRUE)
     rowData.spliced <- dplyr::select(rowData.spliced, chr, start,
-                                    end, strand, intronStarts, intronEnds) %>%
+        end, strand, intronStarts, intronEnds) %>%
         mutate(confidenceType = "highConfidenceJunctionReads")
     se.spliced <- SummarizedExperiment(
         assays = SimpleList(counts = counts.spliced, 
-                            start = start.spliced, 
-                            end = end.spliced),
+        start = start.spliced,end = end.spliced),
         rowData = rowData.spliced, colData = colDataCombined)
     rm(list = c("counts.spliced", "start.spliced", "end.spliced",
         "rowData.spliced", "counts.splicedRef", "start.splicedRef",
@@ -274,12 +266,12 @@ createSEforUnsplicedTx <- function(readClassSeRef, readClassSe,
     unsplicedRangesNew, combinedSingleExonRanges,
     colDataCombined, rowData.unspliced, stranded) {
     refTables <- prepSEforUnsplicedTx(unsplicedRangesRef,
-                            combinedSingleExonRanges, readClassSeRef, stranded)
+        combinedSingleExonRanges, readClassSeRef, stranded)
     counts.unsplicedRefSum <- refTables$counts.unsplicedSum
     start.unsplicedRefSum <- refTables$start.unsplicedSum
     end.unsplicedRefSum <- refTables$end.unsplicedSum
     newTables <- prepSEforUnsplicedTx(unsplicedRangesNew, 
-                combinedSingleExonRanges, readClassSe, stranded, readClassSeTBL)
+        combinedSingleExonRanges, readClassSe, stranded, readClassSeTBL)
     counts.unsplicedNewSum <- newTables$counts.unsplicedSum
     start.unsplicedNewSum <- newTables$start.unsplicedSum
     end.unsplicedNewSum <- newTables$end.unsplicedSum
@@ -311,8 +303,7 @@ createSEforUnsplicedTx <- function(readClassSeRef, readClassSe,
     end.unspliced[which(is.infinite(end.unspliced))] <- NA
     se.unspliced <- SummarizedExperiment(
         assays = SimpleList(counts = counts.unspliced,
-                        start = start.unspliced,
-                        end = end.unspliced),
+        start = start.unspliced, end = end.unspliced),
         rowData = rowData.unspliced, colData = colDataCombined)
     return(se.unspliced)
 }
@@ -329,8 +320,7 @@ prepSEforUnsplicedTx <- function(unsplicedRanges,
     stranded, readClassSeTBL = NULL) {
     overlapToCombined <-
         findOverlaps(unsplicedRanges, combinedSingleExonRanges,
-                    type = "within", ignore.strand = !stranded,
-                    select = "first")
+        type = "within", ignore.strand = !stranded, select = "first")
     counts.unsplicedSum <- as_tibble(assays(readClass)[["counts"]])[
         rowData(readClass)$confidenceType == "unsplicedNew",] %>%
         mutate(index = overlapToCombined) %>%
@@ -376,7 +366,7 @@ createRefFromReadClassSE <- function(readClassSe){
     start <- matrix(min(start(rowRanges(readClassSe))),
                     dimnames = dimnames(counts))
     end <- matrix(max(end(rowRanges(readClassSe))),
-                dimnames = dimnames(counts))
+                    dimnames = dimnames(counts))
     rowData <- as_tibble(rowData(readClassSe))
     rowData$start <- rowMins(start)
     rowData$end <- rowMaxs(end)
@@ -406,10 +396,10 @@ isore.combineTranscriptCandidates <- function(readClassSe,
             mutate(start = min(start(rowRanges(readClassSe))),
                     end = max(end(rowRanges(readClassSe))))
         rowData.spliced <- full_join(filter(readClassSeRefTBL,
-          confidenceType == "highConfidenceJunctionReads"), filter(
-          readClassSeTBL, confidenceType == "highConfidenceJunctionReads"),
-          by = c("chr" = "chr.rc", "strand" = "strand.rc",
-              "intronStarts", "intronEnds"), suffix = c(".ref", ".new"))
+            confidenceType == "highConfidenceJunctionReads"), filter(
+            readClassSeTBL, confidenceType == "highConfidenceJunctionReads"),
+            by = c("chr" = "chr.rc", "strand" = "strand.rc",
+                "intronStarts", "intronEnds"), suffix = c(".ref", ".new"))
         # create SE objects for spliced and unspliced Tx
         se.spliced <- createSEforSplicedTx(rowData.spliced, readClassSeRef,
                                             readClassSe, colDataCombined)
@@ -420,12 +410,12 @@ isore.combineTranscriptCandidates <- function(readClassSe,
         unsplicedRangesRef <- GRanges(
             seqnames = readClassSeRefTBL.unspliced$chr,
             ranges = IRanges(start = readClassSeRefTBL.unspliced$start,
-                             end = readClassSeRefTBL.unspliced$end),
+                            end = readClassSeRefTBL.unspliced$end),
             strand = readClassSeRefTBL.unspliced$strand)
         unsplicedRangesNew <- GRanges(
             seqnames = readClassSeTBL.unspliced$chr.rc,
             ranges = IRanges(start = readClassSeTBL.unspliced$start,
-                             end = readClassSeTBL.unspliced$end),
+                            end = readClassSeTBL.unspliced$end),
             strand = readClassSeTBL.unspliced$strand.rc)
         combinedSingleExonRanges <- reduce(
             c(unsplicedRangesRef,unsplicedRangesNew), ignore.strand = !stranded)
@@ -450,14 +440,11 @@ isore.combineTranscriptCandidates <- function(readClassSe,
 #' for filtered spliced reads
 #' @param annotationGrangesList annotation GRangesList object
 #' @noRd
-createExonByReadClass <- function(seFilteredSpliced,
-                                annotationGrangesList) {
+createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList) {
     exonEndsShifted <- paste(rowData(seFilteredSpliced)$intronStarts,
-        as.integer(rowData(seFilteredSpliced)$end + 1),
-        sep = ",")
+        as.integer(rowData(seFilteredSpliced)$end + 1), sep = ",")
     exonStartsShifted <- paste(as.integer(rowData(seFilteredSpliced)$start - 1),
-        rowData(seFilteredSpliced)$intronEnds,
-        sep = ",")
+        rowData(seFilteredSpliced)$intronEnds, sep = ",")
     exonsByReadClass <- makeGRangesListFromFeatureFragments(
         seqnames = rowData(seFilteredSpliced)$chr,
         fragmentStarts = exonStartsShifted,
@@ -545,8 +532,7 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
 #' @param verbose verbose
 #' @noRd
 extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass, 
-                                    annotationGrangesList, seFilteredSpliced,
-                                    min.exonDistance, verbose) {
+    annotationGrangesList, seFilteredSpliced, min.exonDistance, verbose) {
     ovExon <- findSpliceOverlapsQuick(
         cutStartEndFromGrangesList(exonsByReadClass),
         cutStartEndFromGrangesList(annotationGrangesList))
@@ -554,10 +540,10 @@ extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass,
         data.frame(matrix("", nrow = length(seFilteredSpliced), ncol = 9), 
         stringsAsFactors = FALSE)
     colnames(classificationTable) <- c("equal", "compatible", "newWithin",
-            "newLastJunction","newFirstJunction","newJunction", "allNew", 
-            "newFirstExon", "newLastExon")
+        "newLastJunction","newFirstJunction","newJunction", "allNew", 
+        "newFirstExon", "newLastExon")
     classificationTable$equal[queryHits(ovExon[mcols(ovExon)$equal])[
-                !duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]] <- "equal"
+        !duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]] <- "equal"
     classificationTable$compatible[queryHits(ovExon[mcols(ovExon)$compatible])[
     !duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]] <- "compatible"
     classificationTable$compatible[classificationTable$equal == "equal"] <- ""
@@ -575,11 +561,11 @@ extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass,
     # annotate as identical, using intron matches
     unlistedIntrons <- unlist(intronsByReadClass, use.names = TRUE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)),
-                                        names = NULL)
+        names = NULL)
     unlistedIntronsAnnotations <- unlist(myGaps(annotationGrangesList))
     mcols(unlistedIntronsAnnotations)$GENEID <- mcols(annotationGrangesList
-                            )$GENEID[match(names(unlistedIntronsAnnotations),
-                                        mcols(annotationGrangesList)$TXNAME)]
+        )$GENEID[match(names(unlistedIntronsAnnotations),
+        mcols(annotationGrangesList)$TXNAME)]
     classificationTable <- 
         updateWIntronMatches(unlistedIntrons, unlistedIntronsAnnotations,
         partitioning, classificationTable, annotationGrangesList,
@@ -596,15 +582,13 @@ extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass,
 #' assign gene id by maximum match
 #' @noRd
 assignGeneIDbyMaxMatch <- function(unlistedIntrons,
-                                   unlistedIntronsAnnotations,
-                                   overlapsNewIntronsAnnotatedIntrons,
-                                   exonsByReadClass,
-                                   seFilteredSpliced, annotationGrangesList,
-                                   min.exonDistance) {
+    unlistedIntronsAnnotations, overlapsNewIntronsAnnotatedIntrons,
+    exonsByReadClass, seFilteredSpliced, annotationGrangesList,
+    min.exonDistance) {
     maxGeneCountPerNewTx <- as_tibble(data.frame(txId =
         names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
         geneId = mcols(unlistedIntronsAnnotations)$GENEID[
-                subjectHits(overlapsNewIntronsAnnotatedIntrons)],
+            subjectHits(overlapsNewIntronsAnnotatedIntrons)],
         stringsAsFactors = FALSE)) %>%
         group_by(txId, geneId) %>%
         summarise(geneCount = n()) %>%
@@ -718,8 +702,7 @@ assignGeneIDexonMatch <- function(seCombined, exonRangesCombined,
                 exonMatchGene[!is.na(exonMatchGene)]]
         exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
             exonRangesCombined[!is.na(geneIdByExon)],
-            select = "arbitrary",
-            minoverlap = min.exonOverlap)
+            select = "arbitrary", minoverlap = min.exonOverlap)
     }
     mcols(seCombined)$GENEID[is.na(mcols(seCombined)$GENEID)] <-
         geneIdByExon[is.na(mcols(seCombined)$GENEID)]
@@ -795,25 +778,24 @@ filterTranscripts <- function(seCombined, annotationGrangesList,
         exonRangesCombinedFiltered <- exonRangesCombinedFiltered[!grepl(
             "compatible",mcols(seCombinedFiltered)$readClassType)]
         seCombinedFiltered <- seCombinedFiltered[!grepl("compatible",
-                                    mcols(seCombinedFiltered)$readClassType)]
+            mcols(seCombinedFiltered)$readClassType)]
     }# (3) remove transcripts with identical junctions to annotations
     extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
         seCombinedFiltered, exonRangesCombinedFiltered, 
         annotationGrangesList, prefix)
     end.ptm <- proc.time()
     if (verbose) message("transcript filtering in ",
-                round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     start.ptm <- proc.time()
     geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in%
-                             mcols(extendedAnnotationRanges)$GENEID[
-                             which(mcols(extendedAnnotationRanges)$newTxClass !=
-                             "annotation")])
+        mcols(extendedAnnotationRanges)$GENEID[
+        which(mcols(extendedAnnotationRanges)$newTxClass != "annotation")])
     minEqClasses <-
         getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
     end.ptm <- proc.time()
     if (verbose) message("calculated minimum equivalent classes for
-                        extended annotations in ",
-                round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+        extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
+        " mins.")
 
     mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <-
         minEqClasses$eqClass[match(names(extendedAnnotationRanges[
@@ -827,7 +809,7 @@ filterTranscripts <- function(seCombined, annotationGrangesList,
 #' @noRd
 exonsintronsByReadClass <- function(se, annotationGrangesList, filterSet1){
     seFilteredSpliced <- se[rowData(se)$confidenceType ==
-                                "highConfidenceJunctionReads" & filterSet1, ]
+        "highConfidenceJunctionReads" & filterSet1, ]
     mcols(seFilteredSpliced)$GENEID <- NA
     intronsByReadClass <- makeGRangesListFromFeatureFragments(
         seqnames = rowData(seFilteredSpliced)$chr,
@@ -836,7 +818,7 @@ exonsintronsByReadClass <- function(se, annotationGrangesList, filterSet1){
         strand = rowData(seFilteredSpliced)$strand)
     names(intronsByReadClass) <- seq_along(intronsByReadClass)
     seqlevels(intronsByReadClass) <- unique(c(seqlevels(intronsByReadClass), 
-                                            seqlevels(annotationGrangesList)))
+        seqlevels(annotationGrangesList)))
     exonsByReadClass <- createExonByReadClass(
         seFilteredSpliced, annotationGrangesList
     )
@@ -861,7 +843,7 @@ isore.extendAnnotations <- function(se, annotationGrangesList,
         if (any(rowData(se)$confidenceType == "highConfidenceJunctionReads" &
             filterSet1)) { ## (1) Spliced Reads
             byReadClass <- exonsintronsByReadClass(
-                                se, annotationGrangesList, filterSet1)
+                se, annotationGrangesList, filterSet1)
             seFilteredSpliced <- extdannotateSplicedReads(
                 byReadClass$exons, byReadClass$intron, annotationGrangesList,
                 byReadClass$seFilteredSpliced, min.exonDistance, verbose

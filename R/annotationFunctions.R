@@ -20,10 +20,10 @@ prepareAnnotations <- function(x) {
         }
         unlistedExons <- unlist(exonsByTx, use.names = FALSE)
         partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)),
-          names = NULL)
+            names = NULL)
         txIdForReorder <- togroup(PartitioningByWidth(exonsByTx))
         unlistedExons <- unlistedExons[order(txIdForReorder,
-          unlistedExons$exon_rank)]
+            unlistedExons$exon_rank)]
         # exonsByTx is always sorted by exon rank, not by strand, make sure that
         # this is the case here
         unlistedExons$exon_endRank <- unlist(lapply(elementNROWS(exonsByTx),
@@ -56,7 +56,8 @@ prepareAnnotations <- function(x) {
 
 
 #' Prepare annotation granges object from GTF file
-#' @title Prepare annotation granges object from GTF file into a GRangesList object
+#' @title Prepare annotation granges object from GTF file into a 
+#' GRangesList object
 #' @param file a GTF file
 #' @return A \code{\link{GRangesList}} object
 #' @details Unlike \code{\link{readFromGTF}}, this function finds out the
@@ -107,7 +108,7 @@ prepareAnnotationsFromGTF <- function(file) {
         unlistedExons <- unlistedExons[order(txIdForReorder,
             start(unlistedExons))]
         mcols(unlistedExons) <- mcols(unlistedExons)[, c("exon_rank",
-          "exon_endRank")]
+            "exon_endRank")]
         grlist <- relist(unlistedExons, partitioning)
         # sort the grlist by start position, ranked by exon number
         minEqClasses <- getMinimumEqClassByTx(grlist)
@@ -196,9 +197,9 @@ assignNewGeneIds <- function(exByTx, prefix = "", minoverlap = 5,
             filter(queryHits.x != queryHits.y) %>%
             mutate(
                 queryHits = if_else(queryHits.x > queryHits.y,
-                  queryHits.y, queryHits.x),
+                    queryHits.y, queryHits.x),
                 subjectHits = if_else(queryHits.x > queryHits.y,
-                  queryHits.x, queryHits.y)) %>%
+                    queryHits.x, queryHits.y)) %>%
             dplyr::select(queryHits, subjectHits) %>%
             distinct()
         candidateList <- distinct(rbind(temp2, candidateList))
@@ -240,7 +241,7 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist,
     ## change query hits for step 2 and 3
     if (!is.null(exByTx)) {
         txToAnTable$queryHits <-
-          (seq_along(exByTx))[-setTMP][txToAnTable$queryHits]
+            (seq_along(exByTx))[-setTMP][txToAnTable$queryHits]
     }
     ## todo: check filters, what happens to reads with only start and end match?
     if (isFALSE(DistCalculated)) {
@@ -249,8 +250,8 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist,
             arrange(queryHits, dist) %>%
             filter(dist <= (min(dist) + primarySecondaryDist)) %>%
             filter(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist
-            == min(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist)) %>%
-            filter((uniqueStartLengthQuery <= primarySecondaryDist &
+            == min(queryElementsOutsideMaxDist + subjectElementsOutsideMaxDist))
+            %>% filter((uniqueStartLengthQuery <= primarySecondaryDist &
                 uniqueEndLengthQuery
             <= primarySecondaryDist) == max(uniqueStartLengthQuery <=
                 primarySecondaryDist & uniqueEndLengthQuery <=
@@ -288,7 +289,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
         dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
         ignore.strand = ignore.strand)
     txToAnTableRest <-
-      genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
+        genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
         exByTx = exByTx, setTMP = setTMP, DistCalculated = FALSE)
     # (3) find overlaps for remaining reads 
     setTMPRest <- unique(c(txToAnTableRest$queryHits, setTMP))
@@ -307,11 +308,11 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
         }
     }
     txToAnTableFiltered <- rbind( txToAnTableFiltered,
-      txToAnTableRest, txToAnTableRestStartEnd ) %>% ungroup()
+        txToAnTableRest, txToAnTableRestStartEnd ) %>% ungroup()
     txToAnTableFiltered$readClassId <-
-      names(exByTx)[txToAnTableFiltered$queryHits]
+        names(exByTx)[txToAnTableFiltered$queryHits]
     txToAnTableFiltered$annotationTxId <-
-      names(exByTxRef)[txToAnTableFiltered$subjectHits]
+        names(exByTxRef)[txToAnTableFiltered$subjectHits]
     return(txToAnTableFiltered)
 }
 
@@ -325,9 +326,9 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
     
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
     compatibleData <- as.data.table(as.data.frame(rowData(se)),
-      keep.rownames = TRUE)
+        keep.rownames = TRUE)
     setnames(compatibleData, old = c("rn", "geneId"),
-      new = c("readClassId", "GENEID"))
+        new = c("readClassId", "GENEID"))
     distTable <- distTable[compatibleData[ readClassId %in% 
         unique(distTable$readClassId), .(readClassId, GENEID)],
         on = c("readClassId", "GENEID")]
@@ -357,7 +358,7 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
 
     setnames(eqClassCountTable, old = c("TXNAME", "GENEID", "eqClass",
         "eqClassReadCount"),
-      new = c("tx_id", "gene_id", "read_class_id", "nobs"))
+        new = c("tx_id", "gene_id", "read_class_id", "nobs"))
     return(eqClassCountTable)
 }
 

@@ -6,15 +6,15 @@
 #' annotations, and quantification based on extended annotations. When multiple
 #' samples are provided, extended annotations will be combined across samples to
 #' allow comparison.
-#' @param reads A string or a vector of strings specifying the paths of bam files
-#' for genomic alignments, or a \code{\link{BamFile}} object or a
+#' @param reads A string or a vector of strings specifying the paths of bam
+#' files for genomic alignments, or a \code{\link{BamFile}} object or a
 #' \code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).
-#' @param readClass.file A string or a vector of strings specifying the read class
-#' files that are saved during previous run of \code{\link{bambu}}.
-#' @param readClass.outputDir A string variable specifying the path to where read
-#' class files will be saved.
-#' @param annotations A \code{\link{TxDb}} object or A GRangesList object obtained
-#' by \code{\link{prepareAnnotations}}.
+#' @param readClass.file A string or a vector of strings specifying the read
+#' class files that are saved during previous run of \code{\link{bambu}}.
+#' @param readClass.outputDir A string variable specifying the path to where
+#' read class files will be saved.
+#' @param annotations A \code{\link{TxDb}} object or A GRangesList object
+#' obtained by \code{\link{prepareAnnotations}}.
 #' @param genomeSequence A fasta file or a BSGenome object.
 #' @param stranded A boolean for strandedness, defaults to FALSE.
 #' @param ncore specifying number of cores used when parallel processing is used,
@@ -25,29 +25,30 @@
 #' \itemize{
 #'   \item prefix specifying prefix for new gene Ids (genePrefix.number),
 #'   defaults to empty
-#'   \item remove.subsetTx indicating whether filter to remove read classes which are
-#'   a subset of known transcripts(), defaults to TRUE
-#'   \item min.readCount specifying minimun read count to consider a read class valid
-#'   in a sample, defaults to 2
-#'   \item min.readFractionByGene specifying minimum relative read count per gene,
-#'   highly expressed genes will have many high read count low relative abundance
-#'   transcripts that can be filtered, defaults to 0.05
-#'   \item min.sampleNumber specifying minimum sample number with minimum read count,
-#'    defaults to 1
+#'   \item remove.subsetTx indicating whether filter to remove read classes
+#'   which are a subset of known transcripts(), defaults to TRUE
+#'   \item min.readCount specifying minimun read count to consider a read class
+#'   valid in a sample, defaults to 2
+#'   \item min.readFractionByGene specifying minimum relative read count per
+#'   gene, highly expressed genes will have many high read count low relative
+#'   abundance transcripts that can be filtered, defaults to 0.05
+#'   \item min.sampleNumber specifying minimum sample number with minimum read
+#'   count, defaults to 1
 #'   \item min.exonDistance specifying minum distance to known transcript to be
 #'   considered valid as new, defaults to 35
-#'   \item min.exonOverlap specifying minimum number of bases shared with annotation
-#'    to be assigned to the same gene id, defaults 10 base pairs
+#'   \item min.exonOverlap specifying minimum number of bases shared with
+#'   annotation to be assigned to the same gene id, defaults 10 base pairs
 #' }
-#' @param emParameters A list of controlling parameters for quantification algorithm
-#'  estimation process:
+#' @param emParameters A list of controlling parameters for quantification
+#' algorithm estimation process:
 #' \itemize{
-#'   \item maxiter specifying maximum number of run interations, defaults to 10000.
+#'   \item maxiter specifying maximum number of run interations,
+#'                 defaults to 10000.
 #'   \item bias specifying whether to correct for bias, defaults to FALSE.
 #'   \item conv specifying the covergence trheshold control, defaults to 0.0001.
 #' }
-#' @param extendAnnotations A logical variable indicating whether annotations are
-#' to be extended for quantification.
+#' @param extendAnnotations A logical variable indicating whether annotations
+#' are to be extended for quantification.
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
 #' @details
@@ -159,20 +160,20 @@ processReads <- function(reads, annotations, genomeSequence,
         if (length(reads) > 10 & (is.null(readClass.outputDir))) {
             readClass.outputDir <- tempdir()
             message(paste0("There are more than 10 samples, read class files
-                     will be temporarily saved to ", readClass.outputDir,
+                will be temporarily saved to ", readClass.outputDir,
                 " for more efficient processing"))
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         if (!verbose) message("Start generating read class files")
         readClassList <- BiocParallel::bplapply(names(reads),
-          function(bamFileName) {
+            function(bamFileName) {
             bambu.constructReadClass(bam.file = reads[bamFileName],
                 readClass.outputDir = readClass.outputDir,
                 genomeSequence = genomeSequence,annotations = annotations,
                 stranded = stranded,ncore = ncore,verbose = verbose)},
         BPPARAM = bpParameters)
         if (!verbose)
-          message("Finished generating read classes from genomic alignments.")
+            message("Finished generating read classes from genomic alignments.")
     } else {
         readClassList <- readClass.file
     }
@@ -320,8 +321,8 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
     readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore,
         verbose = verbose)
     
-    if ( length(intersect(seqlevels(readGrgList),seqlevels(annotations))) == 0 )
-      stop("Error: please provide annotation with matched seqlevel styles.")
+    if (length(intersect(seqlevels(readGrgList),seqlevels(annotations))) == 0)
+        stop("Error: please provide annotation with matched seqlevel styles.")
     
     se <- isore.constructReadClasses(
         readGrgList = readGrgList,
@@ -330,14 +331,11 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
         genomeSequence = genomeSequence,
         stranded = stranded,
         ncore = ncore,
-        verbose = verbose
-    )
+        verbose = verbose)
     seqlevels(se) <- unique(c(seqlevels(se), seqlevels(annotations)))
     if (!is.null(readClass.outputDir)) {
         readClassFile <- fs::path(readClass.outputDir, paste0(
-            names(bam.file),
-            "_readClassSe"
-        ), ext = "rds")
+            names(bam.file),"_readClassSe"), ext = "rds")
         if (file.exists(readClassFile)) {
             show(paste(readClassFile, "exists, will be overwritten"))
             # warning is not printed, use show in addition
@@ -362,7 +360,7 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
     } else if (any(!(c("gene_id", "tx_id", "read_class_id","nobs") %in% 
         colnames(readClassDt)))) {
         stop("Columns gene_id, tx_id, read_class_id, nobs,
-          are missing from object.")
+            are missing from object.")
     }
     ## check quantification parameters
     emParameters.default <- list(bias = FALSE,maxiter = 10000,conv = 10^(-4))
@@ -394,11 +392,11 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
         conv = emParameters[["conv"]])
     end.time <- proc.time()
     if (verbose) message("Finished EM estimation in ",
-      round((end.time - start.time)[3] / 60, 1), " mins.")
+        round((end.time - start.time)[3] / 60, 1), " mins.")
 
     theta_est <- outList[[1]]
     theta_est[, `:=`(tx_name = txVec[as.numeric(tx_sid)],
-      gene_name = geneVec[gene_sid])]
+        gene_name = geneVec[gene_sid])]
     theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
     theta_est <- theta_est[, .(tx_name, estimates)]
     theta_est[, `:=`(CPM = estimates / sum(estimates) * (10^6))]

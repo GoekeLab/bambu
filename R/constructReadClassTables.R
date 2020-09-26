@@ -44,7 +44,7 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
     readTable[lowConfidenceReads, "confidenceType"] <- 
         "lowConfidenceJunctionReads"
     readTable <- readTable %>% group_by( chr, strand, intronEnds,
-      intronStarts) %>% summarise( readCount = n(), start = nth(
+        intronStarts) %>% summarise( readCount = n(), start = nth(
                 x = start, n = ceiling(readCount / 5), order_by = start),
             end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
             confidenceType = dplyr::first(confidenceType)) %>%
@@ -73,11 +73,11 @@ constructSplicedReadClassTables <- function(uniqueJunctions,
     allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
         uniqueJunctions, type = "equal", ignore.strand = TRUE)
     
-    intronStartTMP <- correctReadTableStrand(uniqueJunctions,
-    unlisted_junctions, allJunctionToUniqueJunctionOverlap)[[1]]
+    intronStartTMP <- createIntronTmp(uniqueJunctions,
+    allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[1]]
     
-    intronEndTMP <- correctReadTableStrand(uniqueJunctions,
-    unlisted_junctions, allJunctionToUniqueJunctionOverlap)[[2]]
+    intronEndTMP <- createIntronTmp(uniqueJunctions,
+    allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[2]]
     
     if (!stranded) {
         readStrand <- correctReadTableStrand(uniqueJunctions,
@@ -123,7 +123,7 @@ correctReadTableStrand <- function(uniqueJunctions,
 #' @noRd
 createIntronTmp <- function(uniqueJunctions,
     allJunctionToUniqueJunctionOverlap,unlisted_junctions){
-  intronStartTMP <-
+    intronStartTMP <-
         start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
             subjectHits(allJunctionToUniqueJunctionOverlap)]])
     
@@ -132,9 +132,9 @@ createIntronTmp <- function(uniqueJunctions,
             subjectHits(allJunctionToUniqueJunctionOverlap)]])
     
     exon_0size <- 
-      which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
-      mcols(unlisted_junctions)$id[-1] == 
-          mcols(unlisted_junctions)$id[-length(unlisted_junctions)])
+        which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
+        mcols(unlisted_junctions)$id[-1] == 
+            mcols(unlisted_junctions)$id[-length(unlisted_junctions)])
     
     if (length(exon_0size) > 0)
         intronStartTMP[-1][exon_0size] <-
@@ -144,7 +144,7 @@ createIntronTmp <- function(uniqueJunctions,
 
 #' @noRd
 createExonsByReadClass <- function(readTable){
-  exonsByReadClass <-
+    exonsByReadClass <-
         makeGRangesListFromFeatureFragments(seqnames = readTable$chr,
             fragmentStarts = paste(readTable$start - 1, readTable$intronEnds,
                 sep = ","), 
@@ -156,8 +156,7 @@ createExonsByReadClass <- function(readTable){
     names(exonsByReadClass) <- readTable$readClassId
     unlistData <- unlist(exonsByReadClass, use.names = FALSE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
-        names = NULL
-    )
+        names = NULL)
     exon_rank <- lapply(width((partitioning)), seq, from = 1)
     # add exon rank and exon_endRank
     exon_rank[which(readTable$strand == "-")] <-
@@ -224,8 +223,7 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
         seqnames = hitsDF$chr,
         ranges = IRanges(
             start = hitsDF$start,
-            end = hitsDF$end
-        ),
+            end = hitsDF$end),
         strand = hitsDF$strand
     )
     exByReadClassUnspliced$exon_rank <- 1

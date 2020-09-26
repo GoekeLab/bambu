@@ -21,6 +21,6 @@ if (getRversion() >= "2.15.1") {
         "uniqueLengthQuery", "uniqueLengthSubject",
         "uniqueStartLengthQuery", "value", "valueGene", "valueGeneCPM",
         "variable", "junctionMatchList", "readClass.file",
-        "start.ptm", "verbose", ".insertGaps", "."
+        "start.ptm", "verbose", ".insertGaps", ".","subjectList"
     ))
 }
