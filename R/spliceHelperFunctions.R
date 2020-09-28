@@ -110,26 +110,42 @@ annotateSpliceOverlapsByDist <-function(query, subject) {
   querySpliceRng[elementNROWS(querySpliceRng)==0] <- IRanges(start=1,end=1) # add mock intron
   subjectSpliceRng <- ranges(myGaps(subject))
   subjectSpliceRng[elementNROWS(subjectSpliceRng)==0] <- IRanges(start=1,end=1)# add mock intron
-  ###############################################################################
   annotatedTable <- tibble(queryId = names(query), subjectId = names(subject), strand = strand)
   # calculate alternative First/last exons and annotate internal start and end first exons
-  alterEndTable <- annotateAlterEndExons(queryStartRng, queryEndRng, queryFullRng,
-                                         subjectStartRng, subjectEndRng, subjectFullRng, annotatedTable$strand)
-  #intron retention subject
+  annotatedTable$alternativeFirstExon <- alternativeStartEndExon(queryStartRng, 
+                                                                subjectStartRng)
+  annotatedTable$alternativeTSS <- calculateTSSdistance(queryStartRng, 
+                                                       subjectStartRng, 
+                                                       annotatedTable$alternativeFirstExon,
+                                                       strand)
+  annotatedTable$internalFirstExon.query <- annotateInternalStartEnd(queryStartRng,
+                                                                    subjectFullRng, annotatedTable$alternativeFirstExon)
+  annotatedTable$internalFirstExon.subject <- annotateInternalStartEnd(subjectStartRng,
+                                                                      queryFullRng, annotatedTable$alternativeFirstExon)
+  # TES/last exon
+  annotatedTable$alternativeLastExon <- alternativeStartEndExon(queryEndRng, 
+                                                               subjectEndRng)
+  annotatedTable$alternativeTES <- calculateTESdistance(queryEndRng, 
+                                                       subjectEndRng, 
+                                                       annotatedTable$alternativeLastExon,
+                                                       strand)
+  annotatedTable$internalLastExon.query <- annotateInternalStartEnd(queryEndRng,
+                                                                   subjectFullRng, annotatedTable$alternativeLastExon)
+  annotatedTable$internalLastExon.subject <- annotateInternalStartEnd(subjectEndRng,
+                                                                     queryFullRng, annotatedTable$alternativeLastExon)
+  #intron retention subject and query
   annotatedTable$intronRetention.subject <- annotateIntronRetent(querySpliceRng, subjectFullRng)
-  #intron retention query
   annotatedTable$intronRetention.query <- annotateIntronRetent(subjectSpliceRng ,queryFullRng)
-  #exon skipping query
+  #exon skipping query and subject
   annotatedTable$exonSkipping.query <- annotateExonSkip(querySpliceRng, subjectFullRng,
                                                         subjectStartRng, subjectEndRng)
-  #exon skipping subject
   annotatedTable$exonSkipping.subject <- annotateExonSkip(subjectSpliceRng ,queryFullRng,
                                                           queryStartRng, queryEndRng) 
   # exon 3' splice site
   exonSpliceTable <- annotateExonSplice(querySpliceRng, subjectFullRng,
                                         subjectStartRng, subjectEndRng,
                                         annotatedTable$strand)
-  annotatedTable <- cbind(annotatedTable, alterEndTable, exonSpliceTable)
+  annotatedTable <- cbind(annotatedTable, exonSpliceTable)
   return(annotatedTable)
 }
 
@@ -155,39 +171,33 @@ expandRangesList <- function(unexpandedRng,targetRng){
   return (processedRng)
 }
 
-#' annotate alternative First/last exons and TSS/TES                                  
+#' alternative start/end exon
 #' @noRd
-annotateAlterEndExons <- function(queryStartRng, queryEndRng, queryFullRng,
-                                  subjectStartRng, subjectEndRng, subjectFullRng, strand){
-  alterEndTable <-  tibble(start.first.query = start(queryStartRng),
-                           end.first.query = end(queryStartRng),
-                           start.last.query = start(queryEndRng),
-                           end.last.query = end(queryEndRng),
-                           start.first.subject = start(subjectStartRng),
-                           end.first.subject = end(subjectStartRng),
-                           start.last.subject = start(subjectEndRng),
-                           end.last.subject = end(subjectEndRng),
-                           strand = strand) 
-  alterEndTable <- alterEndTable %>% mutate(alternativeFirstExon=!ifelse(strand!='-',
-                                                                         start.first.query <= end.first.subject & end.first.query >= start.first.subject,
-                                                                         end.first.query >= start.first.subject & start.first.query <= end.first.subject),
-                                            alternativeLastExon=!ifelse(strand!='-',
-                                                                        end.last.query >= start.last.subject & start.last.query <= end.last.subject,
-                                                                        start.last.query <= end.last.subject & end.last.query >= start.last.subject),
-                                            alternativeTSS=ifelse(strand!='-',
-                                                                  start.first.subject-start.first.query,
-                                                                  end.first.query- end.first.subject )*!alternativeFirstExon,
-                                            alternativeTES=ifelse(strand!='-', 
-                                                                  end.last.query-end.last.subject,
-                                                                  start.last.subject-start.last.query)*!alternativeLastExon)
-  alterEndTable <- alterEndTable %>% select(alternativeFirstExon, alternativeLastExon, alternativeTSS, alternativeTES)
-  #internal start/end query 
-  alterEndTable$internalFirstExon.query <- annotateInternalStartEnd(queryStartRng, subjectFullRng, alterEndTable$alternativeFirstExon)
-  alterEndTable$internalLastExon.query <- annotateInternalStartEnd(queryEndRng, subjectFullRng, alterEndTable$alternativeLastExon)
-  #internal start/end subject
-  alterEndTable$internalFirstExon.subject <- annotateInternalStartEnd(subjectStartRng, queryFullRng, alterEndTable$alternativeFirstExon)
-  alterEndTable$internalLastExon.subject <- annotateInternalStartEnd(subjectEndRng, queryFullRng, alterEndTable$alternativeLastExon)
-  return (alterEndTable)
+alternativeStartEndExon <- function(queryRng, subjectRng){
+  return(!poverlaps(queryRng, subjectRng))
+}
+
+#' alternative TSS distance
+#' @noRd
+calculateTSSdistance <- function(queryStartRng, subjectStartRng,
+                                 alternativeFirstExon, strand){
+  alternativeTSS <- start(subjectStartRng) - start(queryStartRng)
+  alternativeTSS[strand=='-'] <- end(queryStartRng[strand=='-']) -
+                                 end(subjectStartRng[strand=='-'])
+  alternativeTSS <- alternativeTSS * !alternativeFirstExon
+  return (alternativeTSS)
+}
+
+
+#' alternative TES distance
+#' @noRd
+calculateTESdistance <- function(queryEndRng, subjectEndRng,
+                                 alternativeLastExon, strand){
+  alternativeTES <- end(queryEndRng) - end(subjectEndRng)
+  alternativeTES[strand=='-'] <- start(subjectEndRng[strand=='-']) -
+                                 start(queryEndRng[strand=='-'])
+  alternativeTES <- alternativeTES * !alternativeLastExon
+  return (alternativeTES)
 }
 
 #' annotate internal start and end first exons                                    
@@ -227,46 +237,63 @@ annotateExonSkip <- function(spliceRng, fullRng, startRng, endRng){
   return (exonSkippingVector)
 }
 
+#' find exon start extension
+#' @noRd
+findExonStartExtension <- function(splice.Rng, match.startSplice.start,
+                                   match.startSplice.end, spliceIdMap){
+  splice.start <- start(splice.Rng)
+  splice.end <- end(splice.Rng)
+  exonStartExtension <- splice.start<match.startSplice.end &
+                        splice.end>match.startSplice.end &
+                        match.startSplice.start< splice.start
+  exonStartExtension <- tapply(exonStartExtension, spliceIdMap, sum)
+  return (exonStartExtension)
+}
+
+#' find exon end extension
+#' @noRd
+findExonEndExtension <- function(splice.Rng, match.startSplice.start,
+                                 match.startSplice.end, spliceIdMap){
+  splice.start <- start(splice.Rng)
+  splice.end <- end(splice.Rng)
+  exonEndExtension <- splice.end>match.startSplice.start &
+                      splice.start<match.startSplice.start &
+                      match.startSplice.end> splice.end
+  exonEndExtension <- tapply(exonEndExtension, spliceIdMap, sum)
+  return (exonEndExtension)
+}
+
 #' annotate exon splicing
 #' @noRd
 annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
   splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
   start.Splice.Rng <- expandRanges(startRng, spliceRng)
   end.Splice.Rng <- rep(endRng, elementNROWS(spliceRng))
-  fullSpliceTable <- tibble(splice.FullSplice.start = start(splice.FullSplice.Rng),
-                            splice.FullSplice.end = end(splice.FullSplice.Rng),
-                            match.FullSplice.start = start(mcols(splice.FullSplice.Rng)$matchRng),
-                            match.FullSplice.end = end(mcols(splice.FullSplice.Rng)$matchRng))
-  startEndSpliceTable <- tibble(startSplice.start = start(start.Splice.Rng),
-                                startSplice.end = end(start.Splice.Rng),
-                                match.startSplice.start = start(mcols(start.Splice.Rng)$matchRng),
-                                match.startSplice.end = end(mcols(start.Splice.Rng)$matchRng),
-                                endSplice.start = start(end.Splice.Rng),
-                                endSplice.end = end(end.Splice.Rng))
-  fullSpliceTable <- fullSpliceTable %>% mutate(exonStart = splice.FullSplice.end<match.FullSplice.end & 
-                                                  splice.FullSplice.end>match.FullSplice.start &
-                                                  splice.FullSplice.start<match.FullSplice.start,
-                                                exonEnd = splice.FullSplice.start<match.FullSplice.end & 
-                                                  splice.FullSplice.start>match.FullSplice.start &
-                                                  splice.FullSplice.end>match.FullSplice.end)
-  startEndSpliceTable <- startEndSpliceTable %>% mutate(startExonStartExtension = startSplice.start<match.startSplice.end &
-                                                          startSplice.end>match.startSplice.end &
-                                                          match.startSplice.start< startSplice.start,
-                                                        startExonEndExtension = startSplice.end>match.startSplice.start &
-                                                          startSplice.start<match.startSplice.start &
-                                                          match.startSplice.end> startSplice.end,
-                                                        endExonStartExtension = endSplice.start<match.startSplice.end &
-                                                          endSplice.end>match.startSplice.end &
-                                                          match.startSplice.start< endSplice.start,
-                                                        endExonEndExtension = endSplice.end>match.startSplice.start &
-                                                          endSplice.start<match.startSplice.start &
-                                                          match.startSplice.end> endSplice.end)
-  exon5Prime <- tapply(fullSpliceTable$exonStart, mcols(splice.FullSplice.Rng)$IdMap, sum)
-  exon3Prime <- tapply(fullSpliceTable$exonEnd, mcols(splice.FullSplice.Rng)$IdMap, sum)
-  startExonStartExtension <- tapply(startEndSpliceTable$startExonStartExtension, mcols(start.Splice.Rng)$IdMap, sum)
-  startExonEndExtension <- tapply(startEndSpliceTable$startExonEndExtension, mcols(start.Splice.Rng)$IdMap, sum)
-  endExonStartExtension <- tapply(startEndSpliceTable$endExonStartExtension, mcols(start.Splice.Rng)$IdMap, sum)
-  endExonEndExtension <- tapply(startEndSpliceTable$endExonEndExtension, mcols(start.Splice.Rng)$IdMap, sum)
+  startMatch <- poverlaps(start(splice.FullSplice.Rng),mcols(splice.FullSplice.Rng)$matchRng) 
+  endMatch <- poverlaps(end(splice.FullSplice.Rng),mcols(splice.FullSplice.Rng)$matchRng)
+  exonStart <- endMatch & !startMatch
+  exonEnd <-startMatch & !endMatch
+  exon5Prime <- tapply(exonStart, mcols(splice.FullSplice.Rng)$IdMap, sum)
+  exon3Prime <- tapply(exonEnd, mcols(splice.FullSplice.Rng)$IdMap, sum)
+  match.startSplice.start <- start(mcols(start.Splice.Rng)$matchRng)
+  match.startSplice.end <- end(mcols(start.Splice.Rng)$matchRng)
+  spliceIdMap <- mcols(start.Splice.Rng)$IdMap
+  startExonStartExtension <- findExonStartExtension(start.Splice.Rng,
+                                                    match.startSplice.start,
+                                                    match.startSplice.end,
+                                                    spliceIdMap)
+  startExonEndExtension <- findExonEndExtension(start.Splice.Rng,
+                                                match.startSplice.start,
+                                                match.startSplice.end,
+                                                spliceIdMap)
+  endExonStartExtension <- findExonStartExtension(end.Splice.Rng,
+                                                  match.startSplice.start,
+                                                  match.startSplice.end,
+                                                  spliceIdMap)
+  endExonEndExtension <- findExonEndExtension(end.Splice.Rng,
+                                               match.startSplice.start,
+                                               match.startSplice.end,
+                                               spliceIdMap)
   exonSplicingTable <- tibble(exon5Prime,exon3Prime,strand)
   exStrandNeg <- exonSplicingTable$strand=='-'
   exonSplicingTable$exon5Prime[!exStrandNeg] <- exonSplicingTable$exon5Prime[!exStrandNeg] - startExonStartExtension[!exStrandNeg]
