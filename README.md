@@ -64,7 +64,7 @@ fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_c
 
 gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
 
-bambuAnnotations <- prepareAnnotationsFromGTF(gtf.file)
+bambuAnnotations <- prepareAnnotations(gtf.file)
 
 se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
 
@@ -95,7 +95,7 @@ If you plan to run ***bambu*** more frequently, we recommend to save the bambuAn
 The bambuAnnotation object can be calculated from a *.gtf* file:
 
 ```rscript
-annotations <- prepareAnnotationFromGTF(gtf.file)
+annotations <- prepareAnnotation(gtf.file)
 ```
 
 From *TxDb* object
@@ -157,28 +157,28 @@ transcriptToGeneExpression(se)
 
 **Visualization**
 
- You can visualize the novel genes/transcripts using ***plot.bambu*** function 
+ You can visualize the novel genes/transcripts using ***plotBambu*** function 
 
 ```rscript
-plot.bambu(se, type = "annotation", gene_id)
+plotBambu(se, type = "annotation", gene_id)
 
-plot.bambu(se, type = "annotation", transcript_id)
+plotBambu(se, type = "annotation", transcript_id)
 ```
 
-- ***plot.bambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions
+- ***plotBambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions
 
 ```rscript
-plot.bambu(se, type = "heatmap") # heatmap 
+plotBambu(se, type = "heatmap") # heatmap 
 
-plot.bambu(se, type = "pca") # PCA visualization
+plotBambu(se, type = "pca") # PCA visualization
 ```
 
-- ***plot.bambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable
+- ***plotBambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable
 
 ```rscript
-plot.bambu(se, type = "heatmap", group.var) # heatmap 
+plotBambu(se, type = "heatmap", group.var) # heatmap 
 
-plot.bambu(se, type = "pca", group.var) # PCA visualization
+plotBambu(se, type = "pca", group.var) # PCA visualization
 ```
 
 **Write bambu outputs to files**
