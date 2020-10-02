@@ -176,7 +176,7 @@ processReads <- function(reads, annotations, genomeSequence,
         if (!verbose)
             message("Finished generating read classes from genomic alignments.")
     } else {
-        readClassList <- readClass.file
+        readClassList <- reads
     }
     return(readClassList)
 }
