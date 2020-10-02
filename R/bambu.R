@@ -92,12 +92,14 @@ bambu <- function(reads = NULL, readClass.file = NULL,
     rm.readClassSe <- FALSE # indicator to remove temporary read class files
     bpParameters <- BiocParallel::bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
-    bpParameters$workers <- ifelse(length(reads) == 1, 1, ncore)
+    bpParameters$workers <- ifelse(max(length(reads),
+                                       length(readClass.file)) == 1, 1, ncore)
     bpParameters$progressbar <- (!verbose)
     if (bpParameters$workers > 1) ncore <- 1
-    readClassList <- processReads( reads, annotations, genomeSequence,
-        readClass.outputDir,yieldSize, bpParameters, stranded,
-        ncore, verbose)
+    readClassList <- processReads(reads, readClass.file, annotations,
+                                   genomeSequence, readClass.outputDir,
+                                   yieldSize, bpParameters, stranded,
+                                   ncore, verbose)
     if (extendAnnotations) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, verbose = verbose)
@@ -132,7 +134,7 @@ bambu <- function(reads = NULL, readClass.file = NULL,
 #' @param ncore ncore
 #' @param verbose verbose
 #' @noRd
-processReads <- function(reads, annotations, genomeSequence,
+processReads <- function(reads, readClass.file, annotations, genomeSequence,
     readClass.outputDir, yieldSize, bpParameters, stranded, ncore, verbose) {
     if (!is.null(reads)) { # calculate readClass objects
         # ===# create BamFileList object from character #===#
@@ -176,7 +178,7 @@ processReads <- function(reads, annotations, genomeSequence,
         if (!verbose)
             message("Finished generating read classes from genomic alignments.")
     } else {
-        readClassList <- reads
+        readClassList <- readClass.file
     }
     return(readClassList)
 }
@@ -202,7 +204,7 @@ checkParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @noRd
 checkInputs <- function(annotations, reads, readClass.file,
-    readClass.outputDir) {
+    readClass.outputDir){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "TxDb")) {
@@ -212,8 +214,7 @@ checkInputs <- function(annotations, reads, readClass.file,
             if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
                 colnames(mcols(annotations)))) 
                 stop("The annotations is not properly prepared.\nPlease 
-                prepareAnnnotations using prepareAnnotations or 
-                prepareAnnotationsFromGTF functions.")
+                prepareAnnnotations using prepareAnnotations function.")
         } else {
             stop("The annotations is not a GRangesList object.")
         }
