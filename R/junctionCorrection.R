@@ -263,15 +263,15 @@ createSpliceMetadata <- function(annotatedJunctions, splice){
                 'spliceStrand','spliceMotif')]
     len <- -length(annotatedJunctions)
     distdata <- data.frame(
-        dist.start = c(0,diff(start(annotatedJunctions))) *
+        dist.start = c(0,(diff(start(annotatedJunctions)) *
         as.integer((seqnames(annotatedJunctions[-1]) == 
-            seqnames(annotatedJunctions[len]))),
-        annotated.start = c(FALSE,metadata[,3][len]),
-        Score.start = c(FALSE,metadata[,1][len]),
-        spliceStrand.start = c(FALSE,metadata[,4][len]),
-        spliceMotif.start = c(FALSE,metadata[,5][len]),
+            seqnames(annotatedJunctions[-len]))))),
+        annotated.start = c(FALSE,metadata[,3][-len]),
+        Score.start = c(FALSE,metadata[,1][-len]),
+        spliceStrand.start = c(FALSE,metadata[,4][-len]),
+        spliceMotif.start = c(FALSE,metadata[,5][-len]),
         dist.end = c(-diff(end(annotatedJunctions)) *
-        as.integer((seqnames(annotatedJunctions[len]) == 
+        as.integer((seqnames(annotatedJunctions[-len]) == 
             seqnames(annotatedJunctions[-1]))),0),
         annotated.end = c(metadata[,3][-1],FALSE),
         Score.end = c(metadata[,1][-1],FALSE),
