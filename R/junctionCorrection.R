@@ -9,7 +9,7 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
     stop("Reference genome sequence is missing, please provide fasta file or BSgenome name, see available.genomes()")
   }
   
-  original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
+  #original_seqlevelstyle <- seqlevelsStyle(unlisted_junction_granges)[1]
   
   if(is(genomeSequence,'character')){
     if(grepl('.fa',genomeSequence)){
@@ -21,22 +21,22 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
       }else{
         genomeSequence <- Rsamtools::FaFile(genomeSequence)
       }
-      if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
-        seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
-      }
+      # if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
+      #   seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
+      # }
     } else {
       genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-      seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
+      # seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
     }
   } else if(is(genomeSequence,'BSgenome')){
-    seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
+    # seqlevelsStyle(genomeSequence) <- seqlevelsStyle(unlisted_junction_granges)[1]
   } 
   
-  if(is(genomeSequence,'FaFile')){
-    if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
-      seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
-    }
-  }
+  # if(is(genomeSequence,'FaFile')){
+  #   # if(seqlevelsStyle(genomeSequence)[1]  != seqlevelsStyle(unlisted_junction_granges)[1]){
+  #   #   seqlevelsStyle(unlisted_junction_granges) <- seqlevelsStyle(genomeSequence)[1] 
+  #   # }
+  # }
   if(!all(seqlevels(unlisted_junction_granges) %in% seqlevels(genomeSequence))) {
     message("not all chromosomes present in reference genome sequence, ranges are dropped")
     unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
@@ -94,9 +94,9 @@ createJunctionTable <- function(unlisted_junction_granges, genomeSequence=NULL, 
                                       id=1:length(uniqueJunctions))
 
   strand(uniqueJunctions)<-uniqueJunctions$spliceStrand
-  if(original_seqlevelstyle != seqlevelsStyle(unlisted_junction_granges)[1]){
-    seqlevelsStyle(uniqueJunctions) <- original_seqlevelstyle
-  }
+  # if(original_seqlevelstyle != seqlevelsStyle(unlisted_junction_granges)[1]){
+  #   seqlevelsStyle(uniqueJunctions) <- original_seqlevelstyle
+  # }
   return(uniqueJunctions)
 }
 
@@ -333,7 +333,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL, verbo
     mySet.training=(annotatedJunctionsEnd$annotatedEnd.end|annotatedJunctionsEnd$annotatedEnd)[mySet.all]
     
     
-    myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.end+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.end ,annotatedJunctionsEnd$distEnd.end,(annotatedJunctionsEnd$spliceStrand.end=='+'),(annotatedJunctionsEnd$spliceStrand.end=='-'),(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
+    myData=data.frame(annotatedJunctionsEnd$endScore/(annotatedJunctionsEnd$endScore.end+annotatedJunctionsEnd$endScore),annotatedJunctionsEnd$endScore,annotatedJunctionsEnd$distEnd.end , (annotatedJunctionsEnd$spliceStrand.end=='+'),(annotatedJunctionsEnd$spliceStrand.end=='-'),(annotatedJunctionsEnd$spliceStrand=='+'))[mySet.all,]
     
     colnames(myData) <- paste('A',1:ncol(myData),sep='.')
     modelmatrix=model.matrix(~A.1+A.2+A.3+A.4+A.5, data=data.frame((myData)))
