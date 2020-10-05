@@ -15,6 +15,14 @@ knitr::opts_chunk$set(
     warning=FALSE, message=FALSE,
     comment = "##>"
 )
+
+# credit to https://gist.github.com/stevenworthington/3178163
+ipak <- function(pkg){
+    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+    if (length(new.pkg)) 
+        BiocManager::install(new.pkg, dependencies = TRUE)
+    sapply(pkg, require, character.only = TRUE)
+}
 ```
 
 
@@ -143,6 +151,7 @@ library(NanoporeRNASeq)
 data("sample_info")
 sample_info
 
+ipak("ExperimentHub")
 library(ExperimentHub)
 NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","Bam"))
 bamFiles <- Rsamtools::BamFileList(NanoporeData[["EH3808"]], NanoporeData[["EH3809"]],NanoporeData[["EH3810"]], NanoporeData[["EH3811"]], NanoporeData[["EH3812"]], NanoporeData[["EH3813"]])
@@ -232,14 +241,6 @@ samples are used, we can visualise the correlation and clustering of all
 samples with a heatmap:
 
 ```{r, include = FALSE}
-# credit to https://gist.github.com/stevenworthington/3178163
-ipak <- function(pkg){
-    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-    if (length(new.pkg)) 
-        BiocManager::install(new.pkg, dependencies = TRUE)
-    sapply(pkg, require, character.only = TRUE)
-}
-
 # usage
 packages <- c("ggbio", "circlize", "ComplexHeatmap","apeglm","rlang")
 ipak(packages)
