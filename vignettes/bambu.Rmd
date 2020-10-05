@@ -137,17 +137,15 @@ from the *NanoporeRNASeq* package, which contains reads aligned to the first
 half of the human chromosome 22 using *minimap2*. 
 ```{r}
 library(bambu)
+
 devtools::install_github("GoekeLab/NanoporeRNASeq", dependencies = FALSE)
 library(NanoporeRNASeq)
-
 data("sample_info")
 sample_info
 
-bamFiles <- Rsamtools::BamFileList(system.file("extdata", sample_info$fileNames,
-    package = "NanoporeRNASeq"))
-names(bamFiles) <- sample_info$sample_id
-
-bamFiles
+library(ExperimentHub)
+NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","Bam"))
+bamFiles <- Rsamtools::BamFileList(NanoporeData[["EH3808"]], NanoporeData[["EH3809"]],NanoporeData[["EH3810"]], NanoporeData[["EH3811"]], NanoporeData[["EH3812"]], NanoporeData[["EH3813"]])
 ```
 
 ### Genome sequence (fasta file/ BSGenome object) {#genome-sequences}          
@@ -156,9 +154,7 @@ splicing junctions in read alignments. Ideally, we recommend to use the same
 genome seqeunce file that was used for alignment to be used for bambu.
 ```{r}
 # get path to fasta file
-genomeSequence <- system.file("extdata",
-    "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr22_1_25409234.fa",
-    package="NanoporeRNASeq")
+genomeSequence <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FaFile"))
 
 ```
 As an option, users can also choose to use a BSgenome object:
