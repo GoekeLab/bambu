@@ -284,12 +284,12 @@ createSpliceMetadata <- function(annotatedJunctions, splice){
         spliceMotif.end = c(metadata[,5][-1],FALSE))
     colnames(distdata) <- 
         c(paste0('dist',splice,'.start'),
-          paste0('annotated',splice,'.start'),
-          paste0(tolower(splice),'Score.start'),
-          'spliceStrand.start','spliceMotif.start',
-          paste0('dist',splice,'.end'), paste0('annotated',splice,'.end'),
-          paste0(tolower(splice),'Score.end'),
-          'spliceStrand.end', 'spliceMotif.end')
+            paste0('annotated',splice,'.start'),
+            paste0(tolower(splice),'Score.start'),
+            'spliceStrand.start','spliceMotif.start',
+            paste0('dist',splice,'.end'), paste0('annotated',splice,'.end'),
+            paste0(tolower(splice),'Score.end'),
+            'spliceStrand.end', 'spliceMotif.end')
     metadata <- cbind(metadata, distdata)
     return(metadata)
 }
@@ -306,7 +306,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
             ranges = IRanges(start = get(tolower(splice))(annotatedJunctions),
             end = get(tolower(splice))(annotatedJunctions)), strand = '*')
         mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
-        if(splice == "Start"){
+        if (splice == "Start") {
             annotatedJunctionsTmp <- unique(annotatedJunctionsTmp)
         }else{
             annotatedJunctionsTmp <- sort(unique(annotatedJunctionsTmp))
@@ -317,7 +317,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     preds <- lapply(spliceVec, function(splice){
         preds <- lapply(tolower(spliceVec), function(prime){
             return(testSpliceSites(metadataList[[splice]], splice = splice,
-                                   prime = prime, junctionModel, verbose))})
+                                    prime = prime, junctionModel, verbose))})
         names(preds) <- tolower(spliceVec) 
         return(preds)})
     names(preds) <- spliceVec
@@ -417,11 +417,11 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
     ## replace all NA's with 0
     spliceSitePredictionList <- 
         cbind(highConfJunctions$spliceSitePredictionStart.start,
-              highConfJunctions$spliceSitePredictionStart.end,
-              highConfJunctions$spliceSitePredictionEnd.start,
-              highConfJunctions$spliceSitePredictionEnd.end)
+                highConfJunctions$spliceSitePredictionStart.end,
+                highConfJunctions$spliceSitePredictionEnd.start,
+                highConfJunctions$spliceSitePredictionEnd.end)
     spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 2 # NA
-    setReferenceJunctions <- (apply(spliceSitePredictionList>0,1,sum)==4)| 
+    setReferenceJunctions <- (apply(spliceSitePredictionList > 0,1,sum) == 4)| 
         highConfJunctions$annotatedJunction
     candidateJunctions$highConfJunctionPrediction[highConfidentJunctionSet] <- 
         setReferenceJunctions

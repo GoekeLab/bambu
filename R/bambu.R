@@ -94,13 +94,13 @@ bambu <- function(reads = NULL, readClass.file = NULL,
     bpParameters <- BiocParallel::bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
     bpParameters$workers <- ifelse(max(length(reads),
-                                       length(readClass.file)) == 1, 1, ncore)
+                                        length(readClass.file)) == 1, 1, ncore)
     bpParameters$progressbar <- (!verbose)
     if (bpParameters$workers > 1) ncore <- 1
     readClassList <- processReads(reads, readClass.file, annotations,
-                                   genomeSequence, readClass.outputDir,
-                                   yieldSize, bpParameters, stranded,
-                                   ncore, verbose)
+                                    genomeSequence, readClass.outputDir,
+                                    yieldSize, bpParameters, stranded,
+                                    ncore, verbose)
     if (extendAnnotations) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, verbose = verbose)
@@ -239,8 +239,8 @@ checkInputs <- function(annotations, reads, readClass.file,
     ## strangely in windows system
     if (.Platform$OS.type == "windows") {
         if (is(genomeSequence, "FaFile")) warning("Note that use of FaFile
-          using Rsamtools in Windows is a bit fuzzy, recommend to provide the 
-          path as a string variable to avoid use of Rsamtools for opening.")
+            using Rsamtools in Windows is a bit fuzzy, recommend to provide the
+            path as a string variable to avoid use of Rsamtools for opening.")
     }
     return(annotations)
 }
