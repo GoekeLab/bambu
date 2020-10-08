@@ -238,7 +238,7 @@ checkInputs <- function(annotations, reads, readClass.file,
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
     if (.Platform$OS.type == "windows") {
-        if (class(genomeSequence) == "FaFile") warning("Note that use of FaFile
+        if (is(genomeSequence, "FaFile")) warning("Note that use of FaFile
           using Rsamtools in Windows is a bit fuzzy, recommend to provide the 
           path as a string variable to avoid use of Rsamtools for opening.")
     }
