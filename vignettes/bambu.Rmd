@@ -154,7 +154,9 @@ sample_info
 ipak("ExperimentHub")
 library(ExperimentHub)
 NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","Bam"))
-bamFiles <- Rsamtools::BamFileList(NanoporeData[["EH3808"]], NanoporeData[["EH3809"]],NanoporeData[["EH3810"]], NanoporeData[["EH3811"]], NanoporeData[["EH3812"]], NanoporeData[["EH3813"]])
+bamFiles <- Rsamtools::BamFileList(NanoporeData[["EH3808"]],
+    NanoporeData[["EH3809"]],NanoporeData[["EH3810"]], NanoporeData[["EH3811"]],
+  NanoporeData[["EH3812"]], NanoporeData[["EH3813"]])
 ```
 
 ### Genome sequence (fasta file/ BSGenome object) {#genome-sequences}          
