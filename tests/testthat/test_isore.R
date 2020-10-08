@@ -10,10 +10,10 @@ test_that("isore.constructReadClasses completes successfully", {
         "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
         package = "bambu"
     ))
-    genomeSequence <- Rsamtools::FaFile(system.file("extdata",
+    genomeSequence <- system.file("extdata",
         "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
         package = "bambu"
-    ))
+    )
 
 
     seReadClassUnstrandedExpected <- readRDS(system.file("extdata",
