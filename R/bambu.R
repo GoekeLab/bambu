@@ -80,7 +80,8 @@ bambu <- function(reads = NULL, readClass.file = NULL,
     stranded = FALSE, ncore = 1, yieldSize = NULL, isoreParameters = NULL,
     emParameters = NULL, extendAnnotations = TRUE, verbose = FALSE) {
     annotations <-
-        checkInputs(annotations, reads, readClass.file, readClass.outputDir)
+        checkInputs(annotations, reads, readClass.file, 
+            readClass.outputDir, genomeSequence)
     # ===# set default controlling parameters for isoform reconstruction  #===#
     isoreParameters.default <- list(
         remove.subsetTx = TRUE, min.readCount = 2,
@@ -204,7 +205,7 @@ checkParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @noRd
 checkInputs <- function(annotations, reads, readClass.file,
-    readClass.outputDir){
+    readClass.outputDir, genomeSequence){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "TxDb")) {
@@ -233,6 +234,13 @@ checkInputs <- function(annotations, reads, readClass.file,
     if (!is.null(readClass.file)) {
         if (!all(grepl(".rds", readClass.file))) 
             stop("Read class files should be provided in rds format.")
+    }
+    ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
+    ## strangely in windows system
+    if (.Platform$OS.type == "windows") {
+        if (class(genomeSequence) == "FaFile") warning("Note that use of FaFile
+          using Rsamtools in Windows is a bit fuzzy, recommend to provide the 
+          path as a string variable to avoid use of Rsamtools for opening.")
     }
     return(annotations)
 }
