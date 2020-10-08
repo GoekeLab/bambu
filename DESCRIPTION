@@ -6,7 +6,7 @@ Version: 0.99.4
 Authors@R: c(person("Ying Chen", "Developer", role = "cre",
              email = "chen_ying@gis.a-star.edu.sg"),
              person("Yuk Kei Wan", "Developer", role = "aut",
-             email = "ywan6@alumni.jh.edu"),
+             email = "yukkeiwan622@gmail.com"),
              person("Jonathan Goeke", "Developer", role = "aut",
              email = "gokej@gis.a-star.edu.sg"))
 Description: bambu is a R package for multi-sample transcript discovery and 
