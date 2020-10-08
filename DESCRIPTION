@@ -35,7 +35,7 @@ Suggests:
     TxDb.Hsapiens.UCSC.hg38.knownGene,
     BiocParallel,
     Biostrings,
-    ExperimentHub (>=1.15.3),
+    ExperimentHub (>= 1.15.3),
     DESeq2,
     apeglm,
     DEXSeq
