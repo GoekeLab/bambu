@@ -571,10 +571,6 @@ extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass,
         seFilteredSpliced, exonsByReadClass, min.exonDistance)
     mcols(seFilteredSpliced)$readClassType <-
         apply(classificationTable, 1, paste, collapse = "")
-    end.ptm <- proc.time()
-    if (verbose)
-        message("extended annotations for spliced reads in ",
-            round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(seFilteredSpliced)
 }
 
@@ -684,7 +680,7 @@ extdannotateUnsplicedReads <- function(se, seFilteredSpliced, exonsByReadClass,
 #' @noRd
 assignGeneIDexonMatch <- function(seCombined, exonRangesCombined,
     annotationGrangesList,min.exonOverlap, prefix, verbose) {
-    tart.ptm <- proc.time()
+    start.ptm <- proc.time()
     exonMatchGene <- findOverlaps(exonRangesCombined, annotationGrangesList,
         select = "arbitrary", minoverlap = min.exonOverlap)
     geneIdByExon <- rep(NA, length(exonRangesCombined))
@@ -847,11 +843,16 @@ isore.extendAnnotations <- function(se, annotationGrangesList,
                 byReadClass$exons, byReadClass$intron, annotationGrangesList,
                 byReadClass$seFilteredSpliced, min.exonDistance, verbose
             )
+            end.ptm <- proc.time()
+            if (verbose)
+                message("extended annotations for spliced reads in ",
+                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
         }
         ## unspliced transcripts
         SEnRng <- extdannotateUnsplicedReads(
             se, seFilteredSpliced, byReadClass$exons, annotationGrangesList,
             filterSet1, min.exonOverlap, verbose)
+        
         seCombined <- SEnRng$seCombined
         exonRangesCombined <- SEnRng$exonRangesCombined
         # assign gene IDs based on exon match
