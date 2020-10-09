@@ -10,9 +10,6 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
     unlisted_junctions, uniqueJunctions, stranded, verbose) {
     seqlevels(unlisted_junctions) <- seqlevels(readGrgList)
     seqlevels(uniqueJunctions) <- seqlevels(readGrgList)
-    end.ptm <- proc.time()
-    if (verbose) message("Finished creating junction list with splice motif
-        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList,
         use.names = FALSE, use.ids = FALSE))
     junctionTables <- junctionStrandCorrection(uniqueJunctions,
@@ -85,7 +82,6 @@ correctJunctionFromPrediction <- function(uniqueJunctions, verbose) {
     if (verbose) 
         message("Model to predict true splice sites built in ",
             round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    
     start.ptm <- proc.time()
     uniqueJunctions <- findHighConfidenceJunctions( junctions = uniqueJunctions,
         junctionModel = junctionModel, verbose = verbose)
@@ -177,9 +173,12 @@ isore.constructReadClasses <- function(readGrgList,
         message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
+    end.ptm <- proc.time()
+    if (verbose) message("Finished creating junction list with splice motif
+        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     exonsByReadClass <- generateExonsByReadClass(readGrgList,
         annotationGrangesList, unlisted_junctions, uniqueJunctions,
-        stranded, verbose)
+        stranded, verbose, start.ptm)
     counts <- matrix(mcols(exonsByReadClass)$readCount,
         dimnames = list(names(exonsByReadClass), runName))
     colDataDf <- DataFrame(name = runName, row.names = runName)
