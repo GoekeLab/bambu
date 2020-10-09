@@ -178,7 +178,7 @@ isore.constructReadClasses <- function(readGrgList,
         in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     exonsByReadClass <- generateExonsByReadClass(readGrgList,
         annotationGrangesList, unlisted_junctions, uniqueJunctions,
-        stranded, verbose, start.ptm)
+        stranded, verbose)
     counts <- matrix(mcols(exonsByReadClass)$readCount,
         dimnames = list(names(exonsByReadClass), runName))
     colDataDf <- DataFrame(name = runName, row.names = runName)
