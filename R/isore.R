@@ -791,7 +791,6 @@ filterTranscripts <- function(seCombined, annotationGrangesList,
     if (verbose) message("calculated minimum equivalent classes for
         extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
         " mins.")
-
     mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <-
         minEqClasses$eqClass[match(names(extendedAnnotationRanges[
                                 geneListWithNewTx]), minEqClasses$queryTxId)]
