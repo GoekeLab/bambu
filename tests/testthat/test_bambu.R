@@ -36,11 +36,7 @@ test_that("bambu (isoform quantification of bam file) produces expected output",
 
 
     seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    seExtendedExpected <- readRDS(system.file("extdata", "seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
     seCombinedExpected <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    seCombinedExtendedExpected <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-
-
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
@@ -53,24 +49,12 @@ test_that("bambu (isoform quantification of bam file) produces expected output",
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(assays(se), assays(seExpected))
 
-    set.seed(1234)
-    seExtended <- bambu(reads = test.bam, annotations = gr, genomeSequence = fa.file, emParameters = list(bias = FALSE), extendAnnotations = TRUE)
-    expect_s4_class(seExtended, "SummarizedExperiment")
-    expect_equal(assays(seExtended), assays(seExtendedExpected))
-
-
 
     # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
     set.seed(1234)
     seCombined <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genomeSequence = fa.file, extendAnnotations = FALSE)
     expect_s4_class(seCombined, "SummarizedExperiment")
     expect_equal(seCombined, seCombinedExpected)
-
-    # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
-    set.seed(1234)
-    seCombinedExtended <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genomeSequence = fa.file, extendAnnotations = TRUE)
-    expect_s4_class(seCombinedExtended, "SummarizedExperiment")
-    expect_equal(seCombinedExtended, seCombinedExtendedExpected)
 })
 
 
