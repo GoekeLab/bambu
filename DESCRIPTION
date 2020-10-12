@@ -2,7 +2,7 @@ Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read 
     RNA-Seq data
-Version: 0.99.11
+Version: 0.99.12
 Authors@R: c(person("Ying Chen", "Developer", role = "cre",
              email = "chen_ying@gis.a-star.edu.sg"),
              person("Yuk Kei Wan", "Developer", role = "aut",
