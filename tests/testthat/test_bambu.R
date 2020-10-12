@@ -87,39 +87,16 @@ test_that("bambu (isoform quantification of bam file and save readClassFiles) pr
 
 
     seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    seExtendedExpected <- readRDS(system.file("extdata", "seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    seCombinedExpected <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
     seCombinedExtendedExpected <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 
     # test case 1: bambu with single bam file, only using annotations (default option)
-    set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, emParameters = list(bias = FALSE), extendAnnotations = FALSE, readClass.outputDir = readClass.outputDir)
-    expect_s4_class(se, "SummarizedExperiment")
-    expect_equal(se, seExpected)
-
-
     set.seed(1234)
     se <- bambu(reads = test.bam, annotations = gr, genomeSequence = fa.file, emParameters = list(bias = FALSE), extendAnnotations = FALSE, readClass.outputDir = readClass.outputDir)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(se, seExpected)
 
 
-    set.seed(1234)
-    seExtended <- bambu(reads = test.bam, annotations = gr, genomeSequence = fa.file, emParameters = list(bias = FALSE), extendAnnotations = TRUE, readClass.outputDir = readClass.outputDir)
-    expect_s4_class(seExtended, "SummarizedExperiment")
-    expect_equal(seExtended, seExtendedExpected)
-
-
-
-    # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
-    set.seed(1234)
-    seCombined <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genomeSequence = fa.file, extendAnnotations = FALSE, readClass.outputDir = readClass.outputDir)
-    expect_s4_class(seCombined, "SummarizedExperiment")
-    expect_equal(seCombined, seCombinedExpected)
-
-
-
-    # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
+    # test case 2: bambu with multiple bam file, extending annotations, yieldSize lower than read count
     set.seed(1234)
     seCombinedExtended <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genomeSequence = fa.file, extendAnnotations = TRUE, readClass.outputDir = readClass.outputDir)
     expect_s4_class(seCombinedExtended, "SummarizedExperiment")
@@ -135,18 +112,11 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
     gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
 
-    seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
     seExtendedExpected <- readRDS(system.file("extdata", "seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
     seCombinedExpected <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    seCombinedExtendedExpected <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 
 
     # test case 1: bambu with single bam file, only using annotations (default option)
-    set.seed(1234)
-    se <- bambu(readClass.file = seReadClass1, annotations = gr, emParameters = list(bias = FALSE), extendAnnotations = FALSE)
-    expect_s4_class(se, "SummarizedExperiment")
-    expect_equal(se, seExpected)
-
     set.seed(1234)
     seExtended <- bambu(readClass.file = seReadClass1, annotations = gr, emParameters = list(bias = FALSE), extendAnnotations = TRUE)
     expect_s4_class(seExtended, "SummarizedExperiment")
@@ -161,13 +131,4 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 
     expect_s4_class(seCombined, "SummarizedExperiment")
     expect_equal(seCombined, seCombinedExpected)
-
-
-    # test case 3: bambu with multiple bam file, extending annotations, yieldSize lower than read count
-    set.seed(1234)
-    seCombinedExtended <- bambu(readClass.file = c(seReadClass1, seReadClass1), annotations = gr, extendAnnotations = TRUE)
-    dimnames(assays(seCombinedExtendedExpected)$counts)[[2]] <- dimnames(assays(seCombinedExtendedExpected)$CPM)[[2]] <- colnames(seCombinedExtendedExpected) <- colData(seCombinedExtendedExpected)$name <- gsub(".bam", "", colnames(seCombinedExtendedExpected))
-    dimnames(seCombinedExtended@assays@data@listData$counts)[[1]] <- dimnames(seCombinedExtended@assays@data@listData$CPM)[[1]] <- rownames(seCombinedExtendedExpected)
-    expect_s4_class(seCombinedExtended, "SummarizedExperiment")
-    expect_equal(seCombinedExtended, seCombinedExtendedExpected)
 })
