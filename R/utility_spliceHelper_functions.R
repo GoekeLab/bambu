@@ -90,7 +90,7 @@ findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
 #' @noRd
 checkStartSequence <- function(olap, firstLastSeparate, queryStart,
         subjectStart, queryEnd,subjectEnd, subjectFull, subjectList){
-    if (length(olap) > 0) {
+    if (length(olap)) {
         queryStart <- ranges(queryStart[queryHits(olap)])
         subjectStart <- ranges(subjectStart[subjectHits(olap)])
         queryEnd <- ranges(queryEnd[queryHits(olap)])
@@ -225,11 +225,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand = FALSE) {
 
     compatible <- myCompatibleTranscription(query, subject, splice)
     strandSpecific <- all(strand(query) != "*")
-    rm(list = c("query", "subject"))
-    gc()
     equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
-    rm(olapEqual)
-    gc()
     unique <- myOneMatch(compatible, queryHits(olap))
 
     mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific)

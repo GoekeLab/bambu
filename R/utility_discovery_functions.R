@@ -19,7 +19,6 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
         "spliceStrand", "junctionStartName", "junctionEndName",
         "startScore", "endScore", "id")]
     unlisted_junctions <- junctionTables[[2]]
-    rm(junctionTables)
     uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(
         uniqueJunctions,uniqueAnnotatedIntrons)))
     uniqueJunctions$annotatedStart <- uniqueJunctions$junctionStartName %in%
@@ -37,8 +36,6 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
     if (verbose)
     message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-
-    rm(list = c("uniqueJunctions", "unlisted_junctions"))
     return(readClassListSpliced)
 }
 
@@ -97,7 +94,6 @@ correctJunctionFromPrediction <- function(uniqueJunctions, verbose) {
     if (verbose) 
         message("Finished correcting junction based on set of high confidence
             junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    rm(junctionModel)
     return(uniqueJunctions)
 }
 
@@ -131,15 +127,12 @@ generateExonsByReadClass <- function(readGrgList, annotationGrangesList,
     readClassListUnsplicedReduced <- constructUnsplicedReadClasses(
         granges = singleExonReads, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
-    rm(list = c("singleExonReads", "referenceExons", "readGrgList"))
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     exonsByReadClass <- c(readClassListSpliced,
         readClassListUnsplicedWithAnnotation$exonsByReadClass,
         readClassListUnsplicedReduced$exonsByReadClass)
-    rm(list = c("readClassListSpliced", "readClassListUnsplicedWithAnnotation",
-        "readClassListUnsplicedReduced"))
     return(exonsByReadClass)
 }
 
@@ -186,7 +179,6 @@ isore.constructReadClasses <- function(readGrgList,
         "strand.rc", "intronStarts", "intronEnds", "confidenceType")]
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
         rowRanges = exonsByReadClass, colData = colDataDf)
-    rm(list = c("counts", "exonsByReadClass"))
     return(se)
 }
 
@@ -241,11 +233,6 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
         assays = SimpleList(counts = counts.spliced, 
         start = start.spliced,end = end.spliced),
         rowData = rowData.spliced, colData = colDataCombined)
-    rm(list = c("counts.spliced", "start.spliced", "end.spliced",
-        "rowData.spliced", "counts.splicedRef", "start.splicedRef",
-        "end.splicedRef", "counts.splicedNew", "start.splicedNew",
-        "end.splicedNew"))
-    gc(verbose = FALSE)
     return(se.spliced)
 }
 
@@ -294,7 +281,6 @@ createSEforUnsplicedTx <- function(readClassSeRef, readClassSe,
         as.matrix(start.unsplicedNewSum[, "start"])
     end.unsplicedNew[counts.unsplicedNewSum$index, ] <-
         as.matrix(end.unsplicedNewSum[, "end"])
-    ############ TODO: Speed up ###############
     counts.unspliced <- cbind(counts.unsplicedRef, counts.unsplicedNew)
     start.unspliced <- cbind(start.unsplicedRef, start.unsplicedNew)
     start.unspliced[which(is.infinite(start.unspliced))] <- NA
@@ -428,8 +414,6 @@ isore.combineTranscriptCandidates <- function(readClassSe,
             colDataCombined, rowData.unspliced, stranded)
         se.combined <- SummarizedExperiment::rbind(se.spliced, se.unspliced)
         rownames(se.combined) <- seq_len(nrow(se.combined))
-        rm(list = c("se.spliced", "se.unspliced"))
-        gc(verbose = FALSE)
         return(se.combined)
     }
 }
@@ -480,21 +464,19 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
     classificationTable$newWithin[all(intronMatchesList) & !(
         classificationTable$compatible == "compatible" |
             classificationTable$equal == "equal")] <- "newWithin"
-    lastJunctionMatch <-
-        unlist(endoapply(endoapply(intronMatchesList, rev), "[[", 1))
-    firstJunctionMatch <- unlist(endoapply(intronMatchesList, "[[", 1))
+    intronMatchListRev <- lapply(intronMatchesList, rev)
+    lastJunctionMatch <- unlist(lapply(intronMatchListRev,`[[`, 1))
+    firstJunctionMatch <- unlist(lapply(intronMatchesList, `[[`, 1))
     classificationTable$newLastJunction[which(rowData(
         seFilteredSpliced)$strand == "+" & !lastJunctionMatch &
-            any(intronMatchesList))] <- "newLastJunction"
-    classificationTable$newLastJunction[which(rowData(
+            any(intronMatchesList) | (rowData(
         seFilteredSpliced)$strand == "-" & (!firstJunctionMatch &
-            any(intronMatchesList)))] <- "newLastJunction"
+            any(intronMatchesList))))] <- "newLastJunction"
     classificationTable$newFirstJunction[which(rowData(
         seFilteredSpliced)$strand == "+" & !firstJunctionMatch &
-            any(intronMatchesList))] <- "newFirstJunction"
-    classificationTable$newFirstJunction[which(rowData(
+            any(intronMatchesList) | (rowData(
         seFilteredSpliced)$strand == "-" & (!lastJunctionMatch &
-            any(intronMatchesList)))] <- "newFirstJunction"
+            any(intronMatchesList))))] <- "newFirstJunction"
     classificationTable$newJunction[(
         sum(!intronMatchesList) > !firstJunctionMatch + !lastJunctionMatch) &
         any(intronMatchesList)] <- "newJunction"
@@ -503,7 +485,7 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
     overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,
         unlistedIntronsAnnotations, type = "equal",
         select = "all", ignore.strand = FALSE)
-    if (length(overlapsNewIntronsAnnotatedIntrons) > 0) {
+    if (length(overlapsNewIntronsAnnotatedIntrons)) {
         distNewTxByQuery <- assignGeneIDbyMaxMatch(
             unlistedIntrons,unlistedIntronsAnnotations,
             overlapsNewIntronsAnnotatedIntrons, exonsByReadClass,
@@ -734,7 +716,7 @@ removeTranscriptsWIdenJunct <- function(seCombinedFiltered,
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     mcols(extendedAnnotationRanges) <-
         mcols(seCombinedFiltered)[, c("GENEID", "newTxClass")]
-    if (length(extendedAnnotationRanges) > 0) 
+    if (length(extendedAnnotationRanges)) 
         mcols(extendedAnnotationRanges)$TXNAME <- paste0(
             "tx",prefix, ".", seq_along(extendedAnnotationRanges))
     names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
@@ -895,7 +877,6 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
     readClassTable <- left_join(readClassTable, readClassGeneTable,
         by = "readClassId") %>%
         dplyr::select(confidenceType, geneId, compatible, equal)
-    rm(list = c("newGeneCandidates", "readClassGeneTable"))
     end.ptm <- proc.time()
     if (verbose) message("added gene Ids for each read class ",
             round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
@@ -937,6 +918,50 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                         seReadClass, verbose)
     metadata(seReadClass) <- list(distTable = distTable)
     rowData(seReadClass) <- readClassTable
-    rm(list = c("distTable", "readClassTable"))
     return(seReadClass)
+}
+
+
+## helper functions to correct junctions
+#' calculate stranded read counts
+#' @param uniqueJunctions uniqueJunctions
+#' @param junctionMatchList junctionMatchList
+#' @param genomeSequence genomeSequence
+#' @param unstranded_unlisted_junctions unstranded_unlisted_junctions
+#' @param unlisted_junction_granges unlisted_junction_granges
+#' @noRd
+calculateStrandedReadCounts <- function(uniqueJunctions,
+    genomeSequence,unstranded_unlisted_junctions,
+    unlisted_junction_granges) {
+    junctionMatchList <- as(findMatches(uniqueJunctions,
+        unstranded_unlisted_junctions),"List")
+    uniqueJunctions_score <- elementNROWS(junctionMatchList)
+    junctionStrandList <- extractList(strand(unlisted_junction_granges),
+        junctionMatchList)
+    junctionSeqStart <- BSgenome::getSeq(genomeSequence,
+        IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
+    junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
+        IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
+    junctionMotif <- paste(junctionSeqStart, junctionSeqEnd, sep = "-")
+    junctionStartName <- paste(seqnames(uniqueJunctions),start(uniqueJunctions),
+        sep = ":")
+    junctionEndName <- paste(seqnames(uniqueJunctions), end(uniqueJunctions),
+        sep = ":")
+    startScore <- as.integer(tapply(uniqueJunctions_score,
+        junctionStartName, sum)[junctionStartName])
+    endScore <- as.integer(tapply(uniqueJunctions_score,
+        junctionEndName, sum)[junctionEndName])
+    mcols(uniqueJunctions) <- DataFrame(
+        score = uniqueJunctions_score,
+        plus_score = sum(junctionStrandList == "+"),
+        minus_score = sum(junctionStrandList == "-"),
+        spliceMotif = junctionMotif,
+        spliceStrand = spliceStrand(junctionMotif),
+        junctionStartName = junctionStartName,
+        junctionEndName = junctionEndName,
+        startScore = startScore,
+        endScore = endScore,
+        id = seq_along(uniqueJunctions))
+    strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
+    return(uniqueJunctions)
 }

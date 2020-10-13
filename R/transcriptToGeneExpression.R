@@ -60,9 +60,9 @@ transcriptToGeneExpression <- function(se) {
 #' @noRd
 rename_duplicatedNames <- function(runnames){
     ## rename runnames when duplicated names are found
-    if (length(which(duplicated(runnames))) > 0) {
+    if (length(which(duplicated(runnames)))) {
         iter <- 1
-        while (length(which(duplicated(runnames))) > 0) {
+        while (length(which(duplicated(runnames)))) {
             if (iter == 1) {
                 runnames[which(duplicated(runnames))] <-
                     paste0(runnames[which(duplicated(runnames))], "...", iter)

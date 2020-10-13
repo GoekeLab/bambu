@@ -1,47 +1,3 @@
-#' calculate stranded read counts
-#' @param uniqueJunctions uniqueJunctions
-#' @param junctionMatchList junctionMatchList
-#' @param genomeSequence genomeSequence
-#' @param unstranded_unlisted_junctions unstranded_unlisted_junctions
-#' @param unlisted_junction_granges unlisted_junction_granges
-#' @noRd
-calculateStrandedReadCounts <- function(uniqueJunctions,
-    genomeSequence,unstranded_unlisted_junctions,
-    unlisted_junction_granges) {
-    junctionMatchList <- as(findMatches(uniqueJunctions,
-        unstranded_unlisted_junctions),"List")
-    uniqueJunctions_score <- elementNROWS(junctionMatchList)
-    junctionStrandList <- extractList(strand(unlisted_junction_granges),
-        junctionMatchList)
-    junctionSeqStart <- BSgenome::getSeq(genomeSequence,
-        IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
-    junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
-        IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
-    junctionMotif <- paste(junctionSeqStart, junctionSeqEnd, sep = "-")
-    junctionStartName <- paste(seqnames(uniqueJunctions),start(uniqueJunctions),
-        sep = ":")
-    junctionEndName <- paste(seqnames(uniqueJunctions), end(uniqueJunctions),
-        sep = ":")
-    startScore <- as.integer(tapply(uniqueJunctions_score,
-        junctionStartName, sum)[junctionStartName])
-    endScore <- as.integer(tapply(uniqueJunctions_score,
-        junctionEndName, sum)[junctionEndName])
-    mcols(uniqueJunctions) <- DataFrame(
-        score = uniqueJunctions_score,
-        plus_score = sum(junctionStrandList == "+"),
-        minus_score = sum(junctionStrandList == "-"),
-        spliceMotif = junctionMotif,
-        spliceStrand = spliceStrand(junctionMotif),
-        junctionStartName = junctionStartName,
-        junctionEndName = junctionEndName,
-        startScore = startScore,
-        endScore = endScore,
-        id = seq_along(uniqueJunctions))
-    strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
-    return(uniqueJunctions)
-}
-
-
 #' Create Junction tables from unlisted junction granges
 #' @importFrom BiocParallel bppram bpvec
 #' @noRd
@@ -482,7 +438,6 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
                 reference junctions found')
         junctions$mergedHighConfJunctionId <-  names(junctions)
     }
-    rm(candidateJunctionsPlus, candidateJunctionsMinus)
     if (verbose) {
         message('reads count for all annotated junctions after 
                 correction to reference junction')

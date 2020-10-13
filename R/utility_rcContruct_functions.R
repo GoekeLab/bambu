@@ -1,3 +1,4 @@
+
 #' calculate distance between first and last exon matches
 #' @param uniqueJunctions uniqueJunctions
 #' @param unlisted_junctions unlisted_junctions
@@ -59,38 +60,28 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
 constructSplicedReadClassTables <- function(uniqueJunctions,
                         unlisted_junctions, readGrgList, stranded = FALSE) {
     options(scipen = 999)
-
     uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
-    
     if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
         warning("read Id not sorted, can result in wrong assignments.
             Please report error")
-    
     readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
-    
     firstseg <- start(PartitioningByWidth(readGrgList))
-    
     allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
         uniqueJunctions, type = "equal", ignore.strand = TRUE)
-    
     intronStartTMP <- createIntronTmp(uniqueJunctions,
     allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[1]]
-    
     intronEndTMP <- createIntronTmp(uniqueJunctions,
     allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[2]]
-    
     if (!stranded) {
         readStrand <- correctReadTableStrand(uniqueJunctions,
             unlisted_junctions, allJunctionToUniqueJunctionOverlap)
     }else{
         readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
     }
-    
     readTable <- createReadTable(
         uniqueJunctions, unlisted_junctions, readGrgList,
         firstseg, intronStartTMP, intronEndTMP, readStrand,
         allJunctionToUniqueJunctionOverlap)
-    
     exonsByReadClass <- createExonsByReadClass(readTable)
     ## combine new transcripts with annotated transcripts
     ## based on identical intron pattern
@@ -136,7 +127,7 @@ createIntronTmp <- function(uniqueJunctions,
         mcols(unlisted_junctions)$id[-1] == 
             mcols(unlisted_junctions)$id[-length(unlisted_junctions)])
     
-    if (length(exon_0size) > 0)
+    if (length(exon_0size))
         intronStartTMP[-1][exon_0size] <-
             intronEndTMP[-length(intronEndTMP)][exon_0size] + 1
     return(list(intronStartTMP, intronEndTMP))
