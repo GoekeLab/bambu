@@ -23,9 +23,7 @@ Depends:
     SummarizedExperiment (>= 1.1.6)
 Suggests: 
     knitr,
-    fs,
     testthat,
-    devtools,
     ComplexHeatmap,
     circlize,
     ggbio,
@@ -48,6 +46,7 @@ biocViews:
     FeatureExtraction, 
     GeneExpression, 
     GenomeAnnotation,
+    GenomeAssembly,
     ImmunoOncology,
     MultipleComparison,
     Normalization, 
@@ -67,7 +66,6 @@ LinkingTo:
 Imports:
     AnnotationDbi,
     BiocGenerics,
-    BiocManager,
     BSgenome,
     data.table,
     dplyr,
@@ -80,8 +78,8 @@ Imports:
     graphics,
     IRanges, 
     methods,
-    progress,
     Rsamtools,
+    BiocFileCache,
     Rcpp,
     RcppArmadillo,
     RcppProgress,
