@@ -15,14 +15,6 @@ knitr::opts_chunk$set(
     warning=FALSE, message=FALSE,
     comment = "##>"
 )
-
-# credit to https://gist.github.com/stevenworthington/3178163
-ipak <- function(pkg){
-    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-    if (length(new.pkg)) 
-        BiocManager::install(new.pkg, dependencies = TRUE)
-    sapply(pkg, require, character.only = TRUE)
-}
 ```
 
 
@@ -41,41 +33,14 @@ long read RNA-Sequencing data from two human cancer cell lines from the
 Singapore Nanopore Expression Project (SG-NEx).
 
 
-# Content 
-
-* [Quick Start: Transcript discovery and quantification with
-bambu](#quick-start) 
-* [A complete workflow to identify and quantify transcript
-expression from Nanopore RNA-Seq data](#complete-workflow)      
-    + [Input data](#input-data)        
-        - [Aligned reads (bam files)](#bam-files)                     
-        - [Genome sequence (fasta file/ BSGenome object)](#genome-sequences)
-        - [Genome annotations (bambu annotations object/ 
-            gtf file / TxDb object)](#annotations)
-    + [Transcript discovery and quantification
-        ](#transcript-discovery-quantification)  
-        - [Run bambu](#run-bambu)
-        - [Visualise results](#visualise-results)
-        - [Obtain gene expression estimates from transcript
-            expression](#gene-expression)
-        - [Save data (gtf/text)](#save-data)  
-    + [Identify differentially expressed genes](#DESeq2) 
-    + [Identify differential transcript usage](#DEXSeq)    
-* [Running bambu with large number of samples](#large-sample-num)
-* [Bambu parameters](#bambu-parameters)
-* [Getting help](#get-help)
-* [Citing bambu](#cite-bambu)
-* [Session Information](#session-info)
-
-
 # Quick start: Transcript discovery and quantification with bambu {#quick-start}
 
 ## Installation
 You can install bambu from github:
 ```{r, eval = FALSE}
-if (!requireNamespace("devtools", quietly = TRUE))
-    install.packages("devtools")
-devtools::install_github("GoekeLab/bambu")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("bambu")
 ```
 
 ## General Usage
@@ -83,23 +48,12 @@ The default mode to run *bambu* is using a set of aligned reads (bam files),
 reference genome annotations (gtf file, TxDb object, or bambuAnnotation object),
 and reference genome sequence (fasta file or BSgenome). *bambu* will return a 
 summarizedExperiment object with the genomic coordinates for annotated and 
-new transcripts and transcript expression estimates:
-```{r, eval = FALSE}
-library(bambu)
-library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-
-test.bam <- system.file("extdata",
-    "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
-    package = "bambu")
-
-se <- bambu(reads = test.bam, annotations = TxDb.Hsapiens.UCSC.hg38.knownGene,
-    genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38")
-```
-
+new transcripts and transcript expression estimates. 
 We highly recommend to use the same annotations that were used for genome 
 alignment. If you have a gtf file and fasta file you can run bambu with the
 following options:
-```{r, eval = FALSE}
+```{r}
+library(bambu)
 test.bam <- system.file("extdata",
     "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
     package = "bambu")
@@ -114,7 +68,7 @@ gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
 bambuAnnotations <- prepareAnnotations(gtf.file)
 
 se <- bambu(reads = test.bam, annotations = bambuAnnotations,
-    genomeSequence = fa.file)
+    genome = fa.file)
 ```
 *bambu* returns a SummarizedExperiment object which can be accessed as follows:
 
@@ -146,12 +100,10 @@ half of the human chromosome 22 using *minimap2*.
 ```{r}
 library(bambu)
 
-devtools::install_github("GoekeLab/NanoporeRNASeq", dependencies = FALSE)
 library(NanoporeRNASeq)
-data("sample_info")
-sample_info
+data("K562MCF7Samples")
+K562MCF7Samples
 
-ipak("ExperimentHub")
 library(ExperimentHub)
 NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","Bam"))
 bamFiles <- Rsamtools::BamFileList(NanoporeData[["EH3808"]],
@@ -166,7 +118,6 @@ genome seqeunce file that was used for alignment to be used for bambu.
 ```{r}
 # get path to fasta file
 genomeSequence <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FaFile"))
-
 ```
 As an option, users can also choose to use a BSgenome object:
 ```{r}
@@ -199,8 +150,8 @@ Here we will used the annotation object from the *NanoporeRNASeq* package
 that wasis prepared from a gtf file using the \code{prepareAnnotations} 
 function in by function in *bambu*.
 ```{r}
-data("annotation")
-annotation
+data("HsChr22HalfBambuAnnotation")
+HsChr22HalfBambuAnnotation
 ```
 
 ## Transcript discovery and quantification{#transcript-discovery-quantification}
@@ -211,8 +162,8 @@ annotation, and then quantify the transcript expression from these extended
 annotation using an Expectation-Maximisation algorithm. Here we will use 1 core,
 which can be changed to process multiple files in parallel.
 ```{r, results = "hide"}
-se <- bambu(reads = bamFiles, annotations = annotation,
-    genomeSequence = genomeSequence, ncore = 1)
+se <- bambu(reads = bamFiles, annotations = HsChr22HalfBambuAnnotation,
+    genome = genomeSequence, ncore = 1)
 ```
 ```{r}
 se
@@ -221,7 +172,7 @@ For the downstream analysis, we will add the condition of interest to the
 \code{colData} object that describes the samples. Here we are interested in
 a comparison of the 2 cell lines:
 ```{r}
-colData(se)$condition <- as.factor(sample_info$cellLine)
+colData(se)$condition <- as.factor(K562MCF7Samples$cellLine)
 ```
 
 
@@ -229,8 +180,9 @@ colData(se)$condition <- as.factor(sample_info$cellLine)
 Optionally, users can choose to apply *bambu* to do quantification only 
 (without isoform discovery)
 ```{r, results = "hide"}
-seUnextended <- bambu(reads = bamFiles, annotations = annotation,
-    genomeSequence = genomeSequence, extendAnnotations = FALSE)
+seUnextended <- bambu(reads = bamFiles,
+    annotations = HsChr22HalfBambuAnnotation,
+    genome = genomeSequence, discovery = FALSE)
 ```
 ```{r}
 seUnextended
@@ -241,14 +193,6 @@ seUnextended
 *bambu* provides functions to visualise and explore the results. When multiple
 samples are used, we can visualise the correlation and clustering of all
 samples with a heatmap:
-
-```{r, include = FALSE}
-# usage
-packages <- c("ggbio", "circlize", "ComplexHeatmap","apeglm","rlang")
-ipak(packages)
-```
-
-
 ```{r, fig.width = 8, fig.height = 6}
 plotBambu(se, type = "heatmap")
 ```
@@ -282,7 +226,7 @@ We can again use the \code{plotBambu} function to visualise the gene expression
 data across the 6 samples with a heatmap or PCA plot. As expected, samples
 from the same cell line showed higher correlation than across the cell lines.
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <- sample_info$cellLine
+colData(seGene)$groupVar <- K562MCF7Samples$cellLine
 plotBambu(seGene, type = "heatmap")
 ```
 
@@ -291,14 +235,16 @@ plotBambu(seGene, type = "heatmap")
 *bambu* includes a function to write the extended annotations, the transcript
 and the gene expression estimates that include any newly discovered genes and
 transcripts to text files.   
-```{r, eval = FALSE}
-writeBambuOutput(se, path = "./bambu/", prefix="NanoporeRNASeq_")
+```{r}
+save.dir <- tempdir()
+writeBambuOutput(se, path = save.dir, prefix = "NanoporeRNASeq_")
 ```
 
 *bambu* also includes a function that only exports the extended annotations
 to gtf file:
-```{r, eval = FALSE}
-writeToGTF(rowRanges(se), file="./bambu/NanoporeRNASeq_extendedAnnotations.gtf")
+```{r}
+save.file <- tempfile(fileext = ".gtf")
+writeToGTF(rowRanges(se), file = save.file)
 ```
 
 
@@ -366,9 +312,9 @@ plotMA(dxr, cex = 0.8 )
 For larger sample numbers we recommend to write the processed data to a file.
 This can be done by providing the readClass.outputDir:
 ```{r, eval = FALSE}
-se <- bambu(reads = bamFiles, readClass.outputDir = "./bambu/",
+se <- bambu(reads = bamFiles, rcOutDir = "./bambu/",
     annotations = annotaiton, 
-    genomeSequence = genomeSequence)
+    genome = genomeSequence)
 ```
 # Bambu parameters {#bambu-parameters}
 ## Advanced Options
@@ -379,18 +325,18 @@ parameters are explained here. You can use any combination of these parameters.
 
 * Keep novel transcripts with min 5 read count in at least 1 sample:
 ```{r, eval = FALSE}
-bambu(reads, annotations, genomeSequence,
-    isoreParameters = list(min.readCount = 5))
+bambu(reads, annotations, genome,
+    opt.discovery = list(min.readCount = 5))
 ```
 * Keep novel transcripts with min 5 samples having at least 2 counts:
 ```{r, eval = FALSE}
-bambu(reads, annotations, genomeSequence,
-    isoreParameters = list(min.sampleNumber = 5))
+bambu(reads, annotations, genome, 
+    opt.discovery = list(min.sampleNumber = 5))
 ```
 * Filter out transcripts with relative abundance within gene lower than 10%:
 ```{r, eval = FALSE}
-bambu(reads, annotations, genomeSequence, 
-    isoreParameters = list(min.readFractionByGene = 0.1))
+bambu(reads, annotations, genome, 
+    opt.discovery = list(min.readFractionByGene = 0.1))
 ```
 ### Quantification without bias correction    
 
@@ -398,13 +344,13 @@ The default estimation automatically does bias correction for expression
 estimates. However, you can choose to perform the quantification without
 bias correction.
 ```{r, eval = FALSE}
-bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
+bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
 ```
 ### Parallel computation
 
 bambu allows parallel computation.
 ```{r, eval = FALSE}
-bambu(reads, annotations, genomeSequence, ncore = 8)
+bambu(reads, annotations, genome, ncore = 8)
 ```
 See *[manual
 ](https://github.com/GoekeLab/bambu/blob/master/docs/bambu_0.1.0.pdf)* 

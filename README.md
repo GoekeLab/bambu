@@ -55,7 +55,7 @@ gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
 
 bambuAnnotations <- prepareAnnotations(gtf.file)
 
-se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
+se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ```
 
@@ -63,14 +63,14 @@ se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = f
 **Quantification of annotated transcripts and genes only (no transcript/gene discovery)**
 
 ```rscript
-bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnnotations = FALSE)
+bambu(reads = test.bam, annotations = txdb, genome = fa.file, discovery = FALSE)
 ```
 
 **Large sample number/ limited memory**     
 For larger sample numbers we recommend to write the processed data to a file:
 
 ```rscript
-bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnnotations, genomeSequence = fa.file)
+bambu(reads = test.bam, rcOutDir = "./bambu/", annotations = bambuAnnotations, genome = fa.file)
 ```
 ---
 
@@ -102,19 +102,19 @@ annotations <- prepareAnnotations(txdb)
 - Keep novel transcripts with min 5 read count in at least 1 sample: 
 
 ```rscript
-bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readCount = 5))
+bambu(reads, annotations, genome, opt.discovery = list(min.readCount = 5))
 ```
 
 - Keep novel transcripts with min 5 samples having at least 2 counts:
 
 ```rscript
-bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumber = 5))
+bambu(reads, annotations, genome, opt.discovery = list(min.sampleNumber = 5))
 ```
 
 - Filter out transcripts with relative abundance within gene lower than 10%: 
 
 ```rscript
-bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))
+bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 0.1))
 ```
 
 **Quantification without bias correction**     
@@ -122,14 +122,14 @@ bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractio
  The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
 
 ```rscript
-bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
+bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
 ```
 
 **Parallel computation**      
  ***bambu***  allows parallel computation.  
 
 ```rscript
-bambu(reads, annotations, genomeSequence, ncore = 8)
+bambu(reads, annotations, genome, ncore = 8)
 ```
 
 See [manual](docs/bambu_0.3.0.pdf) for details to customize other conditions.
