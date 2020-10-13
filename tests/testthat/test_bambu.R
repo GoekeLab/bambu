@@ -40,19 +40,19 @@ test_that("bambu (isoform quantification of bam file) produces expected output",
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, emParameters = list(bias = FALSE), extendAnnotations = FALSE)
+    se <- bambu(reads = test.bam, annotations = txdb, genome = fa.file, opt.em = list(bias = FALSE), discovery = FALSE)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(assays(se), assays(seExpected))
 
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = gr, genomeSequence = fa.file, emParameters = list(bias = FALSE), extendAnnotations = FALSE)
+    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(bias = FALSE), discovery = FALSE)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(assays(se), assays(seExpected))
 
 
     # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
     set.seed(1234)
-    seCombined <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genomeSequence = fa.file, extendAnnotations = FALSE)
+    seCombined <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genome = fa.file, discovery = FALSE)
     expect_s4_class(seCombined, "SummarizedExperiment")
     expect_equal(seCombined, seCombinedExpected)
 })
@@ -67,7 +67,7 @@ test_that("bambu (isoform quantification of bam file and save readClassFiles) pr
 
     txdb <- loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
     gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-    readClass.outputDir <- tempdir()
+    rcOutDir <- tempdir()
 
 
     seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
@@ -75,14 +75,14 @@ test_that("bambu (isoform quantification of bam file and save readClassFiles) pr
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = gr, genomeSequence = fa.file, emParameters = list(bias = FALSE), extendAnnotations = FALSE, readClass.outputDir = readClass.outputDir)
+    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(bias = FALSE), discovery = FALSE, rcOutDir = rcOutDir)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(se, seExpected)
 
 
     # test case 2: bambu with multiple bam file, extending annotations, yieldSize lower than read count
     set.seed(1234)
-    seCombinedExtended <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genomeSequence = fa.file, extendAnnotations = TRUE, readClass.outputDir = readClass.outputDir)
+    seCombinedExtended <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genome = fa.file, discovery = TRUE, rcOutDir = rcOutDir)
     expect_s4_class(seCombinedExtended, "SummarizedExperiment")
     expect_equal(seCombinedExtended, seCombinedExtendedExpected)
 })
@@ -102,14 +102,14 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    seExtended <- bambu(readClass.file = seReadClass1, annotations = gr, emParameters = list(bias = FALSE), extendAnnotations = TRUE)
+    seExtended <- bambu(rcFile = seReadClass1, annotations = gr, opt.em = list(bias = FALSE), discovery = TRUE)
     expect_s4_class(seExtended, "SummarizedExperiment")
     expect_equal(seExtended, seExtendedExpected)
 
 
     # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
     set.seed(1234)
-    seCombined <- bambu(readClass.file = c(seReadClass1, seReadClass1), annotations = gr, extendAnnotations = FALSE)
+    seCombined <- bambu(rcFile = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
     dimnames(assays(seCombinedExpected)$counts)[[2]] <- dimnames(assays(seCombinedExpected)$CPM)[[2]] <- colnames(seCombinedExpected) <- colData(seCombinedExpected)$name <- gsub(".bam", "", colnames(seCombinedExpected))
     dimnames(seCombined@assays@data@listData$counts)[[1]] <- dimnames(seCombined@assays@data@listData$CPM)[[1]] <- rownames(seCombinedExpected)
 
