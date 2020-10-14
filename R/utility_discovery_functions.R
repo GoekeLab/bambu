@@ -8,8 +8,10 @@
 #' @noRd
 createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
     unlisted_junctions, uniqueJunctions, stranded, verbose) {
-    seqlevels(unlisted_junctions) <- seqlevels(readGrgList)
-    seqlevels(uniqueJunctions) <- seqlevels(readGrgList)
+    GenomeInfoDb::seqlevels(unlisted_junctions) <-
+        GenomeInfoDb::seqlevels(readGrgList)
+    GenomeInfoDb::seqlevels(uniqueJunctions) <- 
+        GenomeInfoDb::seqlevels(readGrgList)
     uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList,
         use.names = FALSE, use.ids = FALSE))
     junctionTables <- junctionStrandCorrection(uniqueJunctions,
@@ -101,9 +103,11 @@ correctJunctionFromPrediction <- function(uniqueJunctions, verbose) {
 #' @noRd
 generateExonsByReadClass <- function(readGrgList, annotationGrangesList, 
     unlisted_junctions, uniqueJunctions, stranded, verbose){
-    seqlevels(readGrgList) <- unique(c(seqlevels(readGrgList),
-        seqlevels(annotationGrangesList)))
-    seqlevels(annotationGrangesList) <- seqlevels(readGrgList)
+    GenomeInfoDb::seqlevels(readGrgList) <-
+        unique(c(GenomeInfoDb::seqlevels(readGrgList),
+        GenomeInfoDb::seqlevels(annotationGrangesList)))
+    GenomeInfoDb::seqlevels(annotationGrangesList) <- 
+        GenomeInfoDb::seqlevels(readGrgList)
     readClassListSpliced <- createModelforJunctionReads(
         readGrgList, annotationGrangesList, unlisted_junctions,
         uniqueJunctions, stranded, verbose)
@@ -113,11 +117,12 @@ generateExonsByReadClass <- function(readGrgList, annotationGrangesList,
         use.names = FALSE)
     mcols(singleExonReads)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
-    referenceExons <- unique(c(granges(unlist(
+    referenceExons <- unique(c(GenomicRanges::granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
             "highConfidenceJunctionReads" &
             mcols(readClassListSpliced)$strand.rc != "*"], use.names = FALSE)), 
-            granges(unlist(annotationGrangesList, use.names = FALSE))))
+            GenomicRanges::granges(unlist(annotationGrangesList,
+            use.names = FALSE))))
     readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
         granges = singleExonReads, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
@@ -152,17 +157,20 @@ isore.constructReadClasses <- function(readGrgList,
     uniqueJunctions <- createJunctionTable(unlisted_junctions,
         ncore = ncore, genomeSequence = genomeSequence)
     # all seqlevels should be consistent, and drop those not in uniqueJunctions
-    if (!all(seqlevels(unlisted_junctions) %in% seqlevels(uniqueJunctions))) {
-        unlisted_junctions <- keepSeqlevels(unlisted_junctions,
-            value = seqlevels(unlisted_junctions)[seqlevels(
-            unlisted_junctions) %in%
-            seqlevels(uniqueJunctions)], pruning.mode = "coarse")
-        readGrgList <- keepSeqlevels(readGrgList,
-            value = seqlevels(readGrgList)[ seqlevels(readGrgList) %in%
-                    seqlevels(uniqueJunctions)], pruning.mode = "coarse")
+    if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
+        GenomeInfoDb::seqlevels(uniqueJunctions))) {
+        unlisted_junctions <- GenomeInfoDb::keepSeqlevels(unlisted_junctions,
+            value = GenomeInfoDb::seqlevels(unlisted_junctions)[
+                GenomeInfoDb::seqlevels(unlisted_junctions) %in%
+            GenomeInfoDb::seqlevels(uniqueJunctions)], pruning.mode = "coarse")
+        readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
+            value = GenomeInfoDb::seqlevels(readGrgList)[ 
+            GenomeInfoDb::seqlevels(readGrgList) %in%
+            GenomeInfoDb::seqlevels(uniqueJunctions)], pruning.mode = "coarse")
     } # the seqleels will be made comparable for all ranges,
     # warning is shown if annotation is missing some
-    if (!all(seqlevels(readGrgList) %in% seqlevels(annotationGrangesList))) 
+    if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
+        GenomeInfoDb::seqlevels(annotationGrangesList))) 
         message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
@@ -392,12 +400,12 @@ isore.combineTranscriptCandidates <- function(readClassSe,
             filter(readClassSeRefTBL,confidenceType == "unsplicedNew")
         readClassSeTBL.unspliced <-
             filter(readClassSeTBL,confidenceType == "unsplicedNew")
-        unsplicedRangesRef <- GRanges(
+        unsplicedRangesRef <- GenomicRanges::GRanges(
             seqnames = readClassSeRefTBL.unspliced$chr,
             ranges = IRanges(start = readClassSeRefTBL.unspliced$start,
                             end = readClassSeRefTBL.unspliced$end),
             strand = readClassSeRefTBL.unspliced$strand)
-        unsplicedRangesNew <- GRanges(
+        unsplicedRangesNew <- GenomicRanges::GRanges(
             seqnames = readClassSeTBL.unspliced$chr.rc,
             ranges = IRanges(start = readClassSeTBL.unspliced$start,
                             end = readClassSeTBL.unspliced$end),
@@ -428,7 +436,7 @@ createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList) {
         as.integer(rowData(seFilteredSpliced)$end + 1), sep = ",")
     exonStartsShifted <- paste(as.integer(rowData(seFilteredSpliced)$start - 1),
         rowData(seFilteredSpliced)$intronEnds, sep = ",")
-    exonsByReadClass <- makeGRangesListFromFeatureFragments(
+    exonsByReadClass <- GenomicRanges::makeGRangesListFromFeatureFragments(
         seqnames = rowData(seFilteredSpliced)$chr,
         fragmentStarts = exonStartsShifted,
         fragmentEnds = exonEndsShifted,
@@ -448,8 +456,9 @@ createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList) {
     unlistData$exon_rank <- unlist(exon_rank)
     unlistData$exon_endRank <- unlist(exon_endRank)
     exonsByReadClass <- relist(unlistData, partitioning)
-    seqlevels(exonsByReadClass) <-
-        unique(c(seqlevels(exonsByReadClass), seqlevels(annotationGrangesList)))
+    GenomeInfoDb::seqlevels(exonsByReadClass) <-
+        unique(c(GenomeInfoDb::seqlevels(exonsByReadClass), 
+        GenomeInfoDb::seqlevels(annotationGrangesList)))
     return(exonsByReadClass)
 }
 
@@ -610,7 +619,7 @@ extdannotateUnsplicedReads <- function(se, seFilteredSpliced, exonsByReadClass,
     if (any(rowData(se)$confidenceType == "unsplicedNew" & filterSet1)) {
         seFilteredUnspliced <-
             se[rowData(se)$confidenceType == "unsplicedNew" & filterSet1, ]
-        exonsByReadClassUnspliced <- GRanges(
+        exonsByReadClassUnspliced <- GenomicRanges::GRanges(
             seqnames = rowData(seFilteredUnspliced)$chr,
             ranges = IRanges(start = rowData(seFilteredUnspliced)$start,
                             end = rowData(seFilteredUnspliced)$end),
@@ -623,8 +632,9 @@ extdannotateUnsplicedReads <- function(se, seFilteredSpliced, exonsByReadClass,
             rep(1, length(exonsByReadClassUnspliced))
         exonsByReadClassUnspliced <-
             relist(exonsByReadClassUnspliced, partitioning)
-        seqlevels(exonsByReadClassUnspliced) <- unique(c(seqlevels(
-            exonsByReadClassUnspliced), seqlevels(annotationGrangesList)))
+        GenomeInfoDb::seqlevels(exonsByReadClassUnspliced) <- 
+            unique(c(GenomeInfoDb::seqlevels(exonsByReadClassUnspliced),
+            GenomeInfoDb::seqlevels(annotationGrangesList)))
         mcols(seFilteredUnspliced)$GENEID <- NA
         mcols(seFilteredUnspliced)$readClassType <- "unsplicedNew"
         ## here: add filter to remove unspliced transcripts which overlap
@@ -787,14 +797,15 @@ exonsintronsByReadClass <- function(se, annotationGrangesList, filterSet1){
     seFilteredSpliced <- se[rowData(se)$confidenceType ==
         "highConfidenceJunctionReads" & filterSet1, ]
     mcols(seFilteredSpliced)$GENEID <- NA
-    intronsByReadClass <- makeGRangesListFromFeatureFragments(
+    intronsByReadClass <- GenomicRanges::makeGRangesListFromFeatureFragments(
         seqnames = rowData(seFilteredSpliced)$chr,
         fragmentStarts = rowData(seFilteredSpliced)$intronStarts,
         fragmentEnds = rowData(seFilteredSpliced)$intronEnds,
         strand = rowData(seFilteredSpliced)$strand)
     names(intronsByReadClass) <- seq_along(intronsByReadClass)
-    seqlevels(intronsByReadClass) <- unique(c(seqlevels(intronsByReadClass), 
-        seqlevels(annotationGrangesList)))
+    GenomeInfoDb::seqlevels(intronsByReadClass) <-
+        unique(c(GenomeInfoDb::seqlevels(intronsByReadClass), 
+        GenomeInfoDb::seqlevels(annotationGrangesList)))
     exonsByReadClass <- createExonByReadClass(
         seFilteredSpliced, annotationGrangesList
     )
@@ -933,7 +944,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
 calculateStrandedReadCounts <- function(uniqueJunctions,
     genomeSequence,unstranded_unlisted_junctions,
     unlisted_junction_granges) {
-    junctionMatchList <- as(findMatches(uniqueJunctions,
+    junctionMatchList <- methods::as(findMatches(uniqueJunctions,
         unstranded_unlisted_junctions),"List")
     uniqueJunctions_score <- elementNROWS(junctionMatchList)
     junctionStrandList <- extractList(strand(unlisted_junction_granges),

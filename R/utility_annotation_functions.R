@@ -19,7 +19,7 @@ prepareAnnotationsFromGTF <- function(file) {
     if (missing(file)) {
         stop("A GTF file is required.")
     } else {
-        data <- read.delim(file, header = FALSE, comment.char = "#")
+        data <- utils::read.delim(file, header = FALSE, comment.char = "#")
         colnames(data) <- c(
             "seqname", "source", "type", "start", "end",
             "score", "strand", "frame", "attribute")
@@ -28,7 +28,7 @@ prepareAnnotationsFromGTF <- function(file) {
         data$GENEID <- gsub("gene_id (.*?);.*", "\\1", data$attribute)
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
         geneData <- unique(data[, c("TXNAME", "GENEID")])
-        grlist <- makeGRangesListFromDataFrame(
+        grlist <- GenomicRanges::makeGRangesListFromDataFrame(
             data[, c("seqname", "start", "end", "strand", "TXNAME")],
             split.field = "TXNAME", keep.extra.columns = TRUE)
         grlist <- grlist[IRanges::order(start(grlist))]

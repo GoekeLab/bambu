@@ -135,10 +135,9 @@ createIntronTmp <- function(uniqueJunctions,
 
 #' @noRd
 createExonsByReadClass <- function(readTable){
-    exonsByReadClass <-
-        makeGRangesListFromFeatureFragments(seqnames = readTable$chr,
-            fragmentStarts = paste(readTable$start - 1, readTable$intronEnds,
-                sep = ","), 
+    exonsByReadClass <- GenomicRanges::makeGRangesListFromFeatureFragments(
+        seqnames = readTable$chr, fragmentStarts = paste(readTable$start - 1,
+            readTable$intronEnds,sep = ","), 
             fragmentEnds = paste(readTable$intronStarts, readTable$end + 1,
                 sep = ","), strand = readTable$strand)
     exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)
@@ -210,7 +209,7 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
             intronEnds = NA) %>% dplyr::select(
             chr, start, end, strand, intronStarts,
             intronEnds, confidenceType, readClassId, readCount)
-    exByReadClassUnspliced <- GRanges(
+    exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
         ranges = IRanges(
             start = hitsDF$start,

@@ -130,7 +130,8 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = TRUE) {
     seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
     strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
 
-    gr <- GRanges(seqnms, unlist(gaps, use.names = use.names), strand)
+    gr <- GenomicRanges::GRanges(seqnms, unlist(gaps,
+        use.names = use.names), strand)
     if (use.ids & !is.null(mcols(x, use.names = FALSE)$id)) 
         mcols(gr)$id <- rep(mcols(x)$id, elementNROWS(gaps))
     return(gr)
@@ -156,7 +157,8 @@ myGaps <- function(x, start = NA, end = NA) {
         ### FIXME: this makes this function more of an 'introns' than a .gaps.
         ### FIXME: this breaks when the GRangesList is not ordered by position
         if (!is.null(mcols(x, use.names = FALSE)$query.break)) {
-            insert_gaps <- as(ranges(.insertGaps(x)), "CompressedIRangesList")
+            insert_gaps <-
+                methods::as(ranges(.insertGaps(x)), "CompressedIRangesList")
             gaps <- setdiff(gaps, insert_gaps)
         }
 
@@ -166,8 +168,8 @@ myGaps <- function(x, start = NA, end = NA) {
         firstseg <- start(PartitioningByWidth(x))
         seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
         strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
-        gr <- relist(GRanges(seqnms, unlist(gaps, use.names = FALSE),
-            strand), gaps)
+        gr <- relist(GenomicRanges::GRanges(seqnms, unlist(gaps,
+            use.names = FALSE), strand), gaps)
         gr
     } else {
         ### FIXME: does not handle query.break column yet

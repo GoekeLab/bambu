@@ -76,7 +76,7 @@ plotPCA <- function(se, count.data, group.variable) {
         sample.info <- as.data.table(as.data.frame(colData(se)[, c(
             "name", group.variable )]))
         setnames(sample.info, seq_len(2), c("runname", "groupVar"))
-        pca_result <- prcomp(t(as.matrix(count.data)))
+        pca_result <- stats::prcomp(t(as.matrix(count.data)))
         plotData <- data.table(pca_result$x[, seq_len(2)], keep.rownames = TRUE)
         setnames(plotData, "rn", "runname")
         if (!all(plotData$runname %in% sample.info$runname)) {
@@ -91,7 +91,7 @@ plotPCA <- function(se, count.data, group.variable) {
             round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
             theme_minimal()
     } else {
-        pca_result <- prcomp(t(as.matrix(count.data))) 
+        pca_result <- stats::prcomp(t(as.matrix(count.data))) 
         plotData <- data.table(pca_result$x[, seq_len(2)], keep.rownames = TRUE)
         setnames(plotData, "rn", "runname")
         p <- ggplot(plotData, aes(x = PC1, y = PC2)) +
@@ -110,7 +110,7 @@ plotPCA <- function(se, count.data, group.variable) {
 #' @param group.variable the sample groups
 #' @noRd
 plotHeatmap <- function(se, count.data, group.variable) {
-    corData <- cor(count.data, method = "spearman")
+    corData <- stats::cor(count.data, method = "spearman")
     col_fun <- circlize::colorRamp2(
         seq(floor(range(corData)[1] * 10) / 10,
             ceiling(range(corData)[2] * 10) / 10, length.out = 8),

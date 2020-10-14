@@ -6,7 +6,7 @@ createJunctionTable <- function(unlisted_junction_granges,
     # License note: This function is adopted from the GenomicAlignments package 
     if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
         please provide fasta file or BSgenome name, see available.genomes()")
-    if (is(genomeSequence, "character")) {
+    if (methods::is(genomeSequence, "character")) {
         if (grepl(".fa", genomeSequence)) {
             if (.Platform$OS.type == "windows") {
                 genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
@@ -21,16 +21,19 @@ createJunctionTable <- function(unlisted_junction_granges,
         }
     }
     
-    if (!all(seqlevels(unlisted_junction_granges) %in%
-            seqlevels(genomeSequence))) {
+    if (!all(GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
+            GenomeInfoDb::seqlevels(genomeSequence))) {
         message("not all chromosomes present in reference genome sequence,
             ranges are dropped")
-        unlisted_junction_granges <- keepSeqlevels(unlisted_junction_granges,
-            value = seqlevels(unlisted_junction_granges)[seqlevels(
-            unlisted_junction_granges) %in% seqlevels(genomeSequence)],
-            pruning.mode = "coarse")
+        unlisted_junction_granges <-
+            GenomeInfoDb::keepSeqlevels(unlisted_junction_granges,
+            value = GenomeInfoDb::seqlevels(unlisted_junction_granges)[
+                GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
+                GenomeInfoDb::seqlevels(genomeSequence)],
+                pruning.mode = "coarse")
     }
-    unstranded_unlisted_junctions <- unstrand(unlisted_junction_granges)
+    unstranded_unlisted_junctions <-
+        BiocGenerics::unstrand(unlisted_junction_granges)
     uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
     names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
                                     sep = ".")
@@ -144,8 +147,8 @@ updateStrandScoreByRead <- function(unlisted_junction_granges,
         readStrand[match(mcols(unlisted_junction_granges)$id,
             as.integer(names(unlisted_junction_granges_strandList)))]
     unstranded_unlisted_junction_granges <-
-        unstrand(unlisted_junction_granges)
-    junctionMatchList <- as(findMatches(uniqueJunctions,
+        BiocGenerics::unstrand(unlisted_junction_granges)
+    junctionMatchList <- methods::as(findMatches(uniqueJunctions,
         unstranded_unlisted_junction_granges), "List")
     tmp <- extractList(strand(unlisted_junction_granges),
         junctionMatchList)
@@ -192,7 +195,7 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
             (spliceStrand.prime == "-"), (spliceStrand == "+"))[mySet.all,]
         colnames(myData) <- paste('A',seq_len(ncol(myData)),sep = '.')
         modelmatrix =
-            model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
+            stats::model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
             myResults = fitBinomialModel(labels.train = 
@@ -258,7 +261,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     ## if needed this can be a single function
     metadataList <- lapply(spliceVec, function(splice){
         annotatedJunctionsTmp <- 
-            GRanges(seqnames = seqnames(annotatedJunctions),
+            GenomicRanges::GRanges(seqnames = seqnames(annotatedJunctions),
             ranges = IRanges(start = get(tolower(splice))(annotatedJunctions),
             end = get(tolower(splice))(annotatedJunctions)), strand = '*')
         mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
@@ -313,7 +316,8 @@ fitBinomialModel <- function(labels.train, data.train, data.test,
             s = 'lambda.min')
         message('prediction accuracy (CV) (higher for splice 
                 donor than splice acceptor)')
-        testResults <- fisher.test(table(predictions > 0,labels.train.cv.test))
+        testResults <- 
+            stats::fisher.test(table(predictions > 0,labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)

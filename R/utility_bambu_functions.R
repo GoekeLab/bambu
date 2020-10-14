@@ -10,7 +10,6 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         readClass <- readClassList[[readClassIndex]]
         if (is.character(readClass)) {
             readClass <- readRDS(file = readClass)
-            seqlevelsStyle(readClass) <- seqlevelsStyle(annotations)[1]
         }
         combinedTxCandidates <- isore.combineTranscriptCandidates(readClass,
             readClassSeRef = combinedTxCandidates, verbose = verbose
@@ -41,7 +40,6 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     min.exonDistance = 35, ncore = 1, verbose = FALSE) {
     if (is.character(readClass)) {
         readClass <- readRDS(file = readClass)
-        seqlevelsStyle(readClass) <- seqlevelsStyle(annotations)[1]
     }
     readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
         min.exonDistance = min.exonDistance, verbose = verbose)
@@ -72,7 +70,8 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore,
         verbose = verbose)
-    if (length(intersect(seqlevels(readGrgList),seqlevels(annotations))) == 0)
+    if (length(intersect(GenomeInfoDb::seqlevels(readGrgList),
+        GenomeInfoDb::seqlevels(annotations))) == 0)
         stop("Error: please provide annotation with matched seqlevel styles.")
     se <- isore.constructReadClasses(
         readGrgList = readGrgList,
@@ -82,7 +81,8 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
         stranded = stranded,
         ncore = ncore,
         verbose = verbose)
-    seqlevels(se) <- unique(c(seqlevels(se), seqlevels(annotations)))
+    GenomeInfoDb::seqlevels(se) <- unique(c(GenomeInfoDb::seqlevels(se),
+        GenomeInfoDb::seqlevels(annotations)))
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
