@@ -22,19 +22,33 @@ Depends:
     R(>= 4.0.0),
     SummarizedExperiment (>= 1.1.6)
 Suggests: 
+    AnnotationDbi,
+    BiocGenerics,
     knitr,
     testthat,
     ComplexHeatmap,
+    GenomeInfoDb,
+    GenomicAlignments,
+    GenomicFeatures,
+    GenomicRanges,
+    stats,
+    utils,
     circlize,
     ggbio,
     RColorBrewer,
     gridExtra,
+    glmnet,
     BSgenome.Hsapiens.NCBI.GRCh38,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
     BiocParallel,
     Biostrings,
     ExperimentHub (>= 1.15.3),
     DESeq2,
+    Rsamtools,
+    BiocFileCache,
+    methods,
+    NanoporeRNASeq,
+    BSgenome,
     apeglm,
     DEXSeq
 Enhances: parallel
@@ -61,30 +75,13 @@ URL: https://github.com/GoekeLab/bambu
 RoxygenNote: 7.1.1
 LinkingTo: 
     Rcpp,
-    RcppArmadillo,
-    RcppProgress
+    RcppArmadillo
 Imports:
-    AnnotationDbi,
-    BiocGenerics,
-    BSgenome,
     data.table,
     dplyr,
-    GenomicAlignments,
-    GenomicFeatures,
-    GenomeInfoDb,
-    GenomicRanges,
     ggplot2,
-    glmnet,
-    graphics,
     IRanges, 
-    methods,
-    Rsamtools,
-    BiocFileCache,
     Rcpp,
-    RcppArmadillo,
-    RcppProgress,
-    S4Vectors(>= 0.22.1),
-    stats,
-    utils
+    S4Vectors(>= 0.22.1)
 VignetteBuilder: 
     knitr
