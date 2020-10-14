@@ -1,8 +1,8 @@
 #' Function to prepare tables and genomic ranges for
 #' transript reconstruction using a txdb object
 #' @title prepare annotations from txdb object or gtf file
-#' @param x A \code{\link{TxDb}} object or a gtf file
-#' @return A \code{\link{GRangesList}} object
+#' @param x A \code{TxDb} object or a gtf file
+#' @return A \code{GRangesList} object
 #' @export
 #' @examples
 #' gtf.file <- system.file("extdata",
@@ -11,8 +11,8 @@
 #' )
 #' prepareAnnotations(x = gtf.file)
 prepareAnnotations <- function(x) {
-    if (is(x, "TxDb")) {
-        exonsByTx <- exonsBy(x, by = "tx", use.names = TRUE)
+    if (methods::is(x, "TxDb")) {
+        exonsByTx <- GenomicFeatures::exonsBy(x, by = "tx", use.names = TRUE)
         if (any(duplicated(names(exonsByTx)))) {
             warning("transcript names are not unique,
             only one transcript per ID will be kept")
@@ -27,9 +27,7 @@ prepareAnnotations <- function(x) {
         # exonsByTx is always sorted by exon rank, not by strand, make sure that
         # this is the case here
         unlistedExons$exon_endRank <- unlist(lapply(elementNROWS(exonsByTx),
-            seq, to = 1),
-            use.names = FALSE
-        )
+            seq, to = 1), use.names = FALSE)
         unlistedExons <- unlistedExons[order(txIdForReorder,
             start(unlistedExons))]
         mcols(unlistedExons) <- mcols(unlistedExons)[, c("exon_rank",
@@ -39,8 +37,7 @@ prepareAnnotations <- function(x) {
         mcols(exonsByTx) <- suppressMessages(AnnotationDbi::select(x,
             names(exonsByTx),
             columns = c("TXNAME", "GENEID"),
-            keytype = "TXNAME"
-        ))
+            keytype = "TXNAME"))
         minEqClasses <- getMinimumEqClassByTx(exonsByTx)
         mcols(exonsByTx)$eqClass <- minEqClasses$eqClass[match(
             names(exonsByTx),
