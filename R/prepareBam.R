@@ -4,7 +4,7 @@
 #' @noRd
 prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
                                 ncore = 1) {
-    if (is(bamFile, "BamFile")) {
+    if (methods::is(bamFile, "BamFile")) {
         if (!is.null(yieldSize)) {
             Rsamtools::yieldSize(bamFile) <- yieldSize
         } else {
