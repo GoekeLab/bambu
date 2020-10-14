@@ -41,6 +41,7 @@ You can install bambu from github:
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install("bambu")
+BiocManager::install("NanoporeRNASeq")
 ```
 
 ## General Usage
@@ -96,13 +97,13 @@ expressed genes and transcripts.
 ### Aligned reads (bam files) {#bam-files}            
 *bambu* takes genomic alignments saved in bam files. Here we use bam-files
 from the *NanoporeRNASeq* package, which contains reads aligned to the first
-half of the human chromosome 22 using *minimap2*. 
+half of the human chromosome 22 using *minimap2*.
 ```{r}
 library(bambu)
 
 library(NanoporeRNASeq)
-data("K562MCF7Samples")
-K562MCF7Samples
+data("SGNexSamples")
+SGNexSamples
 
 library(ExperimentHub)
 NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","Bam"))
@@ -150,8 +151,8 @@ Here we will used the annotation object from the *NanoporeRNASeq* package
 that wasis prepared from a gtf file using the \code{prepareAnnotations} 
 function in by function in *bambu*.
 ```{r}
-data("HsChr22HalfBambuAnnotation")
-HsChr22HalfBambuAnnotation
+data("HsChr22BambuAnnotation")
+HsChr22BambuAnnotation
 ```
 
 ## Transcript discovery and quantification{#transcript-discovery-quantification}
@@ -162,7 +163,7 @@ annotation, and then quantify the transcript expression from these extended
 annotation using an Expectation-Maximisation algorithm. Here we will use 1 core,
 which can be changed to process multiple files in parallel.
 ```{r, results = "hide"}
-se <- bambu(reads = bamFiles, annotations = HsChr22HalfBambuAnnotation,
+se <- bambu(reads = bamFiles, annotations = HsChr22BambuAnnotation,
     genome = genomeSequence, ncore = 1)
 ```
 ```{r}
@@ -172,7 +173,7 @@ For the downstream analysis, we will add the condition of interest to the
 \code{colData} object that describes the samples. Here we are interested in
 a comparison of the 2 cell lines:
 ```{r}
-colData(se)$condition <- as.factor(K562MCF7Samples$cellLine)
+colData(se)$condition <- as.factor(SGNexSamples$cellLine)
 ```
 
 
@@ -181,7 +182,7 @@ Optionally, users can choose to apply *bambu* to do quantification only
 (without isoform discovery)
 ```{r, results = "hide"}
 seUnextended <- bambu(reads = bamFiles,
-    annotations = HsChr22HalfBambuAnnotation,
+    annotations = HsChr22BambuAnnotation,
     genome = genomeSequence, discovery = FALSE)
 ```
 ```{r}
@@ -226,7 +227,7 @@ We can again use the \code{plotBambu} function to visualise the gene expression
 data across the 6 samples with a heatmap or PCA plot. As expected, samples
 from the same cell line showed higher correlation than across the cell lines.
 ```{r, fig.width = 8, fig.height = 6}
-colData(seGene)$groupVar <- K562MCF7Samples$cellLine
+colData(seGene)$groupVar <- SGNexSamples$cellLine
 plotBambu(seGene, type = "heatmap")
 ```
 
