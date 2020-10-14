@@ -68,9 +68,9 @@ checkInputs <- function(annotations, reads, readClass.file,
     readClass.outputDir, genomeSequence){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
-        if (is(annotations, "TxDb")) {
+        if (methods::is(annotations, "TxDb")) {
             annotations <- prepareAnnotations(annotations)
-        } else if (is(annotations, "CompressedGRangesList")) {
+        } else if (methods::is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
             if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
                 colnames(mcols(annotations)))) 
@@ -98,9 +98,10 @@ checkInputs <- function(annotations, reads, readClass.file,
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
     if (.Platform$OS.type == "windows") {
-        if (is(genomeSequence, "FaFile")) warning("Note that use of FaFile
-            using Rsamtools in Windows is a bit fuzzy, recommend to provide the
-            path as a string variable to avoid use of Rsamtools for opening.")
+        if (methods::is(genomeSequence, "FaFile")) 
+        warning("Note that use of FaFile using Rsamtools in Windows is a bit 
+        fuzzy, recommend to provide the path as a string variable to avoid
+        use of Rsamtools for opening.")
     }
     return(annotations)
 }
@@ -119,7 +120,7 @@ checkInputs <- function(annotations, reads, readClass.file,
 processReads <- function(reads, readClass.file, annotations, genomeSequence,
     readClass.outputDir, yieldSize, bpParameters, stranded, ncore, verbose) {
         # ===# create BamFileList object from character #===#
-        if (is(reads, "BamFile")) {
+        if (methods::is(reads, "BamFile")) {
             if (!is.null(yieldSize)) {
                 Rsamtools::yieldSize(reads) <- yieldSize
             } else {
@@ -127,7 +128,7 @@ processReads <- function(reads, readClass.file, annotations, genomeSequence,
             }
         reads <- Rsamtools::BamFileList(reads)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
-        } else if (is(reads, "BamFileList")) {
+        } else if (methods::is(reads, "BamFileList")) {
             if (!is.null(yieldSize)) {
                 Rsamtools::yieldSize(reads) <- yieldSize
             } else {
@@ -157,7 +158,7 @@ processReads <- function(reads, readClass.file, annotations, genomeSequence,
 
 #' @noRd
 helpFun <- function(chr, chrRanges, bamFile) {
-    return(GenomicAlignments::grglist(readGAlignments(
+    return(GenomicAlignments::grglist(GenomicAlignments::readGAlignments(
         file = bamFile,
         param = Rsamtools::ScanBamParam(
             flag = Rsamtools::scanBamFlag(isSecondaryAlignment = FALSE),
