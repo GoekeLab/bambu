@@ -7,10 +7,10 @@
 prepareAnnotations(x)
 }
 \arguments{
-\item{x}{A \code{\link{TxDb}} object or a gtf file}
+\item{x}{A \code{TxDb} object or a gtf file}
 }
 \value{
-A \code{\link{GRangesList}} object
+A \code{GRangesList} object
 }
 \description{
 Function to prepare tables and genomic ranges for

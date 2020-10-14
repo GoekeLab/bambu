@@ -7,7 +7,7 @@
 writeToGTF(annotation, file, geneIDs = NULL)
 }
 \arguments{
-\item{annotation}{a \code{\link{GRangesList}} object}
+\item{annotation}{a \code{GRangesList} object}
 
 \item{file}{the output gtf file name}
 

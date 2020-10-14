@@ -21,8 +21,8 @@ bambu(
 }
 \arguments{
 \item{reads}{A string or a vector of strings specifying the paths of bam
-files for genomic alignments, or a \code{\link{BamFile}} object or a
-\code{\link{BamFileList}}  object (see \code{\link{Rsamtools}}).}
+files for genomic alignments, or a \code{BamFile} object or a
+\code{BamFileList}  object (see \code{Rsamtools}).}
 
 \item{rcFile}{A string or a vector of strings specifying the read
 class files that are saved during previous run of \code{\link{bambu}}.}
@@ -30,7 +30,7 @@ class files that are saved during previous run of \code{\link{bambu}}.}
 \item{rcOutDir}{A string variable specifying the path to where
 read class files will be saved.}
 
-\item{annotations}{A \code{\link{TxDb}} object or A GRangesList object
+\item{annotations}{A \code{TxDb} object or A GRangesList object
 obtained by \code{\link{prepareAnnotations}}.}
 
 \item{genome}{A fasta file or a BSGenome object.}
@@ -40,7 +40,7 @@ obtained by \code{\link{prepareAnnotations}}.}
 \item{ncore}{specifying number of cores used when parallel processing 
 is used, defaults to 1.}
 
-\item{yieldSize}{see \code{\link{Rsamtools}}.}
+\item{yieldSize}{see \code{Rsamtools}.}
 
 \item{opt.discovery}{A list of controlling parameters for isoform
 reconstruction process:

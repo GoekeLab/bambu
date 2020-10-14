@@ -10,7 +10,7 @@ readFromGTF(file)
 \item{file}{a .gtf file}
 }
 \value{
-grlist a \code{\link{GRangesList}} object, with two columns
+grlist a \code{GRangesList} object, with two columns
 \itemize{
     \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
                 defaults to empty
