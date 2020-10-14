@@ -19,8 +19,9 @@ if (getRversion() >= "2.15.1") {
         "subjectHits.y", "sum_nobs", "txId", "txNumberFiltered",
         "tx_id", "tx_name", "tx_sid", "uniqueEndLengthQuery",
         "uniqueLengthQuery", "uniqueLengthSubject",
+        "score","frame","dist","nobs","index",
         "uniqueStartLengthQuery", "value", "valueGene", "valueGeneCPM",
-        "variable", "junctionMatchList", "readClass.file",
+        "variable", "junctionMatchList", "readClass.file", 
         "start.ptm", "verbose", ".insertGaps", ".","subjectList"
     ))
 }
