@@ -38,18 +38,18 @@ writeBambuOutput <- function(se, path, prefix = "") {
         transcript_counts <- cbind(geneIDs, transcript_counts)
         transcript_countsfn <- paste(outdir, prefix, 
             "counts_transcript.txt", sep = "")
-        write.table(transcript_counts, file = transcript_countsfn,
+        utils::write.table(transcript_counts, file = transcript_countsfn,
             sep = "\t", quote = FALSE, row.names = FALSE)
         gene_se <- transcriptToGeneExpression(se)
         gene_counts <- as.data.frame(assays(gene_se)$counts)
         gene_countsfn <- paste(outdir, prefix, "counts_gene.txt", sep = "")
-        write.table(gene_counts, file = gene_countsfn, 
+        utils::write.table(gene_counts, file = gene_countsfn, 
             sep = "\t", quote = FALSE)
     }
 }
 #' Write annotation GRangesList into a GTF file
 #' @title write GRangeslist into GTF file
-#' @param annotation a \code{\link{GRangesList}} object
+#' @param annotation a \code{GRangesList} object
 #' @param file the output gtf file name
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with
 #'                  the corresponding transcriptIDs (column 1)
@@ -65,7 +65,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
 writeToGTF <- function(annotation, file, geneIDs = NULL) {
     if (missing(annotation) | missing(file)) {
         stop("Both GRangesList and the name of the output file are required.")
-    } else if (!is(annotation, "CompressedGRangesList")) {
+    } else if (!methods::is(annotation, "CompressedGRangesList")) {
         stop("The inputted GRangesList is of the wrong class.")
     }
     df <- as_tibble(annotation)
@@ -103,7 +103,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         dplyr::select(seqnames, source, feature, start, end, score,
         strand, frame, attributes)
     gtf <- mutate(gtf, strand = recode_factor(strand, `*` = "."))
-    write.table(gtf, file = file, quote = FALSE, row.names = FALSE,
+    utils::write.table(gtf, file = file, quote = FALSE, row.names = FALSE,
         col.names = FALSE, sep = "\t")
 }
 
@@ -111,7 +111,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 #' Outputs GRangesList object from reading a GTF file
 #' @title convert a GTF file into a GRangesList
 #' @param file a .gtf file
-#' @return grlist a \code{\link{GRangesList}} object, with two columns
+#' @return grlist a \code{GRangesList} object, with two columns
 #' \itemize{
 #'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
 #'                defaults to empty
@@ -129,7 +129,7 @@ readFromGTF <- function(file) {
     if (missing(file)) {
         stop("A GTF file is required.")
     } else {
-        data <- read.delim(file, header = FALSE, comment.char = "#")
+        data <- utils::read.delim(file, header = FALSE, comment.char = "#")
 
         colnames(data) <- c("seqname", "source", "type", "start", "end",
             "score", "strand", "frame", "attribute")
@@ -137,7 +137,7 @@ readFromGTF <- function(file) {
         data$strand[data$strand == "."] <- "*"
         data$GENEID <- gsub("gene_id (.*?);.*", "\\1", data$attribute)
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
-        grlist <- makeGRangesListFromDataFrame(
+        grlist <- GenomicRanges::makeGRangesListFromDataFrame(
             data[, c("seqname", "start", "end", "strand", "TXNAME")],
             split.field = "TXNAME", keep.extra.columns = TRUE)
         grlist <- grlist[IRanges::order(start(grlist))]
