@@ -21,11 +21,9 @@ LazyData: true
 Depends: 
     R(>= 4.0.0),
     SummarizedExperiment (>= 1.1.6)
-    S4Vectors(>= 0.22.1)
-    data.table,
-    dplyr,
+    S4Vectors(>= 0.22.1),
+    IRanges
 Suggests: 
-    AnnotationDbi,
     knitr,
     testthat,
     RColorBrewer,
@@ -63,10 +61,13 @@ LinkingTo:
     Rcpp,
     RcppArmadillo
 Imports:
+    AnnotationDbi,
     BiocGenerics,
     BiocParallel,
     Biostrings,
     BiocFileCache,
+    data.table,
+    dplyr,
     ggplot2,
     GenomeInfoDb,
     GenomicAlignments,
@@ -77,11 +78,10 @@ Imports:
     ggbio,
     stats,
     utils,
-    IRanges, 
     gridExtra,
     glmnet,
     Rsamtools,
     methods,
-    Rcpp,
+    Rcpp
 VignetteBuilder: 
     knitr
