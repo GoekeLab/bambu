@@ -114,7 +114,7 @@ plotHeatmap <- function(se, count.data, group.variable) {
     col_fun <- circlize::colorRamp2(
         seq(floor(range(corData)[1] * 10) / 10,
             ceiling(range(corData)[2] * 10) / 10, length.out = 8),
-        RColorBrewer::brewer.pal(8, "Blues"))
+        c("White","Blue"))
 
     if (!is.null(group.variable)) {
         sample.info <- as.data.table(as.data.frame(colData(se)[,
