@@ -83,24 +83,24 @@ plotPCA <- function(se, count.data, group.variable) {
             stop("all(plotData$runname %in% sample.info$runname) 
                 is not satisfied!")}
         plotData <- sample.info[plotData, on = "runname"]
-        p <- ggplot(plotData, aes(x = PC1, y = PC2)) +
-            geom_point(aes(col = groupVar)) +
-            ylab(paste0("PC2 (",
+        p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
+            ggplot2::geom_point(ggplot2::aes(col = groupVar)) +
+            ggplot2::ylab(paste0("PC2 (",
             round(pca_result$sdev[2] / sum(pca_result$sdev) * 100, 1), "%)")) +
-            xlab(paste0("PC1 (",
+            ggplot2::xlab(paste0("PC1 (",
             round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
-            theme_minimal()
+            ggplot2::theme_minimal()
     } else {
         pca_result <- stats::prcomp(t(as.matrix(count.data))) 
         plotData <- data.table(pca_result$x[, seq_len(2)], keep.rownames = TRUE)
         setnames(plotData, "rn", "runname")
-        p <- ggplot(plotData, aes(x = PC1, y = PC2)) +
-            geom_point(aes(col = runname)) +
-            ylab(paste0("PC2 (",
+        p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
+            ggplot2::geom_point(ggplot2::aes(col = runname)) +
+            ggplot2::ylab(paste0("PC2 (",
             round(pca_result$sdev[2] / sum(pca_result$sdev) * 100, 1), "%)")) +
-            xlab(paste0("PC1 (",
+            ggplot2::xlab(paste0("PC1 (",
             round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
-            theme_minimal()
+            ggplot2::theme_minimal()
     }
     return(p)
 }
@@ -113,7 +113,7 @@ plotHeatmap <- function(se, count.data, group.variable) {
     corData <- stats::cor(count.data, method = "spearman")
     col_fun <- circlize::colorRamp2(
         seq(floor(range(corData)[1] * 10) / 10,
-            ceiling(range(corData)[2] * 10) / 10, length.out = 8),
+            ceiling(range(corData)[2] * 10) / 10, length.out = 2),
         c("White","Blue"))
 
     if (!is.null(group.variable)) {

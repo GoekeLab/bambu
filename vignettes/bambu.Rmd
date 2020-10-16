@@ -195,6 +195,7 @@ seUnextended
 samples are used, we can visualise the correlation and clustering of all
 samples with a heatmap:
 ```{r, fig.width = 8, fig.height = 6}
+library(ggplot2)
 plotBambu(se, type = "heatmap")
 ```
 
