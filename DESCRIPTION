@@ -20,13 +20,20 @@ Encoding: UTF-8
 LazyData: true
 Depends: 
     R(>= 4.0.0),
-    SummarizedExperiment (>= 1.1.6)
+    SummarizedExperiment(>= 1.1.6),
     S4Vectors(>= 0.22.1),
     IRanges
 Suggests: 
+    AnnotationDbi,
+    Biostrings,
+    BiocFileCache,
+    ggplot2,
+    ComplexHeatmap,
+    circlize,
+    ggbio,
+    gridExtra,
     knitr,
     testthat,
-    RColorBrewer,
     BSgenome.Hsapiens.NCBI.GRCh38,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
     ExperimentHub (>= 1.15.3),
@@ -34,6 +41,7 @@ Suggests:
     NanoporeRNASeq,
     BSgenome,
     apeglm,
+    utils,
     DEXSeq
 Enhances: parallel
 SystemRequirements:
@@ -61,24 +69,15 @@ LinkingTo:
     Rcpp,
     RcppArmadillo
 Imports:
-    AnnotationDbi,
     BiocGenerics,
     BiocParallel,
-    Biostrings,
-    BiocFileCache,
     data.table,
     dplyr,
-    ggplot2,
     GenomeInfoDb,
     GenomicAlignments,
     GenomicFeatures,
     GenomicRanges,
-    ComplexHeatmap,
-    circlize,
-    ggbio,
     stats,
-    utils,
-    gridExtra,
     glmnet,
     Rsamtools,
     methods,
