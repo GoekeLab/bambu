@@ -288,7 +288,7 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations, read
 
   readGrgList <- prepareDataFromBam(bam.file[[1]], ncore=ncore, verbose = verbose)
   seqlevelsStyle(readGrgList) <- seqlevelsStyle(annotations)[1]
-  se <- isore.constructReadClasses(readGrgList = readGrgList,
+  se <- bambu::isore.constructReadClasses(readGrgList = readGrgList,
                                    runName = names(bam.file)[1],
                                    annotationGrangesList = annotations,
                                    genomeSequence = genomeSequence,

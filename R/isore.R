@@ -238,17 +238,74 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                          strand=strand.rc,
                                          intronStarts,
                                          intronEnds,
-                                         confidenceType)
+                                         confidenceType,
+                                         resultOutput.equal,
+                                         resultOutput.compatible,
+                                         resultOutput.non_compatible_match)
+    strand_bias = assays(readClassSe)$strand_bias
+    startSD = assays(readClassSe)$startSD
+    endSD = assays(readClassSe)$endSD
+    FE_numReads = assays(readClassSe)$FE_numReads
+    FE_tx_strand_bias = assays(readClassSe)$FE_tx_strand_bias
+    FE_SD = assays(readClassSe)$FE_SD
+    LE_numReads = assays(readClassSe)$LE_numReads
+    LE_tx_strand_bias = assays(readClassSe)$LE_tx_strand_bias
+    LE_SD = assays(readClassSe)$LE_SD
 
-    readClassSeRef <- SummarizedExperiment(assays = SimpleList(counts=counts,
-                                                             start=start,
-                                                             end=end),
+    #equal = assays(readClassSe)$equal
+    #compatible = assays(readClassSe)$compatible
+    #non_compatible_match = assays(readClassSe)$non_compatible_match
+    if(!is.null(assays(readClassSe)$adapNumReads)){
+      adapNumReads = assays(readClassSe)$adapNumReads
+      adapEndNumReads = assays(readClassSe)$adapEndNumReads
+      adaptDist = assays(readClassSe)$adaptDist
+      adapEndDist = assays(readClassSe)$adapEndDist
+      FE_adapNumReads = assays(readClassSe)$FE_adapNumReads
+      FE_adaptDist = assays(readClassSe)$FE_adaptDist
+      LE_adapNumReads = assays(readClassSe)$LE_adapNumReads
+      LE_adaptDist = assays(readClassSe)$LE_adaptDist
+      assaysList = SimpleList(counts=counts,
+                          start=start,
+                          end=end,
+                          strand_bias=strand_bias,
+                          startSD=startSD,
+                          endSD=endSD,
+                          FE_numReads=FE_numReads,
+                          FE_tx_strand_bias=FE_tx_strand_bias,
+                          FE_SD=FE_SD,
+                          LE_numReads=LE_numReads,
+                          LE_tx_strand_bias=LE_tx_strand_bias,
+                          LE_SD=LE_SD,
+                          adapNumReads = adapNumReads,
+                          adapEndNumReads = adapEndNumReads,
+                          adaptDist = adaptDist,
+                          adapEndDist = adapEndDist,
+                          FE_adapNumReads = FE_adapNumReads,
+                          FE_adaptDist = FE_adaptDist,
+                          LE_adapNumReads = LE_adapNumReads,
+                          LE_adaptDist = LE_adaptDist
+      )
+    } else{
+      assaysList = SimpleList(counts=counts,
+                          start=start,
+                          end=end,
+                          strand_bias=strand_bias,
+                          startSD=startSD,
+                          endSD=endSD,
+                          FE_numReads=FE_numReads,
+                          FE_tx_strand_bias=FE_tx_strand_bias,
+                          FE_SD=FE_SD,
+                          LE_numReads=LE_numReads,
+                          LE_tx_strand_bias=LE_tx_strand_bias,
+                          LE_SD=LE_SD
+      )
+    }
+    readClassSeRef <- SummarizedExperiment(assays = assaysList,
                                            rowData = rowData,
                                            colData = colData(readClassSe))
     return(readClassSeRef)
 
   }else {
-
     colDataCombined <- rbind(colData(readClassSeRef), colData(readClassSe))
 
     readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), rownames='id')
@@ -258,12 +315,32 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 
     rowData.spliced <- full_join(filter(readClassSeRefTBL, confidenceType=='highConfidenceJunctionReads'),
                                  filter(readClassSeTBL, confidenceType=='highConfidenceJunctionReads'),
-                                 by=c('chr'='chr.rc','strand'='strand.rc','intronStarts', 'intronEnds'),
+                                 by=c('chr'='chr.rc','strand'='strand.rc','intronStarts', 'intronEnds',
+                                      'resultOutput.equal', 'resultOutput.compatible', 'resultOutput.non_compatible_match'),
                                  suffix=c('.ref','.new'))
 
     # (1) create first SE object for spliced Tx
+    getSplicedAssay = function(assay){
+      counts.splicedRef <- matrix(0,
+                                  dimnames = list(1:nrow(rowData.spliced),
+                                                  rownames(colData(readClassSeRef))),
+                                  ncol = nrow(colData(readClassSeRef)),
+                                  nrow = nrow(rowData.spliced))
+      
+      counts.splicedNew <- matrix(0,
+                                  dimnames = list(1:nrow(rowData.spliced),
+                                                  rownames(colData(readClassSe))),
+                                  ncol = nrow(colData(readClassSe)),
+                                  nrow = nrow(rowData.spliced))
 
-
+      counts.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)[[assay]][rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
+      counts.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(assays(readClassSe)[[assay]][rowData.spliced$id.new[!is.na(rowData.spliced$id.new)],])
+      
+      counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
+      return(counts.spliced)
+      
+    }
+    
     counts.splicedRef <- matrix(0,
                                 dimnames = list(1:nrow(rowData.spliced),
                                                 rownames(colData(readClassSeRef))),
@@ -289,9 +366,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                nrow = nrow(rowData.spliced))
     end.splicedNew <- start.splicedNew
 
-
     counts.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$counts[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
-
     start.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$start[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
     end.splicedRef[!is.na(rowData.spliced$id.ref), ] <- as.matrix(assays(readClassSeRef)$end[rowData.spliced$id.ref[!is.na(rowData.spliced$id.ref)],])
 
@@ -300,28 +375,118 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     start.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'start.new'])
     end.splicedNew[!is.na(rowData.spliced$id.new), ] <- as.matrix(rowData.spliced[!is.na(rowData.spliced$id.new),'end.new'])
 
-
-
     counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
     start.spliced <- cbind(start.splicedRef, start.splicedNew)
     end.spliced <- cbind(end.splicedRef, end.splicedNew)
+
+    strand_bias.spliced = getSplicedAssay("strand_bias")
+    startSD.spliced = getSplicedAssay("startSD")
+    endSD.spliced = getSplicedAssay("endSD")
+    FE_numReads.spliced = getSplicedAssay("FE_numReads")
+    FE_tx_strand_bias.spliced = getSplicedAssay("FE_tx_strand_bias")
+    FE_SD.spliced = getSplicedAssay("FE_SD")
+    LE_numReads.spliced = getSplicedAssay("LE_numReads")
+    LE_tx_strand_bias.spliced = getSplicedAssay("LE_tx_strand_bias")
+    LE_SD.spliced = getSplicedAssay("LE_SD")
+    if(!is.null(assays(readClassSe)$adapNumReads)){
+      adapNumReads.spliced = getSplicedAssay("adapNumReads")
+      adapEndNumReads.spliced = getSplicedAssay("adapEndNumReads")
+      adaptDist.spliced = getSplicedAssay("adaptDist")
+      adapEndDist.spliced = getSplicedAssay("adapEndDist")
+      FE_adapNumReads.spliced = getSplicedAssay("FE_adapNumReads")
+      FE_adaptDist.spliced = getSplicedAssay("FE_adaptDist")
+      LE_adapNumReads.spliced = getSplicedAssay("LE_adapNumReads")
+      LE_adaptDist.spliced = getSplicedAssay("LE_adaptDist")
+    }
+
+    #equal.spliced = getSplicedAssay("equal")
+    #compatible.spliced = getSplicedAssay("compatible")
+    #non_compatible_match.spliced = getSplicedAssay("non_compatible_match")
     rowData.spliced$start <- rowMins(start.spliced, na.rm=TRUE)
     rowData.spliced$end <- rowMaxs(end.spliced, na.rm=TRUE)
-    rowData.spliced <- dplyr::select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds) %>%
+    rowData.spliced <- dplyr::select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds, resultOutput.equal, resultOutput.compatible, resultOutput.non_compatible_match) %>%
       mutate(confidenceType = 'highConfidenceJunctionReads')
+    
+    if(!is.null(assays(readClassSe)$adapNumReads)){
+      se.spliced <- SummarizedExperiment(assays = SimpleList(counts=counts.spliced,
+                                                             start=start.spliced,
+                                                             end=end.spliced,
+                                                             strand_bias=strand_bias.spliced,
+                                                             startSD=startSD.spliced,
+                                                             endSD=endSD.spliced,
+                                                             FE_numReads=FE_numReads.spliced,
+                                                             FE_tx_strand_bias=FE_tx_strand_bias.spliced,
+                                                             FE_SD=FE_SD.spliced,
+                                                             LE_numReads=LE_numReads.spliced,
+                                                             LE_tx_strand_bias=LE_tx_strand_bias.spliced,
+                                                             LE_SD=LE_SD.spliced,
+                                                             adapNumReads = adapNumReads.spliced,
+                                                             adapEndNumReads = adapEndNumReads.spliced,
+                                                             adaptDist = adaptDist.spliced,
+                                                             adapEndDist = adapEndDist.spliced,
+                                                             FE_adapNumReads = FE_adapNumReads.spliced,
+                                                             FE_adaptDist = FE_adaptDist.spliced,
+                                                             LE_adapNumReads = LE_adapNumReads.spliced,
+                                                             LE_adaptDist = LE_adaptDist.spliced 
+      ),
+      rowData = rowData.spliced,
+      colData = colDataCombined)
+    } else{
+      se.spliced <- SummarizedExperiment(assays = SimpleList(counts=counts.spliced,
+                                                             start=start.spliced,
+                                                             end=end.spliced,
+                                                             strand_bias=strand_bias.spliced,
+                                                             startSD=startSD.spliced,
+                                                             endSD=endSD.spliced,
+                                                             FE_numReads=FE_numReads.spliced,
+                                                             FE_tx_strand_bias=FE_tx_strand_bias.spliced,
+                                                             FE_SD=FE_SD.spliced,
+                                                             LE_numReads=LE_numReads.spliced,
+                                                             LE_tx_strand_bias=LE_tx_strand_bias.spliced,
+                                                             LE_SD=LE_SD.spliced
+      ),
+      rowData = rowData.spliced,
+      colData = colDataCombined)
+    }
 
-    se.spliced <- SummarizedExperiment(assays = SimpleList(counts=counts.spliced,
-                                                           start=start.spliced,
-                                                           end=end.spliced),
-                                       rowData = rowData.spliced,
-                                       colData = colDataCombined)
-
+    
     rm(list=c('counts.spliced', 'start.spliced', 'end.spliced', 'rowData.spliced', 'counts.splicedRef', 'start.splicedRef', 'end.splicedRef', 'counts.splicedNew', 'start.splicedNew', 'end.splicedNew'))
     gc(verbose = FALSE)
-
   ## (2) create second SE object for unspliced Tx
 
+    getUnsplicedAssay = function(feature, index.unsplicedRefSum, index.unsplicedNewSum, fun){
 
+      counts.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[[feature]])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+        mutate(index=overlapRefToCombined) %>%
+        group_by(index) %>%
+        summarise_all(fun, na.rm=TRUE)
+
+      counts.unsplicedNewSum <- as_tibble(assays(readClassSe)[[feature]])[rowData(readClassSe)$confidenceType=='unsplicedNew',] %>%
+        mutate(index=overlapNewToCombined) %>%
+        group_by(index) %>%
+        summarise_all(fun, na.rm=TRUE)
+
+      counts.unsplicedRef <- matrix(0,
+                                    dimnames = list(1:nrow(rowData.unspliced),
+                                                    rownames(colData(readClassSeRef))),
+                                    ncol = nrow(colData(readClassSeRef)),
+                                    nrow = nrow(rowData.unspliced))
+
+      counts.unsplicedNew <- matrix(0,
+                                    dimnames = list(1:nrow(rowData.unspliced),
+                                                    rownames(colData(readClassSe))),
+                                    ncol = nrow(colData(readClassSe)),
+                                    nrow = nrow(rowData.unspliced))
+
+      counts.unsplicedRef[index.unsplicedRefSum, ] <- as.matrix(counts.unsplicedRefSum[,colnames(counts.unsplicedRef)])
+
+      counts.unsplicedNew[index.unsplicedNewSum, ] <- as.matrix(counts.unsplicedNewSum[,colnames(counts.unsplicedNew)])
+
+      ############ TODO: Speed up ###############
+      counts.unspliced <- cbind(counts.unsplicedRef, counts.unsplicedNew)
+      
+      return(counts.unspliced)
+    }
     readClassSeRefTBL.unspliced <- filter(readClassSeRefTBL, confidenceType=='unsplicedNew')
     readClassSeTBL.unspliced <- filter(readClassSeTBL, confidenceType=='unsplicedNew')
     unsplicedRangesRef <- GRanges(seqnames=readClassSeRefTBL.unspliced$chr,
@@ -333,14 +498,12 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                                  end=readClassSeTBL.unspliced$end),
                                   strand=readClassSeTBL.unspliced$strand.rc)
 
-
-
     combinedSingleExonRanges <- reduce(c(unsplicedRangesRef,unsplicedRangesNew), ignore.strand=!stranded)
 
     rowData.unspliced <- as_tibble(combinedSingleExonRanges) %>%
       mutate_if(is.factor, as.character) %>%
       dplyr::select(chr=seqnames, start, end, strand=strand) %>%
-      mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
+      mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew', resultOutput.equal = "NOVEL", resultOutput.compatible = "NOVEL", resultOutput.non_compatible_match = "NOVEL")
 
     overlapRefToCombined <-findOverlaps(unsplicedRangesRef,
                                         combinedSingleExonRanges,
@@ -352,7 +515,6 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                         type='within',
                                         ignore.strand=!stranded,
                                         select='first')
-
     counts.unsplicedRefSum <- as_tibble(assays(readClassSeRef)[['counts']])[rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
       mutate(index=overlapRefToCombined) %>%
       group_by(index) %>%
@@ -386,7 +548,6 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
       mutate(index=overlapNewToCombined) %>%
       group_by(index) %>%
       summarise_all(max, na.rm=TRUE)
-
     counts.unsplicedRef <- matrix(0,
                                   dimnames = list(1:nrow(rowData.unspliced),
                                                   rownames(colData(readClassSeRef))),
@@ -411,7 +572,6 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                  nrow = nrow(rowData.unspliced))
     end.unsplicedNew <- start.unsplicedNew
 
-
   counts.unsplicedRef[counts.unsplicedRefSum$index, ] <- as.matrix(counts.unsplicedRefSum[,colnames(counts.unsplicedRef)])
   start.unsplicedRef[counts.unsplicedRefSum$index, ] <- as.matrix(start.unsplicedRefSum[,colnames(start.unsplicedRef)])
   end.unsplicedRef[counts.unsplicedRefSum$index, ] <- as.matrix(end.unsplicedRefSum[,colnames(end.unsplicedRef)])
@@ -426,13 +586,79 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
   start.unspliced[which(is.infinite(start.unspliced))] <- NA  ## is slow, replace with more efficient method?
   end.unspliced <- cbind(end.unsplicedRef, end.unsplicedNew)
   end.unspliced[which(is.infinite(end.unspliced))] <- NA  ## is slow, replace with more efficient method?
-
-  se.unspliced <- SummarizedExperiment(assays = SimpleList(counts = counts.unspliced,
-                                                         start = start.unspliced,
-                                                         end = end.unspliced),
-                                       rowData = rowData.unspliced,
-                                       colData = colDataCombined)
-
+  #sum
+  strand_bias.unspliced = getUnsplicedAssay("strand_bias", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  #weighted.mean
+  startSD.unspliced = getUnsplicedAssay("startSD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+  endSD.unspliced = getUnsplicedAssay("endSD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+  #sum
+  FE_numReads.unspliced = getUnsplicedAssay("FE_numReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  FE_tx_strand_bias.unspliced = getUnsplicedAssay("FE_tx_strand_bias", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  #weighted.mean
+  FE_SD.unspliced = getUnsplicedAssay("FE_SD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+  #sum
+  LE_numReads.unspliced = getUnsplicedAssay("LE_numReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  LE_tx_strand_bias.unspliced = getUnsplicedAssay("LE_tx_strand_bias", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  #weighted.mean
+  LE_SD.unspliced = getUnsplicedAssay("LE_SD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+  #mode?
+  # equal.unspliced = getUnsplicedAssay("equal", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index,any)
+  # compatible.unspliced = getUnsplicedAssay("compatible", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index,any)
+  # non_compatible_match.unspliced = getUnsplicedAssay("non_compatible_match", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index,any)
+  
+  if(!is.null(assays(readClassSe)$adapNumReads)){
+    adapNumReads.unspliced = getUnsplicedAssay("adapNumReads",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    adapEndNumReads.unspliced = getUnsplicedAssay("adapEndNumReads",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    adaptDist.unspliced = getUnsplicedAssay("adaptDist",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+    adapEndDist.unspliced = getUnsplicedAssay("adapEndDist",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+    FE_adapNumReads.unspliced = getUnsplicedAssay("FE_adapNumReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    FE_adaptDist.unspliced = getUnsplicedAssay("FE_adaptDist",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    LE_adapNumReads.unspliced = getUnsplicedAssay("LE_adapNumReads",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+    LE_adaptDist.unspliced = getUnsplicedAssay("LE_adaptDist", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean) 
+    
+    se.unspliced <- SummarizedExperiment(assays = SimpleList(counts = counts.unspliced,
+                                                           start = start.unspliced,
+                                                           end = end.unspliced,
+                                                           strand_bias = strand_bias.unspliced,
+                                                           startSD = startSD.unspliced,
+                                                           endSD = endSD.unspliced,
+                                                           FE_numReads = FE_numReads.unspliced,
+                                                           FE_tx_strand_bias = FE_tx_strand_bias.unspliced,
+                                                           FE_SD = FE_SD.unspliced,
+                                                           LE_numReads = LE_numReads.unspliced,
+                                                           LE_tx_strand_bias = LE_tx_strand_bias.unspliced,
+                                                           LE_SD = LE_SD.unspliced,
+                                                           #equal = equal.unspliced,
+                                                           #compatible = compatible.unspliced,
+                                                           #non_compatible_match=non_compatible_match.unspliced
+                                                           adapNumReads = adapNumReads.unspliced,
+                                                           adapEndNumReads = adapEndNumReads.unspliced,
+                                                           adaptDist = adaptDist.unspliced,
+                                                           adapEndDist = adapEndDist.unspliced,
+                                                           FE_adapNumReads = FE_adapNumReads.unspliced,
+                                                           FE_adaptDist = FE_adaptDist.unspliced,
+                                                           LE_adapNumReads = LE_adapNumReads.unspliced,
+                                                           LE_adaptDist = LE_adaptDist.unspliced 
+                                                           ),
+                                         rowData = rowData.unspliced,
+                                         colData = colDataCombined)
+  } else{
+    se.unspliced <- SummarizedExperiment(assays = SimpleList(counts = counts.unspliced,
+                                                             start = start.unspliced,
+                                                             end = end.unspliced,
+                                                             strand_bias = strand_bias.unspliced,
+                                                             startSD = startSD.unspliced,
+                                                             endSD = endSD.unspliced,
+                                                             FE_numReads = FE_numReads.unspliced,
+                                                             FE_tx_strand_bias = FE_tx_strand_bias.unspliced,
+                                                             FE_SD = FE_SD.unspliced,
+                                                             LE_numReads = LE_numReads.unspliced,
+                                                             LE_tx_strand_bias = LE_tx_strand_bias.unspliced,
+                                                             LE_SD = LE_SD.unspliced
+    ),
+    rowData = rowData.unspliced,
+    colData = colDataCombined)
+  }
   se.combined <- SummarizedExperiment::rbind(se.spliced, se.unspliced)
   rownames(se.combined) <- 1:nrow(se.combined)
   rm(list = c("se.spliced", "se.unspliced"))
