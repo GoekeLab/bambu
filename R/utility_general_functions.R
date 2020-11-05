@@ -17,7 +17,6 @@ setBiocParallelParameters <- function(reads, readClass.file, ncore, verbose){
     bpParameters$workers <- ifelse(max(length(reads),
             length(readClass.file)) == 1, 1, ncore)
     bpParameters$progressbar <- (!verbose)
-    if (bpParameters$workers > 1) ncore <- 1
     return(bpParameters)
 }
 

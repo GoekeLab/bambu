@@ -80,6 +80,7 @@ bambu <- function(reads = NULL, rcFile = NULL,
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
         ncore, verbose)
+    if (bpParameters$workers > 1) ncore <- 1
     rm.readClassSe <- FALSE
     if (!is.null(reads)) {
         #===# When more than 10 samples, files saved to temporary directory
