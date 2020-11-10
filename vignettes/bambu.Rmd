@@ -106,7 +106,7 @@ data("SGNexSamples")
 SGNexSamples
 
 library(ExperimentHub)
-NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","Bam"))
+NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","BAM"))
 bamFiles <- Rsamtools::BamFileList(NanoporeData[["EH3808"]],
     NanoporeData[["EH3809"]],NanoporeData[["EH3810"]], NanoporeData[["EH3811"]],
     NanoporeData[["EH3812"]], NanoporeData[["EH3813"]])
@@ -118,7 +118,7 @@ splicing junctions in read alignments. Ideally, we recommend to use the same
 genome seqeunce file that was used for alignment to be used for bambu.
 ```{r}
 # get path to fasta file
-genomeSequence <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FaFile"))
+genomeSequence <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FASTA"))
 ```
 As an option, users can also choose to use a BSgenome object:
 ```{r}

@@ -2,11 +2,11 @@ Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read 
     RNA-Seq data
-Version: 0.99.15
-Authors@R: c(person("Ying", "Chen", role = "cre",
+Version: 1.1.2
+Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
              email = "chen_ying@gis.a-star.edu.sg"),
              person("Yuk Kei", "Wan", role = "aut",
-             email = "yukkeiwan622@gmail.com"),
+             email = "Wan_Yuk_Kei@gis.a-star.edu.sg"),
              person("Jonathan", "Goeke", role = "aut",
              email = "gokej@gis.a-star.edu.sg"))
 Description: bambu is a R package for multi-sample transcript discovery and 
