@@ -20,7 +20,6 @@ createJunctionTable <- function(unlisted_junction_granges,
             genomeSequence <- BSgenome::getBSgenome(genomeSequence)
         }
     }
-    
     if (!all(GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
             GenomeInfoDb::seqlevels(genomeSequence))) {
         message("not all chromosomes present in reference genome sequence,

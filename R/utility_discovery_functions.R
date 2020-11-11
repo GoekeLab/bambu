@@ -591,7 +591,8 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons,
         exByTx = exonsByReadClass,
         exByTxRef = annotationGrangesList,
         maxDist = min.exonDistance,
-        primarySecondaryDist = 5,
+        primarySecondaryDist = min.primarySecondaryDist,
+        primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         ignore.strand = FALSE)
     distNewTxByQuery <- distNewTx %>%
         group_by(queryHits) %>%
@@ -821,7 +822,8 @@ exonsintronsByReadClass <- function(se, annotationGrangesList, filterSet1){
 isore.extendAnnotations <- function(se, annotationGrangesList,
     remove.subsetTx = TRUE, min.readCount = 2, 
     min.readFractionByGene = 0.05, min.sampleNumber = 1, min.exonDistance = 35, 
-    min.exonOverlap = 10, prefix = "", verbose = FALSE){
+    min.exonOverlap = 10, min.primarySecondaryDist = 5,
+    min.primarySecondaryDistStartEnd = 5, prefix = "", verbose = FALSE){
     start.ptm <- proc.time() # timer for verbose output
     filterSet1 <- FALSE
     if (nrow(se) > 0) filterSet1 <-
@@ -900,15 +902,18 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @noRd
 isore.estimateDistanceToAnnotations <- function(seReadClass,
     annotationGrangesList, min.exonDistance = 35,
+    min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 100000, 
     additionalFiltering = FALSE, verbose = FALSE) {
     start.ptm <- proc.time()
     readClassTable <-
         as_tibble(rowData(seReadClass), rownames = "readClassId") %>%
         dplyr::select(readClassId, confidenceType)
-    
+
     distTable <- calculateDistToAnnotation(rowRanges(seReadClass),
         annotationGrangesList, maxDist = min.exonDistance,
-        primarySecondaryDist = 5, ignore.strand = FALSE)
+        primarySecondaryDist = min.primarySecondaryDist,
+        primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
+        ignore.strand = FALSE)
     distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId, ] 
 
     if (additionalFiltering) 
@@ -917,8 +922,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
             mutate(relativeReadCount = readCount / txNumberFiltered)
     distTable <- dplyr::select(distTable, annotationTxId, readClassId,
                                 readCount, compatible, equal)
-    distTable <-
-        left_join(distTable, as_tibble(mcols(annotationGrangesList)[,
+    distTable <- left_join(distTable, as_tibble(mcols(annotationGrangesList)[,
             c("TXNAME", "GENEID")]),by = c("annotationTxId" = "TXNAME"))
 
     end.ptm <- proc.time()

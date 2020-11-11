@@ -27,6 +27,10 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
         min.exonDistance = isoreParameters[["min.exonDistance"]],
         min.exonOverlap = isoreParameters[["min.exonOverlap"]],
+        min.primarySecondaryDist = 
+            isoreParameters[['min.primarySecondaryDist']], 
+        min.primarySecondaryDistStartEnd = 
+            isoreParameters[['min.primarySecondaryDistStartEnd1']],
         prefix = isoreParameters[["prefix"]],
         verbose = verbose
     )
@@ -37,28 +41,50 @@ bambu.extendAnnotations <- function(readClassList, annotations,
 #' @inheritParams bambu
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters,
-    min.exonDistance = 35, ncore = 1, verbose = FALSE) {
-    if (is.character(readClass)) {
-        readClass <- readRDS(file = readClass)
-    }
+    min.exonDistance = 35, min.primarySecondaryDist = 5,
+    min.primarySecondaryDistStartEnd = 5, ncore = 1, verbose = FALSE) {
+    if (is.character(readClass)) readClass <- readRDS(file = readClass)
     readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
-        min.exonDistance = min.exonDistance, verbose = verbose)
+        min.exonDistance = min.exonDistance,
+        min.primarySecondaryDist = min.primarySecondaryDist,
+        min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
+        verbose = verbose)
     readClassDt <- getEmptyClassFromSE(readClass, annotations)
+    readClassDt <- 
+        modifyReadClassWtFullLengthTranscript(readClassDt, annotations)
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
-    counts <- bambu.quantDT(readClassDt,
-        emParameters = emParameters,
+    counts <- bambu.quantDT(readClassDt, emParameters = emParameters,
         ncore = ncore, verbose = verbose)
+    Est <- c("FullLength", "PartialLength")
+    counts[, estimate_type := ifelse(grepl("Start",tx_name),Est[1],Est[2])]
+    counts[, tx_name := gsub("Start","",tx_name)]
+    countsEstimates <-
+        dcast(counts, tx_name ~ estimate_type, value.var = "estimates")
+    setnames(countsEstimates, Est, paste0(Est,"Counts"))
+    countsCPM <- dcast(counts, tx_name ~ estimate_type, value.var = "CPM")
+    setnames(countsCPM, Est, paste0(Est,"CPM"))
+    counts <- merge(countsEstimates, countsCPM, by = c("tx_name"))
+    counts[is.na(FullLengthCounts), `:=`(FullLengthCounts = 0,
+        FullLengthCPM = 0) ]
+    counts[is.na(PartialLengthCounts),`:=`(PartialLengthCounts = 0,
+        PartialLengthCPM = 0) ]
+    counts[, `:=`(estimates = FullLengthCounts + PartialLengthCounts,
+                CPM = FullLengthCPM + PartialLengthCPM)]
     if (length(setdiff(counts$tx_name, names(annotations)))) 
         stop("The provided annotation is incomplete")
     counts <- counts[data.table(tx_name = names(annotations)), on = "tx_name"]
-    counts[is.na(estimates), `:=`(estimates = 0, CPM = 0)]
-
+    counts[is.na(estimates),`:=`(estimates = 0, CPM = 0, 
+        FullLengthCounts = 0, PartialLengthCounts = 0,
+        FullLengthCPM = 0, PartialLengthCPM = 0)]
     seOutput <- SummarizedExperiment::SummarizedExperiment(
-        assays =
-            SimpleList(counts = matrix(counts$estimates, ncol = 1,
-                dimnames = list(NULL, colNameRC)),CPM = matrix(counts$CPM,
-                ncol = 1, dimnames = list(NULL, colNameRC))),
+        assays = SimpleList(counts = matrix(counts$estimates, ncol = 1,
+            dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
+            ncol =  1, dimnames = list(NULL, colNameRC)),
+            fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
+            dimnames = list(NULL, colNameRC)),
+            partialLengthCounts = matrix(counts$PartialLengthCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC))),
         colData = colDataRC)
     return(seOutput)
 }

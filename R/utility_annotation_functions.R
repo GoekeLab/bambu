@@ -164,12 +164,14 @@ assignNewGeneIds <- function(exByTx, prefix = "", minoverlap = 5,
 #' generate filtered annotation table
 #' @param spliceOverlaps an output from  findSpliceOverlapsByDist()
 #' @param primarySecondaryDist default 5
+#' @param primarySecondaryDistStartEnd default 5
 #' @param exByTx default NULL
 #' @param setTMP default NULL
 #' @param DistCalculated default FALSE
 #' @noRd
-genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist,
-    exByTx = NULL, setTMP = NULL, DistCalculated = FALSE) {
+genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
+    primarySecondaryDistStartEnd = 5, exByTx = NULL, setTMP = NULL,
+    DistCalculated = FALSE) {
     ## initiate the table
     if (isFALSE(DistCalculated)) {
         txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
@@ -196,11 +198,11 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist,
                 subjectElementsOutsideMaxDist == 
                 min(queryElementsOutsideMaxDist +
                 subjectElementsOutsideMaxDist)) %>% 
-                filter((uniqueStartLengthQuery <= primarySecondaryDist &
-                uniqueEndLengthQuery <= primarySecondaryDist) ==
+                filter((uniqueStartLengthQuery <= primarySecondaryDistStartEnd &
+                uniqueEndLengthQuery <= primarySecondaryDistStartEnd) ==
                 max(uniqueStartLengthQuery <=
-                primarySecondaryDist & uniqueEndLengthQuery <=
-                primarySecondaryDist)) %>%
+                primarySecondaryDistStartEnd & uniqueEndLengthQuery <=
+                primarySecondaryDistStartEnd)) %>%
             mutate(txNumberFiltered = n())
     } else {
         txToAnTableFiltered <- txToAnTable %>%
@@ -219,7 +221,8 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist,
 #' @param ignore.strand defaults to FALSE
 #' @noRd
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
-    primarySecondaryDist = 5, ignore.strand = FALSE) {
+    primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
+    ignore.strand = FALSE) {
     # (1)  find overlaps of read classes with annotated transcripts,
     spliceOverlaps <- findSpliceOverlapsByDist(exByTx, exByTxRef,
         maxDist = maxDist, firstLastSeparate = TRUE,
@@ -305,6 +308,62 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
         "eqClassReadCount"),
         new = c("tx_id", "gene_id", "read_class_id", "nobs"))
     return(eqClassCountTable)
+}
+
+##============================================================================##
+# Steps in modifying readClass
+# 1. change concatenating symbol to & to avoid mis-spliting for novel transcript 
+#    find the possible first characters in the tx_id
+# 2. Modify read class that can be found with a minimal subset transcript 
+#    with a full length version of the minimal subset transcript indicated 
+#    by original transcript followed by Start (this set by right, should be able
+#    to find all shared read class with a subset transcript matching and all
+#    transcript with unique splicing )
+# 3. Transcripts that are subset of shared read class, if they have a read class
+#    for themseleves, modify by adding a full length version as well
+# 4. For shared read class that do not have a subset transcript that is 
+#    fully compatible with the splicing patterns, do not modify 
+# 5. change concatenating symbol back to .
+##============================================================================##
+#' Modify readClass to create full length read class
+#' @param readClassDt output from \code{getEmptyClassFromSE}
+#' @param annotationGrangesList inherits from \code{getEmptyClassFromSE}
+#' @noRd
+modifyReadClassWtFullLengthTranscript <-
+    function(readClassDt, annotationGrangesList){
+    # get the minimum subset transcript for each read class
+    rcAnnotations <- data.table(as.data.frame(mcols(annotationGrangesList)))
+    setnames(rcAnnotations, c("eqClass","GENEID"),c("read_class_id","gene_id"))
+    # match to read class
+    readClassDtMatched <-
+        rcAnnotations[readClassDt, on = c("read_class_id","gene_id")]
+    uni_charVec <- unique(substr(readClassDt$tx_id,1,1))
+    for (uni_char in uni_charVec) {
+        readClassDtMatched[, read_class_id := gsub(paste0("\\.",uni_char,""),
+        paste0("\\&",uni_char,""), read_class_id)]
+    }
+    readClassDtMatched[!is.na(newTxClass), read_class_id_new := 
+        paste0(read_class_id, "&", paste0(TXNAME,"Start")), by = read_class_id]
+    readClassDtMatched[!grepl(paste(paste0("(\\&",uni_charVec,")"),
+        collapse = "|"), read_class_id) & (is.na(newTxClass)), 
+        read_class_id_new := paste0(read_class_id, "&", paste0(tx_id,"Start"))]
+    readClassDtMatched[is.na(read_class_id_new), 
+        read_class_id_new := read_class_id]
+    readClassDtMatched[, `:=`(TXNAME = NULL, newTxClass = NULL,
+        read_class_id = NULL, tx_id = NULL)]
+    readClassDtMatched <- unique(readClassDtMatched)
+    setnames(readClassDtMatched, "read_class_id_new", "read_class_id")
+    readClassDtNew <- unique(readClassDtMatched[, 
+        list(tx_id = unlist(strsplit(read_class_id, "\\&"))),
+        by = list(gene_id, nobs, read_class_id)],by = NULL)
+    readClassDtNew[,sum_nobs := sum(nobs), by = list(gene_id, tx_id)]
+    readClassDt <- unique(readClassDtNew[sum_nobs > 0,
+        .(gene_id, read_class_id, nobs,tx_id)])
+    for (uni_char in uni_charVec) {
+        readClassDt[, read_class_id := gsub(paste0("\\&",uni_char,""),
+            paste0("\\.",uni_char,""), read_class_id)]
+    }
+   return(readClassDt)
 }
 
 #' From tx ranges to gene ranges

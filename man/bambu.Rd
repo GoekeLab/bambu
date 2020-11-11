@@ -60,6 +60,12 @@ reconstruction process:
     to be considered valid as new, defaults to 35
     \item min.exonOverlap specifying minimum number of bases shared with
     annotation to be assigned to the same gene id, defaults 10 base pairs
+    \item min.primarySecondaryDist specifying the minimum number of distance 
+    threshold
+    \item min.primarySecondaryDistStartEnd1 specifying the minimum number 
+    of distance threshold, used for extending annotation
+    \item min.primarySecondaryDistStartEnd2 specifying the minimum number 
+    of distance threshold, used for estimating distance to annotation
 }}
 
 \item{opt.em}{A list of controlling parameters for quantification

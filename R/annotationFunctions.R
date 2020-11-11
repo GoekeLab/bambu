@@ -50,5 +50,3 @@ prepareAnnotations <- function(x) {
         }
     }
 }
-
-
