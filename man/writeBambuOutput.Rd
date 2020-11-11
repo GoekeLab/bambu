@@ -7,23 +7,27 @@
 writeBambuOutput(se, path, prefix = "")
 }
 \arguments{
-\item{se}{a \code{\link{SummarizedExperiment}} object from \code{\link{bambu}}}
+\item{se}{a \code{\link{SummarizedExperiment}} object 
+from \code{\link{bambu}}.}
 
-\item{path}{the destination of the output files (gtf, transcript counts, and gene counts)}
+\item{path}{the destination of the output files 
+(gtf, transcript counts, and gene counts)}
 
 \item{prefix}{the prefix of the output files}
 }
 \value{
-The function will generate three files, a .gtf file for the annotations, 
+The function will generate three files, 
+a .gtf file for the annotations,
 two .txt files for transcript and gene counts respectively.
 }
 \description{
 Outputs a GTF file, transcript-count file, and gene-count file from bambu
 }
 \examples{
-se <- readRDS(system.file("extdata", 
-"seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
-package = "bambu"))
+se <- readRDS(system.file("extdata",
+    "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
+    package = "bambu"
+))
 path <- tempdir()
-writeBambuOutput(se,path)
+writeBambuOutput(se, path)
 }

@@ -7,20 +7,19 @@
 prepareAnnotations(x)
 }
 \arguments{
-\item{x}{A \code{\link{TxDb}} object or a gtf file}
+\item{x}{A \code{TxDb} object or a gtf file}
 }
 \value{
-A \code{\link{GRangesList}} object
+A \code{GRangesList} object
 }
 \description{
-Function to prepare tables and genomic ranges for transript reconstruction using a txdb object
+Function to prepare tables and genomic ranges for
+transript reconstruction using a txdb object
 }
 \examples{
- library(TxDb.Hsapiens.UCSC.hg38.knownGene)
- txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
- prepareAnnotations(x = txdb)
- gtf.file <- system.file("extdata", 
- "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", 
- package = "bambu")
- gr <- prepareAnnotations(x = gtf.file)
+gtf.file <- system.file("extdata",
+    "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
+    package = "bambu"
+)
+prepareAnnotations(x = gtf.file)
 }

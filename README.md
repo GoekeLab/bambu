@@ -42,18 +42,7 @@ devtools::install_github("GoekeLab/bambu")
 
 ### General Usage 
 
-The default mode to run ***bambu** is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). ***bambu*** will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates: 
- 
- ```rscript
-library(bambu)
-
-test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
-  
-
-se <- bambu(reads = test.bam, annotations = "TxDb.Hsapiens.UCSC.hg38.knownGene", genomeSequence = "BSgenome.Hsapiens.NCBI.GRCh38")
-       
-```
-
+The default mode to run ***bambu** is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). ***bambu*** will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates.
 
 We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run ***bambu*** with the following options:
 
@@ -64,9 +53,9 @@ fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_c
 
 gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
 
-bambuAnnotations <- prepareAnnotationsFromGTF(gtf.file)
+bambuAnnotations <- prepareAnnotations(gtf.file)
 
-se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
+se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ```
 
@@ -74,14 +63,14 @@ se <- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = f
 **Quantification of annotated transcripts and genes only (no transcript/gene discovery)**
 
 ```rscript
-bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnnotations = FALSE)
+bambu(reads = test.bam, annotations = txdb, genome = fa.file, discovery = FALSE)
 ```
 
 **Large sample number/ limited memory**     
 For larger sample numbers we recommend to write the processed data to a file:
 
 ```rscript
-bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnnotations, genomeSequence = fa.file)
+bambu(reads = test.bam, rcOutDir = "./bambu/", annotations = bambuAnnotations, genome = fa.file)
 ```
 ---
 
@@ -95,7 +84,7 @@ If you plan to run ***bambu*** more frequently, we recommend to save the bambuAn
 The bambuAnnotation object can be calculated from a *.gtf* file:
 
 ```rscript
-annotations <- prepareAnnotationFromGTF(gtf.file)
+annotations <- prepareAnnotation(gtf.file)
 ```
 
 From *TxDb* object
@@ -113,19 +102,19 @@ annotations <- prepareAnnotations(txdb)
 - Keep novel transcripts with min 5 read count in at least 1 sample: 
 
 ```rscript
-bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readCount = 5))
+bambu(reads, annotations, genome, opt.discovery = list(min.readCount = 5))
 ```
 
 - Keep novel transcripts with min 5 samples having at least 2 counts:
 
 ```rscript
-bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumber = 5))
+bambu(reads, annotations, genome, opt.discovery = list(min.sampleNumber = 5))
 ```
 
 - Filter out transcripts with relative abundance within gene lower than 10%: 
 
 ```rscript
-bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))
+bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 0.1))
 ```
 
 **Quantification without bias correction**     
@@ -133,14 +122,14 @@ bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractio
  The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
 
 ```rscript
-bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))
+bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
 ```
 
 **Parallel computation**      
  ***bambu***  allows parallel computation.  
 
 ```rscript
-bambu(reads, annotations, genomeSequence, ncore = 8)
+bambu(reads, annotations, genome, ncore = 8)
 ```
 
 See [manual](docs/bambu_0.3.0.pdf) for details to customize other conditions.
@@ -157,28 +146,28 @@ transcriptToGeneExpression(se)
 
 **Visualization**
 
- You can visualize the novel genes/transcripts using ***plot.bambu*** function 
+ You can visualize the novel genes/transcripts using ***plotBambu*** function 
 
 ```rscript
-plot.bambu(se, type = "annotation", gene_id)
+plotBambu(se, type = "annotation", gene_id)
 
-plot.bambu(se, type = "annotation", transcript_id)
+plotBambu(se, type = "annotation", transcript_id)
 ```
 
-- ***plot.bambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions
+- ***plotBambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions
 
 ```rscript
-plot.bambu(se, type = "heatmap") # heatmap 
+plotBambu(se, type = "heatmap") # heatmap 
 
-plot.bambu(se, type = "pca") # PCA visualization
+plotBambu(se, type = "pca") # PCA visualization
 ```
 
-- ***plot.bambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable
+- ***plotBambu*** can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable
 
 ```rscript
-plot.bambu(se, type = "heatmap", group.var) # heatmap 
+plotBambu(se, type = "heatmap", group.var) # heatmap 
 
-plot.bambu(se, type = "pca", group.var) # PCA visualization
+plotBambu(se, type = "pca", group.var) # PCA visualization
 ```
 
 **Write bambu outputs to files**

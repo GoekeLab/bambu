@@ -1,0 +1,27 @@
+bambu v1.0.2 (Change date: 2020-11-10)
+==============
+
+Changes:
+    * Bug fix for author name display
+    * Bug fix for calling fasta file and bam file from ExperimentHub
+    * Update NEWS file 
+
+bambu v1.0.1 (Change date: 2020-11-06)
+==============
+
+Changes:
+    * Bug fix for parallel computation to avoid bplapply
+
+bambu v0.99.4 (Release date: 2020-08-18)
+==============
+
+Changes:
+    * Remove codes using seqlevelStyle to allow customized annotation
+    * update the requirement of R version and ExperimentHub version
+
+
+
+bambu v0.99.1 (Release date: 2020-08-18)
+==============
+
+    * First submission to BioConductor
