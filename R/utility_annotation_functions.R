@@ -267,11 +267,12 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
 #' Get Empty Read Class From SE
 #' @param se summarizedExperiment
 #' @param annotationGrangesList defaults to NULL
+#' @param max.distScore defaults to 5 
 #' @noRd
-getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
+getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL,
+    max.distScore = 5) {
     distTable <- data.table(metadata(se)$distTable)[,
-        .(readClassId, annotationTxId, readCount, GENEID)]
-    
+        .(readClassId, annotationTxId, readCount, GENEID, dist)]
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
     compatibleData <- as.data.table(as.data.frame(rowData(se)),
         keep.rownames = TRUE)
@@ -282,19 +283,21 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
         on = c("readClassId", "GENEID")]
     distTable[, eqClass := paste(sort(unique(annotationTxId)), collapse = "."),
         by = list(readClassId, GENEID)]
-    
-    rcTable <- unique(distTable[, .(readClassId, GENEID, eqClass, readCount)])
-    rcTable[, eqClassReadCount := sum(readCount), by = list(eqClass, GENEID)]
+    distTable[, `:=`(distSum = sum((dist <= 
+        max.distScore)*readCount)), by = list(eqClass,annotationTxId)]
+    rcTable <- unique(distTable[, .(readClassId, GENEID,
+        eqClass, readCount)])
+    rcTable[, `:=`(eqClassReadCount = sum(readCount)),
+        by = list(eqClass, GENEID)]
     rcTable <- unique(rcTable[, .(eqClass, eqClassReadCount, GENEID)])
-    
     eqClassCountTable <- unique(distTable[, .(annotationTxId, GENEID,
-        eqClass)][rcTable, on = c("GENEID", "eqClass")])
+        eqClass,distSum)][rcTable, on = c("GENEID", "eqClass")])
     setnames(eqClassCountTable, c("annotationTxId"), c("TXNAME"))
     eqClassTable <- as.data.table(mcols(annotationGrangesList)[,
         c("GENEID", "eqClass", "TXNAME")])
     eqClassCountTable <- unique(merge(eqClassCountTable, eqClassTable,
         all = TRUE, on = c("GENEID", "eqClass", "TXNAME")))
-    
+
     #  new isoforms from eqClassCountTable should be kept
     eqClassCountTable[is.na(eqClassReadCount), eqClassReadCount := 0]
     ## remove empty read class where there is no shared class found
@@ -302,11 +305,10 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
         by = list(GENEID, TXNAME)]
 
     eqClassCountTable <- unique(eqClassCountTable[sum_nobs > 0, .(
-        GENEID,eqClass, eqClassReadCount, TXNAME)])
-
+        GENEID,eqClass, eqClassReadCount, TXNAME, distSum)])
     setnames(eqClassCountTable, old = c("TXNAME", "GENEID", "eqClass",
-        "eqClassReadCount"),
-        new = c("tx_id", "gene_id", "read_class_id", "nobs"))
+        "eqClassReadCount","distSum"), new = c("tx_id", "gene_id",
+            "read_class_id", "nobs","distSumPerTx"))
     return(eqClassCountTable)
 }
 
@@ -324,41 +326,52 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
 # 4. For shared read class that do not have a subset transcript that is 
 #    fully compatible with the splicing patterns, do not modify 
 # 5. change concatenating symbol back to .
-##============================================================================##
+
 #' Modify readClass to create full length read class
 #' @param readClassDt output from \code{getEmptyClassFromSE}
 #' @param annotationGrangesList inherits from \code{getEmptyClassFromSE}
 #' @noRd
-modifyReadClassWtFullLengthTranscript <-
-    function(readClassDt, annotationGrangesList){
+modifyReadClassWtFullLengthTranscript <- function(readClassDt,
+    annotationGrangesList){
     # get the minimum subset transcript for each read class
     rcAnnotations <- data.table(as.data.frame(mcols(annotationGrangesList)))
     setnames(rcAnnotations, c("eqClass","GENEID"),c("read_class_id","gene_id"))
     # match to read class
+    rcAnnotations[, `:=`(min_eqClass = 1)]
     readClassDtMatched <-
         rcAnnotations[readClassDt, on = c("read_class_id","gene_id")]
+    readClassDtMatched[is.na(min_eqClass), min_eqClass := 0]
     uni_charVec <- unique(substr(readClassDt$tx_id,1,1))
     for (uni_char in uni_charVec) {
         readClassDtMatched[, read_class_id := gsub(paste0("\\.",uni_char,""),
         paste0("\\&",uni_char,""), read_class_id)]
     }
-    readClassDtMatched[!is.na(newTxClass), read_class_id_new := 
+    readClassDtMatched[min_eqClass == 1, read_class_id_new := 
         paste0(read_class_id, "&", paste0(TXNAME,"Start")), by = read_class_id]
     readClassDtMatched[!grepl(paste(paste0("(\\&",uni_charVec,")"),
-        collapse = "|"), read_class_id) & (is.na(newTxClass)), 
+        collapse = "|"), read_class_id) & (min_eqClass == 0), 
         read_class_id_new := paste0(read_class_id, "&", paste0(tx_id,"Start"))]
     readClassDtMatched[is.na(read_class_id_new), 
         read_class_id_new := read_class_id]
-    readClassDtMatched[, `:=`(TXNAME = NULL, newTxClass = NULL,
-        read_class_id = NULL, tx_id = NULL)]
+    if ("newTxClass" %in% colnames(readClassDtMatched)) 
+        readClassDtMatched[, `:=`(newTxClass = NULL)] 
+    distDt <- unique(readClassDtMatched[,
+        .(read_class_id_new,tx_id,gene_id,distSumPerTx)])
+    setnames(distDt, "read_class_id_new","read_class_id")
+    readClassDtMatched[, `:=`(TXNAME = NULL, read_class_id = NULL,tx_id = NULL)]
     readClassDtMatched <- unique(readClassDtMatched)
     setnames(readClassDtMatched, "read_class_id_new", "read_class_id")
     readClassDtNew <- unique(readClassDtMatched[, 
-        list(tx_id = unlist(strsplit(read_class_id, "\\&"))),
+        list(tx_id_new = unlist(strsplit(read_class_id, "\\&"))),
         by = list(gene_id, nobs, read_class_id)],by = NULL)
+    readClassDtNew[, tx_id := gsub("Start","",tx_id_new)]
+    readClassDtNew <- distDt[readClassDtNew, 
+        on = c("gene_id","read_class_id","tx_id")]
+    readClassDtNew[,tx_id := NULL]
+    setnames(readClassDtNew, "tx_id_new","tx_id")
     readClassDtNew[,sum_nobs := sum(nobs), by = list(gene_id, tx_id)]
-    readClassDt <- unique(readClassDtNew[sum_nobs > 0,
-        .(gene_id, read_class_id, nobs,tx_id)])
+    readClassDt <- unique(readClassDtNew[sum_nobs > 0, .(gene_id, 
+        read_class_id, nobs,distSumPerTx, tx_id)])
     for (uni_char in uni_charVec) {
         readClassDt[, read_class_id := gsub(paste0("\\&",uni_char,""),
             paste0("\\.",uni_char,""), read_class_id)]

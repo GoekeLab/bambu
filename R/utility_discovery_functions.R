@@ -921,7 +921,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
             readClassId, confidenceType), by = "readClassId") %>%
             mutate(relativeReadCount = readCount / txNumberFiltered)
     distTable <- dplyr::select(distTable, annotationTxId, readClassId,
-                                readCount, compatible, equal)
+                                readCount, compatible, equal,dist)
     distTable <- left_join(distTable, as_tibble(mcols(annotationGrangesList)[,
             c("TXNAME", "GENEID")]),by = c("annotationTxId" = "TXNAME"))
 

@@ -51,6 +51,8 @@
 #'     \item maxiter specifying maximum number of run interations,
 #'     defaults to 10000.
 #'     \item bias specifying whether to correct for bias, defaults to FALSE.
+#'     \item max.distScore the parameter controlling the distance threshold used
+#'     for defining the likelihood of being full length.
 #'     \item conv specifying the covergence trheshold control,
 #'     defaults to 0.0001.
 #' }
@@ -115,6 +117,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             isoreParameters[['min.primarySecondaryDist']], 
         min.primarySecondaryDistStartEnd =
             isoreParameters[['min.primarySecondaryDistStartEnd2']],
+        max.distScore = 
+            emParameters[["max.distScore"]],
         emParameters = emParameters, ncore = ncore,
         verbose = verbose, BPPARAM = bpParameters)
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)

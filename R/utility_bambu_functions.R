@@ -40,16 +40,16 @@ bambu.extendAnnotations <- function(readClassList, annotations,
 #' Perform quantification
 #' @inheritParams bambu
 #' @noRd
-bambu.quantify <- function(readClass, annotations, emParameters,
-    min.exonDistance = 35, min.primarySecondaryDist = 5,
-    min.primarySecondaryDistStartEnd = 5, ncore = 1, verbose = FALSE) {
+bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
+    verbose = FALSE, min.exonDistance = 35, min.primarySecondaryDist = 5, 
+    min.primarySecondaryDistStartEnd = 5, max.distScore = 5) {
     if (is.character(readClass)) readClass <- readRDS(file = readClass)
     readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
         min.exonDistance = min.exonDistance,
         min.primarySecondaryDist = min.primarySecondaryDist,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
-    readClassDt <- getEmptyClassFromSE(readClass, annotations)
+    readClassDt <- getEmptyClassFromSE(readClass, annotations,max.distScore)
     readClassDt <- 
         modifyReadClassWtFullLengthTranscript(readClassDt, annotations)
     colNameRC <- colnames(readClass)
@@ -64,7 +64,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     setnames(countsEstimates, Est, paste0(Est,"Counts"))
     countsCPM <- dcast(counts, tx_name ~ estimate_type, value.var = "CPM")
     setnames(countsCPM, Est, paste0(Est,"CPM"))
-    counts <- merge(countsEstimates, countsCPM, by = c("tx_name"))
+    counts <- merge(countsEstimates, countsCPM, by = "tx_name")
     counts[is.na(FullLengthCounts), `:=`(FullLengthCounts = 0,
         FullLengthCPM = 0) ]
     counts[is.na(PartialLengthCounts),`:=`(PartialLengthCounts = 0,
@@ -74,9 +74,8 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     if (length(setdiff(counts$tx_name, names(annotations)))) 
         stop("The provided annotation is incomplete")
     counts <- counts[data.table(tx_name = names(annotations)), on = "tx_name"]
-    counts[is.na(estimates),`:=`(estimates = 0, CPM = 0, 
-        FullLengthCounts = 0, PartialLengthCounts = 0,
-        FullLengthCPM = 0, PartialLengthCPM = 0)]
+    counts[is.na(estimates),`:=`(estimates = 0, CPM = 0, FullLengthCounts = 0,
+        PartialLengthCounts = 0, FullLengthCPM = 0, PartialLengthCPM = 0)]
     seOutput <- SummarizedExperiment::SummarizedExperiment(
         assays = SimpleList(counts = matrix(counts$estimates, ncol = 1,
             dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
@@ -84,8 +83,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
             fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
             dimnames = list(NULL, colNameRC)),
             partialLengthCounts = matrix(counts$PartialLengthCounts, 
-            ncol = 1, dimnames = list(NULL, colNameRC))),
-        colData = colDataRC)
+            ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     return(seOutput)
 }
 
@@ -142,28 +140,21 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
         stop("Columns gene_id, tx_id, read_class_id, nobs,
             are missing from object.")
     }
-    ## check quantification parameters
-    emParameters.default <- list(bias = FALSE,maxiter = 10000,conv = 10^(-4))
-    if (!is.null(emParameters)) {
-        for (i in names(emParameters)) {
-            emParameters.default[[i]] <- emParameters[[i]]
-        }
-    }
-    emParameters <- emParameters.default
     ## ----step2: match to simple numbers to increase claculation efficiency
     geneVec <- unique(readClassDt$gene_id)
+    ori_txvec <- unique(gsub("Start","",readClassDt$tx_id))
     txVec <- unique(readClassDt$tx_id)
     readclassVec <- unique(readClassDt$read_class_id)
     readClassDt <- as.data.table(readClassDt)
     readClassDt[, gene_sid := match(gene_id, geneVec)]
     readClassDt[, tx_sid := match(tx_id, txVec)]
+    readClassDt[, tx_ori := match(gsub("Start","",tx_id),ori_txvec)]
     readClassDt[, read_class_sid := match(read_class_id, readclassVec)]
+    readClassDt[, fullTx := grepl("Start",tx_id)]
     readClassDt[, `:=`(tx_id = NULL, gene_id = NULL, read_class_id = NULL)]
 
-    ## ----step3: aggregate read class
-    temp <- aggReadClass(readClassDt)
-    readClassDt <- temp[[1]]
-    eqClassVec <- temp[[2]]
+    ## ----step3: aggregate read class mainly to combine empty RCs with observed
+    readClassDt <- aggReadClass(readClassDt)
 
     ## ----step4: quantification
     start.time <- proc.time()
