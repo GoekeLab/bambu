@@ -37,21 +37,20 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
 
   arma::rowvec summed_by_row_Xb = arma::sum(Xb.t(),0);
 
-  Xb = (Xb.t() * diagmat(1.0/summed_by_row_Xb)).t();
-
-  arma::mat adjP_Xb = Xb;   // adjusted p-values = sampling probability X theta X b, with bias parameter include
-  arma::rowvec summed_by_col_adjP_Xb = arma::sum(adjP_Xb,0);   // will be used in logLikelihood estimation as well as probMat update
+  //Xb = (Xb.t() * diagmat(1.0/summed_by_row_Xb)).t();
+  arma::mat adjP_Xt = X;   // adjusted p-values = sampling probability X theta X b, with bias parameter include
+  arma::rowvec summed_by_col_adjP_Xt = arma::sum(adjP_Xt,0);   // will be used in logLikelihood estimation as well as probMat update
 
   double deltaTheta = 1;
   while(deltaTheta > conv && iter < (maxiter-1)){
 
     //update iterator
     iter++;
-    adjP_Xb =  (Xb.t() * diagmat(theta)).t();
-    summed_by_col_adjP_Xb = arma::sum(adjP_Xb,0);
-    lmat = (adjP_Xb * diagmat(Y / summed_by_col_adjP_Xb));
+    adjP_Xt =  (X.t() * diagmat(theta)).t();
+    summed_by_col_adjP_Xt = arma::sum(adjP_Xt,0);
+    lmat = (adjP_Xt * diagmat(Y / summed_by_col_adjP_Xt));
     lmat.replace(arma::datum::nan, 0);
-    theta = arma::sum(lmat.t(),0); //sum by row
+    theta = arma::sum(lmat.t(),0)/summed_by_row_Xb; //sum by row
     theta_trace.col(iter) = theta.t();
 
     deltaTheta = dot(theta_trace.col(iter) - theta_trace.col(iter-1), theta_trace.col(iter) - theta_trace.col(iter-1));
@@ -101,15 +100,15 @@ List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
   b.fill(1);
 
   if(d){
-    arma::mat Xb = X * arma::diagmat(exp(b));
-    arma::rowvec summed_by_col_Xb = arma::sum(Xb,0);
-    arma::rowvec log_column_sum_Xb(J);
+    //arma::mat Xb = X * arma::diagmat(exp(b));
+    //arma::rowvec summed_by_col_Xb = arma::sum(Xb,0);
+    //arma::rowvec log_column_sum_Xb(J);
 
-    arma::rowvec summed_by_col_adjP_X = arma::sum(X,0);
+    arma::rowvec summed_by_col_adjP_Xt = arma::sum(X,0);
     arma::rowvec signvec(J);
 
     arma::rowvec signinputvec(J);
-    b = b - diagvec(arma::log(diagmat(summed_by_col_Xb))).t();
+    //b = b - diagvec(arma::log(diagmat(summed_by_col_Xb))).t();
     est.tail(J) = b;
 
     int maxiter_b = 500;
@@ -130,15 +129,15 @@ List emWithL1 (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
       est.head(M) = theta ;
 
       // at each estimation, update b with new theta
-      summed_by_col_adjP_X = arma::sum((X.t() * diagmat(theta)).t(),0);
-      signinputvec = Y- summed_by_col_adjP_X;
+      summed_by_col_adjP_Xt = arma::sum((X.t() * diagmat(theta)).t(),0);
+      signinputvec = Y- summed_by_col_adjP_Xt;
       signvec = diagvec(arma::sign(diagmat(signinputvec))).t() % ((abs(signinputvec)-lambda) % ((abs(signinputvec)-lambda) > 0));
-      b = diagvec(arma::log1p(diagmat(signvec / summed_by_col_adjP_X))).t();
+      b = diagvec(arma::log1p(diagmat(signvec / summed_by_col_adjP_Xt))).t();
       b = b - median(b);
-      Xb = X * diagmat(exp(b));
-      summed_by_col_Xb = arma::sum(Xb,0);
-      log_column_sum_Xb = arma::diagvec(arma::log(arma::diagmat(summed_by_col_Xb))).t();
-      b = b - log_column_sum_Xb;
+      // Xb = X * diagmat(exp(b));
+      // summed_by_col_Xb = arma::sum(Xb,0);
+      // log_column_sum_Xb = arma::diagvec(arma::log(arma::diagmat(summed_by_col_Xb))).t();
+      // b = b - log_column_sum_Xb;
 
 
       est.tail(J) = b ;

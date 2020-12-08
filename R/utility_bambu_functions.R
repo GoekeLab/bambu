@@ -42,14 +42,14 @@ bambu.extendAnnotations <- function(readClassList, annotations,
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
     verbose = FALSE, min.exonDistance = 35, min.primarySecondaryDist = 5, 
-    min.primarySecondaryDistStartEnd = 5, max.distScore = 5) {
+    min.primarySecondaryDistStartEnd = 5) {
     if (is.character(readClass)) readClass <- readRDS(file = readClass)
     readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
         min.exonDistance = min.exonDistance,
         min.primarySecondaryDist = min.primarySecondaryDist,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
-    readClassDt <- getEmptyClassFromSE(readClass, annotations,max.distScore)
+    readClassDt <- getEmptyClassFromSE(readClass, annotations)
     readClassDt <- 
         modifyReadClassWtFullLengthTranscript(readClassDt, annotations)
     colNameRC <- colnames(readClass)
@@ -59,10 +59,12 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
     Est <- c("FullLength", "PartialLength")
     counts[, estimate_type := ifelse(grepl("Start",tx_name),Est[1],Est[2])]
     counts[, tx_name := gsub("Start","",tx_name)]
-    countsEstimates <-
-        dcast(counts, tx_name ~ estimate_type, value.var = "estimates")
+    ## for now, consider to use the maximum as only one non-zero assumed
+    countsEstimates <- dcast(counts, tx_name ~ estimate_type,
+        fun.aggregate = max, fill = 0, na.rm = TRUE, value.var = "estimates")
     setnames(countsEstimates, Est, paste0(Est,"Counts"))
-    countsCPM <- dcast(counts, tx_name ~ estimate_type, value.var = "CPM")
+    countsCPM <- dcast(counts, tx_name ~ estimate_type, 
+        fun.aggregate = max,fill = 0, na.rm = TRUE, value.var = "CPM")
     setnames(countsCPM, Est, paste0(Est,"CPM"))
     counts <- merge(countsEstimates, countsCPM, by = "tx_name")
     counts[is.na(FullLengthCounts), `:=`(FullLengthCounts = 0,
@@ -153,8 +155,8 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
     readClassDt[, fullTx := grepl("Start",tx_id)]
     readClassDt[, `:=`(tx_id = NULL, gene_id = NULL, read_class_id = NULL)]
 
-    ## ----step3: aggregate read class mainly to combine empty RCs with observed
-    readClassDt <- aggReadClass(readClassDt)
+    # ## ----step3: aggregate read class mainly to combine empty RCs with observed
+    # readClassDt <- aggReadClass(readClassDt)
 
     ## ----step4: quantification
     start.time <- proc.time()

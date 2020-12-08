@@ -95,8 +95,7 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
 #' @noRd
 includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
     temp <- left_join(candidateList, filteredOverlapList,
-        by = c("subjectHits" = "queryHits")
-    ) %>%
+        by = c("subjectHits" = "queryHits")) %>%
         group_by(queryHits) %>%
         filter(!subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
         ungroup() %>%
@@ -269,10 +268,12 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
 #' @param annotationGrangesList defaults to NULL
 #' @param max.distScore defaults to 5 
 #' @noRd
-getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL,
-    max.distScore = 5) {
-    distTable <- data.table(metadata(se)$distTable)[,
-        .(readClassId, annotationTxId, readCount, GENEID, dist)]
+getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
+    txLength <- data.table(annotationTxId = names(annotationGrangesList),
+        txLength = sum(width(annotationGrangesList)))
+    distTable <- data.table(metadata(se)$distTable)[, .(readClassId, 
+        annotationTxId, readCount, GENEID, dist,equal)]
+    distTable <- txLength[distTable, on = "annotationTxId"]
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
     compatibleData <- as.data.table(as.data.frame(rowData(se)),
         keep.rownames = TRUE)
@@ -283,33 +284,133 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL,
         on = c("readClassId", "GENEID")]
     distTable[, eqClass := paste(sort(unique(annotationTxId)), collapse = "."),
         by = list(readClassId, GENEID)]
-    distTable[, `:=`(distSum = sum((dist <= 
-        max.distScore)*readCount)), by = list(eqClass,annotationTxId)]
+    distTable[, `:=`(equalN = sum(equal*readCount)), 
+        by = list(eqClass,annotationTxId)]
     rcTable <- unique(distTable[, .(readClassId, GENEID,
         eqClass, readCount)])
     rcTable[, `:=`(eqClassReadCount = sum(readCount)),
         by = list(eqClass, GENEID)]
     rcTable <- unique(rcTable[, .(eqClass, eqClassReadCount, GENEID)])
     eqClassCountTable <- unique(distTable[, .(annotationTxId, GENEID,
-        eqClass,distSum)][rcTable, on = c("GENEID", "eqClass")])
+        eqClass, equalN,txLength)][rcTable, 
+        on = c("GENEID", "eqClass")])
     setnames(eqClassCountTable, c("annotationTxId"), c("TXNAME"))
     eqClassTable <- as.data.table(mcols(annotationGrangesList)[,
         c("GENEID", "eqClass", "TXNAME")])
     eqClassCountTable <- unique(merge(eqClassCountTable, eqClassTable,
         all = TRUE, on = c("GENEID", "eqClass", "TXNAME")))
-
     #  new isoforms from eqClassCountTable should be kept
     eqClassCountTable[is.na(eqClassReadCount), eqClassReadCount := 0]
-    ## remove empty read class where there is no shared class found
+    eqClassCountTable[is.na(equalN), equalN := 0]
     eqClassCountTable[, sum_nobs := sum(eqClassReadCount),
         by = list(GENEID, TXNAME)]
-
     eqClassCountTable <- unique(eqClassCountTable[sum_nobs > 0, .(
-        GENEID,eqClass, eqClassReadCount, TXNAME, distSum)])
-    setnames(eqClassCountTable, old = c("TXNAME", "GENEID", "eqClass",
-        "eqClassReadCount","distSum"), new = c("tx_id", "gene_id",
-            "read_class_id", "nobs","distSumPerTx"))
+        GENEID,eqClass, eqClassReadCount, TXNAME, equalN,txLength)])
+        setnames(eqClassCountTable, old = c("TXNAME", "GENEID", "eqClass",
+        "eqClassReadCount", "equalN","txLength"), new = c("tx_id", "gene_id",
+        "read_class_id", "nobs","equalN","tx_len"))
     return(eqClassCountTable)
+}
+
+#' @noRd 
+createMultimappingBaseOnEmptyRC <- function(rcDt, 
+    from_symbol = ".", to_symbol = "&"){
+    if (!(from_symbol == "&"))
+        rcDt$read_class_id <- changeSymbol(rcDt$read_class_id,
+        rcDt$tx_id, from_symbol, to_symbol)
+    rcDtNew <- rcDt[, list(txNumber = length(unique(tx_id)),
+        txNumberExpected = length(unlist(strsplit(read_class_id, "\\&")))),
+        by = read_class_id]
+    ## For those with txNumber less than txNumberExpected 
+    rcDtNew_remap <- rcDtNew[txNumber != txNumberExpected, 
+        list(tx_id_new = unlist(strsplit(read_class_id, "\\&"))),
+        by = read_class_id]
+    rcDt <- rcDtNew_remap[rcDt, on = "read_class_id"]
+    rcDt[is.na(tx_id_new), tx_id_new := tx_id]
+    rcDt[tx_id_new != tx_id, tx_id := tx_id_new]
+    rcDt[, tx_id_new := NULL]
+    if (!(from_symbol == "&"))
+    rcDt$read_class_id <- changeSymbol(rcDt$read_class_id,
+        rcDt$tx_id, from_symbol = to_symbol, to_symbol = from_symbol)
+    return(rcDt)
+}
+
+#' @noRd
+changeSymbol <- function(eqClass, txVec, from_symbol, to_symbol){
+    uni_charVec <- unique(substr(txVec,1,1))
+     for (uni_char in uni_charVec) {
+        eqClass = gsub(paste0("\\",from_symbol,uni_char,""),
+        paste0("\\",to_symbol,uni_char,""), eqClass)
+     }
+    return(eqClass)
+}
+
+#' @noRd
+getSubsetAnno <- function(rcAnnotations){
+    ## for subset transcripts 
+    subset_anno <- unique(rcAnnotations[which(subset_status), 
+        list(tx_id = unlist(strsplit(eqClass, "\\&"))),
+        by = list(GENEID, TXNAME, eqClass)],by = NULL)
+    subset_anno <- subset_anno[TXNAME != tx_id]
+    setnames(subset_anno, c("eqClass","TXNAME"), 
+        c("read_class_id","subset_txid"))
+    return(subset_anno)
+}
+
+#' @noRd
+getSubsetReadClassTable <- function(subset_anno, readClassDt, rcAnnotations){
+    readClassDtMatched <- unique(subset_anno[,.(tx_id, subset_txid)], 
+        by = NULL)[readClassDt, on = c("tx_id"), allow.cartesian = TRUE]
+    readClassDtMatched <- readClassDtMatched[!is.na(subset_txid)]
+    readClassDtMatched[, exist := grepl(subset_txid, read_class_id),
+        by = list(subset_txid,read_class_id)]
+    readClassDtMatched <- readClassDtMatched[which(exist)]
+    readClassDtMatched[, total_txNumber := 
+        length(unlist(strsplit(read_class_id, "\\&"))), by = read_class_id]
+    subset_rcDt <- readClassDtMatched[, list(subset_txNumber = .N), 
+        by = list(read_class_id,subset_txid, total_txNumber)] 
+    
+    ## only keep those with total_txNumber = subset_txNumber + 1 
+    subset_rcDt <- subset_rcDt[total_txNumber == subset_txNumber + 1]
+    subset_rcDt[, `:=`(total_txNumber = NULL, subset_txNumber = NULL)]
+    subset_rcDt <- rbind(subset_rcDt, 
+        data.table(read_class_id = rcAnnotations[which(!subset_status)]$eqClass,
+        subset_txid = rcAnnotations[which(!subset_status)]$eqClass))
+    subset_rcDt[, read_class_id_new := gsub(subset_txid, 
+        paste0(subset_txid,"Start"), read_class_id), 
+        by = list(read_class_id, subset_txid)]
+    return(subset_rcDt)
+}
+
+#' @noRd
+createFullEquiCounts <- function(subset_rcDt, readClassDt){
+    # first merge subset_rcDt with readClassDt
+    readClassDtNew <- subset_rcDt[readClassDt, on = "read_class_id"]
+    readClassDtNew <- 
+        readClassDtNew[!is.na(subset_txid) & (tx_id == subset_txid)]
+    readClassDtNew[, `:=`(tx_id = paste0(tx_id, "Start"),
+                          nobs = equalN,
+                          read_class_id = read_class_id_new)]
+    readClassDtNew[, `:=`(subset_txid = NULL,
+                          read_class_id_new = NULL)]
+    ## whenever edited, remember to create multimapping 
+    readClassDtNew <- createMultimappingBaseOnEmptyRC(readClassDtNew, 
+        from_symbol = "&")
+    # secondly manual edit those are missed by a few bp difference in splicing 
+    # sites
+    readClassDtNewManual <- readClassDt[!(read_class_id %in% 
+        unique(subset_rcDt$read_class_id))][equalN > 0]
+    readClassDtNewManual[, `:=`(tx_id = paste0(tx_id, "Start"),
+        nobs = equalN,
+        read_class_id = gsub(tx_id, paste0(tx_id,"Start"), read_class_id)), 
+        by = list(tx_id, read_class_id)]
+    readClassDtNewManual <- 
+        createMultimappingBaseOnEmptyRC(readClassDtNewManual, from_symbol = "&")
+    readClassDtOld <- copy(readClassDt)
+    readClassDtOld[, nobs := nobs - equalN]
+    readClassDt_final <- do.call("rbind", list(readClassDtNew, readClassDtOld,
+        readClassDtNewManual))
+    return(readClassDt_final)
 }
 
 ##============================================================================##
@@ -333,52 +434,100 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL,
 #' @noRd
 modifyReadClassWtFullLengthTranscript <- function(readClassDt,
     annotationGrangesList){
-    # get the minimum subset transcript for each read class
+    readClassDt <- createMultimappingBaseOnEmptyRC(readClassDt)
     rcAnnotations <- data.table(as.data.frame(mcols(annotationGrangesList)))
-    setnames(rcAnnotations, c("eqClass","GENEID"),c("read_class_id","gene_id"))
-    # match to read class
-    rcAnnotations[, `:=`(min_eqClass = 1)]
-    readClassDtMatched <-
-        rcAnnotations[readClassDt, on = c("read_class_id","gene_id")]
-    readClassDtMatched[is.na(min_eqClass), min_eqClass := 0]
-    uni_charVec <- unique(substr(readClassDt$tx_id,1,1))
-    for (uni_char in uni_charVec) {
-        readClassDtMatched[, read_class_id := gsub(paste0("\\.",uni_char,""),
-        paste0("\\&",uni_char,""), read_class_id)]
-    }
-    readClassDtMatched[min_eqClass == 1, read_class_id_new := 
-        paste0(read_class_id, "&", paste0(TXNAME,"Start")), by = read_class_id]
-    readClassDtMatched[!grepl(paste(paste0("(\\&",uni_charVec,")"),
-        collapse = "|"), read_class_id) & (min_eqClass == 0), 
-        read_class_id_new := paste0(read_class_id, "&", paste0(tx_id,"Start"))]
-    readClassDtMatched[is.na(read_class_id_new), 
-        read_class_id_new := read_class_id]
-    if ("newTxClass" %in% colnames(readClassDtMatched)) 
-        readClassDtMatched[, `:=`(newTxClass = NULL)] 
-    distDt <- unique(readClassDtMatched[,
-        .(read_class_id_new,tx_id,gene_id,distSumPerTx)])
-    setnames(distDt, "read_class_id_new","read_class_id")
-    readClassDtMatched[, `:=`(TXNAME = NULL, read_class_id = NULL,tx_id = NULL)]
-    readClassDtMatched <- unique(readClassDtMatched)
-    setnames(readClassDtMatched, "read_class_id_new", "read_class_id")
-    readClassDtNew <- unique(readClassDtMatched[, 
-        list(tx_id_new = unlist(strsplit(read_class_id, "\\&"))),
-        by = list(gene_id, nobs, read_class_id)],by = NULL)
-    readClassDtNew[, tx_id := gsub("Start","",tx_id_new)]
-    readClassDtNew <- distDt[readClassDtNew, 
-        on = c("gene_id","read_class_id","tx_id")]
-    readClassDtNew[,tx_id := NULL]
-    setnames(readClassDtNew, "tx_id_new","tx_id")
-    readClassDtNew[,sum_nobs := sum(nobs), by = list(gene_id, tx_id)]
-    readClassDt <- unique(readClassDtNew[sum_nobs > 0, .(gene_id, 
-        read_class_id, nobs,distSumPerTx, tx_id)])
-    for (uni_char in uni_charVec) {
-        readClassDt[, read_class_id := gsub(paste0("\\&",uni_char,""),
-            paste0("\\.",uni_char,""), read_class_id)]
-    }
+    rcAnnotations$eqClass <- changeSymbol(eqClass = rcAnnotations$eqClass, 
+        txVec = rcAnnotations$TXNAME, from_symbol = ".", to_symbol = "&")
+    rcAnnotations[, subset_status := grepl("\\&",eqClass)]
+    subset_anno <- getSubsetAnno(rcAnnotations)
+    readClassDt$read_class_id <- changeSymbol(readClassDt$read_class_id,
+        readClassDt$tx_id, from_symbol = ".", to_symbol = "&")
+    subset_rcDt <-
+        getSubsetReadClassTable(subset_anno, readClassDt, rcAnnotations)
+    readClassDt <- createFullEquiCounts(subset_rcDt, readClassDt)
+    readClassDt$read_class_id <- changeSymbol(readClassDt$read_class_id,
+        readClassDt$tx_id, from_symbol = "&", to_symbol = ".")
+    readClassDt[, `:=`(equalN = NULL)]
    return(readClassDt)
 }
 
+##Model the expected ratio of reads at a certain fraction of transcript
+##Note here single isoform genes will be used for calculation
+##Or should we use uniquely aligned reads?
+# calculateExpectedCoverageRatio <- function(rcranges, annotatons){
+#     ## calculate coverage for all, as this is pretty fast
+#     tx_cvg_numeric <- as(GenomicFeatures::coverageByTranscript(rcranges, 
+#         annotations,#[unlist(unique(strand(annotations))) != "*"], 
+#         ignore.strand = TRUE), "NumericList")
+#     strandInfo <- unlist(unique(strand(annotations)))
+#     ## use only single isoform gene and only use a sample of such genes
+#     annotation_dt <- data.table(as.data.frame(mcols(annotations)))
+#     annotation_dt[, nisoform := length(unique(TXNAME)), by = GENEID]
+#     annotation_dt$eqClassNew <- changeSymbol(annotation_dt$eqClass, 
+#         annotation_dt$TXNAME, from_symbol = ".", to_symbol = "&")
+#     candidate_tx <- annotation_dt[nisoform == 1 & (!grepl("&",
+#         eqClassNew)) & (!grepl("unspliced", newTxClass))]$TXNAME
+#     candidate_tx <- intersect(candidate_tx, 
+#         unique(metadata(readClass)$distTable$annotationTxId))
+#     system.time(tx_cvg_df <- BiocParallel::bplapply(as.list(candidate_tx), 
+#         calCoverage,
+#         tx_cvg_numeric = tx_cvg_numeric, 
+#         strandInfo = strandInfo,
+#         BPPARAM = bpParameters))
+#     tx_cvg <- do.call("rbind",tx_cvg_df)
+#     # tx_cvg[, normAveCount := ave_bin_count/max(ave_bin_count), by = tx_id]
+#     # tx_cvg_ave <- tx_cvg[!is.na(normAveCount), 
+#     #     list(aveNorm = mean(normAveCount)),by = pos_bin]
+#     tx_cvg_ave <- tx_cvg[!is.na(normAveCount),
+#         list(aveCount= mean(ave_bin_count)),by = pos_bin]
+#     ## 
+#     ecdf_fun <- approxfun(tx_cvg_ave$pos_bin/100, 
+#         tx_cvg_ave$aveCount/max(tx_cvg_ave$aveCount),
+#         method = "linear", yleft = 0)
+#     return(ecdf_fun)
+# }
+
+
+#' #' @noRd
+#' calCoverage <- function(x, tx_cvg_numeric, strandInfo){
+#'     dt <- data.table(count = tx_cvg_numeric[[x]],
+#'         s = as.character(strandInfo[x]))
+#'     dt[, `:=`(pos = ifelse(s == "t", rev(seq_along(dt$s)), seq_along(dt$s)))]
+#'     dt[, pos_bin := ceiling(pos/max(pos)*100)]
+#'     dt[, ave_bin_count := mean(count), by = pos_bin]
+#'     dt[, tx_id := x]
+#'     dt <- unique(dt[,.(pos_bin, ave_bin_count, tx_id)], by = NULL)
+#'     return(dt)
+#' }
+
+## degradation estimation
+#' @noRd
+estDegradation_factor <- function(se, annotationGrangesList){
+    txLength <- data.table(annotationTxId = names(annotationGrangesList),
+        txLength = sum(width(annotationGrangesList)))
+    distTable <- data.table(metadata(se)$distTable)[, .(readClassId, 
+        annotationTxId, readCount, GENEID, dist,equal)]
+    distTable <- txLength[distTable, on = "annotationTxId"]
+    
+    annotation_dt <- data.table(as.data.frame(mcols(annotations)))
+    annotation_dt[, nisoform := length(unique(TXNAME)), by = GENEID]
+    annotation_dt$eqClassNew <- changeSymbol(annotation_dt$eqClass,
+        annotation_dt$TXNAME, from_symbol = ".", to_symbol = "&")
+    candidate_tx <- annotation_dt[nisoform == 1 & (!grepl("&",
+        eqClassNew)) & (!grepl("unspliced", newTxClass))]$TXNAME
+    candidate_tx <- intersect(candidate_tx,
+        unique(metadata(readClass)$distTable$annotationTxId))
+    
+    degradation_data <- unique(distTable[annotationTxId %in% 
+        candidate_tx][,.(annotationTxId, txLength, 
+        tx_count, full_count, GENEID)])
+    
+    degradation_rate <- mean((1 - degradation_data2[tx_count > 
+        30]$full_count/degradation_data2[tx_count > 30]$tx_count)/ceiling(
+        degradation_data2[tx_count > 30]$txLength/1000))
+    
+    return(degradation_rate)
+}
 #' From tx ranges to gene ranges
 #' @noRd
 txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {
