@@ -269,11 +269,12 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
 #' @param max.distScore defaults to 5 
 #' @noRd
 getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
-    txLength <- data.table(annotationTxId = names(annotationGrangesList),
-        txLength = sum(width(annotationGrangesList)))
+    rcWidth <- data.table(readClassId = rownames(se),
+        firstExonWidth = width(unlist(rowRanges(se))[unlist(rowRanges(
+        se))$exon_rank == 1,]),totalWidth = sum(width(rowRanges(se))))
     distTable <- data.table(metadata(se)$distTable)[, .(readClassId, 
         annotationTxId, readCount, GENEID, dist,equal)]
-    distTable <- txLength[distTable, on = "annotationTxId"]
+    distTable <- rcWidth[distTable, on = "readClassId"]
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
     compatibleData <- as.data.table(as.data.frame(rowData(se)),
         keep.rownames = TRUE)
@@ -287,28 +288,29 @@ getEmptyClassFromSE <- function(se = se, annotationGrangesList = NULL) {
     distTable[, `:=`(equalN = sum(equal*readCount)), 
         by = list(eqClass,annotationTxId)]
     rcTable <- unique(distTable[, .(readClassId, GENEID,
-        eqClass, readCount)])
-    rcTable[, `:=`(eqClassReadCount = sum(readCount)),
+        eqClass, readCount,firstExonWidth,totalWidth,equal)])
+    rcTable[, `:=`(eqClassReadCount = sum(readCount), rc_width = 
+        ifelse(all(!equal), max(totalWidth), max(firstExonWidth))), 
         by = list(eqClass, GENEID)]
-    rcTable <- unique(rcTable[, .(eqClass, eqClassReadCount, GENEID)])
+    rcTable <- unique(rcTable[, .(eqClass, eqClassReadCount, GENEID, rc_width)])
     eqClassCountTable <- unique(distTable[, .(annotationTxId, GENEID,
-        eqClass, equalN,txLength)][rcTable, 
-        on = c("GENEID", "eqClass")])
+        eqClass, equalN)][rcTable, on = c("GENEID", "eqClass")])
     setnames(eqClassCountTable, c("annotationTxId"), c("TXNAME"))
     eqClassTable <- as.data.table(mcols(annotationGrangesList)[,
         c("GENEID", "eqClass", "TXNAME")])
     eqClassCountTable <- unique(merge(eqClassCountTable, eqClassTable,
         all = TRUE, on = c("GENEID", "eqClass", "TXNAME")))
-    #  new isoforms from eqClassCountTable should be kept
     eqClassCountTable[is.na(eqClassReadCount), eqClassReadCount := 0]
     eqClassCountTable[is.na(equalN), equalN := 0]
+    ## for empty equiRCs, the rc_width would not matter much
+    eqClassCountTable[is.na(rc_width), rc_width := 0]
     eqClassCountTable[, sum_nobs := sum(eqClassReadCount),
         by = list(GENEID, TXNAME)]
-    eqClassCountTable <- unique(eqClassCountTable[sum_nobs > 0, .(
-        GENEID,eqClass, eqClassReadCount, TXNAME, equalN,txLength)])
-        setnames(eqClassCountTable, old = c("TXNAME", "GENEID", "eqClass",
-        "eqClassReadCount", "equalN","txLength"), new = c("tx_id", "gene_id",
-        "read_class_id", "nobs","equalN","tx_len"))
+    eqClassCountTable <- unique(eqClassCountTable[sum_nobs > 0, .(GENEID,
+        eqClass, eqClassReadCount, TXNAME, equalN, rc_width)])
+    setnames(eqClassCountTable, old = c("TXNAME", "GENEID", "eqClass",
+        "eqClassReadCount", "equalN","rc_width"),  new = c("tx_id", 
+        "gene_id", "read_class_id", "nobs", "equalN", "rc_width"))
     return(eqClassCountTable)
 }
 
@@ -382,9 +384,12 @@ getSubsetReadClassTable <- function(subset_anno, readClassDt, rcAnnotations){
     return(subset_rcDt)
 }
 
+
+
+
 #' @noRd
 createFullEquiCounts <- function(subset_rcDt, readClassDt){
-    # first merge subset_rcDt with readClassDt
+    # first merge subset_rcDt with readClassDt,full eq
     readClassDtNew <- subset_rcDt[readClassDt, on = "read_class_id"]
     readClassDtNew <- 
         readClassDtNew[!is.na(subset_txid) & (tx_id == subset_txid)]
@@ -407,7 +412,7 @@ createFullEquiCounts <- function(subset_rcDt, readClassDt){
     readClassDtNewManual <- 
         createMultimappingBaseOnEmptyRC(readClassDtNewManual, from_symbol = "&")
     readClassDtOld <- copy(readClassDt)
-    readClassDtOld[, nobs := nobs - equalN]
+    readClassDtOld[, `:=`(nobs = nobs - equalN)]
     readClassDt_final <- do.call("rbind", list(readClassDtNew, readClassDtOld,
         readClassDtNewManual))
     return(readClassDt_final)
@@ -431,6 +436,7 @@ createFullEquiCounts <- function(subset_rcDt, readClassDt){
 #' Modify readClass to create full length read class
 #' @param readClassDt output from \code{getEmptyClassFromSE}
 #' @param annotationGrangesList inherits from \code{getEmptyClassFromSE}
+#' @param d_rate degradation ratio per kb
 #' @noRd
 modifyReadClassWtFullLengthTranscript <- function(readClassDt,
     annotationGrangesList){
@@ -454,61 +460,15 @@ modifyReadClassWtFullLengthTranscript <- function(readClassDt,
 ##Model the expected ratio of reads at a certain fraction of transcript
 ##Note here single isoform genes will be used for calculation
 ##Or should we use uniquely aligned reads?
-# calculateExpectedCoverageRatio <- function(rcranges, annotatons){
-#     ## calculate coverage for all, as this is pretty fast
-#     tx_cvg_numeric <- as(GenomicFeatures::coverageByTranscript(rcranges, 
-#         annotations,#[unlist(unique(strand(annotations))) != "*"], 
-#         ignore.strand = TRUE), "NumericList")
-#     strandInfo <- unlist(unique(strand(annotations)))
-#     ## use only single isoform gene and only use a sample of such genes
-#     annotation_dt <- data.table(as.data.frame(mcols(annotations)))
-#     annotation_dt[, nisoform := length(unique(TXNAME)), by = GENEID]
-#     annotation_dt$eqClassNew <- changeSymbol(annotation_dt$eqClass, 
-#         annotation_dt$TXNAME, from_symbol = ".", to_symbol = "&")
-#     candidate_tx <- annotation_dt[nisoform == 1 & (!grepl("&",
-#         eqClassNew)) & (!grepl("unspliced", newTxClass))]$TXNAME
-#     candidate_tx <- intersect(candidate_tx, 
-#         unique(metadata(readClass)$distTable$annotationTxId))
-#     system.time(tx_cvg_df <- BiocParallel::bplapply(as.list(candidate_tx), 
-#         calCoverage,
-#         tx_cvg_numeric = tx_cvg_numeric, 
-#         strandInfo = strandInfo,
-#         BPPARAM = bpParameters))
-#     tx_cvg <- do.call("rbind",tx_cvg_df)
-#     # tx_cvg[, normAveCount := ave_bin_count/max(ave_bin_count), by = tx_id]
-#     # tx_cvg_ave <- tx_cvg[!is.na(normAveCount), 
-#     #     list(aveNorm = mean(normAveCount)),by = pos_bin]
-#     tx_cvg_ave <- tx_cvg[!is.na(normAveCount),
-#         list(aveCount= mean(ave_bin_count)),by = pos_bin]
-#     ## 
-#     ecdf_fun <- approxfun(tx_cvg_ave$pos_bin/100, 
-#         tx_cvg_ave$aveCount/max(tx_cvg_ave$aveCount),
-#         method = "linear", yleft = 0)
-#     return(ecdf_fun)
-# }
-
-
-#' #' @noRd
-#' calCoverage <- function(x, tx_cvg_numeric, strandInfo){
-#'     dt <- data.table(count = tx_cvg_numeric[[x]],
-#'         s = as.character(strandInfo[x]))
-#'     dt[, `:=`(pos = ifelse(s == "t", rev(seq_along(dt$s)), seq_along(dt$s)))]
-#'     dt[, pos_bin := ceiling(pos/max(pos)*100)]
-#'     dt[, ave_bin_count := mean(count), by = pos_bin]
-#'     dt[, tx_id := x]
-#'     dt <- unique(dt[,.(pos_bin, ave_bin_count, tx_id)], by = NULL)
-#'     return(dt)
-#' }
-
-## degradation estimation
 #' @noRd
-estDegradation_factor <- function(se, annotationGrangesList){
-    txLength <- data.table(annotationTxId = names(annotationGrangesList),
-        txLength = sum(width(annotationGrangesList)))
-    distTable <- data.table(metadata(se)$distTable)[, .(readClassId, 
-        annotationTxId, readCount, GENEID, dist,equal)]
-    distTable <- txLength[distTable, on = "annotationTxId"]
-    
+calculateExpectedCoverageRatio <- function(readClass, annotations, txLength){
+    ## calculate coverage for all, as this is pretty fast
+    rcranges <- rowRanges(readClass)
+    tx_cvg_numeric <- as(GenomicFeatures::coverageByTranscript(rcranges,
+        annotations,#[unlist(unique(strand(annotations))) != "*"],
+        ignore.strand = TRUE), "NumericList")
+    strandInfo <- unlist(unique(strand(annotations)))
+    ## use only single isoform gene and only use a sample of such genes
     annotation_dt <- data.table(as.data.frame(mcols(annotations)))
     annotation_dt[, nisoform := length(unique(TXNAME)), by = GENEID]
     annotation_dt$eqClassNew <- changeSymbol(annotation_dt$eqClass,
@@ -517,17 +477,66 @@ estDegradation_factor <- function(se, annotationGrangesList){
         eqClassNew)) & (!grepl("unspliced", newTxClass))]$TXNAME
     candidate_tx <- intersect(candidate_tx,
         unique(metadata(readClass)$distTable$annotationTxId))
-    
-    degradation_data <- unique(distTable[annotationTxId %in% 
-        candidate_tx][,.(annotationTxId, txLength, 
-        tx_count, full_count, GENEID)])
-    
-    degradation_rate <- mean((1 - degradation_data2[tx_count > 
-        30]$full_count/degradation_data2[tx_count > 30]$tx_count)/ceiling(
-        degradation_data2[tx_count > 30]$txLength/1000))
-    
-    return(degradation_rate)
+    #sampled_tx <- candidate_tx[sample(seq_along(candidate_tx),5000)]
+    system.time(tx_cvg_df <- lapply(as.list(candidate_tx),
+        calCoverage, tx_cvg_numeric = tx_cvg_numeric,
+        strandInfo = strandInfo))
+    tx_cvg <- do.call("rbind",tx_cvg_df)
+    tx_cvg_ave <- tx_cvg[,
+        list(aveCount = mean(ave_bin_count)),by = pos_bin]
+    ## getting the slope and average transcript length
+    tx_ave_len <- mean(txLength[annotationTxId %in% candidate_tx]$txLength)
+    tx_cvg_ave[, adj_pos := pos_bin*tx_ave_len/100]
+    d_rate <- 
+        lm(aveCount~adj_pos,tx_cvg_ave[pos_bin > 5 & (pos_bin < 96)])$coef[2]
+    d_rate_pkb <- d_rate/diff(range(tx_cvg_ave[pos_bin > 5 & 
+        (pos_bin < 96)]$adj_pos))*1000
+    return(d_rate_pkb)
 }
+
+
+#' @noRd
+calCoverage <- function(x, tx_cvg_numeric, strandInfo){
+    dt <- data.table(count = tx_cvg_numeric[[x]],
+        s = as.character(strandInfo[x]))
+    dt[, `:=`(pos = ifelse(s == "t", rev(seq_along(dt$s)), seq_along(dt$s)))]
+    dt[, pos_bin := ceiling(pos/max(pos)*100)]
+    dt[, ave_bin_count := mean(count), by = pos_bin]
+    dt[, tx_id := x]
+    dt <- unique(dt[,.(pos_bin, ave_bin_count, tx_id)], by = NULL)
+    return(dt)
+}
+
+## degradation estimation
+# estDegradation_factor <- function(se, annotationGrangesList){
+#     txLength <- data.table(annotationTxId = names(annotationGrangesList),
+#         txLength = sum(width(annotationGrangesList)))
+#     distTable <- data.table(metadata(se)$distTable)[, .(readClassId, 
+#         annotationTxId, readCount, GENEID, dist,equal)]
+#     distTable <- txLength[distTable, on = "annotationTxId"]
+#     
+#     annotation_dt <- data.table(as.data.frame(mcols(annotations)))
+#     annotation_dt[, nisoform := length(unique(TXNAME)), by = GENEID]
+#     annotation_dt$eqClassNew <- changeSymbol(annotation_dt$eqClass,
+#         annotation_dt$TXNAME, from_symbol = ".", to_symbol = "&")
+#     candidate_tx <- annotation_dt[nisoform == 1 & (!grepl("&",
+#         eqClassNew)) & (!grepl("unspliced", newTxClass))]$TXNAME
+#     candidate_tx <- intersect(candidate_tx,
+#         unique(metadata(readClass)$distTable$annotationTxId))
+#     distTable[, tx_count:=sum(readCount), by = list(GENEID, annotationTxId)]
+#     distTable[, full_count:=sum(equal*readCount), 
+#       by = list(GENEID, annotationTxId)]
+# 
+#     degradation_data <- unique(distTable[annotationTxId %in% 
+#         candidate_tx][,.(annotationTxId, txLength, 
+#         tx_count, full_count, GENEID)])
+#     
+#     degradation_rate <- mean((1 - degradation_data2[tx_count > 
+#         30]$full_count/degradation_data2[tx_count > 30]$tx_count)/ceiling(
+#         degradation_data2[tx_count > 30]$txLength/1000))
+#     
+#     return(degradation_rate)
+# }
 #' From tx ranges to gene ranges
 #' @noRd
 txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {

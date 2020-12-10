@@ -49,17 +49,37 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         min.primarySecondaryDist = min.primarySecondaryDist,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
+    txLength <- data.table(annotationTxId = names(annotations),
+        txLength = sum(width(annotations)))
+    ## For unique part of rc, we use first exon as the proxy
     readClassDt <- getEmptyClassFromSE(readClass, annotations)
     readClassDt <- 
         modifyReadClassWtFullLengthTranscript(readClassDt, annotations)
+    readClassDt[, tx_len := txLength[match(gsub("Start","",tx_id),
+        annotationTxId)]$txLength]
+    d_rate <- 
+        calculateExpectedCoverageRatio(readClass, annotations, txLength)
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
     counts <- bambu.quantDT(readClassDt, emParameters = emParameters,
-        ncore = ncore, verbose = verbose)
+        ncore = ncore, verbose = verbose, d_rate)
+    counts <- bambu.formatOutput(counts, annotations)
+    seOutput <- SummarizedExperiment::SummarizedExperiment(
+        assays = SimpleList(counts = matrix(counts$estimates, ncol = 1,
+            dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
+            ncol =  1, dimnames = list(NULL, colNameRC)),
+            fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
+            dimnames = list(NULL, colNameRC)),
+            partialLengthCounts = matrix(counts$PartialLengthCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
+    return(seOutput)
+}
+
+#' @noRd
+bambu.formatOutput <- function(counts,annotations){
     Est <- c("FullLength", "PartialLength")
     counts[, estimate_type := ifelse(grepl("Start",tx_name),Est[1],Est[2])]
     counts[, tx_name := gsub("Start","",tx_name)]
-    ## for now, consider to use the maximum as only one non-zero assumed
     countsEstimates <- dcast(counts, tx_name ~ estimate_type,
         fun.aggregate = max, fill = 0, na.rm = TRUE, value.var = "estimates")
     setnames(countsEstimates, Est, paste0(Est,"Counts"))
@@ -78,15 +98,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
     counts <- counts[data.table(tx_name = names(annotations)), on = "tx_name"]
     counts[is.na(estimates),`:=`(estimates = 0, CPM = 0, FullLengthCounts = 0,
         PartialLengthCounts = 0, FullLengthCPM = 0, PartialLengthCPM = 0)]
-    seOutput <- SummarizedExperiment::SummarizedExperiment(
-        assays = SimpleList(counts = matrix(counts$estimates, ncol = 1,
-            dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
-            ncol =  1, dimnames = list(NULL, colNameRC)),
-            fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
-            dimnames = list(NULL, colNameRC)),
-            partialLengthCounts = matrix(counts$PartialLengthCounts, 
-            ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-    return(seOutput)
+    return(counts)
 }
 
 #' Preprocess bam files and save read class files
@@ -134,7 +146,7 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
 #' @inheritParams bambu
 #' @noRd
 bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
-    ncore = 1, verbose = FALSE) {
+    ncore = 1, verbose = FALSE, d_rate = NULL) {
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
     } else if (any(!(c("gene_id", "tx_id", "read_class_id","nobs") %in% 
@@ -154,9 +166,6 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
     readClassDt[, read_class_sid := match(read_class_id, readclassVec)]
     readClassDt[, fullTx := grepl("Start",tx_id)]
     readClassDt[, `:=`(tx_id = NULL, gene_id = NULL, read_class_id = NULL)]
-
-    # ## ----step3: aggregate read class mainly to combine empty RCs with observed
-    # readClassDt <- aggReadClass(readClassDt)
 
     ## ----step4: quantification
     start.time <- proc.time()

@@ -58,16 +58,24 @@ run_parallel <- function(g, conv, bias, maxiter, readClassDt) {
                 data.table(read_class_sid = tmp$read_class_sid,
                 estimates = 0,n = tmp$nobs,gene_sid = g,ntotal = sum(tmp$nobs)))
     } else {
-        n.obs <- unique(tmp[, .(read_class_sid, nobs)], by = NULL)$nobs
+        n.obs <- unique(tmp[, .(read_class_sid, nobs)], 
+            by = NULL)[order(read_class_sid)]$nobs
         K <- sum(n.obs)
         n.obs <- n.obs/K
-        tmp_wide <- dcast(tmp[order(nobs)], tx_sid ~ read_class_sid,
-            fun.aggregate = length, value.var = "nobs")
-        a_mat <- tmp_wide[, -1, with = FALSE]
-        setDF(a_mat)
-        rownames(a_mat) <- tmp_wide$tx_sid
+        ## For those that are shared across replace the a_mat with corresponding 
+        ## rate
+        tmp[, align_both := (length(unique(tx_sid)) > 1), by = read_class_sid]
+        tmp[align_both == 1 , aval := ifelse(fullTx, 1 - 
+            sum(rc_width*d_rate/1000), rc_width*d_rate/1000), by = tx_ori]
+        tmp[align_both == 0, aval := 1]
+        tmp_wide <- dcast(tmp[order(nobs)], tx_sid + tx_ori + 
+            fullTx ~ read_class_sid, value.var = "aval")
+        tmp_wide[is.na(tmp_wide)] <- 0
+        a_mat <- setDF(tmp_wide[,-c(1:3),with = FALSE])
+        rownames(a_mat) <- tmp_wide$tx_sid #unique(tmp_wide$tx_ori)
         lambda <- sqrt(max(n.obs)) ##using the Jiang and Salzman suggested value
         out <- list(data.table(tx_sid = rownames(a_mat),estimates = 0,
+                #full_estimates = 0, partial_estimates = 0, 
                 gene_sid = g,ntotal = K),
             data.table(read_class_sid = colnames(a_mat),estimates = 0,
                 n = n.obs, gene_sid = g,ntotal = K))#pre-define output
@@ -80,15 +88,16 @@ run_parallel <- function(g, conv, bias, maxiter, readClassDt) {
         }
         est_output <- emWithL1(X = as.matrix(a_mat), Y = n.obs, lambda = lambda,
             d = bias, maxiter = maxiter, conv = conv)
-        est_output$theta <- K*apply(a_mat * est_output$theta,1,sum)
-        out <- modifyQuantOut(est_output, bias, removed_rcs, removed_txs,out)
+        out <- modifyQuantOut(est_output, a_mat, bias, 
+            removed_rcs, removed_txs,out)
     }
     return(out)
 }
 
 # Modify default quant output using estimated outputs
 #' @noRd
-modifyQuantOut <- function(est_output, bias, removed_rcs, removed_txs,out){
+modifyQuantOut <- function(est_output, a_mat, #a_mat_full, a_mat_partial,
+    bias, removed_rcs, removed_txs, out){
     if (bias) {
         b_est <- as.numeric(t(est_output[["b"]]))
         if (length(removed_rcs) > 0) {
@@ -97,11 +106,20 @@ modifyQuantOut <- function(est_output, bias, removed_rcs, removed_txs,out){
             out[[2]]$estimates <- b_est
         }
     } 
-    t_est <- as.numeric(t(est_output[["theta"]]))
+    t_est <- as.numeric(t(K * apply(a_mat * est_output[["theta"]], 1, sum)))
+    # t_est_full <- as.numeric(t(K * apply(a_mat_full * est_output[["theta"]], 
+    #     1, sum)))
+    # t_est_partial <- 
+    #     as.numeric(t(K * apply(a_mat_partial * est_output[["theta"]], 
+    #     1, sum)))
     if (length(removed_txs) > 0) {
         out[[1]][-removed_txs]$estimates <- t_est
+        # out[[1]][-removed_txs]$full_estimates <- t_est_full
+        # out[[1]][-removed_txs]$partial_estimates <- t_est_partial
     }else{
         out[[1]]$estimates <- t_est
+        # out[[1]]$full_estimates <- t_est_full
+        # out[[1]]$partial_estimates <- t_est_partial
     }
     return(out)
 }
