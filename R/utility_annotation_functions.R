@@ -412,7 +412,10 @@ createFullEquiCounts <- function(subset_rcDt, readClassDt){
     readClassDtNewManual <- 
         createMultimappingBaseOnEmptyRC(readClassDtNewManual, from_symbol = "&")
     readClassDtOld <- copy(readClassDt)
-    readClassDtOld[, `:=`(nobs = nobs - equalN)]
+    ## for subset shared case, the read class equal to only one transcript, 
+    ## equal number will differ from each other, therefore, in this case
+    ## nobs, by right, there should be only one equal number 
+    readClassDtOld[, `:=`(nobs = nobs - sum(equalN)), by = read_class_id]
     readClassDt_final <- do.call("rbind", list(readClassDtNew, readClassDtOld,
         readClassDtNewManual))
     return(readClassDt_final)
