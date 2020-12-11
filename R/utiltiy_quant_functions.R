@@ -86,10 +86,16 @@ run_parallel <- function(g, conv, bias, maxiter, readClassDt) {
             a_mat <- a_mat[,-removed_rcs]
             n.obs <- n.obs[-removed_rcs]
         }
-        est_output <- emWithL1(X = as.matrix(a_mat), Y = n.obs, lambda = lambda,
-            d = bias, maxiter = maxiter, conv = conv)
-        out <- modifyQuantOut(est_output, a_mat, bias, 
-            removed_rcs, removed_txs,out)
+        ## with one value, it can't be dealt in EM
+        if (is.null(nrow(a_mat))) {
+            out[[1]][-removed_txs]$estimates <- K*n.obs
+        }else{
+            est_output <- emWithL1(X = as.matrix(a_mat), Y = n.obs, 
+                lambda = lambda, d = bias, maxiter = maxiter, conv = conv)
+            out <- modifyQuantOut(est_output, a_mat, bias, 
+                removed_rcs, removed_txs,out)
+        }
+       
     }
     return(out)
 }
