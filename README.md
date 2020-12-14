@@ -32,14 +32,13 @@
 
 ### Installation
 
-You can install ***bambu*** from github:
-
+You can install ***bambu*** from bioconductor:
 ```rscript
-if (!requireNamespace("devtools", quietly = TRUE))
-    install.packages("devtools")
-devtools::install_github("GoekeLab/bambu")
-```
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
 
+BiocManager::install("bambu")
+```
 
 ---
 
@@ -184,9 +183,30 @@ writeBambuOutput(se, path = "./bambu/")
 
 ### Release History
 
+**bambu version 1.0.2**
+
+Release date: 2020-11-10
+
+- bug fix for author name display
+- bug fix for calling fasta file and bam file from ExperimentHub
+- update NEWS file 
+
+**bambu version 1.0.0**
+
+Release date: 2020-11-06
+
+- bug fix for parallel computation to avoid bplapply
+
+**bambu version 0.99.4**
+
+Release date: 2020-08-18 
+
+- remove codes using seqlevelStyle to allow customized annotation
+- update the requirement of R version and ExperimentHub version
+
 **bambu version 0.3.0**     
 
-Release date: 28th July 2020
+Release date: 2020-07-27 
 
 - bambu now runs on windows with a fasta file
 - update to the documentation (vignette)
@@ -195,14 +215,14 @@ Release date: 28th July 2020
 
 **bambu version 0.2.0**
 
-Release date: 18th June 2020
+Release date: 2020-06-18
 
 **bambu version 0.1.0**
 
-Release date: 29th May 2020
+Release date: 2020-05-29 
 
 ### Citation
-A manuscript describing bambu  is currently in preparation. If you use bambu for your research, please cite using the following doi: 10.5281/zenodo.3900025. 
+A manuscript describing bambu is currently in preparation. If you use bambu for your research, please cite using the following doi: 10.18129/B9.bioc.bambu. 
 
 ### Contributors
 
