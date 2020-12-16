@@ -233,24 +233,24 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     rowData <- as_tibble(rowData(readClassSe))
     rowData$start <- rowMins(start)
     rowData$end <- rowMaxs(end)
-    rowData <- rowData %>% dplyr::select(chr=chr.rc,
+    rowData <- rowData %>% dplyr::select(chr=chr,
                                          start, end,
                                          strand=strand.rc,
                                          intronStarts,
                                          intronEnds,
-                                         confidenceType,
-                                         resultOutput.equal,
-                                         resultOutput.compatible,
-                                         resultOutput.non_compatible_match)
+                                         confidenceType)
     strand_bias = assays(readClassSe)$strand_bias
     startSD = assays(readClassSe)$startSD
     endSD = assays(readClassSe)$endSD
-    FE_numReads = assays(readClassSe)$FE_numReads
-    FE_tx_strand_bias = assays(readClassSe)$FE_tx_strand_bias
-    FE_SD = assays(readClassSe)$FE_SD
-    LE_numReads = assays(readClassSe)$LE_numReads
-    LE_tx_strand_bias = assays(readClassSe)$LE_tx_strand_bias
-    LE_SD = assays(readClassSe)$LE_SD
+    # FE_numReads = assays(readClassSe)$FE_numReads
+    # FE_tx_strand_bias = assays(readClassSe)$FE_tx_strand_bias
+    # FE_SD = assays(readClassSe)$FE_SD
+    # LE_numReads = assays(readClassSe)$LE_numReads
+    # LE_tx_strand_bias = assays(readClassSe)$LE_tx_strand_bias
+    # LE_SD = assays(readClassSe)$LE_SD
+    TSSscore = assays(readClassSe)$TSSscore
+    TESscore = assays(readClassSe)$TESscore
+    uniqueReads = assays(readClassSe)$uniqueReads
 
     #equal = assays(readClassSe)$equal
     #compatible = assays(readClassSe)$compatible
@@ -260,30 +260,37 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
       adapEndNumReads = assays(readClassSe)$adapEndNumReads
       adaptDist = assays(readClassSe)$adaptDist
       adapEndDist = assays(readClassSe)$adapEndDist
-      FE_adapNumReads = assays(readClassSe)$FE_adapNumReads
-      FE_adaptDist = assays(readClassSe)$FE_adaptDist
-      LE_adapNumReads = assays(readClassSe)$LE_adapNumReads
-      LE_adaptDist = assays(readClassSe)$LE_adaptDist
+      # FE_adapNumReads = assays(readClassSe)$FE_adapNumReads
+      # FE_adaptDist = assays(readClassSe)$FE_adaptDist
+      # LE_adapNumReads = assays(readClassSe)$LE_adapNumReads
+      # LE_adaptDist = assays(readClassSe)$LE_adaptDist
+      bothAdapters = assays(readClassSe)$bothAdapters
+      polyAEnd = assays(readClassSe)$polyAEnd
       assaysList = SimpleList(counts=counts,
                           start=start,
                           end=end,
                           strand_bias=strand_bias,
                           startSD=startSD,
                           endSD=endSD,
-                          FE_numReads=FE_numReads,
-                          FE_tx_strand_bias=FE_tx_strand_bias,
-                          FE_SD=FE_SD,
-                          LE_numReads=LE_numReads,
-                          LE_tx_strand_bias=LE_tx_strand_bias,
-                          LE_SD=LE_SD,
+                          # FE_numReads=FE_numReads,
+                          # FE_tx_strand_bias=FE_tx_strand_bias,
+                          # FE_SD=FE_SD,
+                          # LE_numReads=LE_numReads,
+                          # LE_tx_strand_bias=LE_tx_strand_bias,
+                          # LE_SD=LE_SD,
+                          TSSscore = TSSscore,
+                          TESscore = TESscore,
+                          uniqueReads=uniqueReads,
                           adapNumReads = adapNumReads,
                           adapEndNumReads = adapEndNumReads,
                           adaptDist = adaptDist,
                           adapEndDist = adapEndDist,
-                          FE_adapNumReads = FE_adapNumReads,
-                          FE_adaptDist = FE_adaptDist,
-                          LE_adapNumReads = LE_adapNumReads,
-                          LE_adaptDist = LE_adaptDist
+                          # FE_adapNumReads = FE_adapNumReads,
+                          # FE_adaptDist = FE_adaptDist,
+                          # LE_adapNumReads = LE_adapNumReads,
+                          # LE_adaptDist = LE_adaptDist,
+                          bothAdapters = bothAdapters,
+                          polyAEnd = polyAEnd
       )
     } else{
       assaysList = SimpleList(counts=counts,
@@ -292,12 +299,15 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                           strand_bias=strand_bias,
                           startSD=startSD,
                           endSD=endSD,
-                          FE_numReads=FE_numReads,
-                          FE_tx_strand_bias=FE_tx_strand_bias,
-                          FE_SD=FE_SD,
-                          LE_numReads=LE_numReads,
-                          LE_tx_strand_bias=LE_tx_strand_bias,
-                          LE_SD=LE_SD
+                          # FE_numReads=FE_numReads,
+                          # FE_tx_strand_bias=FE_tx_strand_bias,
+                          # FE_SD=FE_SD,
+                          # LE_numReads=LE_numReads,
+                          # LE_tx_strand_bias=LE_tx_strand_bias,
+                          # LE_SD=LE_SD,
+                          uniqueReads=uniqueReads,
+                          TSSscore = TSSscore,
+                          TESscore = TESscore
       )
     }
     readClassSeRef <- SummarizedExperiment(assays = assaysList,
@@ -315,8 +325,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
 
     rowData.spliced <- full_join(filter(readClassSeRefTBL, confidenceType=='highConfidenceJunctionReads'),
                                  filter(readClassSeTBL, confidenceType=='highConfidenceJunctionReads'),
-                                 by=c('chr'='chr.rc','strand'='strand.rc','intronStarts', 'intronEnds',
-                                      'resultOutput.equal', 'resultOutput.compatible', 'resultOutput.non_compatible_match'),
+                                 by=c('chr'='chr','strand'='strand.rc','intronStarts', 'intronEnds'),
                                  suffix=c('.ref','.new'))
 
     # (1) create first SE object for spliced Tx
@@ -382,21 +391,26 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     strand_bias.spliced = getSplicedAssay("strand_bias")
     startSD.spliced = getSplicedAssay("startSD")
     endSD.spliced = getSplicedAssay("endSD")
-    FE_numReads.spliced = getSplicedAssay("FE_numReads")
-    FE_tx_strand_bias.spliced = getSplicedAssay("FE_tx_strand_bias")
-    FE_SD.spliced = getSplicedAssay("FE_SD")
-    LE_numReads.spliced = getSplicedAssay("LE_numReads")
-    LE_tx_strand_bias.spliced = getSplicedAssay("LE_tx_strand_bias")
-    LE_SD.spliced = getSplicedAssay("LE_SD")
+    # FE_numReads.spliced = getSplicedAssay("FE_numReads")
+    # FE_tx_strand_bias.spliced = getSplicedAssay("FE_tx_strand_bias")
+    # FE_SD.spliced = getSplicedAssay("FE_SD")
+    # LE_numReads.spliced = getSplicedAssay("LE_numReads")
+    # LE_tx_strand_bias.spliced = getSplicedAssay("LE_tx_strand_bias")
+    # LE_SD.spliced = getSplicedAssay("LE_SD")
+    TSSscore.spliced = getSplicedAssay("TSSscore")
+    TESscore.spliced = getSplicedAssay("TESscore")
+    uniqueReads.spliced = getSplicedAssay("uniqueReads")
     if(!is.null(assays(readClassSe)$adapNumReads)){
       adapNumReads.spliced = getSplicedAssay("adapNumReads")
       adapEndNumReads.spliced = getSplicedAssay("adapEndNumReads")
       adaptDist.spliced = getSplicedAssay("adaptDist")
       adapEndDist.spliced = getSplicedAssay("adapEndDist")
-      FE_adapNumReads.spliced = getSplicedAssay("FE_adapNumReads")
-      FE_adaptDist.spliced = getSplicedAssay("FE_adaptDist")
-      LE_adapNumReads.spliced = getSplicedAssay("LE_adapNumReads")
-      LE_adaptDist.spliced = getSplicedAssay("LE_adaptDist")
+      # FE_adapNumReads.spliced = getSplicedAssay("FE_adapNumReads")
+      # FE_adaptDist.spliced = getSplicedAssay("FE_adaptDist")
+      # LE_adapNumReads.spliced = getSplicedAssay("LE_adapNumReads")
+      # LE_adaptDist.spliced = getSplicedAssay("LE_adaptDist")
+      bothAdapters.spliced = getSplicedAssay("bothAdapters")
+      polyAEnd.spliced = getSplicedAssay("polyAEnd")
     }
 
     #equal.spliced = getSplicedAssay("equal")
@@ -404,7 +418,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     #non_compatible_match.spliced = getSplicedAssay("non_compatible_match")
     rowData.spliced$start <- rowMins(start.spliced, na.rm=TRUE)
     rowData.spliced$end <- rowMaxs(end.spliced, na.rm=TRUE)
-    rowData.spliced <- dplyr::select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds, resultOutput.equal, resultOutput.compatible, resultOutput.non_compatible_match) %>%
+    rowData.spliced <- dplyr::select(rowData.spliced, chr, start, end, strand, intronStarts, intronEnds) %>%
       mutate(confidenceType = 'highConfidenceJunctionReads')
     
     if(!is.null(assays(readClassSe)$adapNumReads)){
@@ -414,20 +428,25 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                                              strand_bias=strand_bias.spliced,
                                                              startSD=startSD.spliced,
                                                              endSD=endSD.spliced,
-                                                             FE_numReads=FE_numReads.spliced,
-                                                             FE_tx_strand_bias=FE_tx_strand_bias.spliced,
-                                                             FE_SD=FE_SD.spliced,
-                                                             LE_numReads=LE_numReads.spliced,
-                                                             LE_tx_strand_bias=LE_tx_strand_bias.spliced,
-                                                             LE_SD=LE_SD.spliced,
+                                                            #  FE_numReads=FE_numReads.spliced,
+                                                            #  FE_tx_strand_bias=FE_tx_strand_bias.spliced,
+                                                            #  FE_SD=FE_SD.spliced,
+                                                            #  LE_numReads=LE_numReads.spliced,
+                                                            #  LE_tx_strand_bias=LE_tx_strand_bias.spliced,
+                                                            #  LE_SD=LE_SD.spliced,
+                                                             TSSscore = TSSscore.spliced,
+                                                             TESscore = TESscore.spliced,
+                                                             uniqueReads=uniqueReads.spliced,
                                                              adapNumReads = adapNumReads.spliced,
                                                              adapEndNumReads = adapEndNumReads.spliced,
                                                              adaptDist = adaptDist.spliced,
                                                              adapEndDist = adapEndDist.spliced,
-                                                             FE_adapNumReads = FE_adapNumReads.spliced,
-                                                             FE_adaptDist = FE_adaptDist.spliced,
-                                                             LE_adapNumReads = LE_adapNumReads.spliced,
-                                                             LE_adaptDist = LE_adaptDist.spliced 
+                                                            #  FE_adapNumReads = FE_adapNumReads.spliced,
+                                                            #  FE_adaptDist = FE_adaptDist.spliced,
+                                                            #  LE_adapNumReads = LE_adapNumReads.spliced,
+                                                            #  LE_adaptDist = LE_adaptDist.spliced,
+                                                             bothAdapters = bothAdapters.spliced,
+                                                             polyAEnd = polyAEnd.spliced
       ),
       rowData = rowData.spliced,
       colData = colDataCombined)
@@ -438,12 +457,15 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                                              strand_bias=strand_bias.spliced,
                                                              startSD=startSD.spliced,
                                                              endSD=endSD.spliced,
-                                                             FE_numReads=FE_numReads.spliced,
-                                                             FE_tx_strand_bias=FE_tx_strand_bias.spliced,
-                                                             FE_SD=FE_SD.spliced,
-                                                             LE_numReads=LE_numReads.spliced,
-                                                             LE_tx_strand_bias=LE_tx_strand_bias.spliced,
-                                                             LE_SD=LE_SD.spliced
+                                                            #  FE_numReads=FE_numReads.spliced,
+                                                            #  FE_tx_strand_bias=FE_tx_strand_bias.spliced,
+                                                            #  FE_SD=FE_SD.spliced,
+                                                            #  LE_numReads=LE_numReads.spliced,
+                                                            #  LE_tx_strand_bias=LE_tx_strand_bias.spliced,
+                                                            #  LE_SD=LE_SD.spliced,
+                                                             TSSscore = TSSscore.spliced,
+                                                             TESscore = TESscore.spliced,
+                                                             uniqueReads=uniqueReads.spliced
       ),
       rowData = rowData.spliced,
       colData = colDataCombined)
@@ -503,7 +525,7 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     rowData.unspliced <- as_tibble(combinedSingleExonRanges) %>%
       mutate_if(is.factor, as.character) %>%
       dplyr::select(chr=seqnames, start, end, strand=strand) %>%
-      mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew', resultOutput.equal = "NOVEL", resultOutput.compatible = "NOVEL", resultOutput.non_compatible_match = "NOVEL")
+      mutate(intronStarts=NA, intronEnds=NA, confidenceType='unsplicedNew')
 
     overlapRefToCombined <-findOverlaps(unsplicedRangesRef,
                                         combinedSingleExonRanges,
@@ -592,16 +614,21 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
   startSD.unspliced = getUnsplicedAssay("startSD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
   endSD.unspliced = getUnsplicedAssay("endSD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
   #sum
-  FE_numReads.unspliced = getUnsplicedAssay("FE_numReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
-  FE_tx_strand_bias.unspliced = getUnsplicedAssay("FE_tx_strand_bias", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
-  #weighted.mean
-  FE_SD.unspliced = getUnsplicedAssay("FE_SD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
-  #sum
-  LE_numReads.unspliced = getUnsplicedAssay("LE_numReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
-  LE_tx_strand_bias.unspliced = getUnsplicedAssay("LE_tx_strand_bias", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
-  #weighted.mean
-  LE_SD.unspliced = getUnsplicedAssay("LE_SD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+  # FE_numReads.unspliced = getUnsplicedAssay("FE_numReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  # FE_tx_strand_bias.unspliced = getUnsplicedAssay("FE_tx_strand_bias", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  # #weighted.mean
+  # FE_SD.unspliced = getUnsplicedAssay("FE_SD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+  # #sum
+  # LE_numReads.unspliced = getUnsplicedAssay("LE_numReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  # LE_tx_strand_bias.unspliced = getUnsplicedAssay("LE_tx_strand_bias", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  # #weighted.mean
+  # LE_SD.unspliced = getUnsplicedAssay("LE_SD", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
   #mode?
+  uniqueReads.unspliced = getUnsplicedAssay("uniqueReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+  
+  TSSscore.unspliced = getUnsplicedAssay("TSSscore", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+  TESscore.unspliced = getUnsplicedAssay("TESscore", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+ 
   # equal.unspliced = getUnsplicedAssay("equal", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index,any)
   # compatible.unspliced = getUnsplicedAssay("compatible", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index,any)
   # non_compatible_match.unspliced = getUnsplicedAssay("non_compatible_match", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index,any)
@@ -611,10 +638,12 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
     adapEndNumReads.unspliced = getUnsplicedAssay("adapEndNumReads",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
     adaptDist.unspliced = getUnsplicedAssay("adaptDist",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
     adapEndDist.unspliced = getUnsplicedAssay("adapEndDist",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
-    FE_adapNumReads.unspliced = getUnsplicedAssay("FE_adapNumReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
-    FE_adaptDist.unspliced = getUnsplicedAssay("FE_adaptDist",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
-    LE_adapNumReads.unspliced = getUnsplicedAssay("LE_adapNumReads",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
-    LE_adaptDist.unspliced = getUnsplicedAssay("LE_adaptDist", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean) 
+    # FE_adapNumReads.unspliced = getUnsplicedAssay("FE_adapNumReads", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    # FE_adaptDist.unspliced = getUnsplicedAssay("FE_adaptDist",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    # LE_adapNumReads.unspliced = getUnsplicedAssay("LE_adapNumReads",counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+    # LE_adaptDist.unspliced = getUnsplicedAssay("LE_adaptDist", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean) 
+    bothAdapters.unspliced = getUnsplicedAssay("bothAdapters", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum) 
+    polyAEnd.unspliced = getUnsplicedAssay("polyAEnd", counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
     
     se.unspliced <- SummarizedExperiment(assays = SimpleList(counts = counts.unspliced,
                                                            start = start.unspliced,
@@ -622,12 +651,15 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                                            strand_bias = strand_bias.unspliced,
                                                            startSD = startSD.unspliced,
                                                            endSD = endSD.unspliced,
-                                                           FE_numReads = FE_numReads.unspliced,
-                                                           FE_tx_strand_bias = FE_tx_strand_bias.unspliced,
-                                                           FE_SD = FE_SD.unspliced,
-                                                           LE_numReads = LE_numReads.unspliced,
-                                                           LE_tx_strand_bias = LE_tx_strand_bias.unspliced,
-                                                           LE_SD = LE_SD.unspliced,
+                                                          #  FE_numReads = FE_numReads.unspliced,
+                                                          #  FE_tx_strand_bias = FE_tx_strand_bias.unspliced,
+                                                          #  FE_SD = FE_SD.unspliced,
+                                                          #  LE_numReads = LE_numReads.unspliced,
+                                                          #  LE_tx_strand_bias = LE_tx_strand_bias.unspliced,
+                                                          #  LE_SD = LE_SD.unspliced,
+                                                           uniqueReads = uniqueReads.unspliced,
+                                                           TSSscore = TSSscore.unspliced,
+                                                           TESscore = TESscore.unspliced,
                                                            #equal = equal.unspliced,
                                                            #compatible = compatible.unspliced,
                                                            #non_compatible_match=non_compatible_match.unspliced
@@ -635,10 +667,12 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                                            adapEndNumReads = adapEndNumReads.unspliced,
                                                            adaptDist = adaptDist.unspliced,
                                                            adapEndDist = adapEndDist.unspliced,
-                                                           FE_adapNumReads = FE_adapNumReads.unspliced,
-                                                           FE_adaptDist = FE_adaptDist.unspliced,
-                                                           LE_adapNumReads = LE_adapNumReads.unspliced,
-                                                           LE_adaptDist = LE_adaptDist.unspliced 
+                                                          #  FE_adapNumReads = FE_adapNumReads.unspliced,
+                                                          #  FE_adaptDist = FE_adaptDist.unspliced,
+                                                          #  LE_adapNumReads = LE_adapNumReads.unspliced,
+                                                          #  LE_adaptDist = LE_adaptDist.unspliced,
+                                                           bothAdapters = bothAdapters.unspliced,
+                                                           polyAEnd = polyAEnd.unspliced
                                                            ),
                                          rowData = rowData.unspliced,
                                          colData = colDataCombined)
@@ -649,12 +683,13 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                                              strand_bias = strand_bias.unspliced,
                                                              startSD = startSD.unspliced,
                                                              endSD = endSD.unspliced,
-                                                             FE_numReads = FE_numReads.unspliced,
-                                                             FE_tx_strand_bias = FE_tx_strand_bias.unspliced,
-                                                             FE_SD = FE_SD.unspliced,
-                                                             LE_numReads = LE_numReads.unspliced,
-                                                             LE_tx_strand_bias = LE_tx_strand_bias.unspliced,
-                                                             LE_SD = LE_SD.unspliced
+                                                            #  FE_numReads = FE_numReads.unspliced,
+                                                            #  FE_tx_strand_bias = FE_tx_strand_bias.unspliced,
+                                                            #  FE_SD = FE_SD.unspliced,
+                                                            #  LE_numReads = LE_numReads.unspliced,
+                                                            #  LE_tx_strand_bias = LE_tx_strand_bias.unspliced,
+                                                            #  LE_SD = LE_SD.unspliced,
+                                                             uniqueReads = uniqueReads.unspliced
     ),
     rowData = rowData.unspliced,
     colData = colDataCombined)
