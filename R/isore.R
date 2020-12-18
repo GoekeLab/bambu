@@ -192,7 +192,7 @@ isore.constructReadClasses <- function(readGrgList,
   exonsByReadClass <- c(readClassListSpliced$readClassList, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
   counts <- matrix(mcols(exonsByReadClass)$readCount, dimnames = list(names(exonsByReadClass), runName))
   colDataDf <- DataFrame(name = runName, row.names = runName)
-  mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c('chr.rc', 'strand.rc', 'intronStarts', 'intronEnds', 'confidenceType')]
+  mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c('chr', 'strand.rc', 'intronStarts', 'intronEnds', 'confidenceType')]
   se <- SummarizedExperiment(assays = SimpleList(counts = counts),
                              rowRanges = exonsByReadClass,
                              colData = colDataDf)
@@ -515,7 +515,8 @@ isore.combineTranscriptCandidates <- function(readClassSe, readClassSeRef = NULL
                                   ranges=IRanges(start=readClassSeRefTBL.unspliced$start,
                                                  end=readClassSeRefTBL.unspliced$end),
                                   strand=readClassSeRefTBL.unspliced$strand)
-    unsplicedRangesNew <- GRanges(seqnames=readClassSeTBL.unspliced$chr.rc,
+    #print(readClassSeTBL.unspliced$chr)
+    unsplicedRangesNew <- GRanges(seqnames=readClassSeTBL.unspliced$chr,
                                   ranges=IRanges(start=readClassSeTBL.unspliced$start,
                                                  end=readClassSeTBL.unspliced$end),
                                   strand=readClassSeTBL.unspliced$strand.rc)
