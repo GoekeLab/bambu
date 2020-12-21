@@ -3,98 +3,116 @@
 # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
 
 
-#' This function calcualtes compatible splice overlaps allowing for a distance threshold, and returns distance in bp between query and subject. Can be used to assign more transcripts to annotations and reads to transcripts.
+#' calculate distance between first and last exon matches
+#' @param queryExon a query start or end exon ranges
+#' @param subjectExon a subject start or end exon ranges
+#' @param subjectFull a full subject ranges object
+#' @param subjectList a full subject list
 #' @noRd
-findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist = 5, type='within', firstLastSeparate = TRUE, dropRangesByMinLength=FALSE, cutStartEnd = TRUE) {
-
-  #  with this option the first and last exons are stored and the distance for each between query and subject hits is returned
-  if(firstLastSeparate) {
-    queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
-    queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
-    subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
-    subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
-    subjectFull <- subject
-  }
-
-
-  #this list is used to find candidate matches. allows ranges to be dropped from query (to find matches not strictly within). more matches>slower
-  if(dropRangesByMinLength) {
-    queryForOverlap <- dropGrangesListElementsByWidth(query, minWidth=maxDist, cutStartEnd=cutStartEnd)
-  } else if(cutStartEnd) {
-    queryForOverlap <- cutStartEndFromGrangesList(query)
-  } else {
-    queryForOverlap <- query
-  }
-
-
-  # first and last exons are reduced to 2bp, internal exon and splice matches are emphasised
-  query <- cutStartEndFromGrangesList(query)
-  #  subject <- cutStartEndFromGrangesList(subject)
-
-  #  queryExonsRemoved <- dropGrangesListElementsByWidth(query, minWidth=maxDist)
-  subjectExtend <- extendGrangesListElements(subject, by=maxDist)
-
-  olap <- findOverlaps(queryForOverlap, subjectExtend, ignore.strand=ignore.strand, type=type)
-  olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject), ignore.strand=ignore.strand, type='equal')
-
-  query <- query[queryHits(olap)]
-  subject <- subject[subjectHits(olap)]
-  splice <- myGaps(query)
-
-
-  compatible <- rangesDist(query, subject, splice, maxDist)
-  equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
-  unique <- myOneMatch(compatible$compatible, queryHits(olap))
-  strandSpecific <- all(strand(query) != "*")
-  strandedMatch <- ((all(strand(query)=='-') & all(strand(subject)=='-'))| (all(strand(query)=='+') & all(strand(subject)=='+')))
-  mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific, strandedMatch)
-
-  if(firstLastSeparate) { ##NOTE: Check if there is an error with the start sequence ##
-    if(length(olap)>0) {
-      queryStart <- ranges(queryStart[queryHits(olap)])
-      subjectStart <- ranges(subjectStart[subjectHits(olap)])
-      queryEnd <- ranges(queryEnd[queryHits(olap)])
-      subjectEnd <- ranges(subjectEnd[subjectHits(olap)])
-      subjectFull <- ranges(subjectFull[subjectHits(olap)])
-      #queryFirstJunction <- ranges(selectStartExonsFromGrangesList(splice, exonNumber = 1))
-      #queryLastJunction <- ranges(selectEndExonsFromGrangesList(splice, exonNumber = 1))
-
-      startMatch <- poverlaps(unlist(queryStart), unlist(subjectStart))
-      endMatch <- poverlaps(unlist(queryEnd), unlist(subjectEnd))
-
-      #calculate distance between first and last exon matches:
-      # distances corresponds to length of unique sequences in all matching exons
-      # distance = width(element in query) + width(all matching elements in subject) - 2x width(intersection(query, subject)
-      subjectList <- unlist(subjectFull)
-      queryStartList <- rep(unlist(queryStart),elementNROWS(subjectFull))
-      myId <- rep(1:length(queryStart),elementNROWS(subjectFull))
-      byExonIntersect=pintersect(queryStartList,subjectList, resolve.empty='start.x')
-      startDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryStart)))
-      uniqueStartLengthQuery <-   sum(width(GenomicRanges::setdiff(queryStart, subjectFull)))
-      uniqueStartLengthSubject <-  startDist - uniqueStartLengthQuery
-
-
-
-      queryEndList <- rep(unlist(queryEnd),elementNROWS(subjectFull))
-      myId <- rep(1:length(queryEnd),elementNROWS(subjectFull))
-      byExonIntersect=pintersect(queryEndList,subjectList, resolve.empty='start.x')
-      endDist <- as.integer(tapply(width(subjectList)*(width(byExonIntersect)>0)-2*width(byExonIntersect),myId,sum) + width(unlist(queryEnd)))
-      uniqueEndLengthQuery <-   sum(width(GenomicRanges::setdiff(queryEnd, subjectFull)))
-      uniqueEndLengthSubject <-  endDist - uniqueEndLengthQuery
-    } else {
-      startMatch <- NULL
-      uniqueStartLengthQuery <- NULL
-      uniqueStartLengthSubject <- NULL
-      endMatch <- NULL
-      uniqueEndLengthQuery <- NULL
-      uniqueEndLengthSubject <- NULL
-    }
-
-    mcols(olap) <- DataFrame( mcols(olap), startMatch, uniqueStartLengthQuery,uniqueStartLengthSubject,endMatch, uniqueEndLengthQuery,uniqueEndLengthSubject)
-  }
-
-  olap
+calculateFirstLastExonsDist <- function(queryExon, subjectExon,
+                                        subjectFull, subjectList) {
+    # distances corresponds to length of unique sequences in all matching exons
+    # distance = width(element in query) + width(all matching elements 
+    # in subject) - 2x width(intersection(query, subject)
+    ## subjectList <- unlist(subjectFull)
+    ExonMatch <- poverlaps(unlist(queryExon), unlist(subjectExon))
+    queryExonList <- rep(unlist(queryExon), elementNROWS(subjectFull))
+    myId <- rep(seq_along(queryExon), elementNROWS(subjectFull))
+    byExonIntersect <- pintersect(queryExonList, subjectList,
+        resolve.empty = "start.x")
+    ExonDist <- as.integer(tapply(width(subjectList) *
+        (width(byExonIntersect) > 0) - 2 * width(byExonIntersect),
+        myId, sum) + width(unlist(queryExon)))
+    uniqueExonLengthQuery <-
+        sum(width(GenomicRanges::setdiff(queryExon, subjectFull)))
+    uniqueExonLengthSubject <- ExonDist - uniqueExonLengthQuery
+    ExonMatchList <- list(
+        "match" = ExonMatch,
+        "uniqueExonLengthQuery" = uniqueExonLengthQuery,
+        "uniqueExonLengthSubject" = uniqueExonLengthSubject)
+    return(ExonMatchList)
 }
+
+
+#' This function calcualtes compatible splice overlaps allowing for a 
+#' distance threshold, and returns distance in bp between query and subject.
+#' Can be used to assign more transcripts to annotations and reads to
+#' transcripts.
+#' @noRd
+findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
+    maxDist = 5, type = "within", firstLastSeparate = TRUE,
+    dropRangesByMinLength = FALSE, cutStartEnd = TRUE) {
+    if (firstLastSeparate) {
+        queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
+        queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
+        subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
+        subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
+        subjectFull <- subject
+    }
+    if (dropRangesByMinLength) {
+        queryForOverlap <- dropGrangesListElementsByWidth(query,
+            minWidth = maxDist, cutStartEnd = cutStartEnd)
+    } else if (cutStartEnd) {
+        queryForOverlap <- cutStartEndFromGrangesList(query)
+    } else {
+        queryForOverlap <- query
+    }
+    query <- cutStartEndFromGrangesList(query)
+    subjectExtend <- extendGrangesListElements(subject, by = maxDist)
+    olap <- findOverlaps(queryForOverlap, subjectExtend,
+        ignore.strand = ignore.strand, type = type)
+    olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject),
+        ignore.strand = ignore.strand, type = "equal")
+    query <- query[queryHits(olap)]
+    subject <- subject[subjectHits(olap)]
+    splice <- myGaps(query)
+    compatible <- rangesDist(query, subject, splice, maxDist)
+    equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
+    unique <- myOneMatch(compatible$compatible, queryHits(olap))
+    strandSpecific <- all(strand(query) != "*")
+    strandedMatch <- ((all(strand(query) == "-") & 
+        all(strand(subject) == "-")) | 
+        (all(strand(query) == "+") & 
+            all(strand(subject) == "+")))
+    mcols(olap) <- DataFrame(compatible, equal, unique,
+        strandSpecific, strandedMatch)
+
+    ## NOTE: Check if there is an error with the start sequence ##
+    if (firstLastSeparate)
+        olap <- checkStartSequence(olap, firstLastSeparate, queryStart,
+            subjectStart, queryEnd,subjectEnd, subjectFull, subjectList)
+    return(olap)
+}
+
+#' check whether error with start sequence
+#' @noRd
+checkStartSequence <- function(olap, firstLastSeparate, queryStart,
+        subjectStart, queryEnd,subjectEnd, subjectFull, subjectList){
+    if (length(olap)) {
+        queryStart <- ranges(queryStart[queryHits(olap)])
+        subjectStart <- ranges(subjectStart[subjectHits(olap)])
+        queryEnd <- ranges(queryEnd[queryHits(olap)])
+        subjectEnd <- ranges(subjectEnd[subjectHits(olap)])
+        subjectFull <- ranges(subjectFull[subjectHits(olap)])
+        subjectList <- unlist(subjectFull)
+        startList <- calculateFirstLastExonsDist(queryStart, subjectStart,
+            subjectFull, subjectList)
+            endList <- calculateFirstLastExonsDist(queryEnd, subjectEnd,
+                subjectFull, subjectList)
+    } else {
+        startList <- NULL
+        endList <- NULL
+    }
+    mcols(olap) <- DataFrame(mcols(olap),
+        startMatch = startList$match,
+        uniqueStartLengthQuery = startList$uniqueExonLengthQuery,
+        uniqueStartLengthSubject = startList$uniqueExonLengthSubject,
+        endMatch = endList$match,
+        uniqueEndLengthQuery = endList$uniqueExonLengthQuery,
+        uniqueEndLengthSubject = endList$uniqueExonLengthSubject)
+    return(olap)
+}
+
 
 #' annotate splice overlap by distance
 #' @noRd
