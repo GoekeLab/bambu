@@ -117,8 +117,6 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             isoreParameters[['min.primarySecondaryDist']], 
         min.primarySecondaryDistStartEnd =
             isoreParameters[['min.primarySecondaryDistStartEnd2']],
-        max.distScore = 
-            emParameters[["max.distScore"]],
         emParameters = emParameters, ncore = ncore,
         verbose = verbose, BPPARAM = bpParameters)
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
