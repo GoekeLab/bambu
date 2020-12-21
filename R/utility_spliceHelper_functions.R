@@ -625,23 +625,27 @@ selectEndExonFromRangesList <- function(range, strand){
 #   return(relist(unlist(range, use.names = FALSE)[endExonsSet],partitioning))
 # }
 
-#' Function that selects the first N exons from a grangeslist object (exon_rank is required)
+#' Function that selects the first N exons from a grangeslist object
+#' (exon_rank is required)
 #' @param grangesList grangesList
 #' @param exonNumber defaults to 2
 #' @noRd
-selectStartExonsFromGrangesList <- function(grangesList, exonNumber=2) {
-  unlisted_granges <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
-  startExonsSet <- which(unlisted_granges$exon_rank<=exonNumber)
-  return(relist(unlisted_granges[startExonsSet], partitioning))
+selectStartExonsFromGrangesList <- function(grangesList, exonNumber = 2) {
+    unlisted_granges <- unlist(grangesList, use.names = FALSE)
+    partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList),
+        exonNumber)), names = NULL)
+    startExonsSet <- which(unlisted_granges$exon_rank <= exonNumber)
+    return(relist(unlisted_granges[startExonsSet], partitioning))
 }
 
-#' Function that selects the last N exons from a grangeslist object (exon_endRank is required)
+#' Function that selects the last N exons from a grangeslist object 
+#' (exon_endRank is required)
 #' @describeIn selectStartExonsFromGrangesList grangesList
 #' @noRd
-selectEndExonsFromGrangesList <- function(grangesList, exonNumber=2) {
-  unlisted_granges <- unlist(grangesList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
-  endExonsSet <- which(unlisted_granges$exon_endRank<=exonNumber)
-  return(relist(unlisted_granges[endExonsSet], partitioning))
+selectEndExonsFromGrangesList <- function(grangesList, exonNumber = 2) {
+    unlisted_granges <- unlist(grangesList, use.names = FALSE)
+    partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList),
+        exonNumber)), names = NULL)
+    endExonsSet <- which(unlisted_granges$exon_endRank <= exonNumber)
+    return(relist(unlisted_granges[endExonsSet], partitioning))
 }
