@@ -1,5 +1,7 @@
-# Note: several of the functions in this file are adopted from the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
-# License	Artistic-2.0
+# Note: several of the functions in this file are adopted from 
+# the GenomicAlignments package (Author: Hervé Pagès, Valerie Obenchain,
+# Martin Morgan)
+# License Artistic-2.0
 # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
 
 
@@ -114,9 +116,33 @@ checkStartSequence <- function(olap, firstLastSeparate, queryStart,
 }
 
 
+### examples for test purposes
+## Expected annotations of transcripts used in test query
+# 'ENST00000344579', # exon skipping, alternative TSS (-48), +, ENSG00000158109
+# 'ENST00000270792', #intron retention subject 1(last exon),alt.TSS,alt.TES, +,
+# 'ENST00000410032', # alternative first exon, exon skipping query: 2, 
+# #exon skipping subject: 0, alternative TSS (2bp only), internalFirstExon.subject +
+# 'ENST00000468178', # alternative last exon +
+# 'ENST00000485956', # alternative first exon, alternative last exon,
+# #exon skipping subject = 1, internal first exon query, +
+# 'ENST00000530807', # exon skipping query 1, alternative TSS (-17),  -
+# 'ENST00000409894', # alternative 3' exon splice site, exon skipping query 2,
+# #alternative TSS, alterantive TES, +, ENSG00000125630
+# 'ENST00000524447',  # alternative TSS, alternative last exon (internal), 
+# #alternative exon 3' end,-, ENSG00000165916
+# 'ENST00000591696' # alternative TSS, alternative 3' exon (2), 
+# #alternative 5' exon (1) alternative TES, ,+,ENSG00000141349
+############################################################
+# query <- readRDS(system.file("extdata", 
+#     "annotateSpliceOverlapByDist_testQuery.rds",
+#     package = "bambu"))
+# subject <- readRDS(system.file("extdata", 
+#        "annotateSpliceOverlapByDist_testSubject.rds",
+#        package = "bambu"))
+############################################################
 #' annotate splice overlap by distance
 #' @noRd
-annotateSpliceOverlapsByDist <-function(query, subject) {
+compareTranscripts <-function(query, subject) {
   subjectFullRng <- ranges(subject)
   queryFullRng <- ranges(query)
   strand <- as.character(getStrandFromGrList(query))
@@ -159,7 +185,7 @@ annotateSpliceOverlapsByDist <-function(query, subject) {
                                                         subjectStartRng, subjectEndRng)
   annotatedTable$exonSkipping.subject <- annotateExonSkip(subjectSpliceRng ,queryFullRng,
                                                           queryStartRng, queryEndRng) 
-  # exon 3' splice site
+  #exon 5' and 3' splice site
   exonSpliceTable <- annotateExonSplice(querySpliceRng, subjectFullRng,
                                         subjectStartRng, subjectEndRng,
                                         annotatedTable$strand)
@@ -168,12 +194,22 @@ annotateSpliceOverlapsByDist <-function(query, subject) {
 }
 
 #' extract strand from GRangesList
+#' @description This function takes a GRangesList and
+#' get strand information
+#' @examples
+#' query <- readRDS(system.file("extdata", 
+#'     "annotateSpliceOverlapByDist_testQuery.rds",
+#'     package = "bambu"))
+#' strand <- as.character(getStrandFromGrList(query))
 #' @noRd
 getStrandFromGrList <- function(grl) { 
   return(unlist(strand(grl), use.names = F)[cumsum(elementNROWS(grl))]) 
   }
 
-#' start/end ranges pre-processing                                 
+#' start/end ranges pre-processing
+#' @description This function expands exon ranges 
+#' based on their targets
+#' @noRd
 expandRanges <- function(unexpandedRng,targetRng){ 
   processedRng <- rep(unexpandedRng,elementNROWS(targetRng))
   mcols(processedRng)$IdMap <- rep(1:length(unexpandedRng),elementNROWS(targetRng))
@@ -182,6 +218,9 @@ expandRanges <- function(unexpandedRng,targetRng){
 }
 
 #' splice ranges pre-processing
+#' @description This function expands splice ranges 
+#' based on their targets
+#' @noRd
 expandRangesList <- function(unexpandedRng,targetRng){ 
   processedRng <- rep(unlist(unexpandedRng, use.names=F),rep(elementNROWS(targetRng),times=elementNROWS(unexpandedRng)))
   mcols(processedRng)$IdMap <- rep(1:length(unexpandedRng),elementNROWS(unexpandedRng)*elementNROWS(targetRng))
@@ -190,6 +229,8 @@ expandRangesList <- function(unexpandedRng,targetRng){
 }
 
 #' alternative start/end exon
+#' @description This functions checks whether an 
+#' alternative start/end exon is used
 #' @noRd
 alternativeStartEndExon <- function(queryRng, subjectRng){
   return(!poverlaps(queryRng, subjectRng))
