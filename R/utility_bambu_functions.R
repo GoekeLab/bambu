@@ -49,56 +49,25 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         min.primarySecondaryDist = min.primarySecondaryDist,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
-    txLength <- data.table(annotationTxId = names(annotations),
-        txLength = sum(width(annotations)))
-    ## For unique part of rc, we use first exon as the proxy
-    readClassDt <- getEmptyClassFromSE(readClass, annotations)
-    readClassDt <- 
-        modifyReadClassWtFullLengthTranscript(readClassDt, annotations)
-    readClassDt[, tx_len := txLength[match(gsub("Start","",tx_id),
-        annotationTxId)]$txLength]
+    readClassDt <- genEquiRCs(readClass, annotations)
     d_rate <- 
-        calculateExpectedCoverageRatio(readClass, annotations, txLength)
+        calculateExpectedCoverageRatio(readClass, annotations)
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
     counts <- bambu.quantDT(readClassDt, emParameters = emParameters,
         ncore = ncore, verbose = verbose, d_rate)
-    counts <- bambu.formatOutput(counts, annotations)
+    counts <- counts[match(names(annotations), tx_name)]
     seOutput <- SummarizedExperiment::SummarizedExperiment(
-        assays = SimpleList(counts = matrix(counts$estimates, ncol = 1,
+        assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
             dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
             ncol =  1, dimnames = list(NULL, colNameRC)),
             fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
             dimnames = list(NULL, colNameRC)),
             partialLengthCounts = matrix(counts$PartialLengthCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC)),
+            uniqueCounts = matrix(counts$UniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     return(seOutput)
-}
-
-#' @noRd
-bambu.formatOutput <- function(counts,annotations){
-    Est <- c("FullLength", "PartialLength")
-    counts[, estimate_type := ifelse(grepl("Start",tx_name),Est[1],Est[2])]
-    counts[, tx_name := gsub("Start","",tx_name)]
-    countsEstimates <- dcast(counts, tx_name ~ estimate_type,
-        fun.aggregate = max, fill = 0, na.rm = TRUE, value.var = "estimates")
-    setnames(countsEstimates, Est, paste0(Est,"Counts"))
-    countsCPM <- dcast(counts, tx_name ~ estimate_type, 
-        fun.aggregate = max,fill = 0, na.rm = TRUE, value.var = "CPM")
-    setnames(countsCPM, Est, paste0(Est,"CPM"))
-    counts <- merge(countsEstimates, countsCPM, by = "tx_name")
-    counts[is.na(FullLengthCounts), `:=`(FullLengthCounts = 0,
-        FullLengthCPM = 0) ]
-    counts[is.na(PartialLengthCounts),`:=`(PartialLengthCounts = 0,
-        PartialLengthCPM = 0) ]
-    counts[, `:=`(estimates = FullLengthCounts + PartialLengthCounts,
-                CPM = FullLengthCPM + PartialLengthCPM)]
-    if (length(setdiff(counts$tx_name, names(annotations)))) 
-        stop("The provided annotation is incomplete")
-    counts <- counts[data.table(tx_name = names(annotations)), on = "tx_name"]
-    counts[is.na(estimates),`:=`(estimates = 0, CPM = 0, FullLengthCounts = 0,
-        PartialLengthCounts = 0, FullLengthCPM = 0, PartialLengthCPM = 0)]
-    return(counts)
 }
 
 #' Preprocess bam files and save read class files
@@ -158,28 +127,17 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
     geneVec <- unique(readClassDt$gene_id)
     ori_txvec <- unique(gsub("Start","",readClassDt$tx_id))
     txVec <- unique(readClassDt$tx_id)
-    readclassVec <- unique(readClassDt$read_class_id)
-    readClassDt <- as.data.table(readClassDt)
-    readClassDt[, gene_sid := match(gene_id, geneVec)]
-    readClassDt[, tx_sid := match(tx_id, txVec)]
-    readClassDt[, tx_ori := match(gsub("Start","",tx_id),ori_txvec)]
-    readClassDt[, read_class_sid := match(read_class_id, readclassVec)]
-    readClassDt[, fullTx := grepl("Start",tx_id)]
-    readClassDt[, `:=`(tx_id = NULL, gene_id = NULL, read_class_id = NULL)]
-
-    ## ----step4: quantification
+    readClassDt <- simplifyNames(readClassDt,txVec, geneVec,ori_txvec)
     start.time <- proc.time()
     outList <- abundance_quantification(readClassDt,ncore = ncore,
         bias = emParameters[["bias"]], maxiter = emParameters[["maxiter"]],
-        conv = emParameters[["conv"]])
+        conv = emParameters[["conv"]], d_rate)
     end.time <- proc.time()
     if (verbose) message("Finished EM estimation in ",
         round((end.time - start.time)[3] / 60, 1), " mins.")
-    theta_est <- outList[[1]]
-    theta_est[, `:=`(tx_name = txVec[as.numeric(tx_sid)],
-        gene_name = geneVec[gene_sid])]
-    theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
-    theta_est <- theta_est[, .(tx_name, estimates)]
-    theta_est[, `:=`(CPM = estimates / sum(estimates) * (10^6))]
+    theta_est <- formatOutput(outList,ori_txvec,geneVec)
+    theta_est <- removeDuplicates(theta_est)
     return(theta_est)
 }
+
+
