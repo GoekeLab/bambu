@@ -51,8 +51,6 @@
 #'     \item maxiter specifying maximum number of run interations,
 #'     defaults to 10000.
 #'     \item bias specifying whether to correct for bias, defaults to FALSE.
-#'     \item max.distScore the parameter controlling the distance threshold used
-#'     for defining the likelihood of being full length.
 #'     \item conv specifying the covergence trheshold control,
 #'     defaults to 0.0001.
 #' }
