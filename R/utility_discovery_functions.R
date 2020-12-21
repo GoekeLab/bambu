@@ -466,7 +466,8 @@ createExonByReadClass <- function(seFilteredSpliced, annotationGrangesList) {
 #' @noRd
 updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
     partitioning, classificationTable, annotationGrangesList,
-    seFilteredSpliced, exonsByReadClass, min.exonDistance){
+    seFilteredSpliced, exonsByReadClass, min.exonDistance,
+    min.primarySecondaryDist, min.primarySecondaryDistStartEnd){
     intronMatches <- GenomicRanges::match(
         unlistedIntrons,unique(unlistedIntronsAnnotations),nomatch = 0) > 0
     intronMatchesList <- relist(intronMatches, partitioning)
@@ -498,7 +499,8 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
         distNewTxByQuery <- assignGeneIDbyMaxMatch(
             unlistedIntrons,unlistedIntronsAnnotations,
             overlapsNewIntronsAnnotatedIntrons, exonsByReadClass,
-            seFilteredSpliced, annotationGrangesList, min.exonDistance)
+            seFilteredSpliced, annotationGrangesList, min.exonDistance,
+            min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
         classificationTable$compatible[distNewTxByQuery$queryHits[
             distNewTxByQuery$compatible]] <- "compatible"
         classificationTable$newFirstExon[distNewTxByQuery$queryHits[
@@ -522,7 +524,8 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
 #' @param verbose verbose
 #' @noRd
 extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass, 
-    annotationGrangesList, seFilteredSpliced, min.exonDistance, verbose) {
+    annotationGrangesList, seFilteredSpliced, min.exonDistance, verbose,
+    min.primarySecondaryDist, min.primarySecondaryDistStartEnd) {
     ovExon <- findSpliceOverlapsQuick(
         cutStartEndFromGrangesList(exonsByReadClass),
         cutStartEndFromGrangesList(annotationGrangesList))
@@ -559,7 +562,8 @@ extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass,
     classificationTable <- 
         updateWIntronMatches(unlistedIntrons, unlistedIntronsAnnotations,
         partitioning, classificationTable, annotationGrangesList,
-        seFilteredSpliced, exonsByReadClass, min.exonDistance)
+        seFilteredSpliced, exonsByReadClass, min.exonDistance,
+        min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
     mcols(seFilteredSpliced)$readClassType <-
         apply(classificationTable, 1, paste, collapse = "")
     return(seFilteredSpliced)
@@ -570,7 +574,8 @@ extdannotateSplicedReads <- function(exonsByReadClass,intronsByReadClass,
 assignGeneIDbyMaxMatch <- function(unlistedIntrons,
     unlistedIntronsAnnotations, overlapsNewIntronsAnnotatedIntrons,
     exonsByReadClass, seFilteredSpliced, annotationGrangesList,
-    min.exonDistance) {
+    min.exonDistance, min.primarySecondaryDist,
+    min.primarySecondaryDistStartEnd) {
     maxGeneCountPerNewTx <- as_tibble(data.frame(txId =
         names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
         geneId = mcols(unlistedIntronsAnnotations)$GENEID[
@@ -835,8 +840,8 @@ isore.extendAnnotations <- function(se, annotationGrangesList,
                 se, annotationGrangesList, filterSet1)
             seFilteredSpliced <- extdannotateSplicedReads(
                 byReadClass$exons, byReadClass$intron, annotationGrangesList,
-                byReadClass$seFilteredSpliced, min.exonDistance, verbose
-            )
+                byReadClass$seFilteredSpliced, min.exonDistance, verbose,
+                min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
             end.ptm <- proc.time()
             if (verbose)
                 message("extended annotations for spliced reads in ",
@@ -921,7 +926,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
             readClassId, confidenceType), by = "readClassId") %>%
             mutate(relativeReadCount = readCount / txNumberFiltered)
     distTable <- dplyr::select(distTable, annotationTxId, readClassId,
-                                readCount, compatible, equal)
+                                readCount, compatible, equal,dist)
     distTable <- left_join(distTable, as_tibble(mcols(annotationGrangesList)[,
             c("TXNAME", "GENEID")]),by = c("annotationTxId" = "TXNAME"))
 
