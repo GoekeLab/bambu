@@ -192,7 +192,7 @@ isore.constructReadClasses <- function(readGrgList,
   exonsByReadClass <- c(readClassListSpliced$readClassList, readClassListUnsplicedWithAnnotation$exonsByReadClass, readClassListUnsplicedReduced$exonsByReadClass)
   counts <- matrix(mcols(exonsByReadClass)$readCount, dimnames = list(names(exonsByReadClass), runName))
   colDataDf <- DataFrame(name = runName, row.names = runName)
-  mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c('chr', 'strand.rc', 'intronStarts', 'intronEnds', 'confidenceType')]
+  mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c('chr.rc', 'strand.rc', 'intronStarts', 'intronEnds', 'confidenceType')]
   se <- SummarizedExperiment(assays = SimpleList(counts = counts),
                              rowRanges = exonsByReadClass,
                              colData = colDataDf)
