@@ -4,6 +4,35 @@
 # License Artistic-2.0
 # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
 
+## examples for test purposes
+# query=rowRanges(seBambu.core)[c(
+# 'ENST00000344579', # exon skipping, alternative TSS (-48), +, ENSG00000158109
+# 'ENST00000270792', #intron retention subject 1(last exon),alt.TSS,alt.TES, +,
+# 'ENST00000410032', # alternative first exon, exon skipping query: 2, 
+# #exon skipping subject: 0, alternative TSS (2bp only), internalFirstExon.subject +
+# 'ENST00000468178', # alternative last exon +
+# 'ENST00000485956', # alternative first exon, alternative last exon,
+# #exon skipping subject = 1, internal first exon query, +
+# 'ENST00000530807', # exon skipping query 1, alternative TSS (-17),  -
+# 'ENST00000409894', # alternative 3' exon splice site, exon skipping query 2,
+# #alternative TSS, alterantive TES, +, ENSG00000125630
+# 'ENST00000524447',  # alternative TSS, alternative last exon (internal), 
+# #alternative exon 3' end,-, ENSG00000165916
+# 'ENST00000591696' # alternative TSS, alternative 3' exon (2), 
+# #alternative 5' exon (1) alternative TES, ,+,ENSG00000141349
+#     )]
+  # subject=rowRanges(seBambu.core)[c('ENST00000378344',
+  #                                   'ENST00000319041',
+  #                                   'ENST00000338530',
+  #                                   'ENST00000338530',
+  #                                   'ENST00000338530',
+  #                                   'ENST00000532718',
+  #                                   'ENST00000263331',
+  #                                   'ENST00000602866',
+  #                                   'ENST00000585361')]
+  # query <- rep(query,2000)
+  # subject <- rep(subject,2000)
+## To be modified after merging Yuk Kei's PR
 annotateSpliceOverlapsByDist <- function(query, subject) {
   queryStartRng <- ranges(selectStartExonsFromGrangesList(query, exonNumber = 1))
   subjectStartRng <- ranges(selectStartExonsFromGrangesList(subject, exonNumber = 1))
