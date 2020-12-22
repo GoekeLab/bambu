@@ -218,7 +218,7 @@ calculateTSSdistance <- function(queryStartRng, subjectStartRng,
 #' @description This function calculates the distance
 #' of an alternative TES by comparing the end
 #' coordinates of the end exon ranges of matching
-#' transcripts if an alternative last exon is not used.
+#' transcripts. If an alternative last exon is used the distance is set to 0.
 #' @noRd
 calculateTESdistance <- function(queryEndRng, subjectEndRng,
                                  alternativeLastExon, strand){
