@@ -116,7 +116,9 @@ compareTranscripts <-function(query, subject) {
 
 #' extract strand from GRangesList
 #' @description This function takes a GRangesList and
-#' get strand information
+#' returns a vector with the strand for each list entry.
+#' This function assumes that all elements for each list
+#' entry have the same strand.
 #' @usage getStrangeFromGrList(grl)
 #' @params grl a GRangesList
 #' @return an Rle object with strand information
