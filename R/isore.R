@@ -719,14 +719,14 @@ seqlevels(exonsByReadClassUnspliced) <-  unique(c(seqlevels(exonsByReadClassUnsp
 #' @param seReadClass seReadClass
 #' @inheritParams bambu
 #' @noRd
-isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, additionalFiltering = FALSE, verbose = FALSE){
+isore.estimateDistanceToAnnotations <- function(seReadClass, annotationGrangesList, min.exonDistance = 35, primarySecondaryDistStartEnd = 100000, additionalFiltering = FALSE, verbose = FALSE){
   start.ptm <- proc.time()
   readClassTable <- as_tibble(rowData(seReadClass), rownames='readClassId') %>%
     dplyr::select(readClassId, confidenceType)
 
   ## note/todo: here the stranded mode should always be used as read classes are stranded as much as possible (* aligns with + and -).
   ## if stranded mode is turned off, then filtering needs to be adjusted to first select strandedMatches (currently only stranded assignment possible)
-  distTable <- calculateDistToAnnotation(rowRanges(seReadClass),annotationGrangesList,maxDist = min.exonDistance, primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5, ignore.strand = FALSE)
+  distTable <- calculateDistToAnnotation(rowRanges(seReadClass),annotationGrangesList,maxDist = min.exonDistance, primarySecondaryDist = 5, primarySecondaryDistStartEnd = primarySecondaryDistStartEnd, ignore.strand = FALSE)
 
   distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId,]  # should actually be stored in counts, but is here to  assign genes based on high read counts
 

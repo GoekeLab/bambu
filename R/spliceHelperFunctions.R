@@ -96,9 +96,48 @@ findSpliceOverlapsByDist <-function(query, subject, ignore.strand=FALSE, maxDist
   olap
 }
 
-annotateSpliceOverlapsByDist <-function(query, subject) {
 
-  ## examples for test purposes
+getStrandFromGrList <- function(grl) {
+  unlist(strand(grl), use.names = F)[cumsum(elementNROWS(grl))]
+}
+
+
+selectStartExonFromRangesList <- function(range, strand){
+  partitioning<-PartitioningByEnd(cumsum(pmin(elementNROWS(range),1)), names=NULL)
+  #partitioning<-PartitioningByEnd(1:length(range), names=NULL)
+  largestExons <- as.numeric(cumsum(elementNROWS(range)))
+  startExonsSet <- c(1, largestExons[1:length(largestExons)-1]+1)
+  startExonsSet[strand == "-"] <- largestExons[strand == "-"]
+  return(relist(unlist(range, use.names = FALSE)[startExonsSet],partitioning))
+}
+
+selectStartExonFromRangesListNew <- function(range, strand){
+#  partitioning<-PartitioningByEnd(1:length(range), names=NULL)
+ # return(relist(unlist(range, use.names = FALSE)[c(1,1+cumsum(elementNROWS(range))[-length(range)])],partitioning))
+  lastExons <- cumsum(elementNROWS(range))
+  startExonsSet <- c(1, lastExons[-(length(lastExons))]+1)
+  setNeg <- strand == "-"
+  startExonsSet[setNeg] <- lastExons[setNeg]
+  return( unlist(range, use.names = FALSE)[startExonsSet])
+ # return( relist(unlist(range, use.names = FALSE)[startExonsSet], partitioning))
+  #return( unlist(range, use.names = FALSE)[c(1,1+cumsum(elementNROWS(range))[-length(range)])])
+}
+
+
+selectStartExonsFromGrangesListNew <- function(grangesList, exonNumber=2) {
+  unlisted_granges <- unlist(grangesList, use.names = FALSE)
+ # partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList), exonNumber)), names=NULL)
+  #startExonsSet <- which(unlisted_granges$exon_rank<=exonNumber)
+  #return(relist(unlisted_granges[startExonsSet], partitioning))
+  return(unlisted_granges[unlisted_granges$exon_rank==1])
+}
+
+
+
+
+annotateSpliceOverlapsByDist <-function(query, subject) {
+  # 
+  # ## examples for test purposes
   # query=rowRanges(seBambu.core)[c('ENST00000344579', # exon skipping, alternative TSS (-48), +, ENSG00000158109
   #                                 'ENST00000270792', # intron retention subject 1(last exon), alt. TSS, alt. TES, +, ENSG00000
   #                                 'ENST00000410032', # alternative first exon, exon skipping query: 2, exon skipping subject: 0, alternative TSS (2bp only), internalFirstExon.subject +
@@ -108,7 +147,7 @@ annotateSpliceOverlapsByDist <-function(query, subject) {
   #                                 'ENST00000409894',  # alternative 3' exon splice site, exon skipping query 2, alternative TSS, alterantive TES, +, ENSG00000125630
   #                                 'ENST00000524447',  # alternative TSS, alternative last exon (internal), alternative exon 3' end,-, ENSG00000165916
   #                                 'ENST00000591696' # alternative TSS, alternative 3' exon (2), alternative 5' exon (1) alternative TES, ,+,ENSG00000141349
-  #                                 )]
+  # )]
   # subject=rowRanges(seBambu.core)[c('ENST00000378344',
   #                                   'ENST00000319041',
   #                                   'ENST00000338530',
@@ -120,8 +159,8 @@ annotateSpliceOverlapsByDist <-function(query, subject) {
   #                                   'ENST00000585361')]
   # query <- rep(query,2000)
   # subject <- rep(subject,2000)
+  # #
   # 
-
   queryStartRng <- ranges(selectStartExonsFromGrangesList(query, exonNumber = 1))
   subjectStartRng <- ranges(selectStartExonsFromGrangesList(subject, exonNumber = 1))
   queryEndRng<- ranges(selectEndExonsFromGrangesList(query, exonNumber = 1))
