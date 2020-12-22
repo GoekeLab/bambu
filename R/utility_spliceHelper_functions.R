@@ -34,6 +34,9 @@
 #' and a target GRangesList (subject). The function creates
 #' an annotation table in tibble by comparing ranges entries
 #' from transcripts between the query and subject GRangesLists.
+#' @usage compareTranscripts(query, subject)
+#' @params query a GRangesList
+#' @params subject a GRangesList
 #' @return a tibble with the following annotations:
 #' \itemize{
 #'    \item alternativeFirstExon
@@ -51,6 +54,14 @@
 #'    \item exon5prime (splicing)
 #'    \item exon3prime (splicing)
 #' }
+#' @examples
+#' query <- readRDS(system.file("extdata", 
+#'     "annotateSpliceOverlapByDist_testQuery.rds",
+#'     package = "bambu"))
+#' subject <- readRDS(system.file("extdata", 
+#'     "annotateSpliceOverlapByDist_testSubject.rds",
+#'     package = "bambu"))
+#' annotationTable <- compareTranscripts(query, subject)
 #' @noRd
 compareTranscripts <-function(query, subject) {
   subjectFullRng <- ranges(subject)
@@ -106,6 +117,9 @@ compareTranscripts <-function(query, subject) {
 #' extract strand from GRangesList
 #' @description This function takes a GRangesList and
 #' get strand information
+#' @usage getStrangeFromGrList(grl)
+#' @params grl a GRangesList
+#' @return an Rle object with strand information
 #' @examples
 #' query <- readRDS(system.file("extdata", 
 #'     "annotateSpliceOverlapByDist_testQuery.rds",
@@ -693,21 +707,6 @@ selectEndExonFromRangesList <- function(range, strand){
   endExonsSet[strand == "-"] <- firstExons[strand == "-"]
   return(unlist(range, use.names = FALSE)[endExonsSet])
 }
-####the ones with relist()
-# selectStartExonFromRangesList <- function(range, strand){
-#   partitioning<-PartitioningByEnd(cumsum(pmin(elementNROWS(range),1)), names=NULL)
-#   largestExons <- as.numeric(cumsum(elementNROWS(range)))
-#   startExonsSet <- c(1, largestExons[1:length(largestExons)-1]+1)
-#   startExonsSet[strand == "-"] <- largestExons[strand == "-"]
-#   return(relist(unlist(range, use.names = FALSE)[startExonsSet],partitioning))
-# }
-# selectEndExonFromRangesList <- function(range, strand){
-#   partitioning<-PartitioningByEnd(cumsum(pmin(elementNROWS(range),1)), names=NULL)
-#   endExonsSet <- as.numeric(cumsum(elementNROWS(range)))
-#   smallestExons <- c(1, endExonsSet[1:length(endExonsSet)-1]+1)
-#   endExonsSet[strand == "-"] <- smallestExons[strand == "-"]
-#   return(relist(unlist(range, use.names = FALSE)[endExonsSet],partitioning))
-# }
 
 #' Function that selects the first N exons from a grangeslist object
 #' (exon_rank is required)
