@@ -202,7 +202,7 @@ alternativeStartEndExon <- function(queryRng, subjectRng){
 #' @description This function calculates the distance
 #' of an alternative TSS by comparing the start
 #' coordinates of the start exon ranges of matching
-#' transcripts if an alternative first exon is not used.
+#' transcripts. If an alternative first exon is used the distance is set to 0.
 #' @noRd
 calculateTSSdistance <- function(queryStartRng, subjectStartRng,
                                  alternativeFirstExon, strand){
