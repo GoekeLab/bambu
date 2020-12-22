@@ -192,7 +192,7 @@ expandRangesList <- function(rglist,target){
 #' alternative start/end exon
 #' @description This function checks whether an 
 #' alternative start/end exon is used by overlapping
-#' the exon ranges of matching transcripts.
+#' the exon ranges of the first (or last) exons of matching transcripts.
 #' @noRd
 alternativeStartEndExon <- function(queryRng, subjectRng){
   return(!poverlaps(queryRng, subjectRng))
