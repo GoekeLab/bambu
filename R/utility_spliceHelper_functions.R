@@ -95,24 +95,51 @@ getStrandFromGrList <- function(grl) {
   }
 
 #' start/end ranges pre-processing
-#' @description This function expands exon ranges 
-#' based on their targets
+#' @description this function takes in an IRanges object and a target
+#' IRangesList object with the same length, where each list entry
+#' in IRangesList[[i]] corresponds to the matching range in IRanges[i].
+#' The function then creates a new IRanges object with a length corresponding
+#' to the length(unlist(target)), where the IRanges[i] elements are repeated to
+#' match each individual element in target[[i]]. The unlist(target) ranges are
+#' stored in mcols()$matchRng while the corresponding index i for each
+#' element of target[[i]] is stored in mcols()$IdMap.
+#' @param ranges an IRanges object
+#' @param target an IRangesList object
+#' @return processedRng a ranges object with mcols objects
+#' \itemize{
+#'     \item matchRng repeated matched ranges
+#'     \item IdMap index of the repeated matched ranges
+#' }
 #' @noRd
-expandRanges <- function(unexpandedRng,targetRng){ 
-  processedRng <- rep(unexpandedRng,elementNROWS(targetRng))
-  mcols(processedRng)$IdMap <- rep(1:length(unexpandedRng),elementNROWS(targetRng))
-  mcols(processedRng)$matchRng <- unlist(targetRng, use.names=F)
+expandRanges <- function(ranges,target){ 
+  processedRng <- rep(ranges,elementNROWS(target))
+  mcols(processedRng)$IdMap <- rep(1:length(ranges),elementNROWS(target))
+  mcols(processedRng)$matchRng <- unlist(target, use.names=F)
   return (processedRng)
 }
 
 #' splice ranges pre-processing
-#' @description This function expands splice ranges 
-#' based on their targets
+#' @description this function takes in an IRangesList object and a 
+#' target IRangesList object with the same length, where each list entry
+#' in target IRangesList[[i]] corresponds to the matching list entry in 
+#' IRangesList[i]. The function then creates an IRanges object with a 
+#' length corresponding to the length(unlist(target))*length(unlist(rglist)),
+#' where each individual element in rglist[[i]] is repeated to match each
+#' individual element in target[[i]]. The repeated ranges are
+#' stored in mcols()$matchRng while the corresponding index i for each
+#' element of target[[i]]*rglist[[i]] is stored in mcols()$IdMap.
+#' @param rglist an IRangesList object
+#' @param target an IRangesList object
+#' @return processedRng a ranges object with mcols objects
+#' \itemize{
+#'     \item matchRng repeated matched ranges
+#'     \item IdMap index of the repeated matched ranges
+#' }
 #' @noRd
-expandRangesList <- function(unexpandedRng,targetRng){ 
-  processedRng <- rep(unlist(unexpandedRng, use.names=F),rep(elementNROWS(targetRng),times=elementNROWS(unexpandedRng)))
-  mcols(processedRng)$IdMap <- rep(1:length(unexpandedRng),elementNROWS(unexpandedRng)*elementNROWS(targetRng))
-  mcols(processedRng)$matchRng <- unlist(rep(targetRng, times= elementNROWS(unexpandedRng)), use.names=F)
+expandRangesList <- function(rglist,target){ 
+  processedRng <- rep(unlist(rglist, use.names=F),rep(elementNROWS(target),times=elementNROWS(rglist)))
+  mcols(processedRng)$IdMap <- rep(1:length(rglist),elementNROWS(rglist)*elementNROWS(target))
+  mcols(processedRng)$matchRng <- unlist(rep(target, times= elementNROWS(rglist)), use.names=F)
   return (processedRng)
 }
 
