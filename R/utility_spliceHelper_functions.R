@@ -28,7 +28,29 @@
 #        "annotateSpliceOverlapByDist_testSubject.rds",
 #        package = "bambu"))
 ############################################################
+
 #' annotate splice overlap by distance
+#' @description This function takes in a GRangesList (query)
+#' and a target GRangesList (subject). The function creates
+#' an annotation table in tibble by comparing ranges entries
+#' from transcripts between the query and subject GRangesLists.
+#' @return a tibble with the following annotations:
+#' \itemize{
+#'    \item alternativeFirstExon
+#'    \item alternativeTSS
+#'    \item internalFirstExon.query
+#'    \item internalFirstExon.subject
+#'    \item alternativeLastExon
+#'    \item alternativeTES
+#'    \item internalLastExon.query
+#'    \item internalLastExon.subject
+#'    \item intronRetention.subject
+#'    \item intronRetention.query
+#'    \item exonSkipping.query
+#'    \item exonSkipping.subject
+#'    \item exon5prime (splicing)
+#'    \item exon3prime (splicing)
+#' }
 #' @noRd
 compareTranscripts <-function(query, subject) {
   subjectFullRng <- ranges(subject)
@@ -97,18 +119,22 @@ getStrandFromGrList <- function(grl) {
 #' start/end ranges pre-processing
 #' @description this function takes in an IRanges object and a target
 #' IRangesList object with the same length, where each list entry
-#' in IRangesList[[i]] corresponds to the matching range in IRanges[i].
-#' The function then creates a new IRanges object with a length corresponding
-#' to the length(unlist(target)), where the IRanges[i] elements are repeated to
-#' match each individual element in target[[i]]. The unlist(target) ranges are
-#' stored in mcols()$matchRng while the corresponding index i for each
-#' element of target[[i]] is stored in mcols()$IdMap.
+#' i in IRangesList (target[[i]]) corresponds to the matching range
+#' i in IRanges (ranges[i]). The function then creates a new IRanges
+#' object with a length corresponding to length(unlist(target)), 
+#' where the ranges[i] elements are repeated to match each individual
+#' element in target[[i]]. The unlist(target) ranges are stored in
+#' mcols()$matchRng while the corresponding index i for each element
+#' of target[[i]] is stored in mcols()$IdMap. This function is
+#' used to enable the comparison of ranges with all elements in a
+#' rangesList, for example to compute the overlap of first and last
+#' exons with matching transcripts (see compareTranscripts()).
 #' @param ranges an IRanges object
 #' @param target an IRangesList object
-#' @return processedRng a ranges object with mcols objects
+#' @return a ranges object with mcols objects
 #' \itemize{
-#'     \item matchRng repeated matched ranges
-#'     \item IdMap index of the repeated matched ranges
+#'    \item matchRng repeated matched ranges
+#'    \item IdMap index of the repeated matched ranges
 #' }
 #' @noRd
 expandRanges <- function(ranges,target){ 
@@ -120,20 +146,24 @@ expandRanges <- function(ranges,target){
 
 #' splice ranges pre-processing
 #' @description this function takes in an IRangesList object and a 
-#' target IRangesList object with the same length, where each list entry
-#' in target IRangesList[[i]] corresponds to the matching list entry in 
-#' IRangesList[i]. The function then creates an IRanges object with a 
-#' length corresponding to the length(unlist(target))*length(unlist(rglist)),
-#' where each individual element in rglist[[i]] is repeated to match each
-#' individual element in target[[i]]. The repeated ranges are
-#' stored in mcols()$matchRng while the corresponding index i for each
-#' element of target[[i]]*rglist[[i]] is stored in mcols()$IdMap.
+#' target IRangesList object with the same length, where each list
+#' entry in target IRangesList[[i]] (target[[i]]) corresponds to the
+#' matching list entry in IRangesList[[i]] (rglist[i]). The function
+#' then creates an IRanges object with a length corresponding to the
+#' length(unlist(target))*length(unlist(rglist)), where each individual
+#' element in rglist[[i]] is repeated to match each individual element
+#' in target[[i]]. The repeated ranges are stored in mcols()$matchRng 
+#' while the corresponding index i for each element of 
+#' target[[i]]*rglist[[i]] is stored in mcols()$IdMap. This function is
+#' used to enable the comparison of ranges with all elements in a
+#' rangesList, for example to compute the overlap of splice sites
+#' with matching transcripts (see compareTranscripts()).
 #' @param rglist an IRangesList object
 #' @param target an IRangesList object
-#' @return processedRng a ranges object with mcols objects
+#' @return a ranges object with mcols objects
 #' \itemize{
-#'     \item matchRng repeated matched ranges
-#'     \item IdMap index of the repeated matched ranges
+#'    \item matchRng repeated matched ranges
+#'    \item IdMap index of the repeated matched ranges
 #' }
 #' @noRd
 expandRangesList <- function(rglist,target){ 
@@ -144,14 +174,19 @@ expandRangesList <- function(rglist,target){
 }
 
 #' alternative start/end exon
-#' @description This functions checks whether an 
-#' alternative start/end exon is used
+#' @description This function checks whether an 
+#' alternative start/end exon is used by overlapping
+#' the exon ranges of matching transcripts.
 #' @noRd
 alternativeStartEndExon <- function(queryRng, subjectRng){
   return(!poverlaps(queryRng, subjectRng))
 }
 
 #' alternative TSS distance
+#' @description This function calculates the distance
+#' of an alternative TSS by comparing the start
+#' coordinates of the start exon ranges of matching
+#' transcripts if an alternative first exon is not used.
 #' @noRd
 calculateTSSdistance <- function(queryStartRng, subjectStartRng,
                                  alternativeFirstExon, strand){
@@ -164,6 +199,10 @@ calculateTSSdistance <- function(queryStartRng, subjectStartRng,
 
 
 #' alternative TES distance
+#' @description This function calculates the distance
+#' of an alternative TES by comparing the end
+#' coordinates of the end exon ranges of matching
+#' transcripts if an alternative last exon is not used.
 #' @noRd
 calculateTESdistance <- function(queryEndRng, subjectEndRng,
                                  alternativeLastExon, strand){
@@ -174,7 +213,10 @@ calculateTESdistance <- function(queryEndRng, subjectEndRng,
   return (alternativeTES)
 }
 
-#' annotate internal start and end first exons                                    
+#' annotate internal start and end first exons
+#' @description This function checks whether
+#' there is an internal start/end by overlapping
+#' the exon ranges of matching transcripts.
 #' @noRd
 annotateInternalStartEnd <- function(exonRng, fullRng, alternativeFirstLastExon){
   exon.Full.Rng <- expandRanges(exonRng, fullRng) 
@@ -184,7 +226,10 @@ annotateInternalStartEnd <- function(exonRng, fullRng, alternativeFirstLastExon)
   return(internalStartEndVector)
 }
 
-#' annotate intron retention 
+#' annotate intron retention
+#' @description This function checks whether
+#' there is intron retention by overlapping
+#' the intron ranges of matching transcripts.
 #' @noRd
 annotateIntronRetent <- function(spliceRng, fullRng){
   splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
@@ -193,7 +238,10 @@ annotateIntronRetent <- function(spliceRng, fullRng){
   return (intronRetentionVector)
 }
 
-#' annotate exon skiping 
+#' annotate exon skiping
+#' @description This function checks whether
+#' there is exon skipping by overlapping 
+#' the intron ranges of matching transcripts.
 #' @noRd
 annotateExonSkip <- function(spliceRng, fullRng, startRng, endRng){
   splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
@@ -212,6 +260,9 @@ annotateExonSkip <- function(spliceRng, fullRng, startRng, endRng){
 }
 
 #' find exon start extension
+#' @description This function checks whether
+#' there is an extension at the start of an exon
+#' by comparing the coordinates of the splice sites.
 #' @noRd
 findExonStartExtension <- function(splice.Rng, match.startSplice.start,
                                    match.startSplice.end, spliceIdMap){
@@ -225,6 +276,9 @@ findExonStartExtension <- function(splice.Rng, match.startSplice.start,
 }
 
 #' find exon end extension
+#' @description This function checks whether
+#' there is an extension at the end of an exon
+#' by comparing the coordinates of the splice sites.
 #' @noRd
 findExonEndExtension <- function(splice.Rng, match.startSplice.start,
                                  match.startSplice.end, spliceIdMap){
@@ -238,6 +292,9 @@ findExonEndExtension <- function(splice.Rng, match.startSplice.start,
 }
 
 #' annotate exon splicing
+#' @description This function checks whether 
+#' there is alternative splicing in the 5'/3'
+#' end of an exon.
 #' @noRd
 annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
   splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
