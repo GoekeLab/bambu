@@ -68,10 +68,14 @@ compareTranscripts <-function(query, subject) {
     subjectFullRng <- ranges(subject)
     queryFullRng <- ranges(query)
     strand <- as.character(getStrandFromGrList(query))
-    queryStartRng <- selectStartEndExonFromRangesList(queryFullRng, strand, "start")
-    subjectStartRng <- selectStartEndExonFromRangesList(subjectFullRng, strand, "start")
-    queryEndRng <- selectStartEndExonFromRangesList(queryFullRng, strand, "end")
-    subjectEndRng <- selectStartEndExonFromRangesList(subjectFullRng, strand, "end")
+    queryStartRng <- selectStartEndExonFromRangesList(queryFullRng, strand,
+                                                    "start")
+    subjectStartRng <- selectStartEndExonFromRangesList(subjectFullRng, strand,
+                                                    "start")
+    queryEndRng <- selectStartEndExonFromRangesList(queryFullRng, strand, 
+                                                    "end")
+    subjectEndRng <- selectStartEndExonFromRangesList(subjectFullRng, strand, 
+                                                    "end")
     querySpliceRng <- ranges(myGaps(query))
     querySpliceRng[elementNROWS(querySpliceRng)==0] <- IRanges(start=1,end=1) # add mock intron
     subjectSpliceRng <- ranges(myGaps(subject))
@@ -130,7 +134,7 @@ compareTranscripts <-function(query, subject) {
 #' strand <- as.character(getStrandFromGrList(query))
 #' @noRd
 getStrandFromGrList <- function(grl) { 
-    return(unlist(strand(grl), use.names = F)[cumsum(elementNROWS(grl))]) 
+    return(unlist(strand(grl), use.names = FALSE)[cumsum(elementNROWS(grl))]) 
 }
 
 #' start/end ranges pre-processing
@@ -157,7 +161,7 @@ getStrandFromGrList <- function(grl) {
 expandRanges <- function(ranges,target){ 
     processedRng <- rep(ranges,elementNROWS(target))
     mcols(processedRng)$IdMap <- rep(1:length(ranges),elementNROWS(target))
-    mcols(processedRng)$matchRng <- unlist(target, use.names=F)
+    mcols(processedRng)$matchRng <- unlist(target, use.names=FALSE)
     return (processedRng)
 }
 
@@ -189,7 +193,7 @@ expandRangesList <- function(rglist,target){
     mcols(processedRng)$IdMap <- rep(1:length(rglist),
                                     elementNROWS(rglist)*elementNROWS(target))
     mcols(processedRng)$matchRng <- unlist(rep(target, 
-                                            times= elementNROWS(rglist)), use.names=F)
+                                            times= elementNROWS(rglist)), use.names=FALSE)
     return (processedRng)
 }
 
