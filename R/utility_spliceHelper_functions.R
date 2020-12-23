@@ -85,14 +85,12 @@ compareTranscripts <-function(query, subject) {
     annotatedTable$alternativeFirstExon <- alternativeStartEndExon(queryStartRng, 
                                                                 subjectStartRng)
     annotatedTable$alternativeTSS <- calculateTerminalDistance(queryStartRng, 
-                                                        subjectStartRng, 
-                                                        annotatedTable$alternativeFirstExon,
-                                                        strand, "start")
+                                      subjectStartRng, annotatedTable$alternativeFirstExon,
+                                      strand, "start")
     annotatedTable$internalFirstExon.query <- annotateInternalStartEnd(queryStartRng,
                                                     subjectFullRng, annotatedTable$alternativeFirstExon)
     annotatedTable$internalFirstExon.subject <- annotateInternalStartEnd(subjectStartRng,
                                                     queryFullRng, annotatedTable$alternativeFirstExon)
-    # TES/last exon
     annotatedTable$alternativeLastExon <- alternativeStartEndExon(queryEndRng, 
                                                                 subjectEndRng)
     annotatedTable$alternativeTES <- calculateTerminalDistance(queryEndRng, 
@@ -101,20 +99,17 @@ compareTranscripts <-function(query, subject) {
                                                     subjectFullRng, annotatedTable$alternativeLastExon)
     annotatedTable$internalLastExon.subject <- annotateInternalStartEnd(subjectEndRng,
                                                     queryFullRng, annotatedTable$alternativeLastExon)
-    #intron retention subject and query
     annotatedTable$intronRetention.subject <- annotateIntronRetent(querySpliceRng,
                                                                 subjectFullRng)
     annotatedTable$intronRetention.query <- annotateIntronRetent(subjectSpliceRng,
                                                                 queryFullRng)
-    #exon skipping query and subject
     annotatedTable$exonSkipping.query <- annotateExonSkip(querySpliceRng, subjectFullRng,
                                                         subjectStartRng, subjectEndRng)
     annotatedTable$exonSkipping.subject <- annotateExonSkip(subjectSpliceRng ,queryFullRng,
                                                         queryStartRng, queryEndRng) 
     #exon 5' and 3' splice site
     exonSpliceTable <- annotateExonSplice(querySpliceRng, subjectFullRng,
-                                        subjectStartRng, subjectEndRng,
-                                        annotatedTable$strand)
+                         subjectStartRng, subjectEndRng, annotatedTable$strand)
     annotatedTable <- cbind(annotatedTable, exonSpliceTable)
     return(annotatedTable)
 }
@@ -188,7 +183,7 @@ expandRanges <- function(ranges,target){
 #' }
 #' @noRd
 expandRangesList <- function(rglist,target){ 
-    processedRng <- rep(unlist(rglist, use.names=F),
+    processedRng <- rep(unlist(rglist, use.names=FALSE),
                         rep(elementNROWS(target),times=elementNROWS(rglist)))
     mcols(processedRng)$IdMap <- rep(1:length(rglist),
                                     elementNROWS(rglist)*elementNROWS(target))
