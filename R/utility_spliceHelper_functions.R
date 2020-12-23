@@ -7,9 +7,10 @@
 ### examples for test purposes
 ## Expected annotations of transcripts used in test query
 # 'ENST00000344579', # exon skipping, alternative TSS (-48), +, ENSG00000158109
-# 'ENST00000270792', #intron retention subject 1(last exon),alt.TSS,alt.TES, +,
+# 'ENST00000270792', # intron retention subject 1(last exon),alt.TSS,alt.TES, +,
 # 'ENST00000410032', # alternative first exon, exon skipping query: 2, 
-# #exon skipping subject: 0, alternative TSS (2bp only), internalFirstExon.subject +
+#                    # exon skipping subject: 0, alternative TSS (2bp only), 
+#                    # internalFirstExon.subject +
 # 'ENST00000468178', # alternative last exon +
 # 'ENST00000485956', # alternative first exon, alternative last exon,
 # #exon skipping subject = 1, internal first exon query, +
@@ -78,29 +79,29 @@ compareTranscripts <-function(query, subject) {
   annotatedTable <- tibble(queryId = names(query), subjectId = names(subject), strand = strand)
   # calculate alternative First/last exons and annotate internal start and end first exons
   annotatedTable$alternativeFirstExon <- alternativeStartEndExon(queryStartRng, 
-                                                                subjectStartRng)
-  annotatedTable$alternativeTSS <- calculateTSSdistance(queryStartRng, 
-                                                       subjectStartRng, 
-                                                       annotatedTable$alternativeFirstExon,
-                                                       strand)
+                                                                 subjectStartRng)
+  annotatedTable$alternativeTSS <- calculateTerminalDistance(queryStartRng, 
+                                                        subjectStartRng, 
+                                                        annotatedTable$alternativeFirstExon,
+                                                        strand, "start")
   annotatedTable$internalFirstExon.query <- annotateInternalStartEnd(queryStartRng,
-                                                                    subjectFullRng, annotatedTable$alternativeFirstExon)
+                                                                     subjectFullRng, annotatedTable$alternativeFirstExon)
   annotatedTable$internalFirstExon.subject <- annotateInternalStartEnd(subjectStartRng,
-                                                                      queryFullRng, annotatedTable$alternativeFirstExon)
+                                                                       queryFullRng, annotatedTable$alternativeFirstExon)
   # TES/last exon
   annotatedTable$alternativeLastExon <- alternativeStartEndExon(queryEndRng, 
-                                                               subjectEndRng)
-  annotatedTable$alternativeTES <- calculateTESdistance(queryEndRng, 
-                                                       subjectEndRng, 
-                                                       annotatedTable$alternativeLastExon,
-                                                       strand)
+                                                                subjectEndRng)
+  annotatedTable$alternativeTES <- calculateTerminalDistance(queryEndRng, 
+                                                        subjectEndRng, annotatedTable$alternativeLastExon, strand, "end")
   annotatedTable$internalLastExon.query <- annotateInternalStartEnd(queryEndRng,
-                                                                   subjectFullRng, annotatedTable$alternativeLastExon)
+                                                                    subjectFullRng, annotatedTable$alternativeLastExon)
   annotatedTable$internalLastExon.subject <- annotateInternalStartEnd(subjectEndRng,
-                                                                     queryFullRng, annotatedTable$alternativeLastExon)
+                                                                      queryFullRng, annotatedTable$alternativeLastExon)
   #intron retention subject and query
-  annotatedTable$intronRetention.subject <- annotateIntronRetent(querySpliceRng, subjectFullRng)
-  annotatedTable$intronRetention.query <- annotateIntronRetent(subjectSpliceRng ,queryFullRng)
+  annotatedTable$intronRetention.subject <- annotateIntronRetent(querySpliceRng,
+                                                                 subjectFullRng)
+  annotatedTable$intronRetention.query <- annotateIntronRetent(subjectSpliceRng,
+                                                               queryFullRng)
   #exon skipping query and subject
   annotatedTable$exonSkipping.query <- annotateExonSkip(querySpliceRng, subjectFullRng,
                                                         subjectStartRng, subjectEndRng)
@@ -130,7 +131,7 @@ compareTranscripts <-function(query, subject) {
 #' @noRd
 getStrandFromGrList <- function(grl) { 
   return(unlist(strand(grl), use.names = F)[cumsum(elementNROWS(grl))]) 
-  }
+}
 
 #' start/end ranges pre-processing
 #' @description this function takes in an IRanges object and a target
@@ -183,9 +184,12 @@ expandRanges <- function(ranges,target){
 #' }
 #' @noRd
 expandRangesList <- function(rglist,target){ 
-  processedRng <- rep(unlist(rglist, use.names=F),rep(elementNROWS(target),times=elementNROWS(rglist)))
-  mcols(processedRng)$IdMap <- rep(1:length(rglist),elementNROWS(rglist)*elementNROWS(target))
-  mcols(processedRng)$matchRng <- unlist(rep(target, times= elementNROWS(rglist)), use.names=F)
+  processedRng <- rep(unlist(rglist, use.names=F),
+                      rep(elementNROWS(target),times=elementNROWS(rglist)))
+  mcols(processedRng)$IdMap <- rep(1:length(rglist),
+                                   elementNROWS(rglist)*elementNROWS(target))
+  mcols(processedRng)$matchRng <- unlist(rep(target, 
+                                             times= elementNROWS(rglist)), use.names=F)
   return (processedRng)
 }
 
@@ -198,35 +202,23 @@ alternativeStartEndExon <- function(queryRng, subjectRng){
   return(!poverlaps(queryRng, subjectRng))
 }
 
-#' alternative TSS distance
-#' @description This function calculates the distance
-#' of an alternative TSS by comparing the start
-#' coordinates of the start exon ranges of matching
-#' transcripts. If an alternative first exon is used the distance is set to 0.
+#' alternative TSS/TES distance
+#' @description This function calculates the distance of an
+#' alternative TSS/TES by comparing the start/end coordinates
+#' of the start/end exon ranges of matching transcripts. If an 
+#' alternative first/last exon is used the distance is set to 0.
 #' @noRd
-calculateTSSdistance <- function(queryStartRng, subjectStartRng,
-                                 alternativeFirstExon, strand){
-  alternativeTSS <- start(subjectStartRng) - start(queryStartRng)
-  alternativeTSS[strand=='-'] <- end(queryStartRng[strand=='-']) -
-                                 end(subjectStartRng[strand=='-'])
-  alternativeTSS <- alternativeTSS * !alternativeFirstExon
-  return (alternativeTSS)
-}
-
-
-#' alternative TES distance
-#' @description This function calculates the distance
-#' of an alternative TES by comparing the end
-#' coordinates of the end exon ranges of matching
-#' transcripts. If an alternative last exon is used the distance is set to 0.
-#' @noRd
-calculateTESdistance <- function(queryEndRng, subjectEndRng,
-                                 alternativeLastExon, strand){
-  alternativeTES <- end(queryEndRng) - end(subjectEndRng)
-  alternativeTES[strand=='-'] <- start(subjectEndRng[strand=='-']) -
-                                 start(queryEndRng[strand=='-'])
-  alternativeTES <- alternativeTES * !alternativeLastExon
-  return (alternativeTES)
+calculateTerminalDistance <- function(queryTerminalExonRng,
+                                      subjectTerminalExonRng, alternativeTerminalExon,
+                                      strand, direction = "start"){
+    direction_names <- c("start","end")
+    alternativeTerminal <- (-1)^(direction == "end") *
+           (get(direction)(subjectTerminalExonRng) - get(direction)(queryTerminalExonRng))
+    alternativeTerminal[strand == "-"] <- (-1)^(direction == "end") * 
+      (get(setdiff(direction_names, direction))(queryTerminalExonRng[strand=='-'])-
+       get(setdiff(direction_names, direction))(subjectTerminalExonRng[strand=='-']))
+    alternativeTerminal <- alternativeTerminal * !alternativeTerminalExon
+    return(alternativeTerminal)
 }
 
 #' annotate internal start and end first exons
@@ -234,11 +226,14 @@ calculateTESdistance <- function(queryEndRng, subjectEndRng,
 #' there is an internal start/end by overlapping
 #' the exon ranges of matching transcripts.
 #' @noRd
-annotateInternalStartEnd <- function(exonRng, fullRng, alternativeFirstLastExon){
+annotateInternalStartEnd <- function(exonRng, fullRng, 
+                                     alternativeFirstLastExon){
   exon.Full.Rng <- expandRanges(exonRng, fullRng) 
   #internal start/end
-  exonIntersect <- pintersect(exon.Full.Rng,mcols(exon.Full.Rng)$matchRng, resolve.empty='start.x')
-  internalStartEndVector <- tapply(width(exonIntersect), mcols(exon.Full.Rng)$IdMap, sum)!= 0 & alternativeFirstLastExon
+  exonIntersect <- pintersect(exon.Full.Rng,
+                              mcols(exon.Full.Rng)$matchRng, resolve.empty='start.x')
+  internalStartEndVector <- tapply(width(exonIntersect),
+                                   mcols(exon.Full.Rng)$IdMap, sum)!= 0 & alternativeFirstLastExon
   return(internalStartEndVector)
 }
 
@@ -249,8 +244,11 @@ annotateInternalStartEnd <- function(exonRng, fullRng, alternativeFirstLastExon)
 #' @noRd
 annotateIntronRetent <- function(spliceRng, fullRng){
   splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
-  intronRetention <-punion(splice.FullSplice.Rng, mcols(splice.FullSplice.Rng)$matchRng, fill.gap=TRUE) == mcols(splice.FullSplice.Rng)$matchRng
-  intronRetentionVector <- tapply(intronRetention, mcols(splice.FullSplice.Rng)$IdMap, sum)
+  intronRetention <-punion(splice.FullSplice.Rng, 
+                           mcols(splice.FullSplice.Rng)$matchRng, fill.gap=TRUE) ==
+    mcols(splice.FullSplice.Rng)$matchRng
+  intronRetentionVector <- tapply(intronRetention,
+                                  mcols(splice.FullSplice.Rng)$IdMap, sum)
   return (intronRetentionVector)
 }
 
@@ -263,15 +261,19 @@ annotateExonSkip <- function(spliceRng, fullRng, startRng, endRng){
   splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
   start.Splice.Rng <- expandRanges(startRng, spliceRng)
   end.Splice.Rng <- rep(endRng, elementNROWS(spliceRng))
-  exonSkipping <- punion(splice.FullSplice.Rng, mcols(splice.FullSplice.Rng)$matchRng, 
+  exonSkipping <- punion(splice.FullSplice.Rng, 
+                         mcols(splice.FullSplice.Rng)$matchRng, 
                          fill.gap=TRUE) == splice.FullSplice.Rng
   firstExonInIntron <- punion(mcols(start.Splice.Rng)$matchRng, start.Splice.Rng, 
                               fill.gap=TRUE) == mcols(start.Splice.Rng)$matchRng
   lastExonInIntron <- punion(mcols(start.Splice.Rng)$matchRng, end.Splice.Rng, 
                              fill.gap=TRUE) == mcols(start.Splice.Rng)$matchRng
-  exonSkippingVector <- pmax(0, tapply(exonSkipping, mcols(splice.FullSplice.Rng)$IdMap, sum) -
-                               tapply(firstExonInIntron, mcols(start.Splice.Rng)$IdMap, sum) - 
-                               tapply(lastExonInIntron, mcols(start.Splice.Rng)$IdMap, sum))
+  exonSkippingVector <- pmax(0, tapply(exonSkipping,
+                                       mcols(splice.FullSplice.Rng)$IdMap, sum) -
+                               tapply(firstExonInIntron, 
+                                      mcols(start.Splice.Rng)$IdMap, sum) - 
+                               tapply(lastExonInIntron, 
+                                      mcols(start.Splice.Rng)$IdMap, sum))
   return (exonSkippingVector)
 }
 
@@ -285,8 +287,8 @@ findExonStartExtension <- function(splice.Rng, match.startSplice.start,
   splice.start <- start(splice.Rng)
   splice.end <- end(splice.Rng)
   exonStartExtension <- splice.start<match.startSplice.end &
-                        splice.end>match.startSplice.end &
-                        match.startSplice.start< splice.start
+    splice.end>match.startSplice.end &
+    match.startSplice.start< splice.start
   exonStartExtension <- tapply(exonStartExtension, spliceIdMap, sum)
   return (exonStartExtension)
 }
@@ -301,8 +303,8 @@ findExonEndExtension <- function(splice.Rng, match.startSplice.start,
   splice.start <- start(splice.Rng)
   splice.end <- end(splice.Rng)
   exonEndExtension <- splice.end>match.startSplice.start &
-                      splice.start<match.startSplice.start &
-                      match.startSplice.end> splice.end
+    splice.start<match.startSplice.start &
+    match.startSplice.end> splice.end
   exonEndExtension <- tapply(exonEndExtension, spliceIdMap, sum)
   return (exonEndExtension)
 }
@@ -316,8 +318,10 @@ annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
   splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
   start.Splice.Rng <- expandRanges(startRng, spliceRng)
   end.Splice.Rng <- rep(endRng, elementNROWS(spliceRng))
-  startMatch <- poverlaps(start(splice.FullSplice.Rng),mcols(splice.FullSplice.Rng)$matchRng) 
-  endMatch <- poverlaps(end(splice.FullSplice.Rng),mcols(splice.FullSplice.Rng)$matchRng)
+  startMatch <- poverlaps(start(splice.FullSplice.Rng),
+                          mcols(splice.FullSplice.Rng)$matchRng) 
+  endMatch <- poverlaps(end(splice.FullSplice.Rng),
+                        mcols(splice.FullSplice.Rng)$matchRng)
   exonStart <- endMatch & !startMatch
   exonEnd <-startMatch & !endMatch
   exon5Prime <- tapply(exonStart, mcols(splice.FullSplice.Rng)$IdMap, sum)
@@ -338,15 +342,21 @@ annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
                                                   match.startSplice.end,
                                                   spliceIdMap)
   endExonEndExtension <- findExonEndExtension(end.Splice.Rng,
-                                               match.startSplice.start,
-                                               match.startSplice.end,
-                                               spliceIdMap)
+                                              match.startSplice.start,
+                                              match.startSplice.end,
+                                              spliceIdMap)
   exonSplicingTable <- tibble(exon5Prime,exon3Prime,strand)
   exStrandNeg <- exonSplicingTable$strand=='-'
-  exonSplicingTable$exon5Prime[!exStrandNeg] <- exonSplicingTable$exon5Prime[!exStrandNeg] - startExonStartExtension[!exStrandNeg]
-  exonSplicingTable$exon5Prime[exStrandNeg] <- exon3Prime[exStrandNeg] - startExonEndExtension[exStrandNeg]
-  exonSplicingTable$exon3Prime[!exStrandNeg] <- exonSplicingTable$exon3Prime[!exStrandNeg] - endExonEndExtension[!exStrandNeg]
-  exonSplicingTable$exon3Prime[exStrandNeg] <- exon5Prime[exStrandNeg] - endExonStartExtension[exStrandNeg] 
+  exonSplicingTable$exon5Prime[!exStrandNeg] <- 
+    exonSplicingTable$exon5Prime[!exStrandNeg] - 
+    startExonStartExtension[!exStrandNeg]
+  exonSplicingTable$exon5Prime[exStrandNeg] <- exon3Prime[exStrandNeg] - 
+    startExonEndExtension[exStrandNeg]
+  exonSplicingTable$exon3Prime[!exStrandNeg] <- 
+    exonSplicingTable$exon3Prime[!exStrandNeg] - 
+    endExonEndExtension[!exStrandNeg]
+  exonSplicingTable$exon3Prime[exStrandNeg] <- exon5Prime[exStrandNeg] - 
+    endExonStartExtension[exStrandNeg] 
   exonSplicingTable <- exonSplicingTable %>% select(exon5Prime,exon3Prime)
   return(exonSplicingTable)
 }
@@ -359,26 +369,26 @@ annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
 #' @noRd
 calculateFirstLastExonsDist <- function(queryExon, subjectExon,
                                         subjectFull, subjectList) {
-    # distances corresponds to length of unique sequences in all matching exons
-    # distance = width(element in query) + width(all matching elements 
-    # in subject) - 2x width(intersection(query, subject)
-    ## subjectList <- unlist(subjectFull)
-    ExonMatch <- poverlaps(unlist(queryExon), unlist(subjectExon))
-    queryExonList <- rep(unlist(queryExon), elementNROWS(subjectFull))
-    myId <- rep(seq_along(queryExon), elementNROWS(subjectFull))
-    byExonIntersect <- pintersect(queryExonList, subjectList,
-        resolve.empty = "start.x")
-    ExonDist <- as.integer(tapply(width(subjectList) *
-        (width(byExonIntersect) > 0) - 2 * width(byExonIntersect),
-        myId, sum) + width(unlist(queryExon)))
-    uniqueExonLengthQuery <-
-        sum(width(GenomicRanges::setdiff(queryExon, subjectFull)))
-    uniqueExonLengthSubject <- ExonDist - uniqueExonLengthQuery
-    ExonMatchList <- list(
-        "match" = ExonMatch,
-        "uniqueExonLengthQuery" = uniqueExonLengthQuery,
-        "uniqueExonLengthSubject" = uniqueExonLengthSubject)
-    return(ExonMatchList)
+  # distances corresponds to length of unique sequences in all matching exons
+  # distance = width(element in query) + width(all matching elements 
+  # in subject) - 2x width(intersection(query, subject)
+  ## subjectList <- unlist(subjectFull)
+  ExonMatch <- poverlaps(unlist(queryExon), unlist(subjectExon))
+  queryExonList <- rep(unlist(queryExon), elementNROWS(subjectFull))
+  myId <- rep(seq_along(queryExon), elementNROWS(subjectFull))
+  byExonIntersect <- pintersect(queryExonList, subjectList,
+                                resolve.empty = "start.x")
+  ExonDist <- as.integer(tapply(width(subjectList) *
+                                  (width(byExonIntersect) > 0) - 2 * width(byExonIntersect),
+                                myId, sum) + width(unlist(queryExon)))
+  uniqueExonLengthQuery <-
+    sum(width(GenomicRanges::setdiff(queryExon, subjectFull)))
+  uniqueExonLengthSubject <- ExonDist - uniqueExonLengthQuery
+  ExonMatchList <- list(
+    "match" = ExonMatch,
+    "uniqueExonLengthQuery" = uniqueExonLengthQuery,
+    "uniqueExonLengthSubject" = uniqueExonLengthSubject)
+  return(ExonMatchList)
 }
 
 
@@ -388,140 +398,140 @@ calculateFirstLastExonsDist <- function(queryExon, subjectExon,
 #' transcripts.
 #' @noRd
 findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
-    maxDist = 5, type = "within", firstLastSeparate = TRUE,
-    dropRangesByMinLength = FALSE, cutStartEnd = TRUE) {
-    if (firstLastSeparate) {
-        queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
-        queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
-        subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
-        subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
-        subjectFull <- subject
-    }
-    if (dropRangesByMinLength) {
-        queryForOverlap <- dropGrangesListElementsByWidth(query,
-            minWidth = maxDist, cutStartEnd = cutStartEnd)
-    } else if (cutStartEnd) {
-        queryForOverlap <- cutStartEndFromGrangesList(query)
-    } else {
-        queryForOverlap <- query
-    }
-    query <- cutStartEndFromGrangesList(query)
-    subjectExtend <- extendGrangesListElements(subject, by = maxDist)
-    olap <- findOverlaps(queryForOverlap, subjectExtend,
-        ignore.strand = ignore.strand, type = type)
-    olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject),
-        ignore.strand = ignore.strand, type = "equal")
-    query <- query[queryHits(olap)]
-    subject <- subject[subjectHits(olap)]
-    splice <- myGaps(query)
-    compatible <- rangesDist(query, subject, splice, maxDist)
-    equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
-    unique <- myOneMatch(compatible$compatible, queryHits(olap))
-    strandSpecific <- all(strand(query) != "*")
-    strandedMatch <- ((all(strand(query) == "-") & 
-        all(strand(subject) == "-")) | 
-        (all(strand(query) == "+") & 
-            all(strand(subject) == "+")))
-    mcols(olap) <- DataFrame(compatible, equal, unique,
-        strandSpecific, strandedMatch)
-
-    ## NOTE: Check if there is an error with the start sequence ##
-    if (firstLastSeparate)
-        olap <- checkStartSequence(olap, firstLastSeparate, queryStart,
-            subjectStart, queryEnd,subjectEnd, subjectFull, subjectList)
-    return(olap)
+                                     maxDist = 5, type = "within", firstLastSeparate = TRUE,
+                                     dropRangesByMinLength = FALSE, cutStartEnd = TRUE) {
+  if (firstLastSeparate) {
+    queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
+    queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
+    subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
+    subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
+    subjectFull <- subject
+  }
+  if (dropRangesByMinLength) {
+    queryForOverlap <- dropGrangesListElementsByWidth(query,
+                                                      minWidth = maxDist, cutStartEnd = cutStartEnd)
+  } else if (cutStartEnd) {
+    queryForOverlap <- cutStartEndFromGrangesList(query)
+  } else {
+    queryForOverlap <- query
+  }
+  query <- cutStartEndFromGrangesList(query)
+  subjectExtend <- extendGrangesListElements(subject, by = maxDist)
+  olap <- findOverlaps(queryForOverlap, subjectExtend,
+                       ignore.strand = ignore.strand, type = type)
+  olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject),
+                            ignore.strand = ignore.strand, type = "equal")
+  query <- query[queryHits(olap)]
+  subject <- subject[subjectHits(olap)]
+  splice <- myGaps(query)
+  compatible <- rangesDist(query, subject, splice, maxDist)
+  equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
+  unique <- myOneMatch(compatible$compatible, queryHits(olap))
+  strandSpecific <- all(strand(query) != "*")
+  strandedMatch <- ((all(strand(query) == "-") & 
+                       all(strand(subject) == "-")) | 
+                      (all(strand(query) == "+") & 
+                         all(strand(subject) == "+")))
+  mcols(olap) <- DataFrame(compatible, equal, unique,
+                           strandSpecific, strandedMatch)
+  
+  ## NOTE: Check if there is an error with the start sequence ##
+  if (firstLastSeparate)
+    olap <- checkStartSequence(olap, firstLastSeparate, queryStart,
+                               subjectStart, queryEnd,subjectEnd, subjectFull, subjectList)
+  return(olap)
 }
 
 
 #' check whether error with start sequence
 #' @noRd
 checkStartSequence <- function(olap, firstLastSeparate, queryStart,
-        subjectStart, queryEnd,subjectEnd, subjectFull, subjectList){
-    if (length(olap)) {
-        queryStart <- ranges(queryStart[queryHits(olap)])
-        subjectStart <- ranges(subjectStart[subjectHits(olap)])
-        queryEnd <- ranges(queryEnd[queryHits(olap)])
-        subjectEnd <- ranges(subjectEnd[subjectHits(olap)])
-        subjectFull <- ranges(subjectFull[subjectHits(olap)])
-        subjectList <- unlist(subjectFull)
-        startList <- calculateFirstLastExonsDist(queryStart, subjectStart,
-            subjectFull, subjectList)
-            endList <- calculateFirstLastExonsDist(queryEnd, subjectEnd,
-                subjectFull, subjectList)
-    } else {
-        startList <- NULL
-        endList <- NULL
-    }
-    mcols(olap) <- DataFrame(mcols(olap),
-        startMatch = startList$match,
-        uniqueStartLengthQuery = startList$uniqueExonLengthQuery,
-        uniqueStartLengthSubject = startList$uniqueExonLengthSubject,
-        endMatch = endList$match,
-        uniqueEndLengthQuery = endList$uniqueExonLengthQuery,
-        uniqueEndLengthSubject = endList$uniqueExonLengthSubject)
-    return(olap)
+                               subjectStart, queryEnd,subjectEnd, subjectFull, subjectList){
+  if (length(olap)) {
+    queryStart <- ranges(queryStart[queryHits(olap)])
+    subjectStart <- ranges(subjectStart[subjectHits(olap)])
+    queryEnd <- ranges(queryEnd[queryHits(olap)])
+    subjectEnd <- ranges(subjectEnd[subjectHits(olap)])
+    subjectFull <- ranges(subjectFull[subjectHits(olap)])
+    subjectList <- unlist(subjectFull)
+    startList <- calculateFirstLastExonsDist(queryStart, subjectStart,
+                                             subjectFull, subjectList)
+    endList <- calculateFirstLastExonsDist(queryEnd, subjectEnd,
+                                           subjectFull, subjectList)
+  } else {
+    startList <- NULL
+    endList <- NULL
+  }
+  mcols(olap) <- DataFrame(mcols(olap),
+                           startMatch = startList$match,
+                           uniqueStartLengthQuery = startList$uniqueExonLengthQuery,
+                           uniqueStartLengthSubject = startList$uniqueExonLengthSubject,
+                           endMatch = endList$match,
+                           uniqueEndLengthQuery = endList$uniqueExonLengthQuery,
+                           uniqueEndLengthSubject = endList$uniqueExonLengthSubject)
+  return(olap)
 }
 
 #' Get intron ranges from exon ranges list
 #' @noRd
 unlistIntrons <- function(x, use.ids = TRUE, use.names = TRUE) {
-    # License note: This function is adopted from the GenomicAlignments 
-    # package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
-    # License Artistic-2.0
-    # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
-
-    flat <- unlist(x, use.names = FALSE)
-    gaps <- gaps(ranges(x))
-
-    firstseg <- start(PartitioningByWidth(x))
-    seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
-    strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
-
-    gr <- GenomicRanges::GRanges(seqnms, unlist(gaps,
-        use.names = use.names), strand)
-    if (use.ids & !is.null(mcols(x, use.names = FALSE)$id)) 
-        mcols(gr)$id <- rep(mcols(x)$id, elementNROWS(gaps))
-    return(gr)
+  # License note: This function is adopted from the GenomicAlignments 
+  # package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
+  # License Artistic-2.0
+  # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
+  
+  flat <- unlist(x, use.names = FALSE)
+  gaps <- gaps(ranges(x))
+  
+  firstseg <- start(PartitioningByWidth(x))
+  seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
+  strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
+  
+  gr <- GenomicRanges::GRanges(seqnms, unlist(gaps,
+                                              use.names = use.names), strand)
+  if (use.ids & !is.null(mcols(x, use.names = FALSE)$id)) 
+    mcols(gr)$id <- rep(mcols(x)$id, elementNROWS(gaps))
+  return(gr)
 }
 
 #' Get intron ranges from exon ranges list
 #' @noRd
 myGaps <- function(x, start = NA, end = NA) {
-    # License note: This function is adopted from the GenomicAlignments package
-    # (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
-    # License Artistic-2.0
-    # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
-    if (!.isNumericOrNAs(start)) stop("'start' must be an integer vector or NA")
-    if (!is.integer(start)) start <- as.integer(start)
-    if (!.isNumericOrNAs(end)) stop("'end' must be an integer vector or NA")
-    if (!is.integer(end)) end <- as.integer(end)
-
-    ## seqname and strand consistent in list elements
-    if (all(elementNROWS(runValue(seqnames(x))) == 1L) &&
-        all(elementNROWS(runValue(strand(x))) == 1L)) {
-        flat <- unlist(x, use.names = FALSE)
-        gaps <- gaps(ranges(x), start, end)
-        ### FIXME: this makes this function more of an 'introns' than a .gaps.
-        ### FIXME: this breaks when the GRangesList is not ordered by position
-        if (!is.null(mcols(x, use.names = FALSE)$query.break)) {
-            insert_gaps <-
-                methods::as(ranges(.insertGaps(x)), "CompressedIRangesList")
-            gaps <- setdiff(gaps, insert_gaps)
-        }
-
-        idx <- elementNROWS(gaps) != 0
-        ## FIXME : can't handle lists with empty elements
-        ##         'start' and 'end' not quite right here
-        firstseg <- start(PartitioningByWidth(x))
-        seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
-        strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
-        gr <- relist(GenomicRanges::GRanges(seqnms, unlist(gaps,
-            use.names = FALSE), strand), gaps)
-        gr
-    } else {
-        ### FIXME: does not handle query.break column yet
-        setdiff(range(x), x)
+  # License note: This function is adopted from the GenomicAlignments package
+  # (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
+  # License Artistic-2.0
+  # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
+  if (!.isNumericOrNAs(start)) stop("'start' must be an integer vector or NA")
+  if (!is.integer(start)) start <- as.integer(start)
+  if (!.isNumericOrNAs(end)) stop("'end' must be an integer vector or NA")
+  if (!is.integer(end)) end <- as.integer(end)
+  
+  ## seqname and strand consistent in list elements
+  if (all(elementNROWS(runValue(seqnames(x))) == 1L) &&
+      all(elementNROWS(runValue(strand(x))) == 1L)) {
+    flat <- unlist(x, use.names = FALSE)
+    gaps <- gaps(ranges(x), start, end)
+    ### FIXME: this makes this function more of an 'introns' than a .gaps.
+    ### FIXME: this breaks when the GRangesList is not ordered by position
+    if (!is.null(mcols(x, use.names = FALSE)$query.break)) {
+      insert_gaps <-
+        methods::as(ranges(.insertGaps(x)), "CompressedIRangesList")
+      gaps <- setdiff(gaps, insert_gaps)
     }
+    
+    idx <- elementNROWS(gaps) != 0
+    ## FIXME : can't handle lists with empty elements
+    ##         'start' and 'end' not quite right here
+    firstseg <- start(PartitioningByWidth(x))
+    seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
+    strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
+    gr <- relist(GenomicRanges::GRanges(seqnms, unlist(gaps,
+                                                       use.names = FALSE), strand), gaps)
+    gr
+  } else {
+    ### FIXME: does not handle query.break column yet
+    setdiff(range(x), x)
+  }
 }
 # myGaps <- .GenomicAlignments:::.gaps
 
@@ -532,21 +542,21 @@ myGaps <- function(x, start = NA, end = NA) {
 
 #' @noRd
 rangesDist <- function(query, subject, splice, maxDist) {
-    qrng <- ranges(query)
-    srng <- ranges(subject)
-    sprng <- ranges(splice)
-
-    setDiffQ <- width(GenomicRanges::setdiff(qrng, srng))
-    interesectS <- width(GenomicRanges::intersect(srng, sprng))
-    uniqueLengthQuery <- sum(setDiffQ)
-    uniqueLengthSubject <- sum(interesectS)
-
-    queryElementsOutsideMaxDist <- sum(setDiffQ >= maxDist)
-    subjectElementsOutsideMaxDist <- sum(interesectS >= maxDist)
-    compatible <- (queryElementsOutsideMaxDist == 0) &
-        (subjectElementsOutsideMaxDist == 0)
-    DataFrame(uniqueLengthQuery, uniqueLengthSubject, compatible,
-        queryElementsOutsideMaxDist, subjectElementsOutsideMaxDist)
+  qrng <- ranges(query)
+  srng <- ranges(subject)
+  sprng <- ranges(splice)
+  
+  setDiffQ <- width(GenomicRanges::setdiff(qrng, srng))
+  interesectS <- width(GenomicRanges::intersect(srng, sprng))
+  uniqueLengthQuery <- sum(setDiffQ)
+  uniqueLengthSubject <- sum(interesectS)
+  
+  queryElementsOutsideMaxDist <- sum(setDiffQ >= maxDist)
+  subjectElementsOutsideMaxDist <- sum(interesectS >= maxDist)
+  compatible <- (queryElementsOutsideMaxDist == 0) &
+    (subjectElementsOutsideMaxDist == 0)
+  DataFrame(uniqueLengthQuery, uniqueLengthSubject, compatible,
+            queryElementsOutsideMaxDist, subjectElementsOutsideMaxDist)
 }
 
 
@@ -561,24 +571,24 @@ rangesDist <- function(query, subject, splice, maxDist) {
 
 #' @noRd
 findSpliceOverlapsQuick <- function(query, subject, ignore.strand = FALSE) {
-    olap <- findOverlaps(query, subject, ignore.strand = ignore.strand,
-        type = "within")
-    olapEqual <- findOverlaps(query, subject, ignore.strand = ignore.strand,
-        type = "equal")
-    if (length(olap) == 0L)
-        return(GenomicAlignments:::.result(olap))
-
-    query <- query[queryHits(olap)]
-    subject <- subject[subjectHits(olap)]
-    splice <- myGaps(query)
-
-    compatible <- myCompatibleTranscription(query, subject, splice)
-    strandSpecific <- all(strand(query) != "*")
-    equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
-    unique <- myOneMatch(compatible, queryHits(olap))
-
-    mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific)
-    return(olap)
+  olap <- findOverlaps(query, subject, ignore.strand = ignore.strand,
+                       type = "within")
+  olapEqual <- findOverlaps(query, subject, ignore.strand = ignore.strand,
+                            type = "equal")
+  if (length(olap) == 0L)
+    return(GenomicAlignments:::.result(olap))
+  
+  query <- query[queryHits(olap)]
+  subject <- subject[subjectHits(olap)]
+  splice <- myGaps(query)
+  
+  compatible <- myCompatibleTranscription(query, subject, splice)
+  strandSpecific <- all(strand(query) != "*")
+  equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
+  unique <- myOneMatch(compatible, queryHits(olap))
+  
+  mcols(olap) <- DataFrame(compatible, equal, unique, strandSpecific)
+  return(olap)
 }
 
 #' @param query query
@@ -586,37 +596,37 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand = FALSE) {
 #' @param splice splice
 #' @noRd
 myCompatibleTranscription <- function(query, subject, splice) {
-    qrng <- ranges(query)
-    srng <- ranges(subject)
-    sprng <- ranges(splice)
-
-    bnds <- elementNROWS(GenomicRanges::setdiff(qrng, srng)) == 0L
-    splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
-    return(bnds & splc)
+  qrng <- ranges(query)
+  srng <- ranges(subject)
+  sprng <- ranges(splice)
+  
+  bnds <- elementNROWS(GenomicRanges::setdiff(qrng, srng)) == 0L
+  splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
+  return(bnds & splc)
 }
 
 #' @param idx idx
 #' @param x x
 #' @noRd
 myOneMatch <- function(x, idx) {
-    # License note: This function is adopted from the GenomicAlignments
-    # package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
-    # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
-    xcnt <- rowsum(as.integer(x), idx)[, 1]
-    oneMatch <- rep((xcnt == 1L), table(idx))
-    unname(x & oneMatch)
+  # License note: This function is adopted from the GenomicAlignments
+  # package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
+  # https://doi.org/doi:10.18129/B9.bioc.GenomicAlignments
+  xcnt <- rowsum(as.integer(x), idx)[, 1]
+  oneMatch <- rep((xcnt == 1L), table(idx))
+  unname(x & oneMatch)
 }
 
 #' @param motif motif
 #' @noRd
 spliceStrand <- function(motif) {
-    NATURAL_INTRON_MOTIFS_RC <- as.character(Biostrings::reverseComplement(
-        Biostrings::DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
-
-    motifStrand <- ifelse(motif %in% GenomicAlignments::NATURAL_INTRON_MOTIFS,
-        "+", "*")
-    motifStrand[motif %in% NATURAL_INTRON_MOTIFS_RC] <- "-"
-    return(motifStrand)
+  NATURAL_INTRON_MOTIFS_RC <- as.character(Biostrings::reverseComplement(
+    Biostrings::DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
+  
+  motifStrand <- ifelse(motif %in% GenomicAlignments::NATURAL_INTRON_MOTIFS,
+                        "+", "*")
+  motifStrand[motif %in% NATURAL_INTRON_MOTIFS_RC] <- "-"
+  return(motifStrand)
 }
 
 
@@ -626,36 +636,36 @@ spliceStrand <- function(motif) {
 #' @param grangesList grangesList
 #' @noRd
 cutStartEndFromGrangesList <- function(grangesList) {
-    unlistedExons <- unlist(grangesList, use.names = FALSE)
-    partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)),
-        names = NULL)
-    startExonsSet <- (which((unlistedExons$exon_rank == 1 &
-        as.character(strand(unlistedExons)) != "-") | 
-        (unlistedExons$exon_endRank == 1 & 
-        as.character(strand(unlistedExons)) == "-")))
-    endExonsSet <- (which((unlistedExons$exon_rank == 1 & 
-        as.character(strand(unlistedExons)) == "-") | 
-        (unlistedExons$exon_endRank == 1 
-        & as.character(strand(unlistedExons)) != "-")))
-
-    start(unlistedExons[startExonsSet]) <- end(unlistedExons[startExonsSet]) - 1
-    end(unlistedExons[endExonsSet]) <- start(unlistedExons[endExonsSet]) + 1
-
-    return(relist(unlistedExons, partitioning))
+  unlistedExons <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(elementNROWS(grangesList)),
+                                    names = NULL)
+  startExonsSet <- (which((unlistedExons$exon_rank == 1 &
+                             as.character(strand(unlistedExons)) != "-") | 
+                            (unlistedExons$exon_endRank == 1 & 
+                               as.character(strand(unlistedExons)) == "-")))
+  endExonsSet <- (which((unlistedExons$exon_rank == 1 & 
+                           as.character(strand(unlistedExons)) == "-") | 
+                          (unlistedExons$exon_endRank == 1 
+                           & as.character(strand(unlistedExons)) != "-")))
+  
+  start(unlistedExons[startExonsSet]) <- end(unlistedExons[startExonsSet]) - 1
+  end(unlistedExons[endExonsSet]) <- start(unlistedExons[endExonsSet]) + 1
+  
+  return(relist(unlistedExons, partitioning))
 }
 
 #' @param grangesList grangesList
 #' @param by defaults to 5
 #' @noRd
 extendGrangesListElements <- function(grangesList, by = 5) {
-    unlistedExons <- unlist(grangesList, use.names = FALSE)
-    partitioning <-
-        PartitioningByEnd(cumsum(elementNROWS(grangesList)), names = NULL)
-    start(unlistedExons) <- pmax(1, start(unlistedExons) - by)
-    end(unlistedExons) <-
-        pmin(seqlengths(unlistedExons)[as.character(seqnames(unlistedExons))],
-        end(unlistedExons) + by, na.rm = TRUE)
-    return(relist(unlistedExons, partitioning))
+  unlistedExons <- unlist(grangesList, use.names = FALSE)
+  partitioning <-
+    PartitioningByEnd(cumsum(elementNROWS(grangesList)), names = NULL)
+  start(unlistedExons) <- pmax(1, start(unlistedExons) - by)
+  end(unlistedExons) <-
+    pmin(seqlengths(unlistedExons)[as.character(seqnames(unlistedExons))],
+         end(unlistedExons) + by, na.rm = TRUE)
+  return(relist(unlistedExons, partitioning))
 }
 
 
@@ -664,28 +674,28 @@ extendGrangesListElements <- function(grangesList, by = 5) {
 #' @param cutStartEnd defaults to FALSE
 #' @noRd
 dropGrangesListElementsByWidth <- function(grangesList, minWidth = 5,
-    cutStartEnd = FALSE) {
-    unlistedExons <- unlist(grangesList, use.names = FALSE)
-    partitioning <- PartitioningByEnd(cumsum(sum(width(grangesList) >= 
-        minWidth)), names = NULL)
-    exonWidth <- width(unlistedExons)
-    if (cutStartEnd) {
-        startExonsSet <- (which((unlistedExons$exon_rank == 1 &
-            as.character(strand(unlistedExons)) != "-") |
-            (unlistedExons$exon_endRank == 1 &
-            as.character(strand(unlistedExons)) == "-")))
-        endExonsSet <- (which((unlistedExons$exon_rank == 1 &
-            as.character(strand(unlistedExons)) == "-") |
-            (unlistedExons$exon_endRank == 1 &
-            as.character(strand(unlistedExons)) != "-")))
-
-        start(unlistedExons[startExonsSet]) <-
-            end(unlistedExons[startExonsSet]) - 1
-        end(unlistedExons[endExonsSet]) <-
-            start(unlistedExons[endExonsSet]) + 1
-    }
-    unlistedExons <- unlistedExons[exonWidth >= minWidth]
-    return(relist(unlistedExons, partitioning))
+                                           cutStartEnd = FALSE) {
+  unlistedExons <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(sum(width(grangesList) >= 
+                                                 minWidth)), names = NULL)
+  exonWidth <- width(unlistedExons)
+  if (cutStartEnd) {
+    startExonsSet <- (which((unlistedExons$exon_rank == 1 &
+                               as.character(strand(unlistedExons)) != "-") |
+                              (unlistedExons$exon_endRank == 1 &
+                                 as.character(strand(unlistedExons)) == "-")))
+    endExonsSet <- (which((unlistedExons$exon_rank == 1 &
+                             as.character(strand(unlistedExons)) == "-") |
+                            (unlistedExons$exon_endRank == 1 &
+                               as.character(strand(unlistedExons)) != "-")))
+    
+    start(unlistedExons[startExonsSet]) <-
+      end(unlistedExons[startExonsSet]) - 1
+    end(unlistedExons[endExonsSet]) <-
+      start(unlistedExons[endExonsSet]) + 1
+  }
+  unlistedExons <- unlistedExons[exonWidth >= minWidth]
+  return(relist(unlistedExons, partitioning))
 }
 
 #' Function that selects the first exon from an IRangesList object
@@ -716,11 +726,11 @@ selectEndExonFromRangesList <- function(range, strand){
 #' @param exonNumber defaults to 2
 #' @noRd
 selectStartExonsFromGrangesList <- function(grangesList, exonNumber = 2) {
-    unlisted_granges <- unlist(grangesList, use.names = FALSE)
-    partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList),
-        exonNumber)), names = NULL)
-    startExonsSet <- which(unlisted_granges$exon_rank <= exonNumber)
-    return(relist(unlisted_granges[startExonsSet], partitioning))
+  unlisted_granges <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList),
+                                                exonNumber)), names = NULL)
+  startExonsSet <- which(unlisted_granges$exon_rank <= exonNumber)
+  return(relist(unlisted_granges[startExonsSet], partitioning))
 }
 
 #' Function that selects the last N exons from a grangeslist object 
@@ -728,9 +738,9 @@ selectStartExonsFromGrangesList <- function(grangesList, exonNumber = 2) {
 #' @describeIn selectStartExonsFromGrangesList grangesList
 #' @noRd
 selectEndExonsFromGrangesList <- function(grangesList, exonNumber = 2) {
-    unlisted_granges <- unlist(grangesList, use.names = FALSE)
-    partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList),
-        exonNumber)), names = NULL)
-    endExonsSet <- which(unlisted_granges$exon_endRank <= exonNumber)
-    return(relist(unlisted_granges[endExonsSet], partitioning))
+  unlisted_granges <- unlist(grangesList, use.names = FALSE)
+  partitioning <- PartitioningByEnd(cumsum(pmin(elementNROWS(grangesList),
+                                                exonNumber)), names = NULL)
+  endExonsSet <- which(unlisted_granges$exon_endRank <= exonNumber)
+  return(relist(unlisted_granges[endExonsSet], partitioning))
 }
