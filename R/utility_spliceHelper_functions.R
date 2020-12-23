@@ -68,10 +68,10 @@ compareTranscripts <-function(query, subject) {
   subjectFullRng <- ranges(subject)
   queryFullRng <- ranges(query)
   strand <- as.character(getStrandFromGrList(query))
-  queryStartRng <- selectStartExonFromRangesList(queryFullRng, strand)
-  subjectStartRng <- selectStartExonFromRangesList(subjectFullRng, strand)
-  queryEndRng <- selectEndExonFromRangesList(queryFullRng, strand)
-  subjectEndRng <- selectEndExonFromRangesList(subjectFullRng, strand)
+  queryStartRng <- selectStartEndExonFromRangesList(queryFullRng, strand, "start")
+  subjectStartRng <- selectStartEndExonFromRangesList(subjectFullRng, strand, "start")
+  queryEndRng <- selectStartEndExonFromRangesList(queryFullRng, strand, "end")
+  subjectEndRng <- selectStartEndExonFromRangesList(subjectFullRng, strand, "end")
   querySpliceRng <- ranges(myGaps(query))
   querySpliceRng[elementNROWS(querySpliceRng)==0] <- IRanges(start=1,end=1) # add mock intron
   subjectSpliceRng <- ranges(myGaps(subject))
@@ -698,26 +698,20 @@ dropGrangesListElementsByWidth <- function(grangesList, minWidth = 5,
   return(relist(unlistedExons, partitioning))
 }
 
-#' Function that selects the first exon from an IRangesList object
+#' Function that selects the first/last exon from an IRangesList object
 #' @param range IRangesList with elements required to be ordered by coordinates
 #' @param stand strand
 #' @noRd
-selectStartExonFromRangesList <- function(range, strand){
-  lastExons <- as.numeric(cumsum(elementNROWS(range)))
-  startExonsSet <- c(1, lastExons[-(length(lastExons))]+1)
-  startExonsSet[strand == "-"] <- lastExons[strand == "-"]
-  return(unlist(range, use.names = FALSE)[startExonsSet])
-}
-
-#' Function that selects the last exon from an IRangesList object
-#' @param range IRangesList with elements required to be ordered by coordinates
-#' @param stand strand
-#' @noRd
-selectEndExonFromRangesList <- function(range, strand){
-  endExonsSet <- as.numeric(cumsum(elementNROWS(range)))
-  firstExons <- c(1, endExonsSet[-(length(endExonsSet))]+1)
-  endExonsSet[strand == "-"] <- firstExons[strand == "-"]
-  return(unlist(range, use.names = FALSE)[endExonsSet])
+selectStartEndExonFromRangesList <- function(range, strand, direction){
+  exons <- as.numeric(cumsum(elementNROWS(range)))
+  exonsSet <- c(1, exons[-(length(exons))]+1)
+  if (direction == "start"){
+    exonsSet[strand == "-"] <- exons[strand == "-"]
+    return(unlist(range, use.names = FALSE)[exonsSet])
+  } else{
+    exons[strand == "-"] <- exonsSet[strand == "-"] 
+    return(unlist(range, use.names = FALSE)[exons])
+  }
 }
 
 #' Function that selects the first N exons from a grangeslist object
