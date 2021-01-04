@@ -1110,3 +1110,58 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
         names(exByTxRef)[txToAnTableFiltered$subjectHits]
     return(txToAnTableFiltered)
 }
+
+
+
+#' generate filtered annotation table
+#' @param spliceOverlaps an output from  findSpliceOverlapsByDist()
+#' @param primarySecondaryDist default 5
+#' @param primarySecondaryDistStartEnd default 5
+#' @param exByTx default NULL
+#' @param setTMP default NULL
+#' @param DistCalculated default FALSE
+#' @noRd
+genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
+                               primarySecondaryDistStartEnd = 5, exByTx = NULL, setTMP = NULL,
+                               DistCalculated = FALSE) {
+    ## initiate the table
+    if (isFALSE(DistCalculated)) {
+        txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
+            mutate(dist = uniqueLengthQuery + uniqueLengthSubject) %>%
+            mutate(txNumber = n())
+    } else {
+        txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
+            mutate(dist = uniqueLengthQuery + uniqueLengthSubject +
+                       uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
+            mutate(txNumber = n())
+    }
+    ## change query hits for step 2 and 3
+    if (!is.null(exByTx)) {
+        txToAnTable$queryHits <-
+            (seq_along(exByTx))[-setTMP][txToAnTable$queryHits]
+    }
+    ## todo: check filters, what happens to reads with only start and end match?
+    if (isFALSE(DistCalculated)) {
+        txToAnTableFiltered <- txToAnTable %>%
+            group_by(queryHits) %>%
+            arrange(queryHits, dist) %>%
+            filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+            filter(queryElementsOutsideMaxDist + 
+                       subjectElementsOutsideMaxDist == 
+                       min(queryElementsOutsideMaxDist +
+                               subjectElementsOutsideMaxDist)) %>% 
+            filter((uniqueStartLengthQuery <= primarySecondaryDistStartEnd &
+                        uniqueEndLengthQuery <= primarySecondaryDistStartEnd) ==
+                       max(uniqueStartLengthQuery <=
+                               primarySecondaryDistStartEnd & uniqueEndLengthQuery <=
+                               primarySecondaryDistStartEnd)) %>%
+            mutate(txNumberFiltered = n())
+    } else {
+        txToAnTableFiltered <- txToAnTable %>%
+            group_by(queryHits) %>%
+            arrange(queryHits, dist) %>%
+            filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+            mutate(txNumberFiltered = n())
+    }
+    return(txToAnTableFiltered)
+}
