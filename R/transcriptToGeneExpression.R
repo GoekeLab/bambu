@@ -53,26 +53,3 @@ transcriptToGeneExpression <- function(se) {
         colData = colData(se))
     return(seOutput)
 }
-
-#' rename runnames when there are duplicated names
-#' @title rename_duplicatedNames
-#' @param runnames sample names
-#' @noRd
-rename_duplicatedNames <- function(runnames){
-    ## rename runnames when duplicated names are found
-    if (length(which(duplicated(runnames)))) {
-        iter <- 1
-        while (length(which(duplicated(runnames)))) {
-            if (iter == 1) {
-                runnames[which(duplicated(runnames))] <-
-                    paste0(runnames[which(duplicated(runnames))], "...", iter)
-            } else {
-                runnames[which(duplicated(runnames))] <-
-                    gsub(paste0("...", iter - 1, "$"), paste0("...", iter),
-                    runnames[which(duplicated(runnames))])
-            }
-            iter <- iter + 1
-        }
-    }
-    return(runnames)
-}
