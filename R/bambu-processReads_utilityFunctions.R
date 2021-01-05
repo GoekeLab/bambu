@@ -42,19 +42,6 @@ isore.constructReadClasses <- function(readGrgList,
   return(se)
 }
 
-
-#' Keep only the seqlevels that also occur in the reference granges
-#' @noRd
-keepSeqLevelsByReference <- function(gr, ref) {
-  gr <- GenomeInfoDb::keepSeqlevels(gr,
-                                    value = GenomeInfoDb::seqlevels(gr)[
-                                      GenomeInfoDb::seqlevels(gr) %in% 
-                                        GenomeInfoDb::seqlevels(ref)],
-                                    pruning.mode = "coarse")
-  return(gr)
-}
-
-
 #' Get unlisted intron ranges from exon ranges list
 #' @noRd
 unlistIntrons <- function(x, use.ids = TRUE, use.names = TRUE) {
@@ -81,26 +68,28 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = TRUE) {
 #' Create Junction tables from unlisted junction granges
 #' @importFrom BiocParallel bppram bpvec
 #' @noRd
-createJunctionTable <- function(unlisted_junction_granges,
+createJunctionTable <- function(unlisted_junctions,
                                 genomeSequence = NULL) {
   # License note: This function is adopted from the GenomicAlignments package 
   genomeSequence <- checkInputSequence(genomeSequence)
-  if (!all(GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
+  if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in%
            GenomeInfoDb::seqlevels(genomeSequence))) {
     message("not all chromosomes present in reference genome sequence,
             ranges are dropped")
-    unlisted_junction_granges <- keepSeqLevelsByReference(unlisted_junction_granges, genomeSequence)
+    unlisted_junctions <- keepSeqLevelsByReference(unlisted_junctions, genomeSequence)
   }
-  unstranded_unlisted_junctions <-
-    BiocGenerics::unstrand(unlisted_junction_granges)
-  uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
+  
+  uniqueJunctions <- sort(unique(BiocGenerics::unstrand(unlisted_junctions)))
   names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
                                   sep = ".")
-  junctionMatchList <- methods::as(findMatches(uniqueJunctions,
-                                               unstranded_unlisted_junctions),"List")
-  uniqueJunctions_score <- elementNROWS(junctionMatchList)
-  junctionStrandList <- extractList(strand(unlisted_junction_granges),
-                                    junctionMatchList)
+  plus_score <- countMatches(uniqueJunctions,
+                             unlisted_junctions[strand(unlisted_junctions)=='+'], 
+                             ignore.strand=T)
+  minus_score <- countMatches(uniqueJunctions,
+                              unlisted_junctions[strand(unlisted_junctions)=='-'], 
+                              ignore.strand=T)
+  uniqueJunctions_score <- plus_score + minus_score
+
   junctionSeqStart <- BSgenome::getSeq(genomeSequence,
                                        IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
   junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
@@ -116,8 +105,8 @@ createJunctionTable <- function(unlisted_junction_granges,
                                 junctionEndName, sum)[junctionEndName])
   mcols(uniqueJunctions) <- DataFrame(
     score = uniqueJunctions_score,
-    plus_score = sum(junctionStrandList == "+"),
-    minus_score = sum(junctionStrandList == "-"),
+    plus_score = plus_score,
+    minus_score = minus_score,
     spliceMotif = junctionMotif,
     spliceStrand = spliceStrand(junctionMotif),
     junctionStartName = junctionStartName,
@@ -127,6 +116,17 @@ createJunctionTable <- function(unlisted_junction_granges,
     id = seq_along(uniqueJunctions))
   strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
   return(uniqueJunctions)
+}
+
+#' Keep only the seqlevels that also occur in the reference granges
+#' @noRd
+keepSeqLevelsByReference <- function(gr, ref) {
+  gr <- GenomeInfoDb::keepSeqlevels(gr,
+                                    value = GenomeInfoDb::seqlevels(gr)[
+                                      GenomeInfoDb::seqlevels(gr) %in% 
+                                        GenomeInfoDb::seqlevels(ref)],
+                                    pruning.mode = "coarse")
+  return(gr)
 }
 
 #' Function to create a object that can be queried by getSeq
