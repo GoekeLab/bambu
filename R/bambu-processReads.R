@@ -38,7 +38,7 @@ bambu.processReads <- function(reads, readClass.file, annotations, genomeSequenc
   if (!verbose) message("Start generating read class files")
   readClassList <- BiocParallel::bplapply(names(reads),
                                           function(bamFileName) {
-                                            bambu.constructReadClass(bam.file = reads[bamFileName],
+                                            bambu.processReadsByFile(bam.file = reads[bamFileName],
                                                                      readClass.outputDir = readClass.outputDir,
                                                                      genomeSequence = genomeSequence,annotations = annotations,
                                                                      stranded = stranded,ncore = ncore,verbose = verbose)},
@@ -52,7 +52,7 @@ bambu.processReads <- function(reads, readClass.file, annotations, genomeSequenc
 #' Preprocess bam files and save read class files
 #' @inheritParams bambu
 #' @noRd
-bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
+bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                      readClass.outputDir = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
   readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore,
                                     verbose = verbose)
