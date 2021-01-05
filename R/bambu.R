@@ -97,8 +97,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         }
         readClassList <- bambu.processReads(reads, readClass.file = rcFile, 
             annotations, genomeSequence = genome, 
-            readClass.outputDir = rcOutDir, yieldSize, bpParameters, stranded,
-            ncore, verbose)
+            readClass.outputDir = rcOutDir, yieldSize, bpParameters, stranded, verbose)
     } else {
         readClassList <- rcFile
     }

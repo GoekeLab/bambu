@@ -2,8 +2,7 @@
 #' @param bamFile bamFile
 #' @inheritParams bambu
 #' @noRd
-prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
-                                ncore = 1) {
+prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
     if (methods::is(bamFile, "BamFile")) {
         if (!is.null(yieldSize)) {
             Rsamtools::yieldSize(bamFile) <- yieldSize
