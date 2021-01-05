@@ -241,17 +241,6 @@ myOneMatch <- function(x, idx) {
     unname(x & oneMatch)
 }
 
-#' @param motif motif
-#' @noRd
-spliceStrand <- function(motif) {
-    NATURAL_INTRON_MOTIFS_RC <- as.character(Biostrings::reverseComplement(
-    Biostrings::DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
-  
-    motifStrand <- ifelse(motif %in% GenomicAlignments::NATURAL_INTRON_MOTIFS,
-                        "+", "*")
-    motifStrand[motif %in% NATURAL_INTRON_MOTIFS_RC] <- "-"
-    return(motifStrand)
-}
 
 
 #' Function to reduce the start end end of the first and last elements in a 

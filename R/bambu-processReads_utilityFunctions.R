@@ -72,6 +72,117 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = TRUE) {
 }
 
 
+#' Create Junction tables from unlisted junction granges
+#' @importFrom BiocParallel bppram bpvec
+#' @noRd
+createJunctionTable <- function(unlisted_junction_granges,
+                                genomeSequence = NULL) {
+  # License note: This function is adopted from the GenomicAlignments package 
+  genomeSequence <- checkInputSequence(genomeSequence)
+  if (!all(GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
+           GenomeInfoDb::seqlevels(genomeSequence))) {
+    message("not all chromosomes present in reference genome sequence,
+            ranges are dropped")
+    unlisted_junction_granges <-
+      GenomeInfoDb::keepSeqlevels(unlisted_junction_granges,
+                                  value = GenomeInfoDb::seqlevels(unlisted_junction_granges)[
+                                    GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
+                                      GenomeInfoDb::seqlevels(genomeSequence)],
+                                  pruning.mode = "coarse")
+  }
+  unstranded_unlisted_junctions <-
+    BiocGenerics::unstrand(unlisted_junction_granges)
+  uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
+  names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
+                                  sep = ".")
+  uniqueJunctions <- calculateStrandedReadCounts(uniqueJunctions,
+                                                 genomeSequence, unstranded_unlisted_junctions,
+                                                 unlisted_junction_granges)
+  return(uniqueJunctions)
+}
+
+#' Function to create a object that can be queried by getSeq
+#' Either from fa file, or BSGenome object
+#' @importFrom BiocParallel bppram bpvec
+#' @noRd
+checkInputSequence <- function(genomeSequence) {
+  if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
+        please provide fasta file or BSgenome name, see available.genomes()")
+  if (methods::is(genomeSequence, "character")) {
+    if (grepl(".fa", genomeSequence)) {
+      if (.Platform$OS.type == "windows") {
+        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
+        newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
+                                   "[[", 1))
+        names(genomeSequence) <- newlevels
+      } else {
+        genomeSequence <- Rsamtools::FaFile(genomeSequence)
+      }
+    } else {
+      genomeSequence <- BSgenome::getBSgenome(genomeSequence)
+    }
+  }
+  return(genomeSequence)
+}
+
+
+## helper functions to correct junctions
+#' calculate stranded read counts
+#' @param uniqueJunctions uniqueJunctions
+#' @param junctionMatchList junctionMatchList
+#' @param genomeSequence genomeSequence
+#' @param unstranded_unlisted_junctions unstranded_unlisted_junctions
+#' @param unlisted_junction_granges unlisted_junction_granges
+#' @noRd
+calculateStrandedReadCounts <- function(uniqueJunctions,
+                                        genomeSequence,unstranded_unlisted_junctions,
+                                        unlisted_junction_granges) {
+  junctionMatchList <- methods::as(findMatches(uniqueJunctions,
+                                               unstranded_unlisted_junctions),"List")
+  uniqueJunctions_score <- elementNROWS(junctionMatchList)
+  junctionStrandList <- extractList(strand(unlisted_junction_granges),
+                                    junctionMatchList)
+  junctionSeqStart <- BSgenome::getSeq(genomeSequence,
+                                       IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
+  junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
+                                     IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
+  junctionMotif <- paste(junctionSeqStart, junctionSeqEnd, sep = "-")
+  junctionStartName <- paste(seqnames(uniqueJunctions),start(uniqueJunctions),
+                             sep = ":")
+  junctionEndName <- paste(seqnames(uniqueJunctions), end(uniqueJunctions),
+                           sep = ":")
+  startScore <- as.integer(tapply(uniqueJunctions_score,
+                                  junctionStartName, sum)[junctionStartName])
+  endScore <- as.integer(tapply(uniqueJunctions_score,
+                                junctionEndName, sum)[junctionEndName])
+  mcols(uniqueJunctions) <- DataFrame(
+    score = uniqueJunctions_score,
+    plus_score = sum(junctionStrandList == "+"),
+    minus_score = sum(junctionStrandList == "-"),
+    spliceMotif = junctionMotif,
+    spliceStrand = spliceStrand(junctionMotif),
+    junctionStartName = junctionStartName,
+    junctionEndName = junctionEndName,
+    startScore = startScore,
+    endScore = endScore,
+    id = seq_along(uniqueJunctions))
+  strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
+  return(uniqueJunctions)
+}
+
+
+#' @param motif motif
+#' @noRd
+spliceStrand <- function(motif) {
+  NATURAL_INTRON_MOTIFS_RC <- as.character(Biostrings::reverseComplement(
+    Biostrings::DNAStringSet(GenomicAlignments::NATURAL_INTRON_MOTIFS)))
+  
+  motifStrand <- ifelse(motif %in% GenomicAlignments::NATURAL_INTRON_MOTIFS,
+                        "+", "*")
+  motifStrand[motif %in% NATURAL_INTRON_MOTIFS_RC] <- "-"
+  return(motifStrand)
+}
+
 #' generate exonByReadClass
 #' @noRd
 generateExonsByReadClass <- function(readGrgList, annotationGrangesList, 
@@ -216,3 +327,4 @@ findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){
   return(list("uniqueJunctions" = uniqueJunctions, 
               "predictSpliceSites" = predictSpliceSites))
 }
+

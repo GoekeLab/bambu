@@ -1,46 +1,4 @@
-#' Create Junction tables from unlisted junction granges
-#' @importFrom BiocParallel bppram bpvec
-#' @noRd
-createJunctionTable <- function(unlisted_junction_granges,
-                                genomeSequence = NULL) {
-    # License note: This function is adopted from the GenomicAlignments package 
-    if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
-        please provide fasta file or BSgenome name, see available.genomes()")
-    if (methods::is(genomeSequence, "character")) {
-        if (grepl(".fa", genomeSequence)) {
-            if (.Platform$OS.type == "windows") {
-                genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-                newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                    "[[", 1))
-                names(genomeSequence) <- newlevels
-            } else {
-                genomeSequence <- Rsamtools::FaFile(genomeSequence)
-            }
-        } else {
-            genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-        }
-    }
-    if (!all(GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
-            GenomeInfoDb::seqlevels(genomeSequence))) {
-        message("not all chromosomes present in reference genome sequence,
-            ranges are dropped")
-        unlisted_junction_granges <-
-            GenomeInfoDb::keepSeqlevels(unlisted_junction_granges,
-            value = GenomeInfoDb::seqlevels(unlisted_junction_granges)[
-                GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
-                GenomeInfoDb::seqlevels(genomeSequence)],
-                pruning.mode = "coarse")
-    }
-    unstranded_unlisted_junctions <-
-        BiocGenerics::unstrand(unlisted_junction_granges)
-    uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
-    names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
-                                    sep = ".")
-    uniqueJunctions <- calculateStrandedReadCounts(uniqueJunctions,
-        genomeSequence, unstranded_unlisted_junctions,
-        unlisted_junction_granges)
-    return(uniqueJunctions)
-}
+
 
 #' update junctions object if strand prediction improves overlap 
 #' with annotations
