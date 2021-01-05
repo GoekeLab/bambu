@@ -8,12 +8,12 @@
 #' @noRd
 isore.constructReadClasses <- function(readGrgList,
                                        runName = "sample1", annotationGrangesList,
-                                       genomeSequence = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
+                                       genomeSequence = NULL, stranded = FALSE, verbose = FALSE) {
   unlisted_junctions <- unlistIntrons(readGrgList,
                                       use.ids = TRUE, use.names = FALSE)
   start.ptm <- proc.time()
   uniqueJunctions <- createJunctionTable(unlisted_junctions,
-                                         ncore = ncore, genomeSequence = genomeSequence)
+                                         genomeSequence = genomeSequence)
   # all seqlevels should be consistent, and drop those not in uniqueJunctions
   if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
            GenomeInfoDb::seqlevels(uniqueJunctions))) {

@@ -7,11 +7,10 @@
 #' @param yieldSize yieldSize
 #' @param bpParameters BioParallel parameter
 #' @param stranded stranded
-#' @param ncore ncore
 #' @param verbose verbose
 #' @noRd
 bambu.processReads <- function(reads, readClass.file, annotations, genomeSequence,
-                         readClass.outputDir, yieldSize, bpParameters, stranded, ncore, verbose) {
+                         readClass.outputDir, yieldSize, bpParameters, stranded, verbose) {
   # ===# create BamFileList object from character #===#
   if (methods::is(reads, "BamFile")) {
     if (!is.null(yieldSize)) {
@@ -41,7 +40,7 @@ bambu.processReads <- function(reads, readClass.file, annotations, genomeSequenc
                                             bambu.processReadsByFile(bam.file = reads[bamFileName],
                                                                      readClass.outputDir = readClass.outputDir,
                                                                      genomeSequence = genomeSequence,annotations = annotations,
-                                                                     stranded = stranded,ncore = ncore,verbose = verbose)},
+                                                                     stranded = stranded,verbose = verbose)},
                                           BPPARAM = bpParameters)
   if (!verbose)
     message("Finished generating read classes from genomic alignments.")
@@ -53,8 +52,8 @@ bambu.processReads <- function(reads, readClass.file, annotations, genomeSequenc
 #' @inheritParams bambu
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-                                     readClass.outputDir = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
-  readGrgList <- prepareDataFromBam(bam.file[[1]], ncore = ncore,
+                                     readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE) {
+  readGrgList <- prepareDataFromBam(bam.file[[1]],
                                     verbose = verbose)
   if (length(intersect(GenomeInfoDb::seqlevels(readGrgList),
                        GenomeInfoDb::seqlevels(annotations))) == 0)
@@ -65,7 +64,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     annotationGrangesList = annotations,
     genomeSequence = genomeSequence,
     stranded = stranded,
-    ncore = ncore,
     verbose = verbose)
   GenomeInfoDb::seqlevels(se) <- unique(c(GenomeInfoDb::seqlevels(se),
                                           GenomeInfoDb::seqlevels(annotations)))

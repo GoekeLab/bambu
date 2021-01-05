@@ -2,7 +2,7 @@
 #' @importFrom BiocParallel bppram bpvec
 #' @noRd
 createJunctionTable <- function(unlisted_junction_granges,
-                                genomeSequence = NULL, ncore = 1) {
+                                genomeSequence = NULL) {
     # License note: This function is adopted from the GenomicAlignments package 
     if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
         please provide fasta file or BSgenome name, see available.genomes()")
