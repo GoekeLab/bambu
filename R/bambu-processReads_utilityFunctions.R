@@ -17,15 +17,9 @@ isore.constructReadClasses <- function(readGrgList,
   # all seqlevels should be consistent, and drop those not in uniqueJunctions
   if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
            GenomeInfoDb::seqlevels(uniqueJunctions))) {
-    unlisted_junctions <- GenomeInfoDb::keepSeqlevels(unlisted_junctions,
-                                                      value = GenomeInfoDb::seqlevels(unlisted_junctions)[
-                                                        GenomeInfoDb::seqlevels(unlisted_junctions) %in%
-                                                          GenomeInfoDb::seqlevels(uniqueJunctions)], pruning.mode = "coarse")
-    readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
-                                               value = GenomeInfoDb::seqlevels(readGrgList)[ 
-                                                 GenomeInfoDb::seqlevels(readGrgList) %in%
-                                                   GenomeInfoDb::seqlevels(uniqueJunctions)], pruning.mode = "coarse")
-  } # the seqleels will be made comparable for all ranges,
+    unlisted_junctions <- keepSeqLevelsByReference(unlisted_junctions, uniqueJunctions)
+    readGrgList <- keepSeqLevelsByReference(readGrgList, uniqueJunctions)
+  } # the seqlevels will be made comparable for all ranges,
   # warning is shown if annotation is missing some
   if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
            GenomeInfoDb::seqlevels(annotationGrangesList))) 
@@ -46,6 +40,18 @@ isore.constructReadClasses <- function(readGrgList,
   se <- SummarizedExperiment(assays = SimpleList(counts = counts),
                              rowRanges = exonsByReadClass, colData = colDataDf)
   return(se)
+}
+
+
+#' Keep only the seqlevels that also occur in the reference granges
+#' @noRd
+keepSeqLevelsByReference <- function(gr, ref) {
+  gr <- GenomeInfoDb::keepSeqlevels(gr,
+                                    value = GenomeInfoDb::seqlevels(gr)[
+                                      GenomeInfoDb::seqlevels(gr) %in% 
+                                        GenomeInfoDb::seqlevels(ref)],
+                                    pruning.mode = "coarse")
+  return(gr)
 }
 
 
@@ -83,60 +89,13 @@ createJunctionTable <- function(unlisted_junction_granges,
            GenomeInfoDb::seqlevels(genomeSequence))) {
     message("not all chromosomes present in reference genome sequence,
             ranges are dropped")
-    unlisted_junction_granges <-
-      GenomeInfoDb::keepSeqlevels(unlisted_junction_granges,
-                                  value = GenomeInfoDb::seqlevels(unlisted_junction_granges)[
-                                    GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
-                                      GenomeInfoDb::seqlevels(genomeSequence)],
-                                  pruning.mode = "coarse")
+    unlisted_junction_granges <- keepSeqLevelsByReference(unlisted_junction_granges, genomeSequence)
   }
   unstranded_unlisted_junctions <-
     BiocGenerics::unstrand(unlisted_junction_granges)
   uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
   names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
                                   sep = ".")
-  uniqueJunctions <- calculateStrandedReadCounts(uniqueJunctions,
-                                                 genomeSequence, unstranded_unlisted_junctions,
-                                                 unlisted_junction_granges)
-  return(uniqueJunctions)
-}
-
-#' Function to create a object that can be queried by getSeq
-#' Either from fa file, or BSGenome object
-#' @importFrom BiocParallel bppram bpvec
-#' @noRd
-checkInputSequence <- function(genomeSequence) {
-  if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
-        please provide fasta file or BSgenome name, see available.genomes()")
-  if (methods::is(genomeSequence, "character")) {
-    if (grepl(".fa", genomeSequence)) {
-      if (.Platform$OS.type == "windows") {
-        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-        newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                                   "[[", 1))
-        names(genomeSequence) <- newlevels
-      } else {
-        genomeSequence <- Rsamtools::FaFile(genomeSequence)
-      }
-    } else {
-      genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-    }
-  }
-  return(genomeSequence)
-}
-
-
-## helper functions to correct junctions
-#' calculate stranded read counts
-#' @param uniqueJunctions uniqueJunctions
-#' @param junctionMatchList junctionMatchList
-#' @param genomeSequence genomeSequence
-#' @param unstranded_unlisted_junctions unstranded_unlisted_junctions
-#' @param unlisted_junction_granges unlisted_junction_granges
-#' @noRd
-calculateStrandedReadCounts <- function(uniqueJunctions,
-                                        genomeSequence,unstranded_unlisted_junctions,
-                                        unlisted_junction_granges) {
   junctionMatchList <- methods::as(findMatches(uniqueJunctions,
                                                unstranded_unlisted_junctions),"List")
   uniqueJunctions_score <- elementNROWS(junctionMatchList)
@@ -170,6 +129,29 @@ calculateStrandedReadCounts <- function(uniqueJunctions,
   return(uniqueJunctions)
 }
 
+#' Function to create a object that can be queried by getSeq
+#' Either from fa file, or BSGenome object
+#' @importFrom BiocParallel bppram bpvec
+#' @noRd
+checkInputSequence <- function(genomeSequence) {
+  if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
+        please provide fasta file or BSgenome name, see available.genomes()")
+  if (methods::is(genomeSequence, "character")) {
+    if (grepl(".fa", genomeSequence)) {
+      if (.Platform$OS.type == "windows") {
+        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
+        newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
+                                   "[[", 1))
+        names(genomeSequence) <- newlevels
+      } else {
+        genomeSequence <- Rsamtools::FaFile(genomeSequence)
+      }
+    } else {
+      genomeSequence <- BSgenome::getBSgenome(genomeSequence)
+    }
+  }
+  return(genomeSequence)
+}
 
 #' @param motif motif
 #' @noRd
