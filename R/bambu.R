@@ -95,7 +95,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
                 " for more efficient processing"))
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
-        readClassList <- processReads(reads, readClass.file = rcFile, 
+        readClassList <- bambu.processReads(reads, readClass.file = rcFile, 
             annotations, genomeSequence = genome, 
             readClass.outputDir = rcOutDir, yieldSize, bpParameters, stranded,
             ncore, verbose)
