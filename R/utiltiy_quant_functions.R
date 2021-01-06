@@ -6,16 +6,16 @@
 #' @param readClassDt A \code{data.table} with columns
 #' @importFrom BiocParallel bplapply
 #' @noRd
-abundance_quantification <- function(readClassDt, ncore = 1,
-    bias = TRUE, maxiter = 20000, conv = 10^(-8), d_rate = 0.1) {
+abundance_quantification <- function(readClassDt, ncore = 1, bias = TRUE,
+    maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
     gene_sidList <- unique(readClassDt$gene_sid)
     if (ncore == 1) {
         emResultsList <- lapply(as.list(gene_sidList),
             run_parallel,
             conv = conv,
+            minvalue = minvalue, 
             bias = bias,
             maxiter = maxiter,
-            d_rate = d_rate,
             readClassDt = readClassDt
         )
     } else {
@@ -25,9 +25,9 @@ abundance_quantification <- function(readClassDt, ncore = 1,
         emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
             run_parallel,
             conv = conv,
+            minvalue = minvalue, 
             bias = bias,
             maxiter = maxiter,
-            d_rate = d_rate,
             readClassDt = readClassDt,
             BPPARAM = bpParameters
         )
@@ -51,64 +51,52 @@ abundance_quantification <- function(readClassDt, ncore = 1,
 #' @param g the serial id of gene
 #' @inheritParams abundance_quantification
 #' @noRd
-run_parallel <- function(g, conv, bias, maxiter, d_rate, readClassDt) {
+run_parallel <-
+    function(g, conv, bias, minvalue, maxiter, readClassDt) {
     tmp <- unique(readClassDt[gene_sid == g])
-    if ((nrow(tmp) == 1)) {
-        out <- list(data.table(tx_sid = tmp$tx_sid,estimates = tmp$nobs,
-                gene_sid = tmp$gene_sid,ntotal = sum(tmp$nobs)),
-                data.table(read_class_sid = tmp$read_class_sid,
-                counts = 0, FullLengthCounts = 0, PartialLengthCounts = 0,
-                UniqueCounts = 0, n = tmp$nobs,gene_sid = g,
-                ntotal = sum(tmp$nobs)))
-    } else {
-        n.obs <- unique(tmp[, .(read_class_sid, nobs)], 
+    print(g)
+    n.obs <- unique(tmp[, .(read_class_sid, nobs)], 
             by = NULL)[order(read_class_sid)]$nobs
-        K <- sum(n.obs)
-        n.obs <- n.obs/K
-        aMatList <- formatAmat(tmp, d_rate)
-        a_mat <- aMatList[["combined"]]
-        lambda <- sqrt(max(n.obs)) ##using the Jiang and Salzman suggested value
-        out <- initialiseOutput(a_mat, g, K, n.obs) 
-        ## The following two steps clean up the rc to tx matrix so that it won't 
-        ## give NA estimates
-        ## note: this step removes transcripts without any read class support
-        removed_txs <- which(apply(t(t(a_mat) * n.obs * K),1,sum) == 0)
-        if (length(removed_txs) > 0) a_mat <- a_mat[-removed_txs,]
-        ## note: this tep removes read classes without any transcript assignment 
-        ## after the first step
-        removed_rcs <- which(apply(a_mat,2,sum) == 0)
-        if (length(removed_rcs) > 0) { 
-            a_mat <- a_mat[,-removed_rcs]
-            n.obs <- n.obs[-removed_rcs]
-        }
-        aMatList[["full"]] <- 
-            updateAmat(aMatList[["full"]], removed_txs, removed_rcs)
-        aMatList[["partial"]] <- 
-            updateAmat(aMatList[["partial"]], removed_txs, removed_rcs)
-        aMatList[["unique"]] <- 
-            updateAmat(aMatList[["unique"]], removed_txs, removed_rcs)
-        if (is.null(nrow(a_mat))) {
-            out[[1]][-as.numeric(removed_txs)]$counts <- K*n.obs
-        }else{
-            est_output <- emWithL1(X = as.matrix(a_mat), Y = n.obs, 
-                lambda = lambda, d = bias, maxiter = maxiter, conv = conv)
-            out <- updateOutput(est_output, a_mat, bias, removed_rcs, 
-                removed_txs,out,K,aMatList,n.obs)
-        }
+    K <- as.numeric(sum(n.obs))
+    n.obs <- as.numeric(n.obs)/K
+    aMatList <- formatAmat(tmp)
+    a_mat <- aMatList[["combined"]]
+    lambda <- sqrt(mean(n.obs))#suggested by Jiang and Salzman
+    out <- initialiseOutput(a_mat, g, K, n.obs) 
+    if (K == 0) {
+        return(out)
+    }
+    # ## The following two steps clean up the rc to tx matrix so that it won't 
+    # ## give NA estimates
+    # ## note: this step removes transcripts without any read class support
+    rids <- which(apply(t(t(a_mat) * n.obs * K),1,sum) != 0)
+    a_mat <- a_mat[rids,]
+    # ## note: this tep removes read classes without any transcript assignment 
+    # ## after the first step
+    cids <- which(apply(a_mat,2,sum) != 0)
+    a_mat <- a_mat[,cids]
+    n.obs <- n.obs[cids]
+    aMatList[["full"]] <-
+        updateAmat(aMatList[["full"]], rids, cids)
+    aMatList[["partial"]] <-
+        updateAmat(aMatList[["partial"]], rids, cids)
+    aMatList[["unique"]] <-
+        updateAmat(aMatList[["unique"]], rids, cids)
+    if (is.null(nrow(a_mat))) {
+        out[[1]][rids]$counts <- K*n.obs
+    }else{
+        est_output <- emWithL1(X = as.matrix(a_mat), Y = n.obs,
+            lambda = lambda, d = bias, maxiter = maxiter,
+            minvalue = minvalue, conv = conv)
+        out <- updateOutput(est_output, a_mat, rids, 
+            cids,out,aMatList, K, n.obs)
     }
     return(out)
 }
 
+# This function generates the wide-format a matrix
 #' @noRd
-formatAmat <- function(tmp, d_rate){
-        tmp[, multi_align := (length(unique(tx_sid)) > 1), by = read_class_sid]
-        tmp[which(multi_align) , aval := ifelse(fullTx, 1 - 
-            sum(.SD[which(!fullTx)]$rc_width*d_rate/1000),
-            rc_width*d_rate/1000), by = tx_ori]
-        tmp[multi_align & fullTx, aval := aval + rc_width*d_rate/1000]
-        tmp[, ave_status := any(fullTx & multi_align), by = tx_ori]
-        tmp[which(ave_status), aval := aval/sum(aval,na.rm = TRUE), by = tx_ori]
-        tmp[which(!multi_align), aval := 1]
+formatAmat <- function(tmp){
         tmp_wide <- dcast(tmp[order(nobs)],  tx_ori + 
             fullTx ~ read_class_sid, value.var = "aval")
         tmp_wide <- tmp_wide[CJ(tx_ori = unique(tmp_wide$tx_ori),
@@ -126,24 +114,48 @@ formatAmat <- function(tmp, d_rate){
                     unique = a_mat_unique))
 }
 
+# This function generates a_mat values for all transcripts 
 #' @noRd
-updateAmat <- function(a_mat, removed_txs, removed_rcs){
-    if (length(removed_txs) > 0)  a_mat <- a_mat[-removed_txs,]
-    if (length(removed_rcs) > 0)  a_mat <- a_mat[,-removed_rcs]
-    return(a_mat)
+modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
+        if (!d_mode) {
+            tmp[, aval := 1]
+            return(tmp)
+        }
+        tmp[, multi_align := (length(unique(tx_sid)) > 1), 
+            by = list(read_class_sid, gene_sid)]
+        tmp[which(multi_align) , aval := ifelse(fullTx, 1 - 
+            sum(.SD[which(!fullTx)]$rc_width*d_rate/1000),
+            rc_width*d_rate/1000), by = list(gene_sid,tx_ori)]
+        tmp[, aval := pmax(pmin(aval,1),0)] #d_rate should be contained to 0-1
+        tmp[multi_align & fullTx,
+            aval := pmin(1,pmax(aval,rc_width*d_rate/1000))]
+        tmp[which(!multi_align), aval := 1]
+        return(tmp)
 }
 
+
+
+# This function initialises the final estimates with default values
 #' @noRd 
 initialiseOutput <- function(a_mat, g, K, n.obs){
     return(list(data.table(tx_sid = rownames(a_mat),counts = 0,
                 FullLengthCounts = 0, PartialLengthCounts = 0,
-                UniqueCounts = 0, gene_sid = g,ntotal = K),
+                UniqueCounts = 0, theta = 0, gene_sid = g, 
+                ntotal = as.numeric(K)),
                 data.table(read_class_sid = colnames(a_mat),biasEstimates = 0,
-                n = n.obs, gene_sid = g,ntotal = K)))#pre-define output
+                gene_sid = g,ntotal = as.numeric(K))))#pre-define output
 }
 
-updateOutput <- function(est_output, a_mat, bias, 
-    removed_rcs, removed_txs,out,K,aMatList,n.obs){
+#' @noRd
+updateAmat <- function(a_mat, rids, cids){
+    return(a_mat[rids, cids])
+}
+
+# This function generates the estimates for overall, full, partial, and unique
+# estimates
+#' @noRd
+updateOutput <- function(est_output, a_mat, rids, cids,
+    out, aMatList, K, n.obs){
     est_output[["counts"]] <- 
         getFullandPartialEstimates(a_mat, a_mat, est_output, n.obs)
     est_output[["FullLengthCounts"]] <- 
@@ -152,52 +164,42 @@ updateOutput <- function(est_output, a_mat, bias,
         aMatList[["partial"]], a_mat, est_output, n.obs)
     est_output[["UniqueCounts"]] <- getFullandPartialEstimates(
         aMatList[["unique"]], a_mat, est_output, n.obs)
-    out <- modifyQuantOut(est_output, a_mat, bias, 
-        removed_rcs, removed_txs,out,K)
-}
-
-# Modify default quant output using estimated outputs
-#' @noRd
-modifyQuantOut <- function(est_output, a_mat,
-    bias, removed_rcs, removed_txs, out,K){
-    if (bias) {
-        b_est <- as.numeric(t(est_output[["b"]]))
-        if (length(removed_rcs) > 0) {
-            out[[2]][-removed_rcs]$biasEstimates <- b_est
-        }else{
-            out[[2]]$biasEstimates <- b_est
-        }
-    } 
-    #t_est <- as.numeric(t(K * apply(a_mat * est_output[["theta"]], 1, sum)))
-    t_est <- K * est_output[["counts"]]
-    t_est_full <- K * est_output[["FullLengthCounts"]]
-    t_est_partial <- K * est_output[["PartialLengthCounts"]]
-    t_est_unique <- K * est_output[["UniqueCounts"]]
-    if (length(removed_txs) > 0) {
-        out[[1]][-removed_txs]$counts <- t_est
-        out[[1]][-removed_txs]$FullLengthCounts <- t_est_full
-        out[[1]][-removed_txs]$PartialLengthCounts <- t_est_partial
-        out[[1]][-removed_txs]$UniqueCounts <- t_est_unique
-    }else{
-        out[[1]]$counts <- t_est
-        out[[1]]$FullLengthCounts <- t_est_full
-        out[[1]]$PartialLengthCounts <- t_est_partial
-        out[[1]]$UniqueCounts <- t_est_unique
-    }
+    out <- modifyQuantOut(est_output, a_mat, rids, cids, out, K)
     return(out)
 }
 
+
+# Modify default quant output using estimated outputs
+#' @noRd
+modifyQuantOut <- function(est_output, a_mat, rids, cids, out,K){
+    out[[1]][rids]$theta <- est_output[["theta"]]
+    out[[1]][rids]$counts <- K * est_output[["counts"]]
+    out[[1]][rids]$FullLengthCounts <- K * est_output[["FullLengthCounts"]]
+    out[[1]][rids]$PartialLengthCounts <- 
+        K * est_output[["PartialLengthCounts"]]
+    out[[1]][rids]$UniqueCounts <- K * est_output[["UniqueCounts"]]
+    out[[2]][cids]$biasEstimates <- as.numeric(t(est_output[["b"]]))
+    return(out)
+}
+
+# This function uses the E-step in the EM algorithm to compute the expected
+# relative read count attributed to each transcript from each read class, note 
+# there are a_mat, one is the overall sampling matrix, i.e., a_mat_sum
+#' @param a_mat This is the sampling matrix of the target estimates
+#' @param a_mat_sum This is the sampling matrix of the overall estimates, it 
+#' will be mainly used in normalizing the count.
 #' @noRd
 getFullandPartialEstimates <- function(a_mat, a_mat_sum, est_output, 
     n.obs){
-    atheta <- a_mat*est_output[["theta"]]
-    atheta_sum <- a_mat_sum*est_output[["theta"]]
-    return(colSums(n.obs*t(atheta)/colSums(atheta_sum), na.rm = TRUE))
+    atheta <- a_mat * est_output[["theta"]]
+    atheta_sum <- a_mat_sum * est_output[["theta"]]
+    return(colSums(n.obs * t(atheta) / colSums(atheta_sum), na.rm = TRUE))
 }
 
+# This function converts transcript, gene, and read class names to simple
+# integers for more efficient computation
 #' @noRd
-simplifyNames <- function(readClassDt, txVec, geneVec,ori_txvec){
-    readclassVec <- unique(readClassDt$read_class_id)
+simplifyNames <- function(readClassDt, txVec, geneVec,ori_txvec, readclassVec){
     readClassDt <- as.data.table(readClassDt)
     readClassDt[, gene_sid := match(gene_id, geneVec)]
     readClassDt[, tx_sid := match(tx_id, txVec)]
@@ -208,7 +210,8 @@ simplifyNames <- function(readClassDt, txVec, geneVec,ori_txvec){
     return(readClassDt)
 }
 
-#' Format output 
+#' This function converts transcript and gene ids back to transcript and gene 
+#' names 
 #' @noRd
 formatOutput <- function(outList, ori_txvec, geneVec){
     theta_est <- outList[[1]]
@@ -216,14 +219,11 @@ formatOutput <- function(outList, ori_txvec, geneVec){
         gene_name = geneVec[gene_sid])]
     theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
     theta_est <- theta_est[, .(tx_name, counts,FullLengthCounts,
-        PartialLengthCounts, UniqueCounts)]
+        PartialLengthCounts, UniqueCounts, theta)]
     totalCount <- sum(theta_est$counts)
     theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
     return(theta_est)
 }
-
-
-
 
 
 ## Remove duplicate transcript counts originated from multiple genes
@@ -233,6 +233,7 @@ removeDuplicates <- function(counts){
                             FullLengthCounts = sum(FullLengthCounts),
                             PartialLengthCounts = sum(PartialLengthCounts),
                             UniqueCounts = sum(UniqueCounts),
+                            theta = sum(theta),
                             CPM = sum(CPM)), by = tx_name],by = NULL)
     return(counts_final)
 }
