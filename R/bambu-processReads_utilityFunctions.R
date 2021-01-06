@@ -250,6 +250,136 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
 }
 
 
+#' JUNCTIONSTRANDCORRECTION
+#' @noRd
+junctionStrandCorrection <- function(uniqueJunctions, unlisted_junctions,
+                                     uniqueAnnotatedIntrons, stranded, verbose = FALSE) {
+  # note: strand sometimes incorrectly infered based on motifs, might 
+  # introduce systematic errors due to alignment (biased to splice motifs)
+ 
+# allJunctionToUniqueJunctionOverlap <- 
+#    findOverlaps(unlisted_junctions, uniqueJunctions,
+#                 type = "equal", ignore.strand = TRUE)
+  allJunctionToUniqueJunctionOverlap <- findMatches(unlisted_junctions, uniqueJunctions, ignore.strand=T)
+  
+  uniqueJunctionsUpdate <- uniqueJunctions
+  # make a copy to revert to if strand correction does not improve results
+  annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions,
+                                                 uniqueAnnotatedIntrons,ignore.strand = FALSE)["TRUE"]
+  if (verbose) {
+    message("before strand correction, annotated introns:")
+    message(annotatedIntronNumber)
+    message(annotatedIntronNumber / length(uniqueJunctions))
+  }
+  # infer strand for each read based on strand of junctions
+  strandStep <- TRUE
+  while (strandStep) { # iterate twice to improve strand prediction w.t.
+    # mean junction counts, annotate junction strand with read strand
+    if (stranded) { # update junction strand score
+      uniqueJunctionsUpdate <- 
+        updateStrandScoreByRead(unlisted_junctions,
+                                uniqueJunctionsUpdate, uniqueJunctions, stranded, 
+                                allJunctionToUniqueJunctionOverlap)
+      strandScoreByRead <-
+        uniqueJunctionsUpdate$minus_score_inferedByRead -
+        uniqueJunctionsUpdate$plus_score_inferedByRead
+    } else{ 
+      strandScoreByRead <- uniqueJunctionsUpdate$minus_score -
+        uniqueJunctionsUpdate$plus_score
+    }
+    # overwrite info from motif which increases overlap with known junc
+    strand(uniqueJunctionsUpdate[strandScoreByRead < 0]) <- "+"
+    strand(uniqueJunctionsUpdate[strandScoreByRead > 0]) <- "-"
+    updatedList <- updateJunctionwimprove(annotatedIntronNumber,
+                                          uniqueJunctions, uniqueJunctionsUpdate, uniqueAnnotatedIntrons,
+                                          strandStep, verbose)
+    annotatedIntronNumber <- updatedList$annotatedIntronNumber
+    uniqueJunctions <- updatedList$uniqueJunctions
+    strandStep <- updatedList$strandStep
+  }
+  return(list(uniqueJunctions = uniqueJunctions,
+              unlisted_junctions = unlisted_junctions))
+}
+
+
+#' Evaluate annoation overlap
+#' @noRd
+evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
+                                  ignore.strand = FALSE) {
+  return(table(!is.na(GenomicRanges::match(intronRanges,
+                                           uniqueAnnotatedIntrons, ignore.strand = ignore.strand ))))
+}
+
+
+#' updateStrandScoreByRead
+#' @noRd
+updateStrandScoreByRead <- function(unlisted_junction_granges,
+                                    uniqueJunctionsUpdate, uniqueJunctions, stranded, 
+                                    allJunctionToUniqueJunctionOverlap){
+  unlisted_junction_granges_strand <-
+    as.character(strand(uniqueJunctionsUpdate)[subjectHits(
+      allJunctionToUniqueJunctionOverlap)])
+  unlisted_junction_granges_strandList <-
+    splitAsList(unlisted_junction_granges_strand,
+                mcols(unlisted_junction_granges)$id)
+  strandJunctionSum <-
+    sum(unlisted_junction_granges_strandList == "-") -
+    sum(unlisted_junction_granges_strandList == "+")
+  readStrand <- rep("*", length(unlisted_junction_granges_strandList))
+  readStrand[strandJunctionSum < 0] <- "+"
+  readStrand[strandJunctionSum > 0] <- "-"
+  strand(unlisted_junction_granges) <-
+    readStrand[match(mcols(unlisted_junction_granges)$id,
+                     as.integer(names(unlisted_junction_granges_strandList)))]
+  unstranded_unlisted_junction_granges <-
+    BiocGenerics::unstrand(unlisted_junction_granges)
+  junctionMatchList <- methods::as(findMatches(uniqueJunctions,
+                                               unstranded_unlisted_junction_granges), "List")
+  tmp <- extractList(strand(unlisted_junction_granges),
+                     junctionMatchList)
+  uniqueJunctionsUpdate$plus_score_inferedByRead <- sum(tmp == "+")
+  uniqueJunctionsUpdate$minus_score_inferedByRead <- sum(tmp == "-")
+  return(uniqueJunctionsUpdate)
+}
+
+
+
+#' update junctions object if strand prediction improves overlap 
+#' with annotations
+#' @param annotatedIntronNumber annotatedIntronNumber
+#' @param uniqueJunctions uniqueJunctions
+#' @param uniqueJunctionsUpdate uniqueJunctionsUpdate
+#' @param uniqueAnnotatedIntrons uniqueAnnotatedIntrons
+#' @param strandStep strandStep
+#' @param verbose verbose
+#' @noRd
+updateJunctionwimprove <- function(annotatedIntronNumber, uniqueJunctions,
+                                   uniqueJunctionsUpdate, uniqueAnnotatedIntrons, strandStep, verbose) {
+  annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate,
+                                                    uniqueAnnotatedIntrons, ignore.strand = FALSE)["TRUE"]
+  if (annotatedIntronNumberNew > annotatedIntronNumber & !is.na(
+    annotatedIntronNumber)) {
+    # update junctions object if strand prediction improves overlap
+    # with annotations
+    if (verbose) {
+      message("after strand correction, annotated introns:")
+      message(annotatedIntronNumberNew)
+      message(annotatedIntronNumberNew / length(uniqueJunctionsUpdate))
+    }
+    annotatedIntronNumber <- annotatedIntronNumberNew
+    uniqueJunctions <- uniqueJunctionsUpdate
+  } else {
+    strandStep <- FALSE
+  }
+  outputList <- list(
+    "strandStep" = strandStep,
+    "annotatedIntronNumber" = annotatedIntronNumber,
+    "uniqueJunctions" = uniqueJunctions
+  )
+  return(outputList)    
+}
+
+
 #' correct junction from prediction
 #' @param uniqueJunctions uniqueJunctions
 #' @param verbose verbose
