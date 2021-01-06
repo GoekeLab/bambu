@@ -53,6 +53,7 @@
 #'     \item bias specifying whether to correct for bias, defaults to FALSE.
 #'     \item conv specifying the covergence trheshold control,
 #'     defaults to 0.0001.
+#'     \item minvalue specifying the minvalue for convergence consideration
 #' }
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended for quantification.
