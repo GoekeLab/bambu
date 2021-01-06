@@ -222,7 +222,7 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
     GenomeInfoDb::seqlevels(readGrgList)
   uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList,
                                                  use.names = FALSE, use.ids = FALSE))
-  uniqueJunctions <- junctionStrandCorrection(uniqueJunctions,
+  strand(uniqueJunctions) <- junctionStrandCorrection(uniqueJunctions,
                                              unlisted_junctions, uniqueAnnotatedIntrons,
                                              stranded = stranded, verbose = verbose)
   uniqueJunctions <- uniqueJunctions[, c("score", "spliceMotif",
@@ -289,7 +289,7 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junctions,
     uniqueJunctions <- updatedList$uniqueJunctions
     strandStep <- updatedList$strandStep
   }
-  return(uniqueJunctions)
+  return(strand(uniqueJunctions))
 }
 
 
