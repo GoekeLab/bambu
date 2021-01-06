@@ -66,6 +66,8 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
             partialLengthCounts = matrix(counts$PartialLengthCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC)),
             uniqueCounts = matrix(counts$UniqueCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC)),
+            theta = matrix(counts$theta, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     return(seOutput)
 }
@@ -127,11 +129,15 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
     geneVec <- unique(readClassDt$gene_id)
     ori_txvec <- unique(gsub("Start","",readClassDt$tx_id))
     txVec <- unique(readClassDt$tx_id)
-    readClassDt <- simplifyNames(readClassDt,txVec, geneVec,ori_txvec)
+    readclassVec <- unique(readClassDt$read_class_id)
+    readClassDt <- 
+        simplifyNames(readClassDt,txVec, geneVec,ori_txvec, readclassVec)
+    readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, d_rate, 
+        d_mode = TRUE)
     start.time <- proc.time()
     outList <- abundance_quantification(readClassDt,ncore = ncore,
         bias = emParameters[["bias"]], maxiter = emParameters[["maxiter"]],
-        conv = emParameters[["conv"]], d_rate)
+        conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.time <- proc.time()
     if (verbose) message("Finished EM estimation in ",
         round((end.time - start.time)[3] / 60, 1), " mins.")
