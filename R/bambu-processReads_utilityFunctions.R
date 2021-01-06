@@ -222,13 +222,12 @@ createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
     GenomeInfoDb::seqlevels(readGrgList)
   uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList,
                                                  use.names = FALSE, use.ids = FALSE))
-  junctionTables <- junctionStrandCorrection(uniqueJunctions,
+  uniqueJunctions <- junctionStrandCorrection(uniqueJunctions,
                                              unlisted_junctions, uniqueAnnotatedIntrons,
                                              stranded = stranded, verbose = verbose)
-  uniqueJunctions <- junctionTables[[1]][, c("score", "spliceMotif",
+  uniqueJunctions <- uniqueJunctions[, c("score", "spliceMotif",
                                              "spliceStrand", "junctionStartName", "junctionEndName",
                                              "startScore", "endScore", "id")]
-  unlisted_junctions <- junctionTables[[2]]
   uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(
     uniqueJunctions,uniqueAnnotatedIntrons)))
   uniqueJunctions$annotatedStart <- uniqueJunctions$junctionStartName %in%
@@ -256,11 +255,6 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junctions,
                                      uniqueAnnotatedIntrons, stranded, verbose = FALSE) {
   # note: strand sometimes incorrectly infered based on motifs, might 
   # introduce systematic errors due to alignment (biased to splice motifs)
- 
-# allJunctionToUniqueJunctionOverlap <- 
-#    findOverlaps(unlisted_junctions, uniqueJunctions,
-#                 type = "equal", ignore.strand = TRUE)
-  allJunctionToUniqueJunctionOverlap <- findMatches(unlisted_junctions, uniqueJunctions, ignore.strand=T)
   
   uniqueJunctionsUpdate <- uniqueJunctions
   # make a copy to revert to if strand correction does not improve results
@@ -275,15 +269,13 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junctions,
   strandStep <- TRUE
   while (strandStep) { # iterate twice to improve strand prediction w.t.
     # mean junction counts, annotate junction strand with read strand
-    if (stranded) { # update junction strand score
-      uniqueJunctionsUpdate <- 
+    if (stranded==FALSE) { # update junction strand score
+      
+      
+      strandScoreByRead <- 
         updateStrandScoreByRead(unlisted_junctions,
-                                uniqueJunctionsUpdate, uniqueJunctions, stranded, 
-                                allJunctionToUniqueJunctionOverlap)
-      strandScoreByRead <-
-        uniqueJunctionsUpdate$minus_score_inferedByRead -
-        uniqueJunctionsUpdate$plus_score_inferedByRead
-    } else{ 
+                                uniqueJunctionsUpdate)
+    } else{ # just use strand from reads for stranded data
       strandScoreByRead <- uniqueJunctionsUpdate$minus_score -
         uniqueJunctionsUpdate$plus_score
     }
@@ -297,8 +289,7 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junctions,
     uniqueJunctions <- updatedList$uniqueJunctions
     strandStep <- updatedList$strandStep
   }
-  return(list(uniqueJunctions = uniqueJunctions,
-              unlisted_junctions = unlisted_junctions))
+  return(uniqueJunctions)
 }
 
 
@@ -311,35 +302,38 @@ evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
 }
 
 
-#' updateStrandScoreByRead
+#' This function assigns a strand to each read based on the majority of junctions
+#' The strand of the junctions is infered by the sequence in createJunctionTables
 #' @noRd
-updateStrandScoreByRead <- function(unlisted_junction_granges,
-                                    uniqueJunctionsUpdate, uniqueJunctions, stranded, 
-                                    allJunctionToUniqueJunctionOverlap){
-  unlisted_junction_granges_strand <-
-    as.character(strand(uniqueJunctionsUpdate)[subjectHits(
-      allJunctionToUniqueJunctionOverlap)])
+updateStrandScoreByRead <- function(unlisted_junctions,
+                                    uniqueJunctions){
+
+  allJunctionToUniqueJunctionMatch <- match(unlisted_junctions, uniqueJunctions, ignore.strand=T)
+  
   unlisted_junction_granges_strandList <-
-    splitAsList(unlisted_junction_granges_strand,
-                mcols(unlisted_junction_granges)$id)
+    splitAsList(strand(uniqueJunctions)[
+      allJunctionToUniqueJunctionMatch],
+      mcols(unlisted_junctions)$id)
+  
   strandJunctionSum <-
-    sum(unlisted_junction_granges_strandList == "-") -
-    sum(unlisted_junction_granges_strandList == "+")
-  readStrand <- rep("*", length(unlisted_junction_granges_strandList))
-  readStrand[strandJunctionSum < 0] <- "+"
-  readStrand[strandJunctionSum > 0] <- "-"
-  strand(unlisted_junction_granges) <-
-    readStrand[match(mcols(unlisted_junction_granges)$id,
-                     as.integer(names(unlisted_junction_granges_strandList)))]
-  unstranded_unlisted_junction_granges <-
-    BiocGenerics::unstrand(unlisted_junction_granges)
-  junctionMatchList <- methods::as(findMatches(uniqueJunctions,
-                                               unstranded_unlisted_junction_granges), "List")
-  tmp <- extractList(strand(unlisted_junction_granges),
-                     junctionMatchList)
-  uniqueJunctionsUpdate$plus_score_inferedByRead <- sum(tmp == "+")
-  uniqueJunctionsUpdate$minus_score_inferedByRead <- sum(tmp == "-")
-  return(uniqueJunctionsUpdate)
+    as.integer(sum(unlisted_junction_granges_strandList == "-") -
+    sum(unlisted_junction_granges_strandList == "+"))
+  
+   readStrand <- factor(rep("*", length(unlisted_junction_granges_strandList)), levels=c('+','-','*'))
+   readStrand[strandJunctionSum < 0] <- "+"
+   readStrand[strandJunctionSum > 0] <- "-"
+   
+  
+   strand_unlisted_junctions <-
+     readStrand[match(mcols(unlisted_junctions)$id,
+                      as.integer(names(unlisted_junction_granges_strandList)))]
+  plus_score <- countMatches(uniqueJunctions,
+                             unlisted_junctions[strand_unlisted_junctions =='+'], 
+                             ignore.strand=T)
+  minus_score <- countMatches(uniqueJunctions,
+                              unlisted_junctions[strand_unlisted_junctions =='-'], 
+                              ignore.strand=T)
+    return(minus_score-plus_score)
 }
 
 
