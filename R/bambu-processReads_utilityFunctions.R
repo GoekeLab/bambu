@@ -88,32 +88,31 @@ createJunctionTable <- function(unlisted_junctions,
   minus_score <- countMatches(uniqueJunctions,
                               unlisted_junctions[strand(unlisted_junctions)=='-'], 
                               ignore.strand=T)
-  uniqueJunctions_score <- plus_score + minus_score
 
   junctionSeqStart <- BSgenome::getSeq(genomeSequence,
                                        IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
   junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
                                      IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
-  junctionMotif <- paste(junctionSeqStart, junctionSeqEnd, sep = "-")
-  junctionStartName <- paste(seqnames(uniqueJunctions),start(uniqueJunctions),
-                             sep = ":")
-  junctionEndName <- paste(seqnames(uniqueJunctions), end(uniqueJunctions),
-                           sep = ":")
-  startScore <- as.integer(tapply(uniqueJunctions_score,
-                                  junctionStartName, sum)[junctionStartName])
-  endScore <- as.integer(tapply(uniqueJunctions_score,
-                                junctionEndName, sum)[junctionEndName])
-  mcols(uniqueJunctions) <- DataFrame(
-    score = uniqueJunctions_score,
+ 
+  mcols(uniqueJunctions) <- DataFrame(tibble(
+    chr=as.factor(seqnames(uniqueJunctions)), 
+    start=start(uniqueJunctions),
+    end=end(uniqueJunctions),
+    score=plus_score+minus_score,
     plus_score = plus_score,
     minus_score = minus_score,
-    spliceMotif = junctionMotif,
-    spliceStrand = spliceStrand(junctionMotif),
-    junctionStartName = junctionStartName,
-    junctionEndName = junctionEndName,
-    startScore = startScore,
-    endScore = endScore,
-    id = seq_along(uniqueJunctions))
+    spliceMotif=paste(junctionSeqStart, junctionSeqEnd, sep = "-"),
+    spliceStrand = spliceStrand(spliceMotif),
+    junctionStartName = paste(chr, start, sep = ":"),
+    junctionEndName = paste(chr, end, sep = ":"),
+    id = seq_along(uniqueJunctions)) %>%
+      group_by(chr, start) %>% 
+      mutate(startScore=sum(score)) %>% 
+      group_by(chr, end) %>%  
+      mutate(endScore=sum(score)) %>%
+      ungroup() %>%
+      select(score, plus_score, minus_score, spliceMotif, spliceStrand,
+             junctionStartName, junctionEndName, startScore, endScore, id))
   strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
   return(uniqueJunctions)
 }
