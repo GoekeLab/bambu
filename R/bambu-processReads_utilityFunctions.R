@@ -50,6 +50,8 @@
     select(score, spliceMotif, spliceStrand, junctionStartName, junctionEndName,
            startScore, endScore, id, annotatedJunction, annotatedStart, annotatedEnd)
   
+  uniqueJunctions <- correctJunctionFromPrediction(uniqueJunctions, verbose)
+  
   start.ptm <- proc.time()
   readClassListSpliced <- constructSplicedReadClassTables(
     uniqueJunctions = uniqueJunctions,
@@ -60,10 +62,10 @@
   if (verbose)
     message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-  # seqlevels are made equal (added for chromosomes missing in any of them)
-  
-  exonsByReadClass <- generateExonsByReadClass(readGrgList,
-                                               annotationGrangesList, readClassListSpliced,
+
+  exonsByReadClass <- generateExonsByReadClass(readGrgList, 
+                                               annotationGrangesList, 
+                                               readClassListSpliced, 
                                                stranded, verbose)
   counts <- matrix(mcols(exonsByReadClass)$readCount,
                    dimnames = list(names(exonsByReadClass), runName))
