@@ -6,38 +6,60 @@
 #' @param quickMode quickMode
 #' @inheritParams bambu
 #' @noRd
-isore.constructReadClasses <- function(readGrgList,
-                                       runName = "sample1", annotationGrangesList,
-                                       genomeSequence = NULL, stranded = FALSE, verbose = FALSE) {
-  unlisted_junctions <- unlistIntrons(readGrgList,
-                                      use.ids = TRUE, use.names = FALSE)
+  isore.constructReadClasses <- function(readGrgList, runName = "sample1", 
+                                         annotationGrangesList, 
+                                         genomeSequence = NULL, stranded = FALSE, 
+                                         verbose = FALSE) {
+  unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
   start.ptm <- proc.time()
   uniqueJunctions <- createJunctionTable(unlisted_junctions,
                                          genomeSequence = genomeSequence)
+  end.ptm <- proc.time()
+  if (verbose) message("Finished creating junction list with splice motif
+        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+  
   # all seqlevels should be consistent, and drop those not in uniqueJunctions
   if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
            GenomeInfoDb::seqlevels(uniqueJunctions))) {
     unlisted_junctions <- keepSeqLevelsByReference(unlisted_junctions, uniqueJunctions)
     readGrgList <- keepSeqLevelsByReference(readGrgList, uniqueJunctions)
   } # the seqlevels will be made comparable for all ranges,
-  # warning is shown if annotation is missing some
   if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
            GenomeInfoDb::seqlevels(annotationGrangesList))) 
     message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
-  end.ptm <- proc.time()
-  if (verbose) message("Finished creating junction list with splice motif
-        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+ combinedSeqLevels <- unique(c(GenomeInfoDb::seqlevels(readGrgList),
+                               GenomeInfoDb::seqlevels(annotationGrangesList)))
+  GenomeInfoDb::seqlevels(readGrgList) <- combinedSeqLevels
+  GenomeInfoDb::seqlevels(annotationGrangesList) <- combinedSeqLevels
+  GenomeInfoDb::seqlevels(unlisted_junctions) <- combinedSeqLevels
+  GenomeInfoDb::seqlevels(uniqueJunctions) <- combinedSeqLevels
+  uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList, 
+                                                 use.ids = FALSE))
+  strand(uniqueJunctions) <- junctionStrandCorrection(uniqueJunctions,
+                                                      unlisted_junctions, 
+                                                      uniqueAnnotatedIntrons,
+                                                      stranded = stranded, 
+                                                      verbose = verbose)
   
-  GenomeInfoDb::seqlevels(readGrgList) <-
-    unique(c(GenomeInfoDb::seqlevels(readGrgList),
-             GenomeInfoDb::seqlevels(annotationGrangesList)))
-  GenomeInfoDb::seqlevels(annotationGrangesList) <- 
-    GenomeInfoDb::seqlevels(readGrgList)
-  readClassListSpliced <- createModelforJunctionReads(
-    readGrgList, annotationGrangesList, unlisted_junctions,
-    uniqueJunctions, stranded, verbose)
+  mcols(uniqueJunctions) <- tibble(as.data.frame(uniqueJunctions)) %>% 
+    mutate(annotatedJunction = (!is.na(GenomicRanges::match(uniqueJunctions, uniqueAnnotatedIntrons)))) %>% group_by(seqnames) %>% 
+    mutate(annotatedStart = start %in% start[annotatedJunction],
+           annotatedEnd = end %in% end[annotatedJunction]) %>% ungroup() %>%
+    select(score, spliceMotif, spliceStrand, junctionStartName, junctionEndName,
+           startScore, endScore, id, annotatedJunction, annotatedStart, annotatedEnd)
+  
+  start.ptm <- proc.time()
+  readClassListSpliced <- constructSplicedReadClassTables(
+    uniqueJunctions = uniqueJunctions,
+    unlisted_junctions = unlisted_junctions,
+    readGrgList = readGrgList,
+    stranded = stranded)
+  end.ptm <- proc.time()
+  if (verbose)
+    message("Finished create transcript models (read classes) for reads with
+    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
   # seqlevels are made equal (added for chromosomes missing in any of them)
   
   exonsByReadClass <- generateExonsByReadClass(readGrgList,
@@ -55,7 +77,7 @@ isore.constructReadClasses <- function(readGrgList,
 
 #' Get unlisted intron ranges from exon ranges list
 #' @noRd
-unlistIntrons <- function(x, use.ids = TRUE, use.names = TRUE) {
+unlistIntrons <- function(x, use.ids = TRUE, use.names = FALSE) {
   # License note: This function is adopted from the GenomicAlignments 
   # package (Author: Hervé Pagès, Valerie Obenchain, Martin Morgan)
   # License Artistic-2.0
@@ -206,48 +228,6 @@ generateExonsByReadClass <- function(readGrgList, annotationGrangesList, readCla
                         readClassListUnsplicedWithAnnotation$exonsByReadClass,
                         readClassListUnsplicedReduced$exonsByReadClass)
   return(exonsByReadClass)
-}
-
-#' create transcript model for splice junction reads
-#' @param readGrgList reads GRangesList
-#' @param annotationGrangesList annotation GRangesList
-#' @param unlisted_junctions unlisted_junctions
-#' @param uniqueJunctions uniqueJunctions
-#' @param stranded stranded
-#' @param verbose verbose
-#' @noRd
-createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
-                                        unlisted_junctions, uniqueJunctions, stranded, verbose) {
-  GenomeInfoDb::seqlevels(unlisted_junctions) <-
-    GenomeInfoDb::seqlevels(readGrgList)
-  GenomeInfoDb::seqlevels(uniqueJunctions) <- 
-    GenomeInfoDb::seqlevels(readGrgList)
-  uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList,
-                                                 use.names = FALSE, use.ids = FALSE))
-  strand(uniqueJunctions) <- junctionStrandCorrection(uniqueJunctions,
-                                             unlisted_junctions, uniqueAnnotatedIntrons,
-                                             stranded = stranded, verbose = verbose)
-  uniqueJunctions <- uniqueJunctions[, c("score", "spliceMotif",
-                                             "spliceStrand", "junctionStartName", "junctionEndName",
-                                             "startScore", "endScore", "id")]
-  uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(
-    uniqueJunctions,uniqueAnnotatedIntrons)))
-  uniqueJunctions$annotatedStart <- uniqueJunctions$junctionStartName %in%
-    uniqueJunctions$junctionStartName[uniqueJunctions$annotatedJunction]
-  uniqueJunctions$annotatedEnd <- uniqueJunctions$junctionEndName %in%
-    uniqueJunctions$junctionEndName[uniqueJunctions$annotatedJunction]
-  uniqueJunctions <- correctJunctionFromPrediction(uniqueJunctions, verbose)
-  start.ptm <- proc.time()
-  readClassListSpliced <- constructSplicedReadClassTables(
-    uniqueJunctions = uniqueJunctions,
-    unlisted_junctions = unlisted_junctions,
-    readGrgList = readGrgList,
-    stranded = stranded)
-  end.ptm <- proc.time()
-  if (verbose)
-    message("Finished create transcript models (read classes) for reads with
-    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-  return(readClassListSpliced)
 }
 
 
