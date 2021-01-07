@@ -29,8 +29,19 @@ isore.constructReadClasses <- function(readGrgList,
   end.ptm <- proc.time()
   if (verbose) message("Finished creating junction list with splice motif
         in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+  
+  GenomeInfoDb::seqlevels(readGrgList) <-
+    unique(c(GenomeInfoDb::seqlevels(readGrgList),
+             GenomeInfoDb::seqlevels(annotationGrangesList)))
+  GenomeInfoDb::seqlevels(annotationGrangesList) <- 
+    GenomeInfoDb::seqlevels(readGrgList)
+  readClassListSpliced <- createModelforJunctionReads(
+    readGrgList, annotationGrangesList, unlisted_junctions,
+    uniqueJunctions, stranded, verbose)
+  # seqlevels are made equal (added for chromosomes missing in any of them)
+  
   exonsByReadClass <- generateExonsByReadClass(readGrgList,
-                                               annotationGrangesList, unlisted_junctions, uniqueJunctions,
+                                               annotationGrangesList, readClassListSpliced,
                                                stranded, verbose)
   counts <- matrix(mcols(exonsByReadClass)$readCount,
                    dimnames = list(names(exonsByReadClass), runName))
@@ -166,17 +177,8 @@ spliceStrand <- function(motif) {
 
 #' generate exonByReadClass
 #' @noRd
-generateExonsByReadClass <- function(readGrgList, annotationGrangesList, 
-                                     unlisted_junctions, uniqueJunctions, stranded, verbose){
-  GenomeInfoDb::seqlevels(readGrgList) <-
-    unique(c(GenomeInfoDb::seqlevels(readGrgList),
-             GenomeInfoDb::seqlevels(annotationGrangesList)))
-  GenomeInfoDb::seqlevels(annotationGrangesList) <- 
-    GenomeInfoDb::seqlevels(readGrgList)
-  readClassListSpliced <- createModelforJunctionReads(
-    readGrgList, annotationGrangesList, unlisted_junctions,
-    uniqueJunctions, stranded, verbose)
-  # seqlevels are made equal (added for chromosomes missing in any of them)
+generateExonsByReadClass <- function(readGrgList, annotationGrangesList, readClassListSpliced, stranded, verbose){
+
   start.ptm <- proc.time()
   singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
                             use.names = FALSE)
