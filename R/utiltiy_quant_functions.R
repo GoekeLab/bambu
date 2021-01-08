@@ -55,11 +55,13 @@ run_parallel <-
     function(g, conv, bias, minvalue, maxiter, readClassDt) {
     tmp <- unique(readClassDt[gene_sid == g])
     print(g)
+    multiMap <- unique(tmp[, .(read_class_sid, multi_align)], 
+            by = NULL)[order(read_class_sid)]$multi_align
     n.obs <- unique(tmp[, .(read_class_sid, nobs)], 
             by = NULL)[order(read_class_sid)]$nobs
     K <- as.numeric(sum(n.obs))
     n.obs <- as.numeric(n.obs)/K
-    aMatList <- formatAmat(tmp)
+    aMatList <- formatAmat(tmp, multiMap)
     a_mat <- aMatList[["combined"]]
     lambda <- sqrt(mean(n.obs))#suggested by Jiang and Salzman
     out <- initialiseOutput(a_mat, g, K, n.obs) 
@@ -96,7 +98,7 @@ run_parallel <-
 
 # This function generates the wide-format a matrix
 #' @noRd
-formatAmat <- function(tmp){
+formatAmat <- function(tmp, multiMap){
         tmp_wide <- dcast(tmp[order(nobs)],  tx_ori + 
             fullTx ~ read_class_sid, value.var = "aval")
         tmp_wide <- tmp_wide[CJ(tx_ori = unique(tmp_wide$tx_ori),
@@ -105,7 +107,7 @@ formatAmat <- function(tmp){
         a_mat_full <- setDF(tmp_wide[which(fullTx)][,-c(1:2),with = FALSE])
         a_mat_partial <- setDF(tmp_wide[which(!fullTx)][,-c(1:2),with = FALSE])
         a_mat_unique <- a_mat <- a_mat_full + a_mat_partial
-        a_mat_unique[,apply(a_mat_unique > 0,2,sum) > 1] <- 0
+        a_mat_unique[, which(multiMap)] <- 0
         rownames(a_mat) <- rownames(a_mat_partial) <- rownames(a_mat_full) <-
             rownames(a_mat_unique) <- unique(tmp_wide$tx_ori)
         return(list(combined = a_mat, 
