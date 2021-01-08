@@ -2,7 +2,8 @@
 #' @param bamFile bamFile
 #' @inheritParams bambu
 #' @noRd
-prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
+prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, 
+                               seqlevels = NULL) {
     if (methods::is(bamFile, "BamFile")) {
         if (!is.null(yieldSize)) {
             Rsamtools::yieldSize(bamFile) <- yieldSize
@@ -18,7 +19,6 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
         bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
     }
     bf <- open(bamFile)
-    # readGrgList <- GenomicRanges::GRangesList()
     readGrgList <- list()
     counter <- 1
     while (Rsamtools::isIncomplete(bf)) {
@@ -38,8 +38,13 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
     } else {
         readGrgList <- readGrgList[[1]]
     }
-    readGrgList <- readGrgList[GenomicRanges::width(readGrgList) > 1]
     # remove microexons of width 1bp from list
+    readGrgList <- readGrgList[GenomicRanges::width(readGrgList) > 1]
+    if(!is.null(seqlevels)) { # only keep ranges from seqlevels provided
+        readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
+                                          value = seqlevels,
+                                          pruning.mode = "coarse")
+    }
     mcols(readGrgList)$id <- seq_along(readGrgList)
     return(readGrgList)
 }
