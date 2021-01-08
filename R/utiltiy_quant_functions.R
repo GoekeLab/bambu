@@ -78,12 +78,9 @@ run_parallel <-
     cids <- which(apply(a_mat,2,sum) != 0)
     a_mat <- a_mat[,cids]
     n.obs <- n.obs[cids]
-    aMatList[["full"]] <-
-        updateAmat(aMatList[["full"]], rids, cids)
-    aMatList[["partial"]] <-
-        updateAmat(aMatList[["partial"]], rids, cids)
-    aMatList[["unique"]] <-
-        updateAmat(aMatList[["unique"]], rids, cids)
+    aMatList[["full"]] <- aMatList[["full"]][rids, cids]
+    aMatList[["partial"]] <- aMatList[["partial"]][rids, cids]
+    aMatList[["unique"]] <- aMatList[["unique"]][rids, cids]
     if (is.null(nrow(a_mat))) {
         out[[1]][rids]$counts <- K*n.obs
     }else{
@@ -119,15 +116,20 @@ formatAmat <- function(tmp, multiMap){
 # This function generates a_mat values for all transcripts 
 #' @noRd
 modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
+        tmp[, multi_align := (length(unique(tx_sid)) > 1),
+            by = list(read_class_sid, gene_sid)]
         if (!d_mode) {
             tmp[, aval := 1]
             return(tmp)
         }
-        tmp[, multi_align := (length(unique(tx_sid)) > 1), 
-            by = list(read_class_sid, gene_sid)]
-        tmp[which(multi_align) , aval := ifelse(fullTx, 1 - 
+        tmp[which(multi_align) , aval := ifelse(fullTx, 1 -
             sum(.SD[which(!fullTx)]$rc_width*d_rate/1000),
             rc_width*d_rate/1000), by = list(gene_sid,tx_ori)]
+        if (d_rate == 0) {
+             tmp[, par_status := all(!fullTx & multi_align),
+             by = list(read_class_sid, gene_sid)]
+             tmp[which(par_status), aval := 0.01]
+        }
         tmp[, aval := pmax(pmin(aval,1),0)] #d_rate should be contained to 0-1
         tmp[multi_align & fullTx,
             aval := pmin(1,pmax(aval,rc_width*d_rate/1000))]
@@ -148,11 +150,6 @@ initialiseOutput <- function(a_mat, g, K, n.obs){
                 gene_sid = g,ntotal = as.numeric(K))))#pre-define output
 }
 
-#' @noRd
-updateAmat <- function(a_mat, rids, cids){
-    return(a_mat[rids, cids])
-}
-
 # This function generates the estimates for overall, full, partial, and unique
 # estimates
 #' @noRd
@@ -165,7 +162,7 @@ updateOutput <- function(est_output, a_mat, rids, cids,
     est_output[["PartialLengthCounts"]] <- getFullandPartialEstimates(
         aMatList[["partial"]], a_mat, est_output, n.obs)
     est_output[["UniqueCounts"]] <- getFullandPartialEstimates(
-        aMatList[["unique"]], a_mat, est_output, n.obs)
+        a_mat = aMatList[["unique"]], a_mat_sum = a_mat, est_output, n.obs)
     out <- modifyQuantOut(est_output, a_mat, rids, cids, out, K)
     return(out)
 }
