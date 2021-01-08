@@ -33,7 +33,7 @@ bambu.processReads <- function(reads, readClass.file, annotations, genomeSequenc
     reads <- Rsamtools::BamFileList(reads, yieldSize = yieldSize)
     names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
   }
-  
+  genomeSequence <- checkInputSequence(genomeSequence)
   if (!verbose) message("Start generating read class files")
   readClassList <- BiocParallel::bplapply(names(reads),
                                           function(bamFileName) {
@@ -53,11 +53,34 @@ bambu.processReads <- function(reads, readClass.file, annotations, genomeSequenc
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                      readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE) {
-  readGrgList <- prepareDataFromBam(bam.file[[1]],
-                                    verbose = verbose)
+  readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
+  #check seqlevels for consistency, drop ranges not present in genomeSequence
+  refSeqLevels <-  GenomeInfoDb::seqlevels(genomeSequence)
   if (length(intersect(GenomeInfoDb::seqlevels(readGrgList),
                        GenomeInfoDb::seqlevels(annotations))) == 0)
     stop("Error: please provide annotation with matched seqlevel styles.")
+  if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
+           GenomeInfoDb::seqlevels(annotationGrangesList))) 
+    message("not all chromosomes present in reference annotations,
+            annotations might be incomplete. Please compare objects
+            on the same reference")
+  if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% refSeqLevels)) {
+    message("not all chromosomes from reads present in reference genome 
+    sequence, reads without reference chromosome sequence are dropped")
+    readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
+                                               value =  refSeqLevels,
+                                               pruning.mode = "coarse")
+    mcols(readGrgList)$id <- seq_along(readGrgList) # reassign Ids after seqlevels are dropped
+  }
+  if (!all(GenomeInfoDb::seqlevels(annotations) %in% refSeqLevels)) {
+    message("not all chromosomes from annotations present in reference genome 
+    sequence, annotations without reference chrosomomse sequence are dropped")
+    annotations <- GenomeInfoDb::keepSeqlevels(annotations,
+                                               value = refSeqLevels,
+                                               pruning.mode = "coarse")
+  }
+  
+
   se <- isore.constructReadClasses(
     readGrgList = readGrgList,
     runName = names(bam.file)[1],
