@@ -60,7 +60,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                        GenomeInfoDb::seqlevels(annotations))) == 0)
     stop("Error: please provide annotation with matched seqlevel styles.")
   if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
-           GenomeInfoDb::seqlevels(annotationGrangesList))) 
+           GenomeInfoDb::seqlevels(annotations))) 
     message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
@@ -80,7 +80,14 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                                pruning.mode = "coarse")
   }
   
-
+  #### NEXT STEPS: split junctionTable creation and read class creation
+  ############### make code simpler, less memory footprint?
+  ############### reorganise code and files, just 1 utitily file for processReads
+  #unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
+  # uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
+  #                                                 annotations,genomeSequence, 
+  #                                                 stranded = stranded,
+  #                                                verbose = verbose)
   se <- isore.constructReadClasses(
     readGrgList = readGrgList,
     runName = names(bam.file)[1],
