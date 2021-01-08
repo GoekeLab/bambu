@@ -1,9 +1,68 @@
+#' Isoform reconstruction using genomic alignments
+#' @param readGrgList readGrgList
+#' @param runName runName
+#' @param stranded stranded
+#' @inheritParams bambu
+#' @noRd
+isore.constructJunctionTables <- function(unlisted_junctions, annotations,
+                                          genomeSequence, stranded = FALSE, 
+                                          verbose = FALSE) {
+
+  start.ptm <- proc.time()
+  uniqueJunctions <- createJunctionTable(unlisted_junctions,
+                                         genomeSequence = genomeSequence)
+  end.ptm <- proc.time()
+  if (verbose) message("Finished creating junction list with splice motif
+        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+  
+  uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList, 
+                                                 use.ids = FALSE))
+  strand(uniqueJunctions) <- junctionStrandCorrection(uniqueJunctions,
+                                                      unlisted_junctions, 
+                                                      uniqueAnnotatedIntrons,
+                                                      stranded = stranded, 
+                                                      verbose = verbose)
+  
+  mcols(uniqueJunctions) <- tibble(as.data.frame(uniqueJunctions)) %>% 
+    mutate(annotatedJunction = (!is.na(GenomicRanges::match(uniqueJunctions, uniqueAnnotatedIntrons)))) %>% group_by(seqnames) %>% 
+    mutate(annotatedStart = start %in% start[annotatedJunction],
+           annotatedEnd = end %in% end[annotatedJunction]) %>% ungroup() %>%
+    select(score, spliceMotif, spliceStrand, junctionStartName, junctionEndName,
+           startScore, endScore, id, annotatedJunction, annotatedStart, annotatedEnd)
+  
+  uniqueJunctions <- correctJunctionFromPrediction(uniqueJunctions, verbose)
+  
+  start.ptm <- proc.time()
+  readClassListSpliced <- constructSplicedReadClassTables(
+    uniqueJunctions = uniqueJunctions,
+    unlisted_junctions = unlisted_junctions,
+    readGrgList = readGrgList,
+    stranded = stranded)
+  end.ptm <- proc.time()
+  if (verbose)
+    message("Finished create transcript models (read classes) for reads with
+    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
+  
+  exonsByReadClass <- generateExonsByReadClass(readGrgList, 
+                                               annotationGrangesList, 
+                                               readClassListSpliced, 
+                                               stranded, verbose)
+  counts <- matrix(mcols(exonsByReadClass)$readCount,
+                   dimnames = list(names(exonsByReadClass), runName))
+  colDataDf <- DataFrame(name = runName, row.names = runName)
+  mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c("chr.rc", 
+                                                         "strand.rc", "intronStarts", "intronEnds", "confidenceType")]
+  se <- SummarizedExperiment(assays = SimpleList(counts = counts),
+                             rowRanges = exonsByReadClass, colData = colDataDf)
+  return(se)
+}
+
+
 
 #' Isoform reconstruction using genomic alignments
 #' @param readGrgList readGrgList
 #' @param runName runName
 #' @param stranded stranded
-#' @param quickMode quickMode
 #' @inheritParams bambu
 #' @noRd
   isore.constructReadClasses <- function(readGrgList, runName = "sample1", 
@@ -18,23 +77,23 @@
   if (verbose) message("Finished creating junction list with splice motif
         in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   
-  # all seqlevels should be consistent, and drop those not in uniqueJunctions
-  if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
-           GenomeInfoDb::seqlevels(uniqueJunctions))) {
-    unlisted_junctions <- keepSeqLevelsByReference(unlisted_junctions, uniqueJunctions)
-    readGrgList <- keepSeqLevelsByReference(readGrgList, uniqueJunctions)
-  } # the seqlevels will be made comparable for all ranges,
-  if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
-           GenomeInfoDb::seqlevels(annotationGrangesList))) 
-    message("not all chromosomes present in reference annotations,
-            annotations might be incomplete. Please compare objects
-            on the same reference")
- combinedSeqLevels <- unique(c(GenomeInfoDb::seqlevels(readGrgList),
-                               GenomeInfoDb::seqlevels(annotationGrangesList)))
-  GenomeInfoDb::seqlevels(readGrgList) <- combinedSeqLevels
-  GenomeInfoDb::seqlevels(annotationGrangesList) <- combinedSeqLevels
-  GenomeInfoDb::seqlevels(unlisted_junctions) <- combinedSeqLevels
-  GenomeInfoDb::seqlevels(uniqueJunctions) <- combinedSeqLevels
+ #  # all seqlevels should be consistent, and drop those not in uniqueJunctions
+ #  if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
+ #           GenomeInfoDb::seqlevels(uniqueJunctions))) {
+ #    unlisted_junctions <- keepSeqLevelsByReference(unlisted_junctions, uniqueJunctions)
+ #    readGrgList <- keepSeqLevelsByReference(readGrgList, uniqueJunctions)
+ #  } # the seqlevels will be made comparable for all ranges,
+ #  if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
+ #           GenomeInfoDb::seqlevels(annotationGrangesList))) 
+ #    message("not all chromosomes present in reference annotations,
+ #            annotations might be incomplete. Please compare objects
+ #            on the same reference")
+ # combinedSeqLevels <- unique(c(GenomeInfoDb::seqlevels(readGrgList),
+ #                               GenomeInfoDb::seqlevels(annotationGrangesList)))
+ #  GenomeInfoDb::seqlevels(readGrgList) <- combinedSeqLevels
+ #  GenomeInfoDb::seqlevels(annotationGrangesList) <- combinedSeqLevels
+ #  GenomeInfoDb::seqlevels(unlisted_junctions) <- combinedSeqLevels
+ #  GenomeInfoDb::seqlevels(uniqueJunctions) <- combinedSeqLevels
   uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList, 
                                                  use.ids = FALSE))
   strand(uniqueJunctions) <- junctionStrandCorrection(uniqueJunctions,
@@ -106,12 +165,16 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = FALSE) {
 createJunctionTable <- function(unlisted_junctions,
                                 genomeSequence = NULL) {
   # License note: This function is adopted from the GenomicAlignments package 
-  genomeSequence <- checkInputSequence(genomeSequence)
+  #genomeSequence <- checkInputSequence(genomeSequence)
   if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in%
            GenomeInfoDb::seqlevels(genomeSequence))) {
     message("not all chromosomes present in reference genome sequence,
-            ranges are dropped")
-    unlisted_junctions <- keepSeqLevelsByReference(unlisted_junctions, genomeSequence)
+            ranges are dropped (createJunctionTable())")
+    unlisted_junctions <- GenomeInfoDb::keepSeqlevels(unlisted_junctions,
+                                                      value = GenomeInfoDb::seqlevels(unlisted_junctions)[
+                                                        GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
+                                                          GenomeInfoDb::seqlevels(genomeSequence)],
+                                                      pruning.mode = "coarse")
   }
   
   uniqueJunctions <- sort(unique(BiocGenerics::unstrand(unlisted_junctions)))
@@ -152,16 +215,17 @@ createJunctionTable <- function(unlisted_junctions,
   return(uniqueJunctions)
 }
 
-#' Keep only the seqlevels that also occur in the reference granges
-#' @noRd
-keepSeqLevelsByReference <- function(gr, ref) {
-  gr <- GenomeInfoDb::keepSeqlevels(gr,
-                                    value = GenomeInfoDb::seqlevels(gr)[
-                                      GenomeInfoDb::seqlevels(gr) %in% 
-                                        GenomeInfoDb::seqlevels(ref)],
-                                    pruning.mode = "coarse")
-  return(gr)
-}
+# can be removed since not used anymore
+#' #' Keep only the seqlevels that also occur in the reference granges
+#' #' @noRd
+#' keepSeqLevelsByReference <- function(gr, ref) {
+#'   gr <- GenomeInfoDb::keepSeqlevels(gr,
+#'                                     value = GenomeInfoDb::seqlevels(gr)[
+#'                                       GenomeInfoDb::seqlevels(gr) %in% 
+#'                                         GenomeInfoDb::seqlevels(ref)],
+#'                                     pruning.mode = "coarse")
+#'   return(gr)
+#' }
 
 #' Function to create a object that can be queried by getSeq
 #' Either from fa file, or BSGenome object
