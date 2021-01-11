@@ -79,24 +79,23 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                                value = refSeqLevels,
                                                pruning.mode = "coarse")
   }
-  
-  #### NEXT STEPS: split junctionTable creation and read class creation
-  ############### make code simpler, less memory footprint?
-  ############### reorganise code and files, just 1 utitily file for processReads
-  #unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
-  # uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-  #                                                 annotations,genomeSequence, 
-  #                                                 stranded = stranded,
-  #                                                verbose = verbose)
+  # create error and strand corrected junction tables
+  unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
+  uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
+                                                   annotations,genomeSequence, 
+                                                   stranded = stranded,
+                                                   verbose = verbose)
+  # create SE object with reconstructed readClasses
   se <- isore.constructReadClasses(
     readGrgList = readGrgList,
+    unlisted_junctions = unlisted_junctions,
+    uniqueJunctions = uniqueJunctions,
     runName = names(bam.file)[1],
-    annotationGrangesList = annotations,
-    genomeSequence = genomeSequence,
+    annotations = annotations,
     stranded = stranded,
     verbose = verbose)
-  GenomeInfoDb::seqlevels(se) <- unique(c(GenomeInfoDb::seqlevels(se),
-                                          GenomeInfoDb::seqlevels(annotations)))
+  GenomeInfoDb::seqlevels(se) <- refSeqLevels
+  
   if (!is.null(readClass.outputDir)) {
     readClassFile <- paste0(readClass.outputDir,names(bam.file),
                             "_readClassSe.rds")
