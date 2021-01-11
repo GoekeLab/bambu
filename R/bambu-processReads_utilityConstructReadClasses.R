@@ -43,8 +43,8 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' reconstruct spliced transripts
 #' @importFrom unstrsplit getFromNamespace
 #' @noRd
-constructSplicedReadClassTables <- function(uniqueJunctions,
-                                            unlisted_junctions, readGrgList, stranded = FALSE) {
+constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, 
+                                            readGrgList, stranded = FALSE) {
     options(scipen = 999)
     uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
     if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
@@ -52,8 +52,8 @@ constructSplicedReadClassTables <- function(uniqueJunctions,
             Please report error")
     readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
     firstseg <- start(PartitioningByWidth(readGrgList))
-    allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
-                                                       uniqueJunctions, type = "equal", ignore.strand = TRUE)
+    allJunctionToUniqueJunctionOverlap <- match(unlisted_junctions,
+                                                uniqueJunctions, ignore.strand = TRUE)
     intronStartTMP <- createIntronTmp(uniqueJunctions,
                                       allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[1]]
     intronEndTMP <- createIntronTmp(uniqueJunctions,
@@ -117,8 +117,7 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
     # confidence type (note: can be changed to integer encoding)
     readTable[, "confidenceType"] <- "highConfidenceJunctionReads"
     lowConfidenceReads <- which(sum(is.na(splitAsList(
-            uniqueJunctions$mergedHighConfJunctionId[subjectHits(
-            allJunctionToUniqueJunctionOverlap)],
+            uniqueJunctions$mergedHighConfJunctionId[allJunctionToUniqueJunctionOverlap],
             mcols(unlisted_junctions)$id))) > 0)
     ## currently the 80% and 20% quantile of reads is used to 
     ## identify start and end sites
@@ -139,8 +138,7 @@ correctReadTableStrand <- function(uniqueJunctions,
     unlisted_junctions, allJunctionToUniqueJunctionOverlap){
     
         unlisted_junctions_strand <-
-            uniqueJunctions$strand.mergedHighConfJunction[subjectHits(
-                allJunctionToUniqueJunctionOverlap)]
+            uniqueJunctions$strand.mergedHighConfJunction[allJunctionToUniqueJunctionOverlap]
         plusCount <- as.integer(sum(splitAsList( unlisted_junctions_strand,
             mcols(unlisted_junctions)$id) == "+"))
         minusCount <- as.integer(sum(splitAsList(unlisted_junctions_strand,
@@ -158,11 +156,11 @@ createIntronTmp <- function(uniqueJunctions,
     allJunctionToUniqueJunctionOverlap,unlisted_junctions){
     intronStartTMP <-
         start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
-            subjectHits(allJunctionToUniqueJunctionOverlap)]])
+            allJunctionToUniqueJunctionOverlap]])
     
     intronEndTMP <-
         end(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
-            subjectHits(allJunctionToUniqueJunctionOverlap)]])
+            allJunctionToUniqueJunctionOverlap]])
     
     exon_0size <- 
         which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
@@ -202,25 +200,6 @@ createExonsByReadClass <- function(readTable){
     return(exonsByReadClass)
 }
 
-#' initiate the hits dataframe
-#' @param hitsWithin hitsWithin
-#' @param grangesReference grangesReference
-#' @param stranded stranded
-#' @noRd
-initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
-    hitsDF <- as_tibble(hitsWithin)
-    hitsDF$chr <-
-        as.factor(seqnames(grangesReference)[subjectHits(hitsWithin)])
-    hitsDF$start <- start(grangesReference)[subjectHits(hitsWithin)]
-    hitsDF$end <- end(grangesReference)[subjectHits(hitsWithin)]
-    if (stranded == FALSE) {
-        hitsDF$strand <- "*"
-    } else {
-        hitsDF$strand <-
-            as.character(strand(grangesReference)[subjectHits(hitsWithin)])
-    }
-    return(hitsDF)
-}
 
 
 #' generate exonByReadClass
@@ -304,4 +283,24 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     mcols(exByReadClassUnspliced) <- hitsDF
     # seqlevels(exByReadClassUnspliced) <- seqLevelList
     return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
+}
+
+#' initiate the hits dataframe
+#' @param hitsWithin hitsWithin
+#' @param grangesReference grangesReference
+#' @param stranded stranded
+#' @noRd
+initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
+    hitsDF <- as_tibble(hitsWithin)
+    hitsDF$chr <-
+        as.factor(seqnames(grangesReference)[subjectHits(hitsWithin)])
+    hitsDF$start <- start(grangesReference)[subjectHits(hitsWithin)]
+    hitsDF$end <- end(grangesReference)[subjectHits(hitsWithin)]
+    if (stranded == FALSE) {
+        hitsDF$strand <- "*"
+    } else {
+        hitsDF$strand <-
+            as.character(strand(grangesReference)[subjectHits(hitsWithin)])
+    }
+    return(hitsDF)
 }
