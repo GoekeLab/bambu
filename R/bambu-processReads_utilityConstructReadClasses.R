@@ -20,6 +20,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     mcols(reads.singleExon)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
     
+  ###### HERE #####  readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
     uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
     if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
         warning("read Id not sorted, can result in wrong assignments.
@@ -59,28 +60,19 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, 
                                             readGrgList, stranded = FALSE) {
     options(scipen = 999)
-    # uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
-    # if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
-    #     warning("read Id not sorted, can result in wrong assignments.
-    #         Please report error")
-    # readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
-    #firstseg <- start(PartitioningByWidth(readGrgList))
     allToUniqueJunctionMatch <- match(unlisted_junctions,
                                                 uniqueJunctions, ignore.strand = TRUE)
-    intronStartTMP <- createIntronTmp(uniqueJunctions,
-                                      allToUniqueJunctionMatch,unlisted_junctions)[[1]]
-    intronEndTMP <- createIntronTmp(uniqueJunctions,
-                                    allToUniqueJunctionMatch,unlisted_junctions)[[2]]
+    correctedJunctionMatches <- match(uniqueJunctions$mergedHighConfJunctionIdAll_noNA[allToUniqueJunctionMatch], names(uniqueJunctions))
+    
+    unlisted_junctions <- correctIntronRanges(unlisted_junctions, 
+                                              uniqueJunctions, 
+                                              correctedJunctionMatches)
+   # intronEndTMP <- createIntronTmp(uniqueJunctions,
+#                                    allToUniqueJunctionMatch,unlisted_junctions)[[2]]
   
-    # if (!stranded) {
-    #     readStrand <- correctReadStrand(uniqueJunctions,
-    #                                          unlisted_junctions, allToUniqueJunctionMatch)
-    # }else{
-    #     readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
-    # }
     readTable <- createReadTable(
-        uniqueJunctions, unlisted_junctions, readGrgList, intronStartTMP,
-        intronEndTMP, allToUniqueJunctionMatch)
+        uniqueJunctions, unlisted_junctions, readGrgList,
+        allToUniqueJunctionMatch)
     exonsByReadClass <- createExonsByReadClass(readTable)
     ## combine new transcripts with annotated transcripts
     ## based on identical intron pattern
@@ -93,15 +85,13 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 
 
 #' @noRd
-createIntronTmp <- function(uniqueJunctions,
-                            allToUniqueJunctionMatch,unlisted_junctions){
+correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
+                                correctedJunctionMatches){
     intronStartTMP <-
-        start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
-            allToUniqueJunctionMatch]])
+        start(uniqueJunctions)[correctedJunctionMatches]
     
     intronEndTMP <-
-        end(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
-            allToUniqueJunctionMatch]])
+        end(uniqueJunctions)[correctedJunctionMatches]
     
     exon_0size <- 
         which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
@@ -111,8 +101,12 @@ createIntronTmp <- function(uniqueJunctions,
     if (length(exon_0size))
         intronStartTMP[-1][exon_0size] <-
         intronEndTMP[-length(intronEndTMP)][exon_0size] + 1
-    return(list(intronStartTMP, intronEndTMP))
+    
+    start(unlisted_junctions) <- intronStartTMP
+    end(unlisted_junctions) <- intronEndTMP
+    return(unlisted_junctions)
 }
+
 #' @noRd
 correctReadStrand <- function(uniqueJunctions, unlisted_junctions, 
                               allToUniqueJunctionMatch, stranded=FALSE){
@@ -140,14 +134,12 @@ correctReadStrand <- function(uniqueJunctions, unlisted_junctions,
 #' @param unlisted_junctions unlisted_junctions
 #' @param readGrgList reads GRangesList
 #' @param firstseg firstseg
-#' @param intronStartTMP intronStartTMP
-#' @param intronEndTMP intronEndTMP
 #' @param readStrand readStrand
 #' @param allToUniqueJunctionMatch
 #' allToUniqueJunctionMatch
 #' @noRd
 createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
-                            intronStartTMP, intronEndTMP, allToUniqueJunctionMatch) {
+                            allToUniqueJunctionMatch) {
     readTable <- as_tibble(data.frame(matrix(ncol = 7, 
         nrow = length(readGrgList))))
     colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
@@ -157,13 +149,13 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
     # intron start and end
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     readTable[, "intronStarts"] <- unstrsplit(splitAsList(as.character(
-        intronStartTMP), mcols(unlisted_junctions)$id), sep = ",")
+        start(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
     readTable[, "intronEnds"] <- unstrsplit(splitAsList(as.character(
-        intronEndTMP), mcols(unlisted_junctions)$id), sep = ",")
+        end(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
     # start and end
-    intronStartCoordinatesInt <- as.integer(min(splitAsList(intronStartTMP,
+    intronStartCoordinatesInt <- as.integer(min(splitAsList(start(unlisted_junctions),
             mcols(unlisted_junctions)$id)) - 2)
-    intronEndCoordinatesInt <- as.integer(max(splitAsList(intronEndTMP,
+    intronEndCoordinatesInt <- as.integer(max(splitAsList(end(unlisted_junctions),
             mcols(unlisted_junctions)$id)) + 2)
     readTable[, "start"] <- pmin(start(readRanges), intronStartCoordinatesInt)
     readTable[, "end"] <- pmax(end(readRanges), intronEndCoordinatesInt)
