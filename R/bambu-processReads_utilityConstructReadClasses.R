@@ -222,6 +222,42 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
     return(hitsDF)
 }
 
+
+#' generate exonByReadClass
+#' @noRd
+generateExonsByReadClass <- function(readGrgList, annotationGrangesList, readClassListSpliced, stranded, verbose){
+    
+    start.ptm <- proc.time()
+    singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
+                              use.names = FALSE)
+    mcols(singleExonReads)$id <- mcols(readGrgList[
+        elementNROWS(readGrgList) == 1])$id
+    referenceExons <- unique(c(GenomicRanges::granges(unlist(
+        readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
+                                 "highConfidenceJunctionReads" &
+                                 mcols(readClassListSpliced)$strand.rc != "*"], use.names = FALSE)), 
+        GenomicRanges::granges(unlist(annotationGrangesList,
+                                      use.names = FALSE))))
+    readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
+        granges = singleExonReads, grangesReference = referenceExons,
+        confidenceType = "unsplicedWithin", stranded = stranded)
+    singleExonReads <- singleExonReads[!mcols(singleExonReads)$id %in%
+                                           readClassListUnsplicedWithAnnotation$readIds]
+    referenceExons <- reduce(singleExonReads, ignore.strand = !stranded)
+    readClassListUnsplicedReduced <- constructUnsplicedReadClasses(
+        granges = singleExonReads, grangesReference = referenceExons,
+        confidenceType = "unsplicedNew", stranded = stranded)
+    end.ptm <- proc.time()
+    if (verbose) message("Finished create single exon transcript models
+        (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    exonsByReadClass <- c(readClassListSpliced,
+                          readClassListUnsplicedWithAnnotation$exonsByReadClass,
+                          readClassListUnsplicedReduced$exonsByReadClass)
+    return(exonsByReadClass)
+}
+
+
+
 #' reconstruct read classes using unspliced reads that fall
 #' within exons from annotations
 #' @noRd
