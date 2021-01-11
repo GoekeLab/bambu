@@ -1,6 +1,66 @@
 
 
 
+#' correct junction from prediction
+#' @param uniqueJunctions uniqueJunctions
+#' @param verbose verbose
+#' @noRd
+junctionErrorCorrection <- function(uniqueJunctions, verbose) {
+    start.ptm <- proc.time()
+    if (sum(uniqueJunctions$annotatedJunction) > 5000 &
+        sum(!uniqueJunctions$annotatedJunction) > 4000) {
+        uniqJunctionsNmodels <-
+            findUniqueJunctions(uniqueJunctions, NULL, verbose)
+        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
+        junctionModel <- uniqJunctionsNmodels$predictSpliceSites[[2]]
+    } else {
+        junctionModel <- standardJunctionModels_temp
+        uniqJunctionsNmodels <-
+            findUniqueJunctions(uniqueJunctions, junctionModel, verbose)
+        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
+        message("Junction correction with not enough data,
+            precalculated model is used")
+    }
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Model to predict true splice sites built in ",
+                round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    start.ptm <- proc.time()
+    uniqueJunctions <- findHighConfidenceJunctions( junctions = uniqueJunctions,
+                                                    junctionModel = junctionModel, verbose = verbose)
+    uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- 
+        uniqueJunctions$mergedHighConfJunctionId
+    uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
+        is.na(uniqueJunctions$mergedHighConfJunctionId)] <- 
+        names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
+    uniqueJunctions$strand.mergedHighConfJunction <- 
+        as.character(strand(
+            uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Finished correcting junction based on set of high confidence
+            junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    return(uniqueJunctions)
+}
+
+
+#' find unique junctions
+#' @noRd
+findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){
+    predictSpliceSites <- predictSpliceJunctions(
+        annotatedJunctions = uniqueJunctions,
+        junctionModel = junctionModel,
+        verbose = verbose)
+    uniqueJunctions <- predictSpliceSites[[1]][, c(
+        "score", "spliceMotif",
+        "spliceStrand", "junctionStartName", "junctionEndName",
+        "startScore", "endScore", "annotatedJunction",
+        "annotatedStart", "annotatedEnd")]
+    return(list("uniqueJunctions" = uniqueJunctions, 
+                "predictSpliceSites" = predictSpliceSites))
+}
+
+
 
 #' Test splice sites
 #' @noRd
