@@ -104,6 +104,46 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = FALSE) {
 }
 
 
+#' reconstruct spliced transripts
+#' @importFrom unstrsplit getFromNamespace
+#' @noRd
+constructSplicedReadClassTables <- function(uniqueJunctions,
+                                            unlisted_junctions, readGrgList, stranded = FALSE) {
+  options(scipen = 999)
+  uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
+  if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
+    warning("read Id not sorted, can result in wrong assignments.
+            Please report error")
+  readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
+  firstseg <- start(PartitioningByWidth(readGrgList))
+  allJunctionToUniqueJunctionOverlap <- findOverlaps(unlisted_junctions,
+                                                     uniqueJunctions, type = "equal", ignore.strand = TRUE)
+  intronStartTMP <- createIntronTmp(uniqueJunctions,
+                                    allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[1]]
+  intronEndTMP <- createIntronTmp(uniqueJunctions,
+                                  allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[2]]
+  if (!stranded) {
+    readStrand <- correctReadTableStrand(uniqueJunctions,
+                                         unlisted_junctions, allJunctionToUniqueJunctionOverlap)
+  }else{
+    readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
+  }
+  readTable <- createReadTable(
+    uniqueJunctions, unlisted_junctions, readGrgList,
+    firstseg, intronStartTMP, intronEndTMP, readStrand,
+    allJunctionToUniqueJunctionOverlap)
+  exonsByReadClass <- createExonsByReadClass(readTable)
+  ## combine new transcripts with annotated transcripts
+  ## based on identical intron pattern
+  readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
+                                           intronStarts, intronEnds, confidenceType, readCount)
+  mcols(exonsByReadClass) <- readTable
+  options(scipen = 0)
+  return(exonsByReadClass)
+}
+
+
+
 #' Create Junction tables from unlisted junction granges
 #' @importFrom BiocParallel bppram bpvec
 #' @noRd
