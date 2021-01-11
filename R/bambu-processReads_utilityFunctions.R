@@ -1,60 +1,42 @@
 #' Isoform reconstruction using genomic alignments
-#' @param readGrgList readGrgList
-#' @param runName runName
+#' @param unlisted_junctions unlisted_junctions
+#' @param annotations annotations
+#' @param genomeSequence genomeSequence
 #' @param stranded stranded
+#' @param verbose verbose
 #' @inheritParams bambu
 #' @noRd
 isore.constructJunctionTables <- function(unlisted_junctions, annotations,
                                           genomeSequence, stranded = FALSE, 
                                           verbose = FALSE) {
-
   start.ptm <- proc.time()
+  #summarise junction counts and strand for all reads
   uniqueJunctions <- createJunctionTable(unlisted_junctions,
                                          genomeSequence = genomeSequence)
   end.ptm <- proc.time()
   if (verbose) message("Finished creating junction list with splice motif
         in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   
-  uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList, 
+  uniqueAnnotatedIntrons <- unique(unlistIntrons(annotations, 
                                                  use.ids = FALSE))
+  # correct strand of junctions based on (inferred) strand of reads
   strand(uniqueJunctions) <- junctionStrandCorrection(uniqueJunctions,
                                                       unlisted_junctions, 
                                                       uniqueAnnotatedIntrons,
                                                       stranded = stranded, 
                                                       verbose = verbose)
-  
+  # add annotation labels to junctions
   mcols(uniqueJunctions) <- tibble(as.data.frame(uniqueJunctions)) %>% 
-    mutate(annotatedJunction = (!is.na(GenomicRanges::match(uniqueJunctions, uniqueAnnotatedIntrons)))) %>% group_by(seqnames) %>% 
+    mutate(annotatedJunction = (!is.na(GenomicRanges::match(uniqueJunctions,
+                                                            uniqueAnnotatedIntrons)))) %>% 
+    group_by(seqnames) %>% 
     mutate(annotatedStart = start %in% start[annotatedJunction],
            annotatedEnd = end %in% end[annotatedJunction]) %>% ungroup() %>%
     select(score, spliceMotif, spliceStrand, junctionStartName, junctionEndName,
            startScore, endScore, id, annotatedJunction, annotatedStart, annotatedEnd)
-  
+  # correct junction coordinates using logistic regression classifier
   uniqueJunctions <- correctJunctionFromPrediction(uniqueJunctions, verbose)
-  
-  start.ptm <- proc.time()
-  readClassListSpliced <- constructSplicedReadClassTables(
-    uniqueJunctions = uniqueJunctions,
-    unlisted_junctions = unlisted_junctions,
-    readGrgList = readGrgList,
-    stranded = stranded)
-  end.ptm <- proc.time()
-  if (verbose)
-    message("Finished create transcript models (read classes) for reads with
-    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-  
-  exonsByReadClass <- generateExonsByReadClass(readGrgList, 
-                                               annotationGrangesList, 
-                                               readClassListSpliced, 
-                                               stranded, verbose)
-  counts <- matrix(mcols(exonsByReadClass)$readCount,
-                   dimnames = list(names(exonsByReadClass), runName))
-  colDataDf <- DataFrame(name = runName, row.names = runName)
-  mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c("chr.rc", 
-                                                         "strand.rc", "intronStarts", "intronEnds", "confidenceType")]
-  se <- SummarizedExperiment(assays = SimpleList(counts = counts),
-                             rowRanges = exonsByReadClass, colData = colDataDf)
-  return(se)
+  return(uniqueJunctions)
 }
 
 
