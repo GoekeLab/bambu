@@ -14,6 +14,19 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                                        runName = "sample1", 
                                        annotations, stranded = FALSE, 
                                        verbose = FALSE) {
+    #split reads into single exon and multi exon reads
+    reads.singleExon <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
+                                  use.names = FALSE)
+    mcols(reads.singleExon)$id <- mcols(readGrgList[
+        elementNROWS(readGrgList) == 1])$id
+    
+    uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
+    if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
+        warning("read Id not sorted, can result in wrong assignments.
+            Please report error")
+    #only keep multi exons reads in readGrgList
+    readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
+    
     start.ptm <- proc.time()
     readClassListSpliced <- constructSplicedReadClassTables(
         uniqueJunctions = uniqueJunctions,
@@ -25,7 +38,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     
-    exonsByReadClass <- generateExonsByReadClass(readGrgList, 
+    exonsByReadClass <- generateExonsByReadClass(reads.singleExon, 
                                                  annotations, 
                                                  readClassListSpliced, 
                                                  stranded, verbose)
@@ -46,28 +59,28 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, 
                                             readGrgList, stranded = FALSE) {
     options(scipen = 999)
-    uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
-    if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
-        warning("read Id not sorted, can result in wrong assignments.
-            Please report error")
-    readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
+    # uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
+    # if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
+    #     warning("read Id not sorted, can result in wrong assignments.
+    #         Please report error")
+    # readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
     firstseg <- start(PartitioningByWidth(readGrgList))
-    allJunctionToUniqueJunctionOverlap <- match(unlisted_junctions,
+    allToUniqueJunctionMatch <- match(unlisted_junctions,
                                                 uniqueJunctions, ignore.strand = TRUE)
     intronStartTMP <- createIntronTmp(uniqueJunctions,
-                                      allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[1]]
+                                      allToUniqueJunctionMatch,unlisted_junctions)[[1]]
     intronEndTMP <- createIntronTmp(uniqueJunctions,
-                                    allJunctionToUniqueJunctionOverlap,unlisted_junctions)[[2]]
+                                    allToUniqueJunctionMatch,unlisted_junctions)[[2]]
     if (!stranded) {
         readStrand <- correctReadTableStrand(uniqueJunctions,
-                                             unlisted_junctions, allJunctionToUniqueJunctionOverlap)
+                                             unlisted_junctions, allToUniqueJunctionMatch)
     }else{
         readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
     }
     readTable <- createReadTable(
         uniqueJunctions, unlisted_junctions, readGrgList,
         firstseg, intronStartTMP, intronEndTMP, readStrand,
-        allJunctionToUniqueJunctionOverlap)
+        allToUniqueJunctionMatch)
     exonsByReadClass <- createExonsByReadClass(readTable)
     ## combine new transcripts with annotated transcripts
     ## based on identical intron pattern
@@ -79,6 +92,29 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 }
 
 
+#' @noRd
+createIntronTmp <- function(uniqueJunctions,
+                            allToUniqueJunctionMatch,unlisted_junctions){
+    intronStartTMP <-
+        start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
+            allToUniqueJunctionMatch]])
+    
+    intronEndTMP <-
+        end(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
+            allToUniqueJunctionMatch]])
+    
+    exon_0size <- 
+        which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
+                  mcols(unlisted_junctions)$id[-1] == 
+                  mcols(unlisted_junctions)$id[-length(unlisted_junctions)])
+    
+    if (length(exon_0size))
+        intronStartTMP[-1][exon_0size] <-
+        intronEndTMP[-length(intronEndTMP)][exon_0size] + 1
+    return(list(intronStartTMP, intronEndTMP))
+}
+
+
 #' calculate distance between first and last exon matches
 #' @param uniqueJunctions uniqueJunctions
 #' @param unlisted_junctions unlisted_junctions
@@ -87,12 +123,12 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
 #' @param intronStartTMP intronStartTMP
 #' @param intronEndTMP intronEndTMP
 #' @param readStrand readStrand
-#' @param allJunctionToUniqueJunctionOverlap
-#' allJunctionToUniqueJunctionOverlap
+#' @param allToUniqueJunctionMatch
+#' allToUniqueJunctionMatch
 #' @noRd
 createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
                             firstseg, intronStartTMP, intronEndTMP, readStrand,
-                            allJunctionToUniqueJunctionOverlap) {
+                            allToUniqueJunctionMatch) {
     readTable <- as_tibble(data.frame(matrix(ncol = 7, 
         nrow = length(readGrgList))))
     colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
@@ -117,7 +153,7 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
     # confidence type (note: can be changed to integer encoding)
     readTable[, "confidenceType"] <- "highConfidenceJunctionReads"
     lowConfidenceReads <- which(sum(is.na(splitAsList(
-            uniqueJunctions$mergedHighConfJunctionId[allJunctionToUniqueJunctionOverlap],
+            uniqueJunctions$mergedHighConfJunctionId[allToUniqueJunctionMatch],
             mcols(unlisted_junctions)$id))) > 0)
     ## currently the 80% and 20% quantile of reads is used to 
     ## identify start and end sites
@@ -135,10 +171,10 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
 
 #' @noRd
 correctReadTableStrand <- function(uniqueJunctions,
-    unlisted_junctions, allJunctionToUniqueJunctionOverlap){
+    unlisted_junctions, allToUniqueJunctionMatch){
     
         unlisted_junctions_strand <-
-            uniqueJunctions$strand.mergedHighConfJunction[allJunctionToUniqueJunctionOverlap]
+            uniqueJunctions$strand.mergedHighConfJunction[allToUniqueJunctionMatch]
         plusCount <- as.integer(sum(splitAsList( unlisted_junctions_strand,
             mcols(unlisted_junctions)$id) == "+"))
         minusCount <- as.integer(sum(splitAsList(unlisted_junctions_strand,
@@ -150,28 +186,6 @@ correctReadTableStrand <- function(uniqueJunctions,
     return(readStrand)
 }
 
-
-#' @noRd
-createIntronTmp <- function(uniqueJunctions,
-    allJunctionToUniqueJunctionOverlap,unlisted_junctions){
-    intronStartTMP <-
-        start(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
-            allJunctionToUniqueJunctionOverlap]])
-    
-    intronEndTMP <-
-        end(uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
-            allJunctionToUniqueJunctionOverlap]])
-    
-    exon_0size <- 
-        which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
-        mcols(unlisted_junctions)$id[-1] == 
-            mcols(unlisted_junctions)$id[-length(unlisted_junctions)])
-    
-    if (length(exon_0size))
-        intronStartTMP[-1][exon_0size] <-
-            intronEndTMP[-length(intronEndTMP)][exon_0size] + 1
-    return(list(intronStartTMP, intronEndTMP))
-}
 
 #' @noRd
 createExonsByReadClass <- function(readTable){
@@ -204,13 +218,13 @@ createExonsByReadClass <- function(readTable){
 
 #' generate exonByReadClass
 #' @noRd
-generateExonsByReadClass <- function(readGrgList, annotationGrangesList, readClassListSpliced, stranded, verbose){
+generateExonsByReadClass <- function(reads.singleExon, annotationGrangesList, readClassListSpliced, stranded, verbose){
     
     start.ptm <- proc.time()
-    singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
-                              use.names = FALSE)
-    mcols(singleExonReads)$id <- mcols(readGrgList[
-        elementNROWS(readGrgList) == 1])$id
+    # singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
+    #                           use.names = FALSE)
+    # mcols(singleExonReads)$id <- mcols(readGrgList[
+    #     elementNROWS(readGrgList) == 1])$id
     referenceExons <- unique(c(GenomicRanges::granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
                                  "highConfidenceJunctionReads" &
@@ -218,13 +232,13 @@ generateExonsByReadClass <- function(readGrgList, annotationGrangesList, readCla
         GenomicRanges::granges(unlist(annotationGrangesList,
                                       use.names = FALSE))))
     readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
-        granges = singleExonReads, grangesReference = referenceExons,
+        granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    singleExonReads <- singleExonReads[!mcols(singleExonReads)$id %in%
+    reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
                                            readClassListUnsplicedWithAnnotation$readIds]
-    referenceExons <- reduce(singleExonReads, ignore.strand = !stranded)
+    referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
     readClassListUnsplicedReduced <- constructUnsplicedReadClasses(
-        granges = singleExonReads, grangesReference = referenceExons,
+        granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
