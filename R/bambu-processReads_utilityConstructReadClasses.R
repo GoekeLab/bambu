@@ -72,7 +72,7 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
     intronEndTMP <- createIntronTmp(uniqueJunctions,
                                     allToUniqueJunctionMatch,unlisted_junctions)[[2]]
     if (!stranded) {
-        readStrand <- correctReadTableStrand(uniqueJunctions,
+        readStrand <- correctReadStrand(uniqueJunctions,
                                              unlisted_junctions, allToUniqueJunctionMatch)
     }else{
         readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
@@ -113,6 +113,23 @@ createIntronTmp <- function(uniqueJunctions,
         intronEndTMP[-length(intronEndTMP)][exon_0size] + 1
     return(list(intronStartTMP, intronEndTMP))
 }
+#' @noRd
+correctReadStrand <- function(uniqueJunctions,
+                                   unlisted_junctions, allToUniqueJunctionMatch){
+    
+    unlisted_junctions_strand <-
+        uniqueJunctions$strand.mergedHighConfJunction[allToUniqueJunctionMatch]
+    plusCount <- as.integer(sum(splitAsList( unlisted_junctions_strand,
+                                             mcols(unlisted_junctions)$id) == "+"))
+    minusCount <- as.integer(sum(splitAsList(unlisted_junctions_strand,
+                                             mcols(unlisted_junctions)$id) == "-"))
+    strandJunctionSum <- minusCount - plusCount
+    readStrand <- rep("*", length(strandJunctionSum))
+    readStrand[strandJunctionSum < 0] <- "+"
+    readStrand[strandJunctionSum > 0] <- "-"
+    return(readStrand)
+}
+
 
 
 #' calculate distance between first and last exon matches
@@ -167,23 +184,6 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
         ungroup() %>% arrange(chr, start, end)
     readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
     return(readTable)
-}
-
-#' @noRd
-correctReadTableStrand <- function(uniqueJunctions,
-    unlisted_junctions, allToUniqueJunctionMatch){
-    
-        unlisted_junctions_strand <-
-            uniqueJunctions$strand.mergedHighConfJunction[allToUniqueJunctionMatch]
-        plusCount <- as.integer(sum(splitAsList( unlisted_junctions_strand,
-            mcols(unlisted_junctions)$id) == "+"))
-        minusCount <- as.integer(sum(splitAsList(unlisted_junctions_strand,
-            mcols(unlisted_junctions)$id) == "-"))
-        strandJunctionSum <- minusCount - plusCount
-        readStrand <- rep("*", length(strandJunctionSum))
-        readStrand[strandJunctionSum < 0] <- "+"
-        readStrand[strandJunctionSum > 0] <- "-"
-    return(readStrand)
 }
 
 
