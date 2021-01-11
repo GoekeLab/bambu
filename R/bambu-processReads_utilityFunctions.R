@@ -47,52 +47,11 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
 #' @param stranded stranded
 #' @inheritParams bambu
 #' @noRd
-  isore.constructReadClasses <- function(readGrgList, runName = "sample1", 
-                                         annotationGrangesList, 
-                                         genomeSequence = NULL, stranded = FALSE, 
+  isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
+                                         uniqueJunctions,
+                                         runName = "sample1", 
+                                         annotations, stranded = FALSE, 
                                          verbose = FALSE) {
-  unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
-  start.ptm <- proc.time()
-  uniqueJunctions <- createJunctionTable(unlisted_junctions,
-                                         genomeSequence = genomeSequence)
-  end.ptm <- proc.time()
-  if (verbose) message("Finished creating junction list with splice motif
-        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  
- #  # all seqlevels should be consistent, and drop those not in uniqueJunctions
- #  if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
- #           GenomeInfoDb::seqlevels(uniqueJunctions))) {
- #    unlisted_junctions <- keepSeqLevelsByReference(unlisted_junctions, uniqueJunctions)
- #    readGrgList <- keepSeqLevelsByReference(readGrgList, uniqueJunctions)
- #  } # the seqlevels will be made comparable for all ranges,
- #  if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
- #           GenomeInfoDb::seqlevels(annotationGrangesList))) 
- #    message("not all chromosomes present in reference annotations,
- #            annotations might be incomplete. Please compare objects
- #            on the same reference")
- # combinedSeqLevels <- unique(c(GenomeInfoDb::seqlevels(readGrgList),
- #                               GenomeInfoDb::seqlevels(annotationGrangesList)))
- #  GenomeInfoDb::seqlevels(readGrgList) <- combinedSeqLevels
- #  GenomeInfoDb::seqlevels(annotationGrangesList) <- combinedSeqLevels
- #  GenomeInfoDb::seqlevels(unlisted_junctions) <- combinedSeqLevels
- #  GenomeInfoDb::seqlevels(uniqueJunctions) <- combinedSeqLevels
-  uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList, 
-                                                 use.ids = FALSE))
-  strand(uniqueJunctions) <- junctionStrandCorrection(uniqueJunctions,
-                                                      unlisted_junctions, 
-                                                      uniqueAnnotatedIntrons,
-                                                      stranded = stranded, 
-                                                      verbose = verbose)
-  
-  mcols(uniqueJunctions) <- tibble(as.data.frame(uniqueJunctions)) %>% 
-    mutate(annotatedJunction = (!is.na(GenomicRanges::match(uniqueJunctions, uniqueAnnotatedIntrons)))) %>% group_by(seqnames) %>% 
-    mutate(annotatedStart = start %in% start[annotatedJunction],
-           annotatedEnd = end %in% end[annotatedJunction]) %>% ungroup() %>%
-    select(score, spliceMotif, spliceStrand, junctionStartName, junctionEndName,
-           startScore, endScore, id, annotatedJunction, annotatedStart, annotatedEnd)
-  
-  uniqueJunctions <- correctJunctionFromPrediction(uniqueJunctions, verbose)
-  
   start.ptm <- proc.time()
   readClassListSpliced <- constructSplicedReadClassTables(
     uniqueJunctions = uniqueJunctions,
@@ -105,7 +64,7 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
 
   exonsByReadClass <- generateExonsByReadClass(readGrgList, 
-                                               annotationGrangesList, 
+                                               annotations, 
                                                readClassListSpliced, 
                                                stranded, verbose)
   counts <- matrix(mcols(exonsByReadClass)$readCount,
