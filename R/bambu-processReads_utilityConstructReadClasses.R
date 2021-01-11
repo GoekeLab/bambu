@@ -76,11 +76,9 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
     
     # confidence type (note: can be changed to integer encoding)
     readConfidence <- rep("highConfidenceJunctionReads", length(readStrand))
-    
     lowConfidenceReads <- which(sum(is.na(splitAsList(
         uniqueJunctions$mergedHighConfJunctionId[allToUniqueJunctionMatch],
         mcols(unlisted_junctions)$id))) > 0)
-    
     readConfidence[lowConfidenceReads] <- "lowConfidenceJunctionReads"
     
     readTable <- createReadTable(unlisted_junctions, readGrgList, readStrand, readConfidence)
@@ -121,23 +119,15 @@ correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
 
 #' @noRd
 correctReadStrandById <- function(strand, id, stranded=FALSE){
-
-      #  unlisted_junctions_strand <-
-       #     uniqueJunctions$strand.mergedHighConfJunction[allToUniqueJunctionMatch]
-
-        plusCount <- as.integer(sum(splitAsList(strand,
-                                                id) == "+"))
-        minusCount <- as.integer(sum(splitAsList(strand,
-                                                id) == "-"))
-        strandJunctionSum <- minusCount - plusCount
-        #readStrand <- factor(rep("*", length(strandJunctionSum)), levels=c('+','-','*'))
-        readStrand <- rep("*", length(strandJunctionSum))
-        readStrand[strandJunctionSum < 0] <- "+"
-        readStrand[strandJunctionSum > 0] <- "-"
-  
+    plusCount <- as.integer(sum(splitAsList(strand, id) == "+"))
+    minusCount <- as.integer(sum(splitAsList(strand, id) == "-"))
+    strandJunctionSum <- minusCount - plusCount
+    readStrand <- rep("*", length(strandJunctionSum))
+    readStrand[strandJunctionSum < 0] <- "+"
+    readStrand[strandJunctionSum > 0] <- "-"
+    
     return(readStrand)
 }
-
 
 
 #' calculate distance between first and last exon matches
@@ -155,7 +145,6 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         nrow = length(readGrgList))))
     colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
         "intronStarts", "confidenceType")
-    # chr
     readTable[, "chr"] <- as.factor(getChrFromGrList(readGrgList))
     # intron start and end
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
@@ -170,22 +159,13 @@ createReadTable <- function(unlisted_junctions, readGrgList,
             mcols(unlisted_junctions)$id)) + 2)
     readTable[, "start"] <- pmin(start(readRanges), intronStartCoordinatesInt)
     readTable[, "end"] <- pmax(end(readRanges), intronEndCoordinatesInt)
-    # strand
     readTable[, "strand"] <- readStrand
     # confidence type (note: can be changed to integer encoding)
     readTable[, "confidenceType"] <- readConfidence
-    ##"highConfidenceJunctionReads"
-    ##lowConfidenceReads <- which(sum(is.na(splitAsList(
-    ##        uniqueJunctions$mergedHighConfJunctionId[allToUniqueJunctionMatch],
-     ##       mcols(unlisted_junctions)$id))) > 0)
-    ##readTable[lowConfidenceReads, "confidenceType"] <- 
-     ##   "lowConfidenceJunctionReads"
-    
-    
-    
+
     ## currently the 80% and 20% quantile of reads is used to 
     ## identify start and end sites
-    readTable <- readTable %>% group_by( chr, strand, intronEnds,
+    readTable <- readTable %>% group_by(chr, strand, intronEnds,
         intronStarts) %>% summarise( readCount = n(), start = nth(
                 x = start, n = ceiling(readCount / 5), order_by = start),
             end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
