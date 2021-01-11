@@ -9,8 +9,8 @@
 #' @param stranded stranded
 #' @param verbose verbose
 #' @noRd
-bambu.processReads <- function(reads, readClass.file, annotations, genomeSequence,
-                         readClass.outputDir, yieldSize, bpParameters, stranded, verbose) {
+bambu.processReads <- function(reads, annotations, genomeSequence,
+                         readClass.outputDir=NULL, yieldSize=1000000, bpParameters, stranded=FALSE, verbose=FALSE) {
   # ===# create BamFileList object from character #===#
   if (methods::is(reads, "BamFile")) {
     if (!is.null(yieldSize)) {
