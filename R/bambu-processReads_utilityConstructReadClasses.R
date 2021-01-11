@@ -64,23 +64,23 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
     #     warning("read Id not sorted, can result in wrong assignments.
     #         Please report error")
     # readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
-    firstseg <- start(PartitioningByWidth(readGrgList))
+    #firstseg <- start(PartitioningByWidth(readGrgList))
     allToUniqueJunctionMatch <- match(unlisted_junctions,
                                                 uniqueJunctions, ignore.strand = TRUE)
     intronStartTMP <- createIntronTmp(uniqueJunctions,
                                       allToUniqueJunctionMatch,unlisted_junctions)[[1]]
     intronEndTMP <- createIntronTmp(uniqueJunctions,
                                     allToUniqueJunctionMatch,unlisted_junctions)[[2]]
-    if (!stranded) {
-        readStrand <- correctReadStrand(uniqueJunctions,
-                                             unlisted_junctions, allToUniqueJunctionMatch)
-    }else{
-        readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
-    }
+  
+    # if (!stranded) {
+    #     readStrand <- correctReadStrand(uniqueJunctions,
+    #                                          unlisted_junctions, allToUniqueJunctionMatch)
+    # }else{
+    #     readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
+    # }
     readTable <- createReadTable(
-        uniqueJunctions, unlisted_junctions, readGrgList,
-        firstseg, intronStartTMP, intronEndTMP, readStrand,
-        allToUniqueJunctionMatch)
+        uniqueJunctions, unlisted_junctions, readGrgList, intronStartTMP,
+        intronEndTMP, allToUniqueJunctionMatch)
     exonsByReadClass <- createExonsByReadClass(readTable)
     ## combine new transcripts with annotated transcripts
     ## based on identical intron pattern
@@ -114,19 +114,22 @@ createIntronTmp <- function(uniqueJunctions,
     return(list(intronStartTMP, intronEndTMP))
 }
 #' @noRd
-correctReadStrand <- function(uniqueJunctions,
-                                   unlisted_junctions, allToUniqueJunctionMatch){
-    
-    unlisted_junctions_strand <-
-        uniqueJunctions$strand.mergedHighConfJunction[allToUniqueJunctionMatch]
-    plusCount <- as.integer(sum(splitAsList( unlisted_junctions_strand,
-                                             mcols(unlisted_junctions)$id) == "+"))
-    minusCount <- as.integer(sum(splitAsList(unlisted_junctions_strand,
-                                             mcols(unlisted_junctions)$id) == "-"))
-    strandJunctionSum <- minusCount - plusCount
-    readStrand <- rep("*", length(strandJunctionSum))
-    readStrand[strandJunctionSum < 0] <- "+"
-    readStrand[strandJunctionSum > 0] <- "-"
+correctReadStrand <- function(uniqueJunctions, unlisted_junctions, 
+                              allToUniqueJunctionMatch, stranded=FALSE){
+    if (!stranded) {
+        unlisted_junctions_strand <-
+            uniqueJunctions$strand.mergedHighConfJunction[allToUniqueJunctionMatch]
+        plusCount <- as.integer(sum(splitAsList( unlisted_junctions_strand,
+                                                 mcols(unlisted_junctions)$id) == "+"))
+        minusCount <- as.integer(sum(splitAsList(unlisted_junctions_strand,
+                                                 mcols(unlisted_junctions)$id) == "-"))
+        strandJunctionSum <- minusCount - plusCount
+        readStrand <- rep("*", length(strandJunctionSum))
+        readStrand[strandJunctionSum < 0] <- "+"
+        readStrand[strandJunctionSum > 0] <- "-"
+    } else {
+        readStrand <- as.character(getStrandFromGrList(readGrgList))
+    }
     return(readStrand)
 }
 
@@ -144,14 +147,13 @@ correctReadStrand <- function(uniqueJunctions,
 #' allToUniqueJunctionMatch
 #' @noRd
 createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
-                            firstseg, intronStartTMP, intronEndTMP, readStrand,
-                            allToUniqueJunctionMatch) {
+                            intronStartTMP, intronEndTMP, allToUniqueJunctionMatch) {
     readTable <- as_tibble(data.frame(matrix(ncol = 7, 
         nrow = length(readGrgList))))
     colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
         "intronStarts", "confidenceType")
     # chr
-    readTable[, "chr"] <- as.factor(seqnames(unlist(readGrgList)[firstseg]))
+    readTable[, "chr"] <- as.factor(getChrFromGrList(readGrgList))
     # intron start and end
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     readTable[, "intronStarts"] <- unstrsplit(splitAsList(as.character(
@@ -166,7 +168,8 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
     readTable[, "start"] <- pmin(start(readRanges), intronStartCoordinatesInt)
     readTable[, "end"] <- pmax(end(readRanges), intronEndCoordinatesInt)
     # strand
-    readTable[, "strand"] <- readStrand
+    readTable[, "strand"] <- correctReadStrand(uniqueJunctions, unlisted_junctions, 
+                                               allToUniqueJunctionMatch, stranded = stranded)
     # confidence type (note: can be changed to integer encoding)
     readTable[, "confidenceType"] <- "highConfidenceJunctionReads"
     lowConfidenceReads <- which(sum(is.na(splitAsList(
@@ -184,6 +187,11 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
         ungroup() %>% arrange(chr, start, end)
     readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
     return(readTable)
+}
+
+#' @noRd
+getChrFromGrList <- function(grl) { 
+    return(unlist(seqnames(grl), use.names = FALSE)[cumsum(elementNROWS(grl))]) 
 }
 
 
