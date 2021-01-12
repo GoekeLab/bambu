@@ -82,8 +82,6 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
     
     readTable <- createReadTable(unlisted_junctions, readGrgList, readStrand, readConfidence)
     exonsByReadClass <- createExonsByReadClass(readTable)
-    ## combine new transcripts with annotated transcripts
-    ## based on identical intron pattern
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
                                              intronStarts, intronEnds, confidenceType, readCount)
     mcols(exonsByReadClass) <- readTable
@@ -133,12 +131,12 @@ correctReadStrandById <- function(strand, id, stranded=FALSE){
 
 
 #' This function generates a table that contains 1 row for each (spliced) read
-#' This table will then be summarised into read classes
+#' This table is then summarised into read classes (identical junction patterns)
+#' The readClass table is returned
 #' @param unlisted_junctions unlisted_junctions
 #' @param readGrgList reads GRangesList
 #' @param readStrand readStrand
 #' @param readConfidence readConfidence
-#' allToUniqueJunctionMatch
 #' @noRd
 #' 
 createReadTable <- function(unlisted_junctions, readGrgList,
@@ -217,19 +215,19 @@ getChrFromGrList <- function(grl) {
 #' @noRd
 createExonsByReadClass <- function(readTable){
     exonsByReadClass <- GenomicRanges::makeGRangesListFromFeatureFragments(
-        seqnames = readTable$chr, fragmentStarts = paste(readTable$start - 1,
-            readTable$intronEnds,sep = ","), 
-            fragmentEnds = paste(readTable$intronStarts, readTable$end + 1,
-                sep = ","), strand = readTable$strand)
-    exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)
-    
+        seqnames = readTable$chr,
+        fragmentStarts = paste(readTable$start-1, readTable$intronEnds, sep=","),
+        fragmentEnds = paste(readTable$intronStarts, readTable$end+1, sep=","),
+        strand = readTable$strand)
     # correct junction to exon differences in coordinates
+    exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)
     names(exonsByReadClass) <- readTable$readClassId
+    
+    # add exon rank and exon_endRank
     unlistData <- unlist(exonsByReadClass, use.names = FALSE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
-        names = NULL)
-    exon_rank <- lapply(width((partitioning)), seq, from = 1)
-    # add exon rank and exon_endRank
+                                      names = NULL)
+    exon_rank <- lapply(width(partitioning), seq, from = 1)
     exon_rank[which(readTable$strand == "-")] <-
         lapply(exon_rank[which(readTable$strand == "-")], rev)
     # * assumes positive for exon ranking
@@ -237,7 +235,6 @@ createExonsByReadClass <- function(readTable){
     unlistData$exon_rank <- unlist(exon_rank)
     unlistData$exon_endRank <- unlist(exon_endRank)
     exonsByReadClass <- relist(unlistData, partitioning)
-    
     return(exonsByReadClass)
 }
 
