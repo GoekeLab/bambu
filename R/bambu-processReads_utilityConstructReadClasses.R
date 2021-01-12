@@ -26,7 +26,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
             Please report error")
 
     start.ptm <- proc.time()
-    readClassListSpliced <- constructSplicedReadClassTables(
+    exonsByRC.spliced <- constructSplicedReadClasses(
         uniqueJunctions = uniqueJunctions,
         unlisted_junctions = unlisted_junctions,
         readGrgList = readGrgList,
@@ -36,17 +36,20 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     
-    exonsByReadClass <- generateExonsByReadClass(reads.singleExon, 
+    exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
                                                  annotations, 
-                                                 readClassListSpliced, 
+                                                 exonsByRC.spliced, 
                                                  stranded, verbose)
-    counts <- matrix(mcols(exonsByReadClass)$readCount,
-                     dimnames = list(names(exonsByReadClass), runName))
+    exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
+    counts <- matrix(mcols(exonsByRC)$readCount,
+                     dimnames = list(names(exonsByRC), runName))
     colDataDf <- DataFrame(name = runName, row.names = runName)
-    mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c("chr.rc", 
-                                                           "strand.rc", "intronStarts", "intronEnds", "confidenceType")]
+    mcols(exonsByRC) <- mcols(exonsByRC)[, c("chr.rc", "strand.rc", 
+                                             "intronStarts", "intronEnds", 
+                                             "confidenceType")]
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
-                               rowRanges = exonsByReadClass, colData = colDataDf)
+                               rowRanges = exonsByRC, 
+                               colData = colDataDf)
     return(se)
 }
 
@@ -54,7 +57,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' reconstruct spliced transripts
 #' @importFrom unstrsplit getFromNamespace
 #' @noRd
-constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions, 
+constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
                                             readGrgList, stranded = FALSE) {
     options(scipen = 999)
     allToUniqueJunctionMatch <- match(unlisted_junctions,
@@ -164,47 +167,9 @@ createReadTable <- function(unlisted_junctions, readGrgList,
               start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
               end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
               .groups='drop') %>% arrange(chr, start, end) %>%
-    mutate(readClassId=paste("rc", seq_len(nrow(readTableNew)), sep="."))
+    mutate(readClassId=paste("rc", row_number(), sep="."))
   return(readTable)
 }
-# 
-# createReadTableOri <- function(unlisted_junctions, readGrgList,
-#                             readStrand, readConfidence) {
-#     readTable <- as_tibble(data.frame(matrix(ncol = 7,
-#         nrow = length(readGrgList))))
-#     colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
-#         "intronStarts", "confidenceType")
-#     readTable[, "chr"] <- as.factor(getChrFromGrList(readGrgList))
-#     # intron start and end
-#     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
-#     readTable[, "intronStarts"] <- unstrsplit(splitAsList(as.character(
-#         start(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
-#     readTable[, "intronEnds"] <- unstrsplit(splitAsList(as.character(
-#         end(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
-#     # start and end
-#     intronStartCoordinatesInt <- as.integer(min(splitAsList(start(unlisted_junctions),
-#             mcols(unlisted_junctions)$id)) - 2)
-#     intronEndCoordinatesInt <- as.integer(max(splitAsList(end(unlisted_junctions),
-#             mcols(unlisted_junctions)$id)) + 2)
-#     readTable[, "start"] <- pmin(start(readRanges), intronStartCoordinatesInt)
-#     readTable[, "end"] <- pmax(end(readRanges), intronEndCoordinatesInt)
-#     readTable[, "strand"] <- readStrand
-#     # confidence type (note: can be changed to integer encoding)
-#     readTable[, "confidenceType"] <- readConfidence
-# 
-#     ## currently the 80% and 20% quantile of reads is used to
-#     ## identify start and end sites
-#     readTable <- readTable %>% group_by(chr, strand, intronEnds,
-#         intronStarts) %>% summarise( readCount = n(), start = nth(
-#                 x = start, n = ceiling(readCount / 5), order_by = start),
-#             end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
-#             confidenceType = dplyr::first(confidenceType)) %>%
-#         ungroup() %>% arrange(chr, start, end)
-#     readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
-#     return(readTable)
-# }
-
-# 
 
 #' @noRd
 getChrFromGrList <- function(grl) { 
@@ -242,31 +207,34 @@ createExonsByReadClass <- function(readTable){
 
 #' generate exonByReadClass
 #' @noRd
-generateExonsByReadClass <- function(reads.singleExon, annotations, 
+constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
                                      readClassListSpliced, stranded, verbose){
     
     start.ptm <- proc.time()
     referenceExons <- unique(c(GenomicRanges::granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
                                  "highConfidenceJunctionReads" &
-                                 mcols(readClassListSpliced)$strand.rc != "*"], use.names = FALSE)), 
-        GenomicRanges::granges(unlist(annotations,
-                                      use.names = FALSE))))
-    readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
+                                 mcols(readClassListSpliced)$strand.rc != "*"], 
+        use.names = FALSE)),
+        GenomicRanges::granges(unlist(annotations, use.names = FALSE))))
+    #(1) reads which fall into annotations or spliced read classes are summarised
+    # by their minimum read class coordinates
+    rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
     reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
-                                           readClassListUnsplicedWithAnnotation$readIds]
+                                           rcUnsplicedAnnotation$readIds]
     referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
-    readClassListUnsplicedReduced <- constructUnsplicedReadClasses(
+    #(2) reads do not fall within a annotated exon/high confidence read class 
+    # exon are summarised based on the union of overlapping unspliced reads
+    rcUnsplicedReduced <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- c(readClassListSpliced,
-                          readClassListUnsplicedWithAnnotation$exonsByReadClass,
-                          readClassListUnsplicedReduced$exonsByReadClass)
+    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass,
+                          rcUnsplicedReduced$exonsByReadClass)
     return(exonsByReadClass)
 }
 
@@ -275,7 +243,7 @@ generateExonsByReadClass <- function(reads.singleExon, annotations,
 #' reconstruct read classes using unspliced reads that fall
 #' within exons from annotations
 #' @noRd
-constructUnsplicedReadClasses <- function(granges, grangesReference,
+getUnsplicedReadClassByReference <- function(granges, grangesReference,
                                           confidenceType = "unspliced", 
                                           stranded = TRUE) {
     if (is.null(mcols(granges)$id))
@@ -332,7 +300,7 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
         hitsDF$strand <- "*"
     } else {
         hitsDF$strand <-
-            as.character(strand(grangesReference)[subjectHits(hitsWithin)])
+            as.factor(strand(grangesReference)[subjectHits(hitsWithin)])
     }
     return(hitsDF)
 }
