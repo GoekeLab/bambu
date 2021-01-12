@@ -54,16 +54,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                      readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE) {
   readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
+  seqlevelCheckReadsAnnotation(readGrgList, annotations)
   #check seqlevels for consistency, drop ranges not present in genomeSequence
-  refSeqLevels <-  GenomeInfoDb::seqlevels(genomeSequence)
-  if (length(intersect(GenomeInfoDb::seqlevels(readGrgList),
-                       GenomeInfoDb::seqlevels(annotations))) == 0)
-    stop("Error: please provide annotation with matched seqlevel styles.")
-  if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
-           GenomeInfoDb::seqlevels(annotations))) 
-    message("not all chromosomes present in reference annotations,
-            annotations might be incomplete. Please compare objects
-            on the same reference")
   if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% refSeqLevels)) {
     message("not all chromosomes from reads present in reference genome 
     sequence, reads without reference chromosome sequence are dropped")
@@ -86,14 +78,9 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                                    stranded = stranded,
                                                    verbose = verbose)
   # create SE object with reconstructed readClasses
-  se <- isore.constructReadClasses(
-    readGrgList = readGrgList,
-    unlisted_junctions = unlisted_junctions,
-    uniqueJunctions = uniqueJunctions,
-    runName = names(bam.file)[1],
-    annotations = annotations,
-    stranded = stranded,
-    verbose = verbose)
+  se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
+                                   uniqueJunctions, runName=names(bam.file)[1],
+                                   annotationss, stranded, verbose)
   GenomeInfoDb::seqlevels(se) <- refSeqLevels
   
   if (!is.null(readClass.outputDir)) {
@@ -114,7 +101,18 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
   return(se)
 }
 
+seqlevelCheckReadsAnnotation <- function(reads, annotations){
+  if (length(intersect(GenomeInfoDb::seqlevels(reads),
+                       GenomeInfoDb::seqlevels(annotations))) == 0)
+    stop("Error: please provide annotation with matched seqlevel styles.")
+  if (!all(GenomeInfoDb::seqlevels(reads) %in% 
+           GenomeInfoDb::seqlevels(annotations))) 
+    message("not all chromosomes present in reference annotations,
+            annotations might be incomplete. Please compare objects
+            on the same reference")
+}
 
+  
 #' Function to create a object that can be queried by getSeq
 #' Either from fa file, or BSGenome object
 #' @importFrom BiocParallel bppram bpvec
