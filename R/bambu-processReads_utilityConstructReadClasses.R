@@ -19,15 +19,12 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                                   use.names = FALSE)
     mcols(reads.singleExon)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
-    
-  ###### HERE #####  readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
-    uniqueReadIds <- unique(mcols(unlisted_junctions)$id)
-    if (any(order(uniqueReadIds) != seq_along(uniqueReadIds))) 
+    #only keep multi exons reads in readGrgList    
+    readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
+    if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
         warning("read Id not sorted, can result in wrong assignments.
             Please report error")
-    #only keep multi exons reads in readGrgList
-    readGrgList <- readGrgList[match(uniqueReadIds, mcols(readGrgList)$id)]
-    
+
     start.ptm <- proc.time()
     readClassListSpliced <- constructSplicedReadClassTables(
         uniqueJunctions = uniqueJunctions,
@@ -141,41 +138,73 @@ correctReadStrandById <- function(strand, id, stranded=FALSE){
 #' @param readConfidence readConfidence
 #' allToUniqueJunctionMatch
 #' @noRd
+#' 
 createReadTable <- function(unlisted_junctions, readGrgList,
                             readStrand, readConfidence) {
-    readTable <- as_tibble(data.frame(matrix(ncol = 7, 
-        nrow = length(readGrgList))))
-    colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
-        "intronStarts", "confidenceType")
-    readTable[, "chr"] <- as.factor(getChrFromGrList(readGrgList))
-    # intron start and end
-    readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
-    readTable[, "intronStarts"] <- unstrsplit(splitAsList(as.character(
-        start(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
-    readTable[, "intronEnds"] <- unstrsplit(splitAsList(as.character(
-        end(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
-    # start and end
-    intronStartCoordinatesInt <- as.integer(min(splitAsList(start(unlisted_junctions),
-            mcols(unlisted_junctions)$id)) - 2)
-    intronEndCoordinatesInt <- as.integer(max(splitAsList(end(unlisted_junctions),
-            mcols(unlisted_junctions)$id)) + 2)
-    readTable[, "start"] <- pmin(start(readRanges), intronStartCoordinatesInt)
-    readTable[, "end"] <- pmax(end(readRanges), intronEndCoordinatesInt)
-    readTable[, "strand"] <- readStrand
-    # confidence type (note: can be changed to integer encoding)
-    readTable[, "confidenceType"] <- readConfidence
-
-    ## currently the 80% and 20% quantile of reads is used to 
-    ## identify start and end sites
-    readTable <- readTable %>% group_by(chr, strand, intronEnds,
-        intronStarts) %>% summarise( readCount = n(), start = nth(
-                x = start, n = ceiling(readCount / 5), order_by = start),
-            end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
-            confidenceType = dplyr::first(confidenceType)) %>%
-        ungroup() %>% arrange(chr, start, end)
-    readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
-    return(readTable)
+  readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
+  intronStartCoordinatesInt <- as.integer(min(splitAsList(start(unlisted_junctions),
+                                                          mcols(unlisted_junctions)$id)) - 2)
+  intronEndCoordinatesInt <- as.integer(max(splitAsList(end(unlisted_junctions),
+                                                        mcols(unlisted_junctions)$id)) + 2)
+  
+  readTable <- tibble(chr=as.factor(getChrFromGrList(readGrgList)), 
+                      intronStarts=unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
+                                                          mcols(unlisted_junctions)$id), sep = ","),
+                      intronEnds=unstrsplit(splitAsList(as.character(end(unlisted_junctions)),
+                                                        mcols(unlisted_junctions)$id), sep = ","),
+                      start=pmin(start(readRanges), intronStartCoordinatesInt),
+                      end=pmax(end(readRanges), intronEndCoordinatesInt),
+                      strand=as.factor(readStrand),
+                      confidenceType=as.factor(readConfidence))
+  ## currently the 80% and 20% quantile of reads is used to 
+  ## identify start and end sites
+  readTable <- readTable %>% 
+    group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
+    summarise(readCount = n(),
+              start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
+              end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
+              .groups='drop') %>% arrange(chr, start, end) %>%
+    mutate(readClassId=paste("rc", seq_len(nrow(readTableNew)), sep="."))
+  return(readTable)
 }
+# 
+# createReadTable <- function(unlisted_junctions, readGrgList,
+#                             readStrand, readConfidence) {
+#     readTable <- as_tibble(data.frame(matrix(ncol = 7, 
+#         nrow = length(readGrgList))))
+#     colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
+#         "intronStarts", "confidenceType")
+#     readTable[, "chr"] <- as.factor(getChrFromGrList(readGrgList))
+#     # intron start and end
+#     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
+#     readTable[, "intronStarts"] <- unstrsplit(splitAsList(as.character(
+#         start(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
+#     readTable[, "intronEnds"] <- unstrsplit(splitAsList(as.character(
+#         end(unlisted_junctions)), mcols(unlisted_junctions)$id), sep = ",")
+#     # start and end
+#     intronStartCoordinatesInt <- as.integer(min(splitAsList(start(unlisted_junctions),
+#             mcols(unlisted_junctions)$id)) - 2)
+#     intronEndCoordinatesInt <- as.integer(max(splitAsList(end(unlisted_junctions),
+#             mcols(unlisted_junctions)$id)) + 2)
+#     readTable[, "start"] <- pmin(start(readRanges), intronStartCoordinatesInt)
+#     readTable[, "end"] <- pmax(end(readRanges), intronEndCoordinatesInt)
+#     readTable[, "strand"] <- readStrand
+#     # confidence type (note: can be changed to integer encoding)
+#     readTable[, "confidenceType"] <- readConfidence
+# 
+#     ## currently the 80% and 20% quantile of reads is used to 
+#     ## identify start and end sites
+#     readTable <- readTable %>% group_by(chr, strand, intronEnds,
+#         intronStarts) %>% summarise( readCount = n(), start = nth(
+#                 x = start, n = ceiling(readCount / 5), order_by = start),
+#             end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
+#             confidenceType = dplyr::first(confidenceType)) %>%
+#         ungroup() %>% arrange(chr, start, end)
+#     readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
+#     return(readTable)
+# }
+# 
+# 
 
 #' @noRd
 getChrFromGrList <- function(grl) { 
