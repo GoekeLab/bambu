@@ -71,18 +71,6 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = FALSE) {
 createJunctionTable <- function(unlisted_junctions,
                                 genomeSequence = NULL) {
   # License note: This function is adopted from the GenomicAlignments package 
-  #genomeSequence <- checkInputSequence(genomeSequence)
-  if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in%
-           GenomeInfoDb::seqlevels(genomeSequence))) {
-    message("not all chromosomes present in reference genome sequence,
-            ranges are dropped (createJunctionTable())")
-    unlisted_junctions <- GenomeInfoDb::keepSeqlevels(unlisted_junctions,
-                                                      value = GenomeInfoDb::seqlevels(unlisted_junctions)[
-                                                        GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
-                                                          GenomeInfoDb::seqlevels(genomeSequence)],
-                                                      pruning.mode = "coarse")
-  }
-  
   uniqueJunctions <- sort(unique(BiocGenerics::unstrand(unlisted_junctions)))
   names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
                                   sep = ".")
