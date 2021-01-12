@@ -242,18 +242,15 @@ createExonsByReadClass <- function(readTable){
 
 #' generate exonByReadClass
 #' @noRd
-generateExonsByReadClass <- function(reads.singleExon, annotationGrangesList, readClassListSpliced, stranded, verbose){
+generateExonsByReadClass <- function(reads.singleExon, annotations, 
+                                     readClassListSpliced, stranded, verbose){
     
     start.ptm <- proc.time()
-    # singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
-    #                           use.names = FALSE)
-    # mcols(singleExonReads)$id <- mcols(readGrgList[
-    #     elementNROWS(readGrgList) == 1])$id
     referenceExons <- unique(c(GenomicRanges::granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
                                  "highConfidenceJunctionReads" &
                                  mcols(readClassListSpliced)$strand.rc != "*"], use.names = FALSE)), 
-        GenomicRanges::granges(unlist(annotationGrangesList,
+        GenomicRanges::granges(unlist(annotations,
                                       use.names = FALSE))))
     readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
         granges = reads.singleExon, grangesReference = referenceExons,
@@ -279,13 +276,14 @@ generateExonsByReadClass <- function(reads.singleExon, annotationGrangesList, re
 #' within exons from annotations
 #' @noRd
 constructUnsplicedReadClasses <- function(granges, grangesReference,
-    confidenceType = "unspliced", stranded = TRUE) {
+                                          confidenceType = "unspliced", 
+                                          stranded = TRUE) {
     if (is.null(mcols(granges)$id))
         stop("ID column is missing from mcols(granges)")
-    # seqLevelList <- unique(c(seqlevels(granges),
-    # seqlevels(grangesReference)))
     hitsWithin <- findOverlaps(granges, grangesReference,
-        ignore.strand = !stranded, type = "within", select = "all")
+                               ignore.strand = !stranded, 
+                               type = "within", 
+                               select = "all")
     # find reads that overlap with reference ranges
     hitsDF <- initiateHitsDF(hitsWithin, grangesReference, stranded)
     ## create single exon read class by using the minimum end
@@ -293,24 +291,21 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     ## minimum equivalent class)
     hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
         group_by(queryHits, chr, strand) %>%
-        summarise(start = max(start), end = min(end)) %>%
+        summarise(start = max(start), end = min(end), .groups="drop") %>%
         group_by(chr, start, end, strand) %>%
-        mutate(readClassId = paste0("rc", confidenceType, ".",
-        cur_group_id())) %>% ungroup()
+        mutate(readClassId = paste0("rc", confidenceType, ".", 
+                                    cur_group_id())) %>% ungroup()
     readIds <- mcols(granges[hitsDF$queryHits])$id
     hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, readClassId) %>%
-        group_by(readClassId) %>% mutate(readCount = n()) %>% distinct() %>%
-        ungroup() %>% mutate(confidenceType = confidenceType, intronStarts = NA,
-            intronEnds = NA) %>% dplyr::select(
-            chr, start, end, strand, intronStarts,
-            intronEnds, confidenceType, readClassId, readCount)
+      group_by(readClassId) %>% mutate(readCount = n()) %>% 
+      ungroup() %>% distinct() %>% 
+      mutate(confidenceType=confidenceType, intronStarts=NA, intronEnds=NA) %>%
+      dplyr::select(chr, start, end, strand, intronStarts, intronEnds, 
+                    confidenceType, readClassId, readCount)
     exByReadClassUnspliced <- GenomicRanges::GRanges(
-        seqnames = hitsDF$chr,
-        ranges = IRanges(
-            start = hitsDF$start,
-            end = hitsDF$end),
-        strand = hitsDF$strand
-    )
+      seqnames = hitsDF$chr,
+      ranges = IRanges(start = hitsDF$start, end = hitsDF$end),
+      strand = hitsDF$strand)
     exByReadClassUnspliced$exon_rank <- 1
     exByReadClassUnspliced$exon_endRank <- 1
     partitioning <- PartitioningByEnd(seq_along(exByReadClassUnspliced))
@@ -319,7 +314,6 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
         intronStarts, intronEnds, confidenceType, readCount)
     mcols(exByReadClassUnspliced) <- hitsDF
-    # seqlevels(exByReadClassUnspliced) <- seqLevelList
     return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
 }
 
