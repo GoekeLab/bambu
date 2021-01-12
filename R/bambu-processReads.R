@@ -81,7 +81,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
   # create SE object with reconstructed readClasses
   se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
                                    uniqueJunctions, runName=names(bam.file)[1],
-                                   annotationss, stranded, verbose)
+                                   annotations, stranded, verbose)
   GenomeInfoDb::seqlevels(se) <- refSeqLevels
   
   if (!is.null(readClass.outputDir)) {
