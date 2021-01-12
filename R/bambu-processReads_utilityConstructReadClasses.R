@@ -92,7 +92,9 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
     return(exonsByReadClass)
 }
 
-
+#' this functions uses the uniqueJunction table which has reference junctions
+#' and replaces intron coordinates with coordinates from the reference junction
+#' the strand of junctions is also changed to the reference junction strand
 #' @noRd
 correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
                                 correctedJunctionMatches){
@@ -117,6 +119,8 @@ correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
     return(unlisted_junctions)
 }
 
+#' This function returns the inferred strand based on the number of +(plus) and
+#' -(minus) junctions in each read (majority vote)
 #' @noRd
 correctReadStrandById <- function(strand, id, stranded=FALSE){
     plusCount <- as.integer(sum(splitAsList(strand, id) == "+"))
@@ -125,18 +129,16 @@ correctReadStrandById <- function(strand, id, stranded=FALSE){
     readStrand <- rep("*", length(strandJunctionSum))
     readStrand[strandJunctionSum < 0] <- "+"
     readStrand[strandJunctionSum > 0] <- "-"
-    
     return(readStrand)
 }
 
 
-#' calculate distance between first and last exon matches
-#' @param uniqueJunctions uniqueJunctions
+#' This function generates a table that contains 1 row for each (spliced) read
+#' This table will then be summarised into read classes
 #' @param unlisted_junctions unlisted_junctions
 #' @param readGrgList reads GRangesList
-#' @param firstseg firstseg
 #' @param readStrand readStrand
-#' @param allToUniqueJunctionMatch
+#' @param readConfidence readConfidence
 #' allToUniqueJunctionMatch
 #' @noRd
 createReadTable <- function(unlisted_junctions, readGrgList,
