@@ -65,14 +65,16 @@ constructSplicedReadClassTables <- function(uniqueJunctions, unlisted_junctions,
                                               uniqueJunctions, 
                                               correctedJunctionMatches)
     if (!stranded) {
-        readStrand <- correctReadStrandById(as.character(strand(unlisted_junctions)),
+        readStrand <- correctReadStrandById(as.factor(strand(unlisted_junctions)),
                                             id=mcols(unlisted_junctions)$id)
     } else {
-        readStrand <- as.character(getStrandFromGrList(readGrgList))
+        readStrand <- as.factor(getStrandFromGrList(readGrgList))
     }
     
     # confidence type (note: can be changed to integer encoding)
-    readConfidence <- rep("highConfidenceJunctionReads", length(readStrand))
+    readConfidence <- factor(rep("highConfidenceJunctionReads", length(readStrand)),
+                             levels=c('highConfidenceJunctionReads',
+                                    'lowConfidenceJunctionReads'))
     lowConfidenceReads <- which(sum(is.na(splitAsList(
         uniqueJunctions$mergedHighConfJunctionId[allToUniqueJunctionMatch],
         mcols(unlisted_junctions)$id))) > 0)
@@ -123,7 +125,7 @@ correctReadStrandById <- function(strand, id, stranded=FALSE){
     plusCount <- as.integer(sum(splitAsList(strand, id) == "+"))
     minusCount <- as.integer(sum(splitAsList(strand, id) == "-"))
     strandJunctionSum <- minusCount - plusCount
-    readStrand <- rep("*", length(strandJunctionSum))
+    readStrand <- factor(rep("*", length(strandJunctionSum)), levels=c('+','-','*'))
     readStrand[strandJunctionSum < 0] <- "+"
     readStrand[strandJunctionSum > 0] <- "-"
     return(readStrand)
@@ -154,8 +156,8 @@ createReadTable <- function(unlisted_junctions, readGrgList,
                                                         mcols(unlisted_junctions)$id), sep = ","),
                       start=pmin(start(readRanges), intronStartCoordinatesInt),
                       end=pmax(end(readRanges), intronEndCoordinatesInt),
-                      strand=as.factor(readStrand),
-                      confidenceType=as.factor(readConfidence))
+                      strand=readStrand,
+                      confidenceType=readConfidence)
   ## currently the 80% and 20% quantile of reads is used to 
   ## identify start and end sites
   readTable <- readTable %>% 
@@ -168,9 +170,9 @@ createReadTable <- function(unlisted_junctions, readGrgList,
   return(readTable)
 }
 # 
-# createReadTable <- function(unlisted_junctions, readGrgList,
+# createReadTableOri <- function(unlisted_junctions, readGrgList,
 #                             readStrand, readConfidence) {
-#     readTable <- as_tibble(data.frame(matrix(ncol = 7, 
+#     readTable <- as_tibble(data.frame(matrix(ncol = 7,
 #         nrow = length(readGrgList))))
 #     colnames(readTable) <- c("chr", "start", "end", "strand", "intronEnds",
 #         "intronStarts", "confidenceType")
@@ -192,7 +194,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
 #     # confidence type (note: can be changed to integer encoding)
 #     readTable[, "confidenceType"] <- readConfidence
 # 
-#     ## currently the 80% and 20% quantile of reads is used to 
+#     ## currently the 80% and 20% quantile of reads is used to
 #     ## identify start and end sites
 #     readTable <- readTable %>% group_by(chr, strand, intronEnds,
 #         intronStarts) %>% summarise( readCount = n(), start = nth(
@@ -203,7 +205,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
 #     readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
 #     return(readTable)
 # }
-# 
+
 # 
 
 #' @noRd
