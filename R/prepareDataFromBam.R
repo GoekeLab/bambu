@@ -18,7 +18,6 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
         bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
     }
     bf <- open(bamFile)
-    # readGrgList <- GenomicRanges::GRangesList()
     readGrgList <- list()
     counter <- 1
     while (Rsamtools::isIncomplete(bf)) {
@@ -38,8 +37,8 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
     } else {
         readGrgList <- readGrgList[[1]]
     }
-    readGrgList <- readGrgList[GenomicRanges::width(readGrgList) > 1]
     # remove microexons of width 1bp from list
+    readGrgList <- readGrgList[GenomicRanges::width(readGrgList) > 1]
     mcols(readGrgList)$id <- seq_along(readGrgList)
     return(readGrgList)
 }
