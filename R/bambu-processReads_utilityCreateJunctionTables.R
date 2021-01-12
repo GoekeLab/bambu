@@ -121,42 +121,6 @@ createJunctionTable <- function(unlisted_junctions,
   return(uniqueJunctions)
 }
 
-# can be removed since not used anymore
-#' #' Keep only the seqlevels that also occur in the reference granges
-#' #' @noRd
-#' keepSeqLevelsByReference <- function(gr, ref) {
-#'   gr <- GenomeInfoDb::keepSeqlevels(gr,
-#'                                     value = GenomeInfoDb::seqlevels(gr)[
-#'                                       GenomeInfoDb::seqlevels(gr) %in% 
-#'                                         GenomeInfoDb::seqlevels(ref)],
-#'                                     pruning.mode = "coarse")
-#'   return(gr)
-#' }
-
-#' Function to create a object that can be queried by getSeq
-#' Either from fa file, or BSGenome object
-#' @importFrom BiocParallel bppram bpvec
-#' @noRd
-checkInputSequence <- function(genomeSequence) {
-  if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
-        please provide fasta file or BSgenome name, see available.genomes()")
-  if (methods::is(genomeSequence, "character")) {
-    if (grepl(".fa", genomeSequence)) {
-      if (.Platform$OS.type == "windows") {
-        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-        newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                                   "[[", 1))
-        names(genomeSequence) <- newlevels
-      } else {
-        genomeSequence <- Rsamtools::FaFile(genomeSequence)
-      }
-    } else {
-      genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-    }
-  }
-  return(genomeSequence)
-}
-
 #' @param motif motif
 #' @noRd
 spliceStrand <- function(motif) {
