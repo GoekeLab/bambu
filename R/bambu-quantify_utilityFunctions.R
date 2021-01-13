@@ -64,24 +64,27 @@ run_parallel <-
     a_mat <- aMatList[["combined"]]
     lambda <- sqrt(mean(n.obs))#suggested by Jiang and Salzman
     out <- initialiseOutput(a_mat, g, K, n.obs) 
-    if (K == 0) {
-        return(out)
-    }
-    # ## The following two steps clean up the rc to tx matrix so that it won't 
-    # ## give NA estimates
-    # ## note: this step removes transcripts without any read class support
+    if (K == 0) return(out)
+    #The following steps clean up the rc to tx matrix
+    #step1:removes transcripts without any read class support
     rids <- which(apply(t(t(a_mat) * n.obs * K),1,sum) != 0)
     a_mat <- a_mat[rids,]
-    # ## note: this tep removes read classes without any transcript assignment 
-    # ## after the first step
-    cids <- which(apply(a_mat,2,sum) != 0)
-    a_mat <- a_mat[,cids]
+    #step2: removes read classes without transcript assignment after step1
+    if (is(a_mat, "numeric")) {
+        cids <- 1
+    }else{
+        cids <- which(apply(a_mat,2,sum) != 0)
+        a_mat <- a_mat[,cids]
+    }
     n.obs <- n.obs[cids]
     aMatList[["full"]] <- aMatList[["full"]][rids, cids]
     aMatList[["partial"]] <- aMatList[["partial"]][rids, cids]
     aMatList[["unique"]] <- aMatList[["unique"]][rids, cids]
     if (is.null(nrow(a_mat))) {
-        out[[1]][rids]$counts <- K*n.obs
+        out[[1]][rids]$counts <- K*n.obs*a_mat
+        out[[1]][rids]$FullLengthCounts <- K*n.obs*aMatList$full
+        out[[1]][rids]$PartialLengthCounts <- K*n.obs*aMatList$partial
+        out[[1]][rids]$UniqueCounts <- K*n.obs*aMatList$unique
     }else{
         est_output <- emWithL1(X = as.matrix(a_mat), Y = n.obs,
             lambda = lambda, d = bias, maxiter = maxiter,
