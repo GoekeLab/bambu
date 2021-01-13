@@ -47,8 +47,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
 #' @param readClassDt A data.table object
 #' @inheritParams bambu
 #' @noRd
-bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
-    ncore = 1, verbose = FALSE, d_rate = NULL) {
+bambu.quantDT <- function(readClassDt = readClassDt, 
+    emParameters = list(bias = TRUE, maxiter = 10000, conv = 10^(-2), 
+        minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
     } else if (any(!(c("gene_id", "tx_id", "read_class_id","nobs") %in% 
