@@ -16,10 +16,10 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         tx_len = sum(width(annotations))),
         data.table(tx_id = paste0(names(annotations),"Start"),
         tx_len = sum(width(annotations))))
-    readClassDt <- tx_len[readClassDt, on = "tx_id"]
+    readClassDt <- unique(tx_len[readClassDt, on = "tx_id"])
     countsOut <- bambu.quantDT(readClassDt, emParameters = emParameters,
         ncore = ncore, verbose = verbose)
-    counts <- countOut[[1]]
+    counts <- countsOut[[1]]
     counts <- counts[match(names(annotations), tx_name)]
     colNameRC <- colnames(readClass)
     colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
