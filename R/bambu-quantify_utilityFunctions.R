@@ -54,7 +54,6 @@ abundance_quantification <- function(readClassDt, ncore = 1, bias = TRUE,
 run_parallel <-
     function(g, conv, bias, minvalue, maxiter, readClassDt) {
     tmp <- unique(readClassDt[gene_sid == g])
-    print(g)
     multiMap <- unique(tmp[, .(read_class_sid, multi_align)], 
             by = NULL)[order(read_class_sid)]$multi_align
     n.obs <- unique(tmp[, .(read_class_sid, nobs)], 
