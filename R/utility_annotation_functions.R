@@ -345,8 +345,11 @@ addEmptyRC <- function(annotations, equiRCTable){
     rcAnno <- data.table(as.data.frame(mcols(annotations)))
     rcAnno_partial <- copy(rcAnno)
     setnames(rcAnno_partial, "eqClass","read_class_id")
-    rcAnno[, `:=`(read_class_id = gsub(TXNAME,paste0(TXNAME, "Start"),
-        eqClass), tx_id = paste0(TXNAME, "Start")), by = TXNAME]
+    rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"$"),
+        paste0(TXNAME, "Start"), eqClass), 
+        tx_id = paste0(TXNAME, "Start")), by = TXNAME]
+    rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"\\."),
+        paste0(TXNAME, "Start\\."), eqClass)), by = TXNAME]
     setnames(rcAnno_partial, "TXNAME", "tx_id")
     rcAnnoDt <-
         rbind(unique(rcAnno[, .(tx_id, GENEID, read_class_id)], by = NULL),
