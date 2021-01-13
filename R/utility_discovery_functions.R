@@ -1,194 +1,6 @@
-#' create transcript model for splice junction reads
-#' @param readGrgList reads GRangesList
-#' @param annotationGrangesList annotation GRangesList
-#' @param unlisted_junctions unlisted_junctions
-#' @param uniqueJunctions uniqueJunctions
-#' @param stranded stranded
-#' @param verbose verbose
-#' @noRd
-createModelforJunctionReads <- function(readGrgList, annotationGrangesList,
-    unlisted_junctions, uniqueJunctions, stranded, verbose) {
-    GenomeInfoDb::seqlevels(unlisted_junctions) <-
-        GenomeInfoDb::seqlevels(readGrgList)
-    GenomeInfoDb::seqlevels(uniqueJunctions) <- 
-        GenomeInfoDb::seqlevels(readGrgList)
-    uniqueAnnotatedIntrons <- unique(unlistIntrons(annotationGrangesList,
-        use.names = FALSE, use.ids = FALSE))
-    junctionTables <- junctionStrandCorrection(uniqueJunctions,
-        unlisted_junctions, uniqueAnnotatedIntrons,
-        stranded = stranded, verbose = verbose)
-    uniqueJunctions <- junctionTables[[1]][, c("score", "spliceMotif",
-        "spliceStrand", "junctionStartName", "junctionEndName",
-        "startScore", "endScore", "id")]
-    unlisted_junctions <- junctionTables[[2]]
-    uniqueJunctions$annotatedJunction <- (!is.na(GenomicRanges::match(
-        uniqueJunctions,uniqueAnnotatedIntrons)))
-    uniqueJunctions$annotatedStart <- uniqueJunctions$junctionStartName %in%
-        uniqueJunctions$junctionStartName[uniqueJunctions$annotatedJunction]
-    uniqueJunctions$annotatedEnd <- uniqueJunctions$junctionEndName %in%
-        uniqueJunctions$junctionEndName[uniqueJunctions$annotatedJunction]
-    uniqueJunctions <- correctJunctionFromPrediction(uniqueJunctions, verbose)
-    start.ptm <- proc.time()
-    readClassListSpliced <- constructSplicedReadClassTables(
-        uniqueJunctions = uniqueJunctions,
-        unlisted_junctions = unlisted_junctions,
-        readGrgList = readGrgList,
-        stranded = stranded)
-    end.ptm <- proc.time()
-    if (verbose)
-    message("Finished create transcript models (read classes) for reads with
-    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    return(readClassListSpliced)
-}
 
-#' find unique junctions
-#' @noRd
-findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){
-    predictSpliceSites <- predictSpliceJunctions(
-        annotatedJunctions = uniqueJunctions,
-        junctionModel = junctionModel,
-        verbose = verbose)
-    uniqueJunctions <- predictSpliceSites[[1]][, c(
-        "score", "spliceMotif",
-        "spliceStrand", "junctionStartName", "junctionEndName",
-        "startScore", "endScore", "annotatedJunction",
-        "annotatedStart", "annotatedEnd")]
-    return(list("uniqueJunctions" = uniqueJunctions, 
-                "predictSpliceSites" = predictSpliceSites))
-}
 
-#' correct junction from prediction
-#' @param uniqueJunctions uniqueJunctions
-#' @param verbose verbose
-#' @noRd
-correctJunctionFromPrediction <- function(uniqueJunctions, verbose) {
-    start.ptm <- proc.time()
-    if (sum(uniqueJunctions$annotatedJunction) > 5000 &
-        sum(!uniqueJunctions$annotatedJunction) > 4000) {
-        uniqJunctionsNmodels <-
-            findUniqueJunctions(uniqueJunctions, NULL, verbose)
-        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
-        junctionModel <- uniqJunctionsNmodels$predictSpliceSites[[2]]
-    } else {
-        junctionModel <- standardJunctionModels_temp
-        uniqJunctionsNmodels <-
-            findUniqueJunctions(uniqueJunctions, junctionModel, verbose)
-        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
-        message("Junction correction with not enough data,
-            precalculated model is used")
-    }
-    end.ptm <- proc.time()
-    if (verbose) 
-        message("Model to predict true splice sites built in ",
-            round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    start.ptm <- proc.time()
-    uniqueJunctions <- findHighConfidenceJunctions( junctions = uniqueJunctions,
-        junctionModel = junctionModel, verbose = verbose)
-    uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- 
-        uniqueJunctions$mergedHighConfJunctionId
-    uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
-        is.na(uniqueJunctions$mergedHighConfJunctionId)] <- 
-        names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
-    uniqueJunctions$strand.mergedHighConfJunction <- 
-        as.character(strand(
-            uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
-    end.ptm <- proc.time()
-    if (verbose) 
-        message("Finished correcting junction based on set of high confidence
-            junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    return(uniqueJunctions)
-}
 
-#' generate exonByReadClass
-#' @noRd
-generateExonsByReadClass <- function(readGrgList, annotationGrangesList, 
-    unlisted_junctions, uniqueJunctions, stranded, verbose){
-    GenomeInfoDb::seqlevels(readGrgList) <-
-        unique(c(GenomeInfoDb::seqlevels(readGrgList),
-        GenomeInfoDb::seqlevels(annotationGrangesList)))
-    GenomeInfoDb::seqlevels(annotationGrangesList) <- 
-        GenomeInfoDb::seqlevels(readGrgList)
-    readClassListSpliced <- createModelforJunctionReads(
-        readGrgList, annotationGrangesList, unlisted_junctions,
-        uniqueJunctions, stranded, verbose)
-    # seqlevels are made equal (added for chromosomes missing in any of them)
-    start.ptm <- proc.time()
-    singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
-        use.names = FALSE)
-    mcols(singleExonReads)$id <- mcols(readGrgList[
-        elementNROWS(readGrgList) == 1])$id
-    referenceExons <- unique(c(GenomicRanges::granges(unlist(
-        readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
-            "highConfidenceJunctionReads" &
-            mcols(readClassListSpliced)$strand.rc != "*"], use.names = FALSE)), 
-            GenomicRanges::granges(unlist(annotationGrangesList,
-            use.names = FALSE))))
-    readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
-        granges = singleExonReads, grangesReference = referenceExons,
-        confidenceType = "unsplicedWithin", stranded = stranded)
-    singleExonReads <- singleExonReads[!mcols(singleExonReads)$id %in%
-        readClassListUnsplicedWithAnnotation$readIds]
-    referenceExons <- reduce(singleExonReads, ignore.strand = !stranded)
-    readClassListUnsplicedReduced <- constructUnsplicedReadClasses(
-        granges = singleExonReads, grangesReference = referenceExons,
-        confidenceType = "unsplicedNew", stranded = stranded)
-    end.ptm <- proc.time()
-    if (verbose) message("Finished create single exon transcript models
-        (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- c(readClassListSpliced,
-        readClassListUnsplicedWithAnnotation$exonsByReadClass,
-        readClassListUnsplicedReduced$exonsByReadClass)
-    return(exonsByReadClass)
-}
-
-#' Isoform reconstruction using genomic alignments
-#' @param readGrgList readGrgList
-#' @param runName runName
-#' @param stranded stranded
-#' @param quickMode quickMode
-#' @inheritParams bambu
-#' @noRd
-isore.constructReadClasses <- function(readGrgList,
-    runName = "sample1", annotationGrangesList,
-    genomeSequence = NULL, stranded = FALSE, ncore = 1, verbose = FALSE) {
-    unlisted_junctions <- unlistIntrons(readGrgList,
-        use.ids = TRUE, use.names = FALSE)
-    start.ptm <- proc.time()
-    uniqueJunctions <- createJunctionTable(unlisted_junctions,
-        ncore = ncore, genomeSequence = genomeSequence)
-    # all seqlevels should be consistent, and drop those not in uniqueJunctions
-    if (!all(GenomeInfoDb::seqlevels(unlisted_junctions) %in% 
-        GenomeInfoDb::seqlevels(uniqueJunctions))) {
-        unlisted_junctions <- GenomeInfoDb::keepSeqlevels(unlisted_junctions,
-            value = GenomeInfoDb::seqlevels(unlisted_junctions)[
-                GenomeInfoDb::seqlevels(unlisted_junctions) %in%
-            GenomeInfoDb::seqlevels(uniqueJunctions)], pruning.mode = "coarse")
-        readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
-            value = GenomeInfoDb::seqlevels(readGrgList)[ 
-            GenomeInfoDb::seqlevels(readGrgList) %in%
-            GenomeInfoDb::seqlevels(uniqueJunctions)], pruning.mode = "coarse")
-    } # the seqleels will be made comparable for all ranges,
-    # warning is shown if annotation is missing some
-    if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% 
-        GenomeInfoDb::seqlevels(annotationGrangesList))) 
-        message("not all chromosomes present in reference annotations,
-            annotations might be incomplete. Please compare objects
-            on the same reference")
-    end.ptm <- proc.time()
-    if (verbose) message("Finished creating junction list with splice motif
-        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- generateExonsByReadClass(readGrgList,
-        annotationGrangesList, unlisted_junctions, uniqueJunctions,
-        stranded, verbose)
-    counts <- matrix(mcols(exonsByReadClass)$readCount,
-        dimnames = list(names(exonsByReadClass), runName))
-    colDataDf <- DataFrame(name = runName, row.names = runName)
-    mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c("chr.rc", 
-        "strand.rc", "intronStarts", "intronEnds", "confidenceType")]
-    se <- SummarizedExperiment(assays = SimpleList(counts = counts),
-        rowRanges = exonsByReadClass, colData = colDataDf)
-    return(se)
-}
 
 #' for creating counts and start matrices
 #' @noRd
@@ -942,46 +754,181 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
 }
 
 
-## helper functions to correct junctions
-#' calculate stranded read counts
-#' @param uniqueJunctions uniqueJunctions
-#' @param junctionMatchList junctionMatchList
-#' @param genomeSequence genomeSequence
-#' @param unstranded_unlisted_junctions unstranded_unlisted_junctions
-#' @param unlisted_junction_granges unlisted_junction_granges
+#' Assign New Gene with Gene Ids
+#' @param exByTx exByTx
+#' @param prefix prefix, defaults to empty
+#' @param minoverlap defaults to 5
+#' @param ignore.strand defaults to FALSE
 #' @noRd
-calculateStrandedReadCounts <- function(uniqueJunctions,
-    genomeSequence,unstranded_unlisted_junctions,
-    unlisted_junction_granges) {
-    junctionMatchList <- methods::as(findMatches(uniqueJunctions,
-        unstranded_unlisted_junctions),"List")
-    uniqueJunctions_score <- elementNROWS(junctionMatchList)
-    junctionStrandList <- extractList(strand(unlisted_junction_granges),
-        junctionMatchList)
-    junctionSeqStart <- BSgenome::getSeq(genomeSequence,
-        IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
-    junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
-        IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
-    junctionMotif <- paste(junctionSeqStart, junctionSeqEnd, sep = "-")
-    junctionStartName <- paste(seqnames(uniqueJunctions),start(uniqueJunctions),
-        sep = ":")
-    junctionEndName <- paste(seqnames(uniqueJunctions), end(uniqueJunctions),
-        sep = ":")
-    startScore <- as.integer(tapply(uniqueJunctions_score,
-        junctionStartName, sum)[junctionStartName])
-    endScore <- as.integer(tapply(uniqueJunctions_score,
-        junctionEndName, sum)[junctionEndName])
-    mcols(uniqueJunctions) <- DataFrame(
-        score = uniqueJunctions_score,
-        plus_score = sum(junctionStrandList == "+"),
-        minus_score = sum(junctionStrandList == "-"),
-        spliceMotif = junctionMotif,
-        spliceStrand = spliceStrand(junctionMotif),
-        junctionStartName = junctionStartName,
-        junctionEndName = junctionEndName,
-        startScore = startScore,
-        endScore = endScore,
-        id = seq_along(uniqueJunctions))
-    strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
-    return(uniqueJunctions)
+assignNewGeneIds <- function(exByTx, prefix = "", minoverlap = 5,
+                             ignore.strand = FALSE) {
+    if (is.null(names(exByTx))) names(exByTx) <- seq_along(exByTx)
+    
+    exonSelfOverlaps <- findOverlaps(exByTx, exByTx, select = "all",
+                                     minoverlap = minoverlap, ignore.strand = ignore.strand)
+    hitObject <- as_tibble(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
+    candidateList <- hitObject %>% group_by(queryHits) %>%
+        filter(queryHits <= min(subjectHits), queryHits != subjectHits) %>%
+        ungroup()
+    filteredOverlapList <- hitObject %>% filter(queryHits < subjectHits)
+    rm(list = c("exonSelfOverlaps", "hitObject"))
+    gc(verbose = FALSE)
+    length_tmp <- 1
+    # loop to include overlapping read classes which are not in order
+    while (nrow(candidateList) > length_tmp) {
+        length_tmp <- nrow(candidateList)
+        temp <- includeOverlapReadClass(candidateList, filteredOverlapList)
+        candidateList <- rbind(temp, candidateList)
+        while (nrow(temp)) { ## annotate transcripts by new gene id
+            temp <- includeOverlapReadClass(candidateList, filteredOverlapList)
+            candidateList <- rbind(temp, candidateList)} ## second loop
+        tst <- candidateList %>% group_by(subjectHits) %>%
+            mutate(subjectCount = n()) %>% group_by(queryHits) %>%
+            filter(max(subjectCount) > 1) %>% ungroup()
+        temp2 <- inner_join(tst, tst, by = c("subjectHits" = "subjectHits")) %>%
+            filter(queryHits.x != queryHits.y) %>%
+            mutate(
+                queryHits = if_else(queryHits.x > queryHits.y,
+                                    queryHits.y, queryHits.x),
+                subjectHits = if_else(queryHits.x > queryHits.y,
+                                      queryHits.x, queryHits.y)) %>%
+            dplyr::select(queryHits, subjectHits) %>%
+            distinct()
+        candidateList <- distinct(rbind(temp2, candidateList))
+    }
+    candidateList <- candidateList %>% filter(!queryHits %in% subjectHits) %>%
+        arrange(queryHits, subjectHits)
+    idToAdd <-
+        (which(!(seq_along(exByTx) %in% unique(candidateList$subjectHits))))
+    candidateList <- rbind(candidateList, tibble(
+        queryHits = idToAdd, subjectHits = idToAdd
+    )) %>% arrange(queryHits, subjectHits) %>%
+        mutate(geneId = paste("gene", prefix, ".", queryHits, sep = "")) %>%
+        dplyr::select(subjectHits, geneId)
+    candidateList$readClassId <- names(exByTx)[candidateList$subjectHits]
+    candidateList <- dplyr::select(candidateList, readClassId, geneId)
+    return(candidateList)
+}
+
+#' calculate distance between first and last exon matches
+#' @param candidateList candidateList
+#' @param filteredOverlapList filteredOverlapList
+#' @noRd
+includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
+    temp <- left_join(candidateList, filteredOverlapList,
+                      by = c("subjectHits" = "queryHits")) %>%
+        group_by(queryHits) %>%
+        filter(!subjectHits.y %in% subjectHits, !is.na(subjectHits.y)) %>%
+        ungroup() %>%
+        dplyr::select(queryHits, subjectHits.y) %>%
+        distinct() %>%
+        dplyr::rename(subjectHits = subjectHits.y)
+    return(temp)
+}
+
+
+#' Calculate distance from read class to annotation
+#' @param exByTx exByTx
+#' @param exByTxRef exByTxRef
+#' @param maxDist defaults to 35
+#' @param primarySecondaryDist defaults to 5
+#' @param ignore.strand defaults to FALSE
+#' @noRd
+calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
+                                      primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
+                                      ignore.strand = FALSE) {
+    # (1)  find overlaps of read classes with annotated transcripts,
+    spliceOverlaps <- findSpliceOverlapsByDist(exByTx, exByTxRef,
+                                               maxDist = maxDist, firstLastSeparate = TRUE,
+                                               dropRangesByMinLength = TRUE, cutStartEnd = TRUE,
+                                               ignore.strand = ignore.strand)
+    txToAnTableFiltered <- genFilteredAnTable(spliceOverlaps,
+                                              primarySecondaryDist, DistCalculated = FALSE)
+    # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
+    setTMP <- unique(txToAnTableFiltered$queryHits)
+    spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
+                                                    exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
+                                                    dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
+                                                    ignore.strand = ignore.strand)
+    txToAnTableRest <-
+        genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
+                           exByTx = exByTx, setTMP = setTMP, DistCalculated = FALSE)
+    # (3) find overlaps for remaining reads 
+    setTMPRest <- unique(c(txToAnTableRest$queryHits, setTMP))
+    txToAnTableRestStartEnd <- NULL
+    if (length(exByTx[-setTMPRest])) {
+        spliceOverlaps_restStartEnd <-
+            findSpliceOverlapsByDist(exByTx[-setTMPRest], exByTxRef,
+                                     maxDist = 0, type = "any", firstLastSeparate = TRUE,
+                                     dropRangesByMinLength = FALSE,
+                                     cutStartEnd = FALSE, ignore.strand = ignore.strand)
+        if (length(spliceOverlaps_restStartEnd)) {
+            txToAnTableRestStartEnd <-
+                genFilteredAnTable(spliceOverlaps_restStartEnd,
+                                   primarySecondaryDist, exByTx = exByTx,
+                                   setTMP = setTMPRest, DistCalculated = TRUE)
+        }
+    }
+    txToAnTableFiltered <- rbind( txToAnTableFiltered,
+                                  txToAnTableRest, txToAnTableRestStartEnd ) %>% ungroup()
+    txToAnTableFiltered$readClassId <-
+        names(exByTx)[txToAnTableFiltered$queryHits]
+    txToAnTableFiltered$annotationTxId <-
+        names(exByTxRef)[txToAnTableFiltered$subjectHits]
+    return(txToAnTableFiltered)
+}
+
+
+
+#' generate filtered annotation table
+#' @param spliceOverlaps an output from  findSpliceOverlapsByDist()
+#' @param primarySecondaryDist default 5
+#' @param primarySecondaryDistStartEnd default 5
+#' @param exByTx default NULL
+#' @param setTMP default NULL
+#' @param DistCalculated default FALSE
+#' @noRd
+genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
+                               primarySecondaryDistStartEnd = 5, exByTx = NULL, setTMP = NULL,
+                               DistCalculated = FALSE) {
+    ## initiate the table
+    if (isFALSE(DistCalculated)) {
+        txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
+            mutate(dist = uniqueLengthQuery + uniqueLengthSubject) %>%
+            mutate(txNumber = n())
+    } else {
+        txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
+            mutate(dist = uniqueLengthQuery + uniqueLengthSubject +
+                       uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
+            mutate(txNumber = n())
+    }
+    ## change query hits for step 2 and 3
+    if (!is.null(exByTx)) {
+        txToAnTable$queryHits <-
+            (seq_along(exByTx))[-setTMP][txToAnTable$queryHits]
+    }
+    ## todo: check filters, what happens to reads with only start and end match?
+    if (isFALSE(DistCalculated)) {
+        txToAnTableFiltered <- txToAnTable %>%
+            group_by(queryHits) %>%
+            arrange(queryHits, dist) %>%
+            filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+            filter(queryElementsOutsideMaxDist + 
+                       subjectElementsOutsideMaxDist == 
+                       min(queryElementsOutsideMaxDist +
+                               subjectElementsOutsideMaxDist)) %>% 
+            filter((uniqueStartLengthQuery <= primarySecondaryDistStartEnd &
+                        uniqueEndLengthQuery <= primarySecondaryDistStartEnd) ==
+                       max(uniqueStartLengthQuery <=
+                               primarySecondaryDistStartEnd & uniqueEndLengthQuery <=
+                               primarySecondaryDistStartEnd)) %>%
+            mutate(txNumberFiltered = n())
+    } else {
+        txToAnTableFiltered <- txToAnTable %>%
+            group_by(queryHits) %>%
+            arrange(queryHits, dist) %>%
+            filter(dist <= (min(dist) + primarySecondaryDist)) %>%
+            mutate(txNumberFiltered = n())
+    }
+    return(txToAnTableFiltered)
 }

@@ -1,170 +1,66 @@
-#' Create Junction tables from unlisted junction granges
-#' @importFrom BiocParallel bppram bpvec
+
+
+
+#' correct junction from prediction
+#' @param uniqueJunctions uniqueJunctions
+#' @param verbose verbose
 #' @noRd
-createJunctionTable <- function(unlisted_junction_granges,
-                                genomeSequence = NULL, ncore = 1) {
-    # License note: This function is adopted from the GenomicAlignments package 
-    if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
-        please provide fasta file or BSgenome name, see available.genomes()")
-    if (methods::is(genomeSequence, "character")) {
-        if (grepl(".fa", genomeSequence)) {
-            if (.Platform$OS.type == "windows") {
-                genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-                newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                    "[[", 1))
-                names(genomeSequence) <- newlevels
-            } else {
-                genomeSequence <- Rsamtools::FaFile(genomeSequence)
-            }
-        } else {
-            genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-        }
+junctionErrorCorrection <- function(uniqueJunctions, verbose) {
+    start.ptm <- proc.time()
+    if (sum(uniqueJunctions$annotatedJunction) > 5000 &
+        sum(!uniqueJunctions$annotatedJunction) > 4000) {
+        uniqJunctionsNmodels <-
+            findUniqueJunctions(uniqueJunctions, NULL, verbose)
+        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
+        junctionModel <- uniqJunctionsNmodels$predictSpliceSites[[2]]
+    } else {
+        junctionModel <- standardJunctionModels_temp
+        uniqJunctionsNmodels <-
+            findUniqueJunctions(uniqueJunctions, junctionModel, verbose)
+        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
+        message("Junction correction with not enough data,
+            precalculated model is used")
     }
-    if (!all(GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
-            GenomeInfoDb::seqlevels(genomeSequence))) {
-        message("not all chromosomes present in reference genome sequence,
-            ranges are dropped")
-        unlisted_junction_granges <-
-            GenomeInfoDb::keepSeqlevels(unlisted_junction_granges,
-            value = GenomeInfoDb::seqlevels(unlisted_junction_granges)[
-                GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
-                GenomeInfoDb::seqlevels(genomeSequence)],
-                pruning.mode = "coarse")
-    }
-    unstranded_unlisted_junctions <-
-        BiocGenerics::unstrand(unlisted_junction_granges)
-    uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
-    names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
-                                    sep = ".")
-    uniqueJunctions <- calculateStrandedReadCounts(uniqueJunctions,
-        genomeSequence, unstranded_unlisted_junctions,
-        unlisted_junction_granges)
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Model to predict true splice sites built in ",
+                round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    start.ptm <- proc.time()
+    uniqueJunctions <- findHighConfidenceJunctions( junctions = uniqueJunctions,
+                                                    junctionModel = junctionModel, verbose = verbose)
+    uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- 
+        uniqueJunctions$mergedHighConfJunctionId
+    uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
+        is.na(uniqueJunctions$mergedHighConfJunctionId)] <- 
+        names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
+    uniqueJunctions$strand.mergedHighConfJunction <- 
+        as.character(strand(
+            uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Finished correcting junction based on set of high confidence
+            junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(uniqueJunctions)
 }
 
-#' update junctions object if strand prediction improves overlap 
-#' with annotations
-#' @param annotatedIntronNumber annotatedIntronNumber
-#' @param uniqueJunctions uniqueJunctions
-#' @param uniqueJunctionsUpdate uniqueJunctionsUpdate
-#' @param uniqueAnnotatedIntrons uniqueAnnotatedIntrons
-#' @param strandStep strandStep
-#' @param verbose verbose
-#' @noRd
-updateJunctionwimprove <- function(annotatedIntronNumber, uniqueJunctions,
-    uniqueJunctionsUpdate, uniqueAnnotatedIntrons, strandStep, verbose) {
-    annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate,
-        uniqueAnnotatedIntrons, ignore.strand = FALSE)["TRUE"]
-    if (annotatedIntronNumberNew > annotatedIntronNumber & !is.na(
-        annotatedIntronNumber)) {
-        # update junctions object if strand prediction improves overlap
-        # with annotations
-        if (verbose) {
-            message("after strand correction, annotated introns:")
-            message(annotatedIntronNumberNew)
-            message(annotatedIntronNumberNew / length(uniqueJunctionsUpdate))
-        }
-        annotatedIntronNumber <- annotatedIntronNumberNew
-        uniqueJunctions <- uniqueJunctionsUpdate
-    } else {
-        strandStep <- FALSE
-    }
-    outputList <- list(
-        "strandStep" = strandStep,
-        "annotatedIntronNumber" = annotatedIntronNumber,
-        "uniqueJunctions" = uniqueJunctions
-    )
-    return(outputList)    
-}
 
-#' JUNCTIONSTRANDCORRECTION
+#' find unique junctions
 #' @noRd
-junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
-    uniqueAnnotatedIntrons, stranded, verbose = FALSE) {
-    # note: strand sometimes incorrectly infered based on motifs, might 
-    # introduce systematic errors due to alignment (biased to splice motifs)
-    allJunctionToUniqueJunctionOverlap <- 
-        findOverlaps(unlisted_junction_granges, uniqueJunctions,
-            type = "equal", ignore.strand = TRUE)
-    uniqueJunctionsUpdate <- uniqueJunctions
-    # make a copy to revert to if strand correction does not improve results
-    annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions,
-        uniqueAnnotatedIntrons,ignore.strand = FALSE)["TRUE"]
-    if (verbose) {
-        message("before strand correction, annotated introns:")
-        message(annotatedIntronNumber)
-        message(annotatedIntronNumber / length(uniqueJunctions))
-    }
-    # infer strand for each read based on strand of junctions
-    strandStep <- TRUE
-    while (strandStep) { # iterate twice to improve strand prediction w.t.
-        # mean junction counts, annotate junction strand with read strand
-        if (stranded) { # update junction strand score
-            uniqueJunctionsUpdate <- 
-                updateStrandScoreByRead(unlisted_junction_granges,
-                    uniqueJunctionsUpdate, uniqueJunctions, stranded, 
-                    allJunctionToUniqueJunctionOverlap)
-            strandScoreByRead <-
-                uniqueJunctionsUpdate$minus_score_inferedByRead -
-                uniqueJunctionsUpdate$plus_score_inferedByRead
-        } else{ 
-            strandScoreByRead <- uniqueJunctionsUpdate$minus_score -
-                uniqueJunctionsUpdate$plus_score
-        }
-        # overwrite info from motif which increases overlap with known junc
-        strand(uniqueJunctionsUpdate[strandScoreByRead < 0]) <- "+"
-        strand(uniqueJunctionsUpdate[strandScoreByRead > 0]) <- "-"
-        updatedList <- updateJunctionwimprove(annotatedIntronNumber,
-            uniqueJunctions, uniqueJunctionsUpdate, uniqueAnnotatedIntrons,
-            strandStep, verbose)
-        annotatedIntronNumber <- updatedList$annotatedIntronNumber
-        uniqueJunctions <- updatedList$uniqueJunctions
-        strandStep <- updatedList$strandStep
-    }
-    return(list(uniqueJunctions = uniqueJunctions,
-                unlisted_junctions = unlisted_junction_granges))
-}
-
-#' updateStrandScoreByRead
-#' @noRd
-updateStrandScoreByRead <- function(unlisted_junction_granges,
-    uniqueJunctionsUpdate, uniqueJunctions, stranded, 
-    allJunctionToUniqueJunctionOverlap){
-    unlisted_junction_granges_strand <-
-        as.character(strand(uniqueJunctionsUpdate)[subjectHits(
-            allJunctionToUniqueJunctionOverlap)])
-    unlisted_junction_granges_strandList <-
-        splitAsList(unlisted_junction_granges_strand,
-            mcols(unlisted_junction_granges)$id)
-    strandJunctionSum <-
-        sum(unlisted_junction_granges_strandList == "-") -
-        sum(unlisted_junction_granges_strandList == "+")
-    readStrand <- rep("*", length(unlisted_junction_granges_strandList))
-    readStrand[strandJunctionSum < 0] <- "+"
-    readStrand[strandJunctionSum > 0] <- "-"
-    strand(unlisted_junction_granges) <-
-        readStrand[match(mcols(unlisted_junction_granges)$id,
-            as.integer(names(unlisted_junction_granges_strandList)))]
-    unstranded_unlisted_junction_granges <-
-        BiocGenerics::unstrand(unlisted_junction_granges)
-    junctionMatchList <- methods::as(findMatches(uniqueJunctions,
-        unstranded_unlisted_junction_granges), "List")
-    tmp <- extractList(strand(unlisted_junction_granges),
-        junctionMatchList)
-    uniqueJunctionsUpdate$plus_score_inferedByRead <- sum(tmp == "+")
-    uniqueJunctionsUpdate$minus_score_inferedByRead <- sum(tmp == "-")
-    return(uniqueJunctionsUpdate)
+findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){
+    predictSpliceSites <- predictSpliceJunctions(
+        annotatedJunctions = uniqueJunctions,
+        junctionModel = junctionModel,
+        verbose = verbose)
+    uniqueJunctions <- predictSpliceSites[[1]][, c(
+        "score", "spliceMotif",
+        "spliceStrand", "junctionStartName", "junctionEndName",
+        "startScore", "endScore", "annotatedJunction",
+        "annotatedStart", "annotatedEnd")]
+    return(list("uniqueJunctions" = uniqueJunctions, 
+                "predictSpliceSites" = predictSpliceSites))
 }
 
 
-
-#' Evaluate annoation overlap
-#' @noRd
-evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
-    ignore.strand = FALSE) {
-    return(table(!is.na(GenomicRanges::match(intronRanges,
-    uniqueAnnotatedIntrons, ignore.strand = ignore.strand ))))
-}
 
 #' Test splice sites
 #' @noRd
