@@ -183,7 +183,13 @@ calculateDegradationRate <- function(readClassDt){
     geneCountLength <- unique(geneLength[geneCount, on = "gene_sid"])
     geneCountLength <- unique(geneCountPar[geneCountLength, on = "gene_sid"])
     geneCountLength[, d_rate := dObs/nobs]
-    geneCountLength <- geneCountLength[nobs >= 30 & ((nobs - dObs) >= 5)]
+    if (length(which(geneCountLength$nobs >= 30 & 
+        ((geneCountLength$nobs - geneCountLength$dObs) >= 5))) == 0){
+        warning("There is not enough read count and full length coverage!
+            Hence degradation rate is estimated using all data!")
+    } else {
+         geneCountLength <- geneCountLength[nobs >= 30 & ((nobs - dObs) >= 5)]
+    }
     d_rate <- median(geneCountLength$d_rate * 1000/geneCountLength$gene_len,
         na.rm = TRUE)
     return(list(d_rate, nrow(geneCountLength)))
