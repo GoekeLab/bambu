@@ -50,13 +50,18 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
     readClassDt <- genEquiRCs(readClass, annotations)
-    d_rate <- 
-        calculateExpectedCoverageRatio(readClass, annotations)
-    colNameRC <- colnames(readClass)
-    colDataRC <- colData(readClass)
-    counts <- bambu.quantDT(readClassDt, emParameters = emParameters,
-        ncore = ncore, verbose = verbose, d_rate)
+    tx_len <- rbind(data.table(tx_id = names(annotations),
+        tx_len = sum(width(annotations))),
+        data.table(tx_id = paste0(names(annotations),"Start"),
+        tx_len = sum(width(annotations))))
+    readClassDt <- tx_len[readClassDt, on = "tx_id"]
+    countsOut <- bambu.quantDT(readClassDt, emParameters = emParameters,
+        ncore = ncore, verbose = verbose)
+    counts <- countOut[[1]]
     counts <- counts[match(names(annotations), tx_name)]
+    colNameRC <- colnames(readClass)
+    colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
+        nGeneFordRate = countsOut[[3]])
     seOutput <- SummarizedExperiment::SummarizedExperiment(
         assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
             dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
@@ -132,8 +137,9 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
     readclassVec <- unique(readClassDt$read_class_id)
     readClassDt <- 
         simplifyNames(readClassDt,txVec, geneVec,ori_txvec, readclassVec)
-    readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, d_rate, 
-        d_mode = TRUE)
+    d_rateInfo <- calculateDegradationRate(readClassDt)
+    readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
+        d_rateInfo[[1]], d_mode = TRUE)
     start.time <- proc.time()
     outList <- abundance_quantification(readClassDt,ncore = ncore,
         bias = emParameters[["bias"]], maxiter = emParameters[["maxiter"]],
@@ -143,7 +149,7 @@ bambu.quantDT <- function(readClassDt = readClassDt, emParameters = NULL,
         round((end.time - start.time)[3] / 60, 1), " mins.")
     theta_est <- formatOutput(outList,ori_txvec,geneVec)
     theta_est <- removeDuplicates(theta_est)
-    return(theta_est)
+    return(list(theta_est, d_rateInfo[[1]], d_rateInfo[[2]]))
 }
 
 
