@@ -167,6 +167,26 @@ updateOutput <- function(est_output, a_mat, rids, cids,
     return(out)
 }
 
+#' Calculate degradation rate based on equiRC read counts 
+#' @noRd
+calculateDegradationRate <- function(readClassDt){
+    rcCount <- unique(readClassDt[, .(gene_sid,read_class_sid, nobs)])
+    rcCountPar <-
+        unique(readClassDt[which(!fullTx), .(gene_sid,read_class_sid, nobs)])
+    geneCount <- unique(rcCount[, list(nobs = sum(nobs)), by = gene_sid])
+    geneCountPar <- unique(rcCountPar[, list(dObs = sum(nobs)), by = gene_sid])
+    txLength <- unique(readClassDt[, .(gene_sid, tx_ori, tx_len)])
+    geneLength <- 
+        unique(txLength[, list(gene_len = max(tx_len)), by = gene_sid])
+    geneCountLength <- unique(geneLength[geneCount, on = "gene_sid"])
+    geneCountLength <- unique(geneCountPar[geneCountLength, on = "gene_sid"])
+    geneCountLength[, d_rate := dObs/nobs]
+    geneCountLength <- geneCountLength[nobs >= 30 & ((nobs - dObs) >= 5)]
+    d_rate <- median(geneCountLength$d_rate * 1000/geneCountLength$gene_len,
+        na.rm = TRUE)
+    return(list(d_rate, nrow(geneCountLength)))
+}
+
 
 # Modify default quant output using estimated outputs
 #' @noRd
