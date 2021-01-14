@@ -130,12 +130,12 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 #' )
 #' readFromGTF(gtf.file)
 readFromGTF <- function(file, keep.extra.columns = NULL){
-  if (missing(file)) {
-    stop('A GTF file is required.')
-  }else{
-    data = read.delim(file,header = FALSE, comment.char = '#')
-    colnames(data) <- c("seqname","source","type","start",
-      "end","score","strand","frame","attribute")
+    if (missing(file)) {
+        stop('A GTF file is required.')
+    }else{
+        data <- read.delim(file,header = FALSE, comment.char = '#')
+        colnames(data) <- c("seqname","source","type","start",
+            "end","score","strand","frame","attribute")
     data <- data[data$type == 'exon',]
     data$strand[data$strand == '.'] <- '*'
     data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)

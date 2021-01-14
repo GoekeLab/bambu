@@ -38,7 +38,6 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     return(seOutput)
 }
-  
 
 
 

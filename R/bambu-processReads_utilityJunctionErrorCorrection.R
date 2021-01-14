@@ -1,6 +1,3 @@
-
-
-
 #' correct junction from prediction
 #' @param uniqueJunctions uniqueJunctions
 #' @param verbose verbose
@@ -26,8 +23,8 @@ junctionErrorCorrection <- function(uniqueJunctions, verbose) {
         message("Model to predict true splice sites built in ",
                 round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     start.ptm <- proc.time()
-    uniqueJunctions <- findHighConfidenceJunctions( junctions = uniqueJunctions,
-                                                    junctionModel = junctionModel, verbose = verbose)
+    uniqueJunctions <- findHighConfidenceJunctions(junctions = uniqueJunctions,
+        junctionModel = junctionModel, verbose = verbose)
     uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- 
         uniqueJunctions$mergedHighConfJunctionId
     uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
@@ -74,7 +71,7 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
     annotatedSplice.prime <- data[, paste0("annotated",splice,".",prime)]
     annotatedSplice <- data[, paste0("annotated",splice)]
     predSplice.primeName <- paste0('spliceSitePrediction',splice,'.',prime)
-    if(prime == "start"){
+    if (prime == "start") {
         mySet.all <- which((distSplice.prime != 0) & (spliceStrand != "*") &
             (spliceScore > 0) & (distSplice.prime < 15))
     }else{
@@ -99,7 +96,7 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
                 data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
             predSplice.prime <- myResults[[2]]
             predictions = myResults[[1]]
-        } else{
+        } else {
             predictions = glmnet:::predict.cv.glmnet(
                 junctionModel[[predSplice.primeName]],
                 newx = modelmatrix,s = 'lambda.min')
@@ -171,7 +168,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     preds <- lapply(spliceVec, function(splice){
         preds <- lapply(tolower(spliceVec), function(prime){
             return(testSpliceSites(metadataList[[splice]], splice = splice,
-                                    prime = prime, junctionModel, verbose))})
+                prime = prime, junctionModel, verbose))})
         names(preds) <- tolower(spliceVec) 
         return(preds)})
     names(preds) <- spliceVec
@@ -276,7 +273,7 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
                 highConfJunctions$spliceSitePredictionEnd.start,
                 highConfJunctions$spliceSitePredictionEnd.end)
     spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 2 # NA
-    setReferenceJunctions <- (apply(spliceSitePredictionList > 0,1,sum) == 4)| 
+    setReferenceJunctions <- (apply(spliceSitePredictionList > 0,1,sum) == 4) | 
         highConfJunctions$annotatedJunction
     candidateJunctions$highConfJunctionPrediction[highConfidentJunctionSet] <- 
         setReferenceJunctions
@@ -328,7 +325,7 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
         candidateJunctionsMinus <-
             findJunctionsByStrand(candidateJunctionsMinus, 
                 highConfidentJunctionSetMinus,junctionModel, verbose)
-        
+
         #if conflict (very rare) use ref junction with higher read count/score
         junctions <- useRefJunctionForConflict(junctions,
                 candidateJunctionsMinus, candidateJunctionsPlus)
@@ -344,8 +341,9 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
                 junctions$mergedHighConfJunctionId, sum)
         message(
             sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]))
-        message(sum(sumByJuncId[junctions[names(sumByJuncId)]$
-            annotatedJunction]) / sum(junctions$score))
+        message(
+            sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]) / 
+                sum(junctions$score))
     }
     return(junctions[,'mergedHighConfJunctionId'])
 }

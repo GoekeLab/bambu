@@ -15,22 +15,22 @@ setBiocParallelParameters <- function(reads, readClass.file, ncore, verbose){
 #' setIsoreparameters
 #' @noRd
 setIsoreParameters <- function(isoreParameters){
-  # ===# set default controlling parameters for isoform reconstruction  #===#
-  isoreParameters.default <- list(
-    remove.subsetTx = TRUE, 
-    min.readCount = 2,
-    min.readFractionByGene = 0.05,
-    min.sampleNumber = 1,
-    min.exonDistance = 35,
-    min.exonOverlap = 10, #
-    min.primarySecondaryDist = 5,
-    min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
-    min.primarySecondaryDistStartEnd2 = 5, # for read assignment
-    min.exonOverlap = 10,
-    prefix = "") 
-  isoreParameters <- 
-    updateParameters(isoreParameters, isoreParameters.default)
-  return(isoreParameters)
+    # ===# set default controlling parameters for isoform reconstruction  #===#
+    isoreParameters.default <- list(
+        remove.subsetTx = TRUE, 
+        min.readCount = 2,
+        min.readFractionByGene = 0.05,
+        min.sampleNumber = 1,
+        min.exonDistance = 35,
+        min.exonOverlap = 10, #
+        min.primarySecondaryDist = 5,
+        min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
+        min.primarySecondaryDistStartEnd2 = 5, # for read assignment
+        min.exonOverlap = 10,
+        prefix = "") 
+    isoreParameters <- 
+        updateParameters(isoreParameters, isoreParameters.default)
+    return(isoreParameters)
 }
 
 
