@@ -12,8 +12,7 @@ bambu.extendAnnotations <- function(readClassList, annotations,
       readClass <- readRDS(file = readClass)
     }
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClass,
-                                                              readClassSeRef = combinedTxCandidates, verbose = verbose)
-  }
+        readClassSeRef = combinedTxCandidates, verbose = verbose)}
   end.ptm <- proc.time()
   if (verbose) message("combining transcripts in ",
                        round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
