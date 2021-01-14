@@ -7,8 +7,8 @@
 using namespace Rcpp;
 
 // em_theta
-List em_theta(const arma::mat X, const arma::rowvec Y, const double lambda, const arma::rowvec b, const bool d, const int maxiter, const double conv);
-RcppExport SEXP _bambu_em_theta(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP bSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
+List em_theta(const arma::mat X, const arma::rowvec Y, const double lambda, const arma::rowvec b, const bool d, const int maxiter, const double minvalue, const double conv);
+RcppExport SEXP _bambu_em_theta(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP bSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP minvalueSEXP, SEXP convSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -18,14 +18,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::rowvec >::type b(bSEXP);
     Rcpp::traits::input_parameter< const bool >::type d(dSEXP);
     Rcpp::traits::input_parameter< const int >::type maxiter(maxiterSEXP);
+    Rcpp::traits::input_parameter< const double >::type minvalue(minvalueSEXP);
     Rcpp::traits::input_parameter< const double >::type conv(convSEXP);
-    rcpp_result_gen = Rcpp::wrap(em_theta(X, Y, lambda, b, d, maxiter, conv));
+    rcpp_result_gen = Rcpp::wrap(em_theta(X, Y, lambda, b, d, maxiter, minvalue, conv));
     return rcpp_result_gen;
 END_RCPP
 }
 // emWithL1
-List emWithL1(const arma::mat X, const arma::rowvec Y, const double lambda, const bool d, const int maxiter, const double conv);
-RcppExport SEXP _bambu_emWithL1(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
+List emWithL1(const arma::mat X, const arma::rowvec Y, const double lambda, const bool d, const int maxiter, const double minvalue, const double conv);
+RcppExport SEXP _bambu_emWithL1(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP minvalueSEXP, SEXP convSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -34,15 +35,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type lambda(lambdaSEXP);
     Rcpp::traits::input_parameter< const bool >::type d(dSEXP);
     Rcpp::traits::input_parameter< const int >::type maxiter(maxiterSEXP);
+    Rcpp::traits::input_parameter< const double >::type minvalue(minvalueSEXP);
     Rcpp::traits::input_parameter< const double >::type conv(convSEXP);
-    rcpp_result_gen = Rcpp::wrap(emWithL1(X, Y, lambda, d, maxiter, conv));
+    rcpp_result_gen = Rcpp::wrap(emWithL1(X, Y, lambda, d, maxiter, minvalue, conv));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_bambu_em_theta", (DL_FUNC) &_bambu_em_theta, 7},
-    {"_bambu_emWithL1", (DL_FUNC) &_bambu_emWithL1, 6},
+    {"_bambu_em_theta", (DL_FUNC) &_bambu_em_theta, 8},
+    {"_bambu_emWithL1", (DL_FUNC) &_bambu_emWithL1, 7},
     {NULL, NULL, 0}
 };
 

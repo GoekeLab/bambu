@@ -4,13 +4,12 @@
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations,
                                     isoreParameters, verbose = FALSE) {
-  combinedTxCandidates <- NULL
-  start.ptm <- proc.time()
-  for (readClassIndex in seq_along(readClassList)) {
-    readClass <- readClassList[[readClassIndex]]
-    if (is.character(readClass)) {
-      readClass <- readRDS(file = readClass)
-    }
+    combinedTxCandidates <- NULL
+    start.ptm <- proc.time()
+    for (readClassIndex in seq_along(readClassList)) {
+        readClass <- readClassList[[readClassIndex]]
+        if (is.character(readClass)) 
+            readClass <- readRDS(file = readClass)
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClass,
         readClassSeRef = combinedTxCandidates, verbose = verbose)}
     end.ptm <- proc.time()
