@@ -108,7 +108,6 @@ usethis::use_data(data1, data2, data3, data4, data5,
 
 
 ## inst data creation
-.libPaths("/usr/local/lib/R/site-library")
 rm(list = ls())
 gc()
 
@@ -124,10 +123,10 @@ require(gridExtra)
 
 
 cat('Setting working directory')
-wkdir <- '/mnt/ont/s3.ontdata.store.genome.sg/projects/'
+wkdir <- ''
 
 ## get gene List
-se <- readRDS("/mnt/ont/s3.ontdata.store.genome.sg/projects/bamboo_output/seOutput2020-04-30_updated_wBC.rds")
+se <- readRDS("seOutput2020-04-30_updated_wBC.rds")
 tx <- rowRanges(se[[1]])
 gene <- rowRanges(se[[2]])
 
@@ -154,7 +153,7 @@ write.table(genevec, file = geneList.file, sep = '\t',
 
 
 ## get gtf
-gtf.file <- "/mnt/ont/annotations/Grch38/ensembl-91/Homo_sapiens.GRCh38.91.gtf"
+gtf.file <- "Homo_sapiens.GRCh38.91.gtf"
 new_gtf.file <- paste0(wkdir, "/Homo_sapiens.GRCh38.91_chr",as.character(seqnames(gr)),
                        "_",start(gr),"_",end(gr),".gtf")
 system(paste0("grep -f  ",geneList.file," ",gtf.file," > ",new_gtf.file))
