@@ -12,18 +12,33 @@ isore.combineTranscriptCandidates <- function(readClassSe,
     return(readClassSeRef)
   } else {
     colDataCombined <- rbind(colData(readClassSeRef), colData(readClassSe))
-    readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), rownames = "id")
-    readClassSeTBL <- as_tibble(rowData(readClassSe), rownames = "id") %>%
+    readClassSeRefTBL <- as_tibble(rowData(readClassSeRef))
+    readClassSeTBL <- as_tibble(rowData(readClassSe)) %>%
       mutate(start = min(start(rowRanges(readClassSe))),
              end = max(end(rowRanges(readClassSe))))
+    
+     # readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), rownames = "id")
+     # readClassSeTBL <- as_tibble(rowData(readClassSe), rownames = "id") %>%
+     #   mutate(start = min(start(rowRanges(readClassSe))),
+     #          end = max(end(rowRanges(readClassSe))))
     rowData.spliced <- full_join(filter(readClassSeRefTBL,
-                                        confidenceType == "highConfidenceJunctionReads"), filter(
-                                          readClassSeTBL, confidenceType == "highConfidenceJunctionReads"),
+                                        confidenceType == "highConfidenceJunctionReads"), 
+                                 filter(readClassSeTBL, 
+                                        confidenceType == "highConfidenceJunctionReads"),
                                  by = c("chr" = "chr.rc", "strand" = "strand.rc",
                                         "intronStarts", "intronEnds"), suffix = c(".ref", ".new"))
     # create SE objects for spliced and unspliced Tx
     se.spliced <- createSEforSplicedTx(rowData.spliced, readClassSeRef,
                                        readClassSe, colDataCombined)
+    
+    ## alternative using dplyr data tables
+    #min.readCount = 2, 
+    #min.readFractionByGene = 0.05, 
+    #min.sampleNumber = 1
+    readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), counts= assays(readClassSeRef)$counts[,1])
+    
+    
+    ##
     readClassSeRefTBL.unspliced <- 
       filter(readClassSeRefTBL,confidenceType == "unsplicedNew")
     readClassSeTBL.unspliced <-
@@ -58,6 +73,28 @@ isore.combineTranscriptCandidates <- function(readClassSe,
 #' create ref from a readClassSe object if readClassSeRef is not provided
 #' @noRd
 createRefFromReadClassSE <- function(readClassSe){
+  rownames(readClassSe) <- NULL
+  counts <- assays(readClassSe)$counts
+  start <- matrix(min(start(rowRanges(readClassSe))),
+                  dimnames = dimnames(counts))
+  end <- matrix(max(end(rowRanges(readClassSe))),
+                dimnames = dimnames(counts))
+  rowData <- as_tibble(rowData(readClassSe)) %>%
+    mutate(start = rowMins(start),
+           end = rowMaxs(end)) %>%
+    dplyr::select(chr = chr.rc, start, end, strand = strand.rc, intronStarts,
+                  intronEnds, confidenceType, id)
+  readClassSeRef <- SummarizedExperiment(assays = SimpleList(counts = counts,
+                                                             start = start,
+                                                             end = end),
+                                         rowData = rowData, 
+                                         colData = colData(readClassSe))
+  return(readClassSeRef)
+}
+
+#' create ref from a readClassSe object if readClassSeRef is not provided
+#' @noRd
+createRefFromReadClassSEOri <- function(readClassSe){
   counts <- assays(readClassSe)$counts
   start <- matrix(min(start(rowRanges(readClassSe))),
                   dimnames = dimnames(counts))
