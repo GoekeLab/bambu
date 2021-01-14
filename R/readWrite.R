@@ -69,8 +69,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         stop("The inputted GRangesList is of the wrong class.")
     }
     df <- as_tibble(annotation)
-    if (any(colnames(df) == "exon_rank"))
-        df$exon_rank <- paste('exon_number "', df$exon_rank, '";', sep = "")
+    df$exon_rank <- paste('exon_number "', df$exon_rank, '";', sep = "")
     if (missing(geneIDs)) {
         if (!is.null(mcols(annotation, use.names = FALSE)$GENEID)) {
             geneIDs <- as_tibble(mcols(annotation, use.names = FALSE)[,
@@ -141,6 +140,7 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
     data$strand[data$strand == '.'] <- '*'
     data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
     data$TXNAME = gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
+    data$exon_rank = gsub('.*exon_number (.*?);.*', '\\1',data$attribute)
     if (!is.null(keep.extra.columns)) {
         for (extraColumn in seq_along(keep.extra.columns)) {
             data[,keep.extra.columns[extraColumn]] <-
@@ -151,7 +151,7 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
         }
     }
     grlist <- makeGRangesListFromDataFrame(
-        data[,c('seqname', 'start','end','strand','TXNAME')],
+        data[,c('seqname', 'start','end','strand','TXNAME','exon_rank')],
         split.field = 'TXNAME',keep.extra.columns = TRUE)
     grlist <- grlist[IRanges::order(start(grlist))]
     geneData = (unique(data[,c('TXNAME', 'GENEID',keep.extra.columns)]))
