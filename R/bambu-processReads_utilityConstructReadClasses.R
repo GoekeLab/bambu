@@ -45,9 +45,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                      dimnames = list(names(exonsByRC), runName))
     colDataDf <- DataFrame(name = runName, row.names = runName)
     mcols(exonsByRC) <- mcols(exonsByRC)[, c("chr.rc", "strand.rc", 
-                                             "intronStarts", "intronEnds", 
-                                             "confidenceType")]
-
+        "intronStarts", "intronEnds", "confidenceType")]
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
                                rowRanges = exonsByRC, 
                                colData = colDataDf)
