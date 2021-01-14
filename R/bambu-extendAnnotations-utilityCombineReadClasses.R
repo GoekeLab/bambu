@@ -35,7 +35,7 @@ isore.combineTranscriptCandidates <- function(readClassSe,
     #min.readCount = 2, 
     #min.readFractionByGene = 0.05, 
     #min.sampleNumber = 1
-    readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), counts= assays(readClassSeRef)$counts[,1])
+  #  readClassSeRefTBL <- as_tibble(rowData(readClassSeRef), counts= assays(readClassSeRef)$counts[,1])
     
     
     ##
@@ -70,6 +70,7 @@ isore.combineTranscriptCandidates <- function(readClassSe,
 }
 
 
+
 #' create ref from a readClassSe object if readClassSeRef is not provided
 #' @noRd
 createRefFromReadClassSE <- function(readClassSe){
@@ -83,7 +84,7 @@ createRefFromReadClassSE <- function(readClassSe){
     mutate(start = rowMins(start),
            end = rowMaxs(end)) %>%
     dplyr::select(chr = chr.rc, start, end, strand = strand.rc, intronStarts,
-                  intronEnds, confidenceType, id)
+                  intronEnds, confidenceType, id=rcId)
   readClassSeRef <- SummarizedExperiment(assays = SimpleList(counts = counts,
                                                              start = start,
                                                              end = end),
