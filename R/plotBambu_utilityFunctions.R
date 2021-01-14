@@ -46,8 +46,8 @@ plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
             p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression,
                 heights = c(1, 1))
             return(p)
-        } else {
-            if (!all(gene_id %in% rowData(se)$GENEID)) stop("all(gene_id %in% 
+    } else {
+        if (!all(gene_id %in% rowData(se)$GENEID)) stop("all(gene_id %in% 
                 rowData(se)$GENEID) condition is not satisfied!")
             p <- lapply(gene_id, function(g) {
                 txVec <- rowData(se)[rowData(se)$GENEID == g, ]$TXNAME
@@ -62,8 +62,8 @@ plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
                     top = g, heights = c(1, 1) )
                 return(p)
             })
-            return(p)
-        }
+        return(p)
+    }
 }
 
 #' plot PCA
