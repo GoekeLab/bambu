@@ -60,11 +60,11 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
-    readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
-        value =  refSeqLevels,
-        pruning.mode = "coarse")
-    # reassign Ids after seqlevels are dropped
-    mcols(readGrgList)$id <- seq_along(readGrgList) 
+        readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
+            value =  refSeqLevels,
+            pruning.mode = "coarse")
+        # reassign Ids after seqlevels are dropped
+        mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
     if (!all(GenomeInfoDb::seqlevels(annotations) %in% refSeqLevels)) {
     message("not all chromosomes from annotations present in reference genome 
