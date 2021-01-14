@@ -69,7 +69,8 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         stop("The inputted GRangesList is of the wrong class.")
     }
     df <- as_tibble(annotation)
-    df$exon_rank <- paste('exon_number "', df$exon_rank, '";', sep = "")
+    if (any(colnames(df) == "exon_rank"))
+        df$exon_rank <- paste('exon_number "', df$exon_rank, '";', sep = "")
     if (missing(geneIDs)) {
         if (!is.null(mcols(annotation, use.names = FALSE)$GENEID)) {
             geneIDs <- as_tibble(mcols(annotation, use.names = FALSE)[,
