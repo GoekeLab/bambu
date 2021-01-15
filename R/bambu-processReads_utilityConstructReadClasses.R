@@ -163,12 +163,16 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand,
         confidenceType = readConfidence)
+        #sameStrand = getChrFromGrList(readGrgList)== readStrand)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
         summarise(readCount = n(),
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
         end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
+      #  startSd = sd(start),
+      #  endSd = sd(end),
+      #  readCount.sameStrand = sum(sameStrand),
         .groups = 'drop') %>% arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
     return(readTable)
