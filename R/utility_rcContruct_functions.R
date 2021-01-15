@@ -44,14 +44,18 @@ createReadTable <- function(uniqueJunctions, unlisted_junctions, readGrgList,
     ## identify start and end sites
     readTable[lowConfidenceReads, "confidenceType"] <- 
         "lowConfidenceJunctionReads"
-    readTable <- readTable %>% group_by( chr, strand, intronEnds,
-        intronStarts) %>% summarise( readCount = n(), start = nth(
-                x = start, n = ceiling(readCount / 5), order_by = start),
+    indices=group_indices(readTable %>% group_by(chr, strand, 
+        intronEnds, intronStarts))
+    names(indices) = mcols(readGrgList)$id
+    readTable <- readTable %>% 
+        group_by( chr, strand, intronEnds, intronStarts) %>% 
+        summarise(readCount = n(), start = nth(
+            x = start, n = ceiling(readCount / 5), order_by = start),
             end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
             confidenceType = dplyr::first(confidenceType)) %>%
-        ungroup() %>% arrange(chr, start, end)
+        ungroup()# %>% arrange(chr, start, end)
     readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
-    return(readTable)
+    return(list(readTable = readTable, indices = indices))
 }
 
 #' reconstruct spliced transripts
@@ -78,18 +82,22 @@ constructSplicedReadClassTables <- function(uniqueJunctions,
     }else{
         readStrand <- as.character(strand(unlist(readGrgList)[firstseg]))
     }
-    readTable <- createReadTable(
+    createReadTableOutput <- createReadTable(
         uniqueJunctions, unlisted_junctions, readGrgList,
         firstseg, intronStartTMP, intronEndTMP, readStrand,
         allJunctionToUniqueJunctionOverlap)
+    readTable = createReadTableOutput$readTable
+    indices = createReadTableOutput$indices
     exonsByReadClass <- createExonsByReadClass(readTable)
     ## combine new transcripts with annotated transcripts
     ## based on identical intron pattern
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
-        intronStarts, intronEnds, confidenceType, readCount)
+        start.rc = start, end.rc = end, intronStarts, 
+        intronEnds, confidenceType, readCount)
+    readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
-    return(exonsByReadClass)
+    return(list(readClassList = exonsByReadClass, indices = indices))
 }
 
 #' @noRd
@@ -196,19 +204,26 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     ## create single exon read class by using the minimum end
     ## and maximum start of all overlapping exons (identical to
     ## minimum equivalent class)
+    indices2=group_indices(hitsDF %>% group_by(queryHits, chr, strand))
+    names(indices2) = mcols(granges[hitsDF$queryHits])$id
     hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
         group_by(queryHits, chr, strand) %>%
         summarise(start = max(start), end = min(end)) %>%
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".",
         cur_group_id())) %>% ungroup()
-    readIds <- mcols(granges[hitsDF$queryHits])$id
-    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, readClassId) %>%
+    indices=group_indices(hitsDF %>% group_by(readClassId))
+    names(indices) = mcols(granges[hitsDF$queryHits])$id
+    indices = indices[indices2]
+    names(indices) = names(indices2)
+    
+    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, 
+        readClassId, queryHits) %>%
         group_by(readClassId) %>% mutate(readCount = n()) %>% distinct() %>%
-        ungroup() %>% mutate(confidenceType = confidenceType, intronStarts = NA,
-            intronEnds = NA) %>% dplyr::select(
-            chr, start, end, strand, intronStarts,
-            intronEnds, confidenceType, readClassId, readCount)
+        ungroup() %>% mutate(confidenceType = confidenceType, 
+            intronStarts = NA, intronEnds = NA, queryHits = queryHits) %>% 
+        dplyr::select(chr, start, end, strand, intronStarts,
+            intronEnds, confidenceType, readClassId, readCount, queryHits)
     exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
         ranges = IRanges(
@@ -222,8 +237,8 @@ constructUnsplicedReadClasses <- function(granges, grangesReference,
     exByReadClassUnspliced <- relist(exByReadClassUnspliced, partitioning)
     names(exByReadClassUnspliced) <- hitsDF$readClassId
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
-        intronStarts, intronEnds, confidenceType, readCount)
+        start.rc = start, end.rc = end, intronStarts, intronEnds, 
+        confidenceType, readCount)
     mcols(exByReadClassUnspliced) <- hitsDF
-    # seqlevels(exByReadClassUnspliced) <- seqLevelList
-    return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
+    return(list(readClasses = exByReadClassUnspliced, indices = indices))
 }

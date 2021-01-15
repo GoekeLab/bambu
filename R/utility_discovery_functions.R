@@ -111,7 +111,12 @@ generateExonsByReadClass <- function(readGrgList, annotationGrangesList,
     readClassListSpliced <- createModelforJunctionReads(
         readGrgList, annotationGrangesList, unlisted_junctions,
         uniqueJunctions, stranded, verbose)
-    # seqlevels are made equal (added for chromosomes missing in any of them)
+    indices = readClassListSpliced$indices
+    readIds = as.numeric(names(indices))
+    readClassListSpliced = readClassListSpliced$readClassList
+    readClasses = as.data.frame(mcols(readClassListSpliced))
+    readMatrix=matrix(nrow=length(readGrgList),ncol=2)
+    readMatrix[readIds,]=cbind(readClasses$readClassId[indices],indices)
     start.ptm <- proc.time()
     singleExonReads <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
         use.names = FALSE)
@@ -123,22 +128,35 @@ generateExonsByReadClass <- function(readGrgList, annotationGrangesList,
             mcols(readClassListSpliced)$strand.rc != "*"], use.names = FALSE)), 
             GenomicRanges::granges(unlist(annotationGrangesList,
             use.names = FALSE))))
-    readClassListUnsplicedWithAnnotation <- constructUnsplicedReadClasses(
+    rcListUnsplAnno <- constructUnsplicedReadClasses(
         granges = singleExonReads, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    singleExonReads <- singleExonReads[!mcols(singleExonReads)$id %in%
-        readClassListUnsplicedWithAnnotation$readIds]
+    rcsUnsplAnno = rcListUnsplAnno$readClasses
+    rcsUnsplAnno = rcsUnsplAnno[unique(names(rcsUnsplAnno))]
+    indices = rcListUnsplAnno$indices
+    readIds = as.numeric(names(indices))
+    readMatrix[readIds,1] = names(unlist(rcsUnsplAnno))[indices]
+    readMatrix[readIds,2]= indices + length(readClassListSpliced)
+    singleExonReads <- singleExonReads[!mcols(singleExonReads)$id %in% readIds]
     referenceExons <- reduce(singleExonReads, ignore.strand = !stranded)
-    readClassListUnsplicedReduced <- constructUnsplicedReadClasses(
+    rcListUnsplReduced <- constructUnsplicedReadClasses(
         granges = singleExonReads, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- c(readClassListSpliced,
-        readClassListUnsplicedWithAnnotation$exonsByReadClass,
-        readClassListUnsplicedReduced$exonsByReadClass)
-    return(exonsByReadClass)
+    rcsUnsplReduced = rcListUnsplReduced$readClasses
+    rcsUnsplReduced = rcsUnsplReduced[unique(names(rcsUnsplReduced))]
+    exonsByReadClass <- c(readClassListSpliced, rcsUnsplAnno,
+        rcsUnsplReduced)
+    indices = rcListUnsplReduced$indices
+    indices2 = indices + length(readClassListSpliced) + length(rcsUnsplAnno)
+    readIds = as.numeric(names(indices))
+    readMatrix[readIds,1]=names(unlist(rcsUnsplReduced))[indices]
+    readMatrix[readIds,2]=indices2 
+    mcols(readGrgList)$readClass = readMatrix[,1]
+    mcols(readGrgList)$readClassIndex = readMatrix[,2]
+    return(list(exonsByReadClass=exonsByReadClass, readGrgList = readGrgList))
 }
 
 #' Isoform reconstruction using genomic alignments
@@ -177,17 +195,21 @@ isore.constructReadClasses <- function(readGrgList,
     end.ptm <- proc.time()
     if (verbose) message("Finished creating junction list with splice motif
         in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- generateExonsByReadClass(readGrgList,
+    generateExonsByReadClassOutput <- generateExonsByReadClass(readGrgList,
         annotationGrangesList, unlisted_junctions, uniqueJunctions,
         stranded, verbose)
+    exonsByReadClass <- generateExonsByReadClassOutput$exonsByReadClass
+    readGrgList <- generateExonsByReadClassOutput$readGrgList
+    rm(generateExonsByReadClassOutput)
     counts <- matrix(mcols(exonsByReadClass)$readCount,
         dimnames = list(names(exonsByReadClass), runName))
     colDataDf <- DataFrame(name = runName, row.names = runName)
     mcols(exonsByReadClass) <- mcols(exonsByReadClass)[, c("chr.rc", 
-        "strand.rc", "intronStarts", "intronEnds", "confidenceType")]
+        "strand.rc", "start.rc", "end.rc", "intronStarts", 
+        "intronEnds", "confidenceType")]
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
         rowRanges = exonsByReadClass, colData = colDataDf)
-    return(se)
+    return(list(se=se, readGrgList = readGrgList))
 }
 
 #' for creating counts and start matrices
@@ -232,6 +254,10 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
     counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
     start.spliced <- cbind(start.splicedRef, start.splicedNew)
     end.spliced <- cbind(end.splicedRef, end.splicedNew)
+    print("createSEforSplicedTx")
+    strand_bias.spliced = getSplicedAssay("strand_bias")
+    startSD.spliced = getSplicedAssay("startSD")
+    endSD.spliced = getSplicedAssay("endSD")
     rowData.spliced$start <- rowMins(start.spliced, na.rm = TRUE)
     rowData.spliced$end <- rowMaxs(end.spliced, na.rm = TRUE)
     rowData.spliced <- dplyr::select(rowData.spliced, chr, start,
@@ -239,9 +265,41 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
         mutate(confidenceType = "highConfidenceJunctionReads")
     se.spliced <- SummarizedExperiment(
         assays = SimpleList(counts = counts.spliced, 
-        start = start.spliced,end = end.spliced),
+        start = start.spliced,end = end.spliced, 
+        strand_bias=strand_bias.spliced,
+        startSD=startSD.spliced,
+        endSD=endSD.spliced,
+        uniqueReads=uniqueReads.spliced),
         rowData = rowData.spliced, colData = colDataCombined)
+    print("createSEforSplicedTx 2" )
     return(se.spliced)
+}
+
+#' create SE object for spliced Tx
+#' @param assay character "assay name"
+#' @noRd
+getSplicedAssay = function(assay){
+    counts.splicedRef <- matrix(0,
+        dimnames = list(1:nrow(rowData.spliced),
+        rownames(colData(readClassSeRef))),
+        ncol = nrow(colData(readClassSeRef)),
+        nrow = nrow(rowData.spliced))
+    
+    counts.splicedNew <- matrix(0,
+        dimnames = list(1:nrow(rowData.spliced),
+        rownames(colData(readClassSe))),
+        ncol = nrow(colData(readClassSe)),
+        nrow = nrow(rowData.spliced))
+
+    counts.splicedRef[!is.na(rowData.spliced$id.ref), ] <- 
+        as.matrix(assays(readClassSeRef)[[assay]][rowData.spliced$id.ref[
+            !is.na(rowData.spliced$id.ref)],])
+    counts.splicedNew[!is.na(rowData.spliced$id.new), ] <- 
+        as.matrix(assays(readClassSe)[[assay]][rowData.spliced$id.new[
+            !is.na(rowData.spliced$id.new)],])
+    
+    counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
+    return(counts.spliced)
 }
 
 #' create SE object for spliced Tx
@@ -294,11 +352,54 @@ createSEforUnsplicedTx <- function(readClassSeRef, readClassSe,
     start.unspliced[which(is.infinite(start.unspliced))] <- NA
     end.unspliced <- cbind(end.unsplicedRef, end.unsplicedNew)
     end.unspliced[which(is.infinite(end.unspliced))] <- NA
+    strand_bias.unspliced = getUnsplicedAssay("strand_bias", 
+        counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    startSD.unspliced = getUnsplicedAssay("startSD", 
+        counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+    endSD.unspliced = getUnsplicedAssay("endSD", 
+        counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
     se.unspliced <- SummarizedExperiment(
         assays = SimpleList(counts = counts.unspliced,
-        start = start.unspliced, end = end.unspliced),
+        start = start.unspliced, end = end.unspliced,
+        strand_bias = strand_bias.unspliced,
+        startSD = startSD.unspliced,
+        endSD = endSD.unspliced),
         rowData = rowData.unspliced, colData = colDataCombined)
     return(se.unspliced)
+}
+
+#helper function for other features during createSEforUnsplicedTx
+getUnsplicedAssay = function(feature, index.unsplicedRefSum, 
+    index.unsplicedNewSum, fun){
+    feature.unsplicedRefSum <- 
+    as_tibble(assays(readClassSeRef)[[feature]])[
+        rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+    mutate(index=overlapRefToCombined) %>%
+    group_by(index) %>%
+    summarise_all(fun, na.rm=TRUE)
+    unsplicedNew.index <- rowData(readClassSe)$confidenceType=='unsplicedNew'
+    feature.unsplicedNewSum <- 
+        as_tibble(assays(readClassSe)[[feature]])[unsplicedNew.index,] %>% 
+    mutate(index=overlapNewToCombined) %>%
+        group_by(index) %>%
+        summarise_all(fun, na.rm=TRUE)
+    feature.unsplicedRef <- matrix(0,
+        dimnames = list(1:nrow(rowData.unspliced),
+        rownames(colData(readClassSeRef))),
+        ncol = nrow(colData(readClassSeRef)),
+        nrow = nrow(rowData.unspliced))
+    feature.unsplicedNew <- matrix(0,
+        dimnames = list(1:nrow(rowData.unspliced),
+        rownames(colData(readClassSe))),
+        ncol = nrow(colData(readClassSe)),
+        nrow = nrow(rowData.unspliced))
+    feature.unsplicedRef[index.unsplicedRefSum, ] <- 
+        as.matrix(feature.unsplicedRefSum[,colnames(feature.unsplicedRef)])
+    feature.unsplicedNew[index.unsplicedNewSum, ] <- 
+        as.matrix(feature.unsplicedNewSum[,colnames(feature.unsplicedNew)])
+
+    feature.unspliced <- cbind(feature.unsplicedRef, feature.unsplicedNew)
+    return(feature.unspliced)
 }
 
 #' prepare SE for unspliced Tx
@@ -365,8 +466,35 @@ createRefFromReadClassSE <- function(readClassSe){
     rowData$end <- rowMaxs(end)
     rowData <- rowData %>% dplyr::select(chr = chr.rc, start, end,
                 strand = strand.rc, intronStarts, intronEnds, confidenceType)
+    strand_bias = assays(readClassSe)$strand_bias
+    startSD = assays(readClassSe)$startSD
+    endSD = assays(readClassSe)$endSD
+    if(!is.null(assays(readClassSe)$adapNumReads)){
+      adapNumReads = assays(readClassSe)$adapNumReads
+      adapEndNumReads = assays(readClassSe)$adapEndNumReads
+      adaptDist = assays(readClassSe)$adaptDist
+      adapEndDist = assays(readClassSe)$adapEndDist
+      bothAdapters = assays(readClassSe)$bothAdapters
+      polyAEnd = assays(readClassSe)$polyAEnd
+      assaysList = SimpleList(counts=counts,
+            start=start, end=end, strand_bias=strand_bias,
+            startSD=startSD, endSD=endSD, TSSscore = TSSscore,
+            TESscore = TESscore, uniqueReads=uniqueReads,
+            adapNumReads = adapNumReads, 
+            adapEndNumReads = adapEndNumReads,
+            adaptDist = adaptDist,
+            adapEndDist = adapEndDist,
+            bothAdapters = bothAdapters,
+            polyAEnd = polyAEnd
+      )
+    } else{
+      assaysList = SimpleList(counts=counts,
+            start=start, end=end, strand_bias=strand_bias,
+            startSD=startSD, endSD=endSD
+      )
+    }
     readClassSeRef <- SummarizedExperiment(
-        assays = SimpleList(counts = counts, start = start, end = end),
+        assays = assaysList,
         rowData = rowData, colData = colData(readClassSe))
     return(readClassSeRef)
 }

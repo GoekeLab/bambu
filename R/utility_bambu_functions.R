@@ -80,7 +80,7 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
     if (length(intersect(GenomeInfoDb::seqlevels(readGrgList),
         GenomeInfoDb::seqlevels(annotations))) == 0)
         stop("Error: please provide annotation with matched seqlevel styles.")
-    se <- isore.constructReadClasses(
+    isore.constructReadClassesOutput <- isore.constructReadClasses(
         readGrgList = readGrgList,
         runName = names(bam.file)[1],
         annotationGrangesList = annotations,
@@ -88,6 +88,8 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
         stranded = stranded,
         ncore = ncore,
         verbose = verbose)
+    se = isore.constructReadClassesOutput$se
+    readGrgList = isore.constructReadClassesOutput$readGrgList
     GenomeInfoDb::seqlevels(se) <- unique(c(GenomeInfoDb::seqlevels(se),
         GenomeInfoDb::seqlevels(annotations)))
     if (!is.null(readClass.outputDir)) {
@@ -105,6 +107,9 @@ bambu.constructReadClass <- function(bam.file, genomeSequence, annotations,
         saveRDS(se, file = readClassFile)
         se <- readClassFile
     }
+    #txRange starts here!
+    se = txrange.filterReadClasses(se, readGrgList, genomeSequence, annotations)
+
     return(se)
 }
 
