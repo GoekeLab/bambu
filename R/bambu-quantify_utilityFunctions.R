@@ -184,7 +184,7 @@ calculateDegradationRate <- function(readClassDt){
     geneCountLength <- unique(geneCountPar[geneCountLength, on = "gene_sid"])
     geneCountLength[, d_rate := dObs/nobs]
     if (length(which(geneCountLength$nobs >= 30 & 
-        ((geneCountLength$nobs - geneCountLength$dObs) >= 5))) == 0){
+        ((geneCountLength$nobs - geneCountLength$dObs) >= 5))) == 0) {
         warning("There is not enough read count and full length coverage!
             Hence degradation rate is estimated using all data!")
     } else {
@@ -380,6 +380,7 @@ changeSymbol <- function(eqClass, txVec, from_symbol, to_symbol){
      }
     return(eqClass)
 }
+
 #' This function creates the multi-mapping of read_class_id to tx_id
 #' @noRd 
 createMultimappingBaseOnEmptyRC <- function(rcDt, 
