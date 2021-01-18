@@ -100,7 +100,7 @@ createJunctionTable <- function(unlisted_junctions,
         group_by(chr, end) %>%  
         mutate(endScore = sum(score)) %>%
         ungroup() %>%
-        select(score, plus_score, minus_score, spliceMotif, spliceStrand,
+        dplyr::select(score, plus_score, minus_score, spliceMotif, spliceStrand,
             junctionStartName, junctionEndName, startScore, endScore, id))
     strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
     return(uniqueJunctions)
