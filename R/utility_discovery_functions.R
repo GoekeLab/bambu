@@ -44,6 +44,9 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
     counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
     start.spliced <- cbind(start.splicedRef, start.splicedNew)
     end.spliced <- cbind(end.splicedRef, end.splicedNew)
+    strand_bias.spliced = getSplicedAssay("strand_bias")
+    startSD.spliced = getSplicedAssay("startSD")
+    endSD.spliced = getSplicedAssay("endSD")
     rowData.spliced$start <- rowMins(start.spliced, na.rm = TRUE)
     rowData.spliced$end <- rowMaxs(end.spliced, na.rm = TRUE)
     rowData.spliced <- dplyr::select(rowData.spliced, chr, start,
@@ -51,9 +54,38 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
         mutate(confidenceType = "highConfidenceJunctionReads")
     se.spliced <- SummarizedExperiment(
         assays = SimpleList(counts = counts.spliced, 
-        start = start.spliced,end = end.spliced),
+        start = start.spliced,end = end.spliced,
+        strand_bias=strand_bias.spliced,
+        startSD=startSD.spliced, endSD=endSD.spliced),
         rowData = rowData.spliced, colData = colDataCombined)
     return(se.spliced)
+}
+
+#' create SE object for spliced Tx
+#' @param assay character "assay name"
+#' @noRd
+getSplicedAssay = function(assay){
+    counts.splicedRef <- matrix(0,
+        dimnames = list(1:nrow(rowData.spliced),
+        rownames(colData(readClassSeRef))),
+        ncol = nrow(colData(readClassSeRef)),
+        nrow = nrow(rowData.spliced))
+    
+    counts.splicedNew <- matrix(0,
+        dimnames = list(1:nrow(rowData.spliced),
+        rownames(colData(readClassSe))),
+        ncol = nrow(colData(readClassSe)),
+        nrow = nrow(rowData.spliced))
+
+    counts.splicedRef[!is.na(rowData.spliced$id.ref), ] <- 
+        as.matrix(assays(readClassSeRef)[[assay]][rowData.spliced$id.ref[
+            !is.na(rowData.spliced$id.ref)],])
+    counts.splicedNew[!is.na(rowData.spliced$id.new), ] <- 
+        as.matrix(assays(readClassSe)[[assay]][rowData.spliced$id.new[
+            !is.na(rowData.spliced$id.new)],])
+    
+    counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
+    return(counts.spliced)
 }
 
 #' create SE object for spliced Tx
@@ -106,11 +138,53 @@ createSEforUnsplicedTx <- function(readClassSeRef, readClassSe,
     start.unspliced[which(is.infinite(start.unspliced))] <- NA
     end.unspliced <- cbind(end.unsplicedRef, end.unsplicedNew)
     end.unspliced[which(is.infinite(end.unspliced))] <- NA
+    strand_bias.unspliced = getUnsplicedAssay("strand_bias", 
+        counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, sum)
+    startSD.unspliced = getUnsplicedAssay("startSD", 
+        counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
+    endSD.unspliced = getUnsplicedAssay("endSD", 
+        counts.unsplicedRefSum$index, counts.unsplicedNewSum$index, mean)
     se.unspliced <- SummarizedExperiment(
         assays = SimpleList(counts = counts.unspliced,
-        start = start.unspliced, end = end.unspliced),
+        start = start.unspliced, end = end.unspliced,
+        strand_bias = strand_bias.unspliced,
+        startSD = startSD.unspliced, endSD = endSD.unspliced),
         rowData = rowData.unspliced, colData = colDataCombined)
     return(se.unspliced)
+}
+
+#helper function for other features during createSEforUnsplicedTx
+getUnsplicedAssay = function(feature, index.unsplicedRefSum, 
+    index.unsplicedNewSum, fun){
+    feature.unsplicedRefSum <- 
+    as_tibble(assays(readClassSeRef)[[feature]])[
+        rowData(readClassSeRef)$confidenceType=='unsplicedNew',] %>%
+    mutate(index=overlapRefToCombined) %>%
+    group_by(index) %>%
+    summarise_all(fun, na.rm=TRUE)
+    unsplicedNew.index <- rowData(readClassSe)$confidenceType=='unsplicedNew'
+    feature.unsplicedNewSum <- 
+        as_tibble(assays(readClassSe)[[feature]])[unsplicedNew.index,] %>% 
+    mutate(index=overlapNewToCombined) %>%
+        group_by(index) %>%
+        summarise_all(fun, na.rm=TRUE)
+    feature.unsplicedRef <- matrix(0,
+        dimnames = list(1:nrow(rowData.unspliced),
+        rownames(colData(readClassSeRef))),
+        ncol = nrow(colData(readClassSeRef)),
+        nrow = nrow(rowData.unspliced))
+    feature.unsplicedNew <- matrix(0,
+        dimnames = list(1:nrow(rowData.unspliced),
+        rownames(colData(readClassSe))),
+        ncol = nrow(colData(readClassSe)),
+        nrow = nrow(rowData.unspliced))
+    feature.unsplicedRef[index.unsplicedRefSum, ] <- 
+        as.matrix(feature.unsplicedRefSum[,colnames(feature.unsplicedRef)])
+    feature.unsplicedNew[index.unsplicedNewSum, ] <- 
+        as.matrix(feature.unsplicedNewSum[,colnames(feature.unsplicedNew)])
+
+    feature.unspliced <- cbind(feature.unsplicedRef, feature.unsplicedNew)
+    return(feature.unspliced)
 }
 
 #' prepare SE for unspliced Tx
@@ -177,8 +251,14 @@ createRefFromReadClassSE <- function(readClassSe){
     rowData$end <- rowMaxs(end)
     rowData <- rowData %>% dplyr::select(chr = chr.rc, start, end,
                 strand = strand.rc, intronStarts, intronEnds, confidenceType)
+    strand_bias = assays(readClassSe)$strand_bias
+    startSD = assays(readClassSe)$startSD
+    endSD = assays(readClassSe)$endSD
+    assaysList = SimpleList(counts=counts,
+            start=start, end=end, strand_bias=strand_bias,
+            startSD=startSD, endSD=endSD)
     readClassSeRef <- SummarizedExperiment(
-        assays = SimpleList(counts = counts, start = start, end = end),
+        assays = assaysList,
         rowData = rowData, colData = colData(readClassSe))
     return(readClassSeRef)
 }

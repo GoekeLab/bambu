@@ -15,7 +15,6 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
     end.ptm <- proc.time()
     if (verbose) message("Finished creating junction list with splice motif
         in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    
     uniqueAnnotatedIntrons <- unique(unlistIntrons(annotations, 
         use.ids = FALSE))
     # correct strand of junctions based on (inferred) strand of reads
@@ -28,7 +27,7 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
             uniqueAnnotatedIntrons)))) %>% group_by(seqnames) %>% 
         mutate(annotatedStart = start %in% start[annotatedJunction],
             annotatedEnd = end %in% end[annotatedJunction]) %>% ungroup() %>%
-        select(score, spliceMotif, spliceStrand, junctionStartName, 
+        dplyr::select(score, spliceMotif, spliceStrand, junctionStartName, 
             junctionEndName, startScore, endScore, id, annotatedJunction,
             annotatedStart, annotatedEnd)
     # correct junction coordinates using logistic regression classifier
@@ -77,12 +76,10 @@ createJunctionTable <- function(unlisted_junctions,
     minus_score <- countMatches(uniqueJunctions,
         unlisted_junctions[strand(unlisted_junctions) == '-'], 
         ignore.strand = TRUE)
-
     junctionSeqStart <- BSgenome::getSeq(genomeSequence,
         IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
     junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
         IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
-    
     mcols(uniqueJunctions) <- DataFrame(tibble(
         chr = as.factor(seqnames(uniqueJunctions)), 
         start = start(uniqueJunctions),
@@ -100,7 +97,7 @@ createJunctionTable <- function(unlisted_junctions,
         group_by(chr, end) %>%  
         mutate(endScore = sum(score)) %>%
         ungroup() %>%
-        select(score, plus_score, minus_score, spliceMotif, spliceStrand,
+        dplyr::select(score, plus_score, minus_score, spliceMotif, spliceStrand,
             junctionStartName, junctionEndName, startScore, endScore, id))
     strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
     return(uniqueJunctions)

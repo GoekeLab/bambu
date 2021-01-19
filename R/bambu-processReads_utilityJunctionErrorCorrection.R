@@ -307,12 +307,13 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
         message(sum(junctions$score[junctions$annotatedJunction]) /
                     sum(junctions$score))
     }
+    junctionStrand = as.character(strand(junctions))
     ##note: the output can be visualised (bed/bigbed track) 
     #calculation is based on distance and properties of next junctions
     candidateJunctionsPlus <-
-        junctions[which(strand(junctions) == '+' | strand(junctions) == '*')]
+        junctions[which(junctionStrand == '+' | junctionStrand == '*')]
     candidateJunctionsMinus <-
-        junctions[which(strand(junctions) == '-' | strand(junctions) == '*')]
+        junctions[which(junctionStrand == '-' | junctionStrand == '*')]
     highConfidentJunctionSetPlus <- candidateJunctionsPlus$score > 1 &
         candidateJunctionsPlus$spliceStrand == '+'
     highConfidentJunctionSetMinus <- candidateJunctionsMinus$score > 1 &
