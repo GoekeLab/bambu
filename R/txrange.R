@@ -15,51 +15,17 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
       annotations, withAdapters = FALSE, min.readCount = 2){
 
     options(scipen = 999)
-    alignData = createAlignData(readGrgList)
+    #alignData = createAlignData(readGrgList)
+    #alignData = annotateReadStartsAndEnds(alignData, se)
     rm(readGrgList)
-    alignData = annotateReadStartsAndEnds(alignData, se)
-    combinedOutputs = combineSEs(list(se), annotations)
-    combinedOutputs = addRowData(combinedOutputs, genomeSequence, annotations)
-    thresholdIndex = which(rowSums(assays(combinedOutputs)$counts)
-        >=min.readCount)
-    #train the models and score RCs
-    #gene model
 
-    geneFeatures = prepareGeneModelFeatures(combinedOutputs[thresholdIndex,])
-    if(checkFeatures(geneFeatures)){
-    geneModel = trainGeneModel(geneFeatures$features, 
-      geneFeatures$labels, geneFeatures$names, 
-      plot = NULL, saveFig = F)
-    geneScore = getGeneScore(geneFeatures$features, geneFeatures$labels, 
-      geneFeatures$names, model = geneModel)$score
-    rowData(combinedOutputs)$geneScore = geneScore[rowData(combinedOutputs)$GENEID]
-    # seSorted = seTrimmed[order(geneScore, decreasing = T),]  
-    # rowData(seSorted)$FDR = cumsum(!grepl("gene.",
-    #   rowData(seSorted)$GENEID))/(1:nrow(rowData(seSorted)))
-    } else {
-      message("Gene Score not calculated")
-      rowData(combinedOutputs)$geneScore = rep(1,nrow(combinedOutputs))
-    }
-    #transcript model
-    #filter out novel genes to train transcript model
-    txFeatures = prepareTranscriptModelFeatures(combinedOutputs,
-      withAdapters = withAdapters)
-    if(checkFeatures(txFeatures)){
-      txIndex = thresholdIndex[thresholdIndex %in% 
-        which(!rowData(combinedOutputs)$novel)]
-      transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
-        txFeatures$labels[txIndex], plot = NULL, saveFig = F)
-      transcriptScore = predict(transcriptModel, newx = txFeatures$features,
-        s = "lambda.min", type="response")
-      rowData(combinedOutputs)$transcriptScore = transcriptScore
-      # seSorted = seFrac[order(transcriptScore, decreasing = T),]
-      # rowData(seSorted)$FDR = cumsum(rowData(seSorted)$equal != "NOVEL")/
-      # (1:nrow(rowData(seSorted)))
-    } else {
-      message("Transcript Score not calculated")
-      rowData(combinedOutputs)$transcriptScore = rep(1,nrow(combinedOutputs))
-    }
-    return(combinedOutputs)
+    se = combineSEs(list(se), annotations)
+    se = addRowData(se, genomeSequence, annotations)
+    thresholdIndex = which(rowSums(assays(se)$counts)
+        >=min.readCount)
+    rowData(se)$geneScore = getGeneScore(se, thresholdIndex, plot = "NULL")
+    rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, plot = "NULL")
+    return(se)
 }
 
 createAlignData = function(readGrgList){
@@ -697,6 +663,24 @@ prepareGeneModelFeatures = function(se){
   return(list(features=features, labels = labels, names = geneIDs))
 }
 
+getGeneScore = function(se, thresholdIndex, plot = NULL){
+  geneFeatures = prepareGeneModelFeatures(se[thresholdIndex,])
+    if(checkFeatures(geneFeatures)){
+    geneModel = trainGeneModel(geneFeatures$features, 
+      geneFeatures$labels, geneFeatures$names, 
+      plot = plot, saveFig = F)
+    geneScore = calculateGeneScore(geneFeatures$features, geneFeatures$labels, 
+      geneFeatures$names, model = geneModel)$score
+    rowData(se)$geneScore = geneScore[rowData(se)$GENEID]
+    # seSorted = seTrimmed[order(geneScore, decreasing = T),]  
+    # rowData(seSorted)$FDR = cumsum(!grepl("gene.",
+    #   rowData(seSorted)$GENEID))/(1:nrow(rowData(seSorted)))
+    } else {
+      message("Gene Score not calculated")
+      rowData(se)$geneScore = rep(1,nrow(se))
+    }
+}
+
 checkFeatures = function(features){
   labels = features$labels
   if(sum(labels)==length(labels) | sum(labels)==0){
@@ -743,7 +727,7 @@ trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T){
   return(geneScore$model$cvfit)
 }
 
-getGeneScore = function(features, labels, names, model = NULL){
+calculateGeneScore = function(features, labels, names, model = NULL){
   if(!is.null(model)){
     score = as.numeric(predict(model, newx = as.matrix(features), 
       s = "lambda.min",type="response"))
@@ -758,6 +742,25 @@ getGeneScore = function(features, labels, names, model = NULL){
   return(list(score=score, model = model))
 }
 
+getTranscriptScore = function(se, thresholdIndex, plot = NULL){
+  txFeatures = prepareTranscriptModelFeatures(se,
+    withAdapters = withAdapters)
+  if(checkFeatures(txFeatures)){
+    txIndex = thresholdIndex[thresholdIndex %in% 
+      which(!rowData(se)$novel)]
+    transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
+      txFeatures$labels[txIndex], plot = plot, saveFig = F)
+    transcriptScore = predict(transcriptModel, newx = txFeatures$features,
+      s = "lambda.min", type="response")
+    rowData(se)$transcriptScore = transcriptScore
+    # seSorted = seFrac[order(transcriptScore, decreasing = T),]
+    # rowData(seSorted)$FDR = cumsum(rowData(seSorted)$equal != "NOVEL")/
+    # (1:nrow(rowData(seSorted)))
+  } else {
+    message("Transcript Score not calculated")
+    rowData(se)$transcriptScore = rep(1,nrow(se))
+  }
+}
 trainTranscriptModel = function(features, labels, plot = NULL, saveFig = T){
   result=calculateScore(cbind(features, labels))
   if(!is.null(plot)){
@@ -810,22 +813,12 @@ plotGeneModel = function(features, labels){
   legend = c(legend,"numReads")
   #random baseline
   lines(c(0,1),c(0,1))
-  plotLine(features[,c("numReadsLog","numNonSubsetRCs")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"numNonSubsetRCs")
-  plotLine(features[,c("numReadsLog","numExons")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"numExons")
-  plotLine(features[,c("numReadsLog","isSpliced")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"isSpliced")
-  plotLine(features[,c("numReadsLog","strand_bias")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"strand_bias")
-  plotLine(features[,c("numReadsLog","numRCs")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"numRCs")
-  
+
+  for(feature in colnames(features)[-which(colnames(features)=="numReadsLog")]){
+    plotLine(features[,c("numReadsLog",feature)],labels, colours[i])
+    legend = c(legend,feature)
+    i = i+1
+  }
   legend("bottomright", legend=legend, col = colours[1:i],lty=1, cex=1)
 }
 
@@ -856,73 +849,17 @@ plotTranscriptModel = function(features, labels, plot){
   
   lines(c(0,1),c(0,1))
   
-  if(T){
-    plotLine(features[,c("numReads","geneReadProp")],labels, colours[i])
-    legend = c(legend,"geneReadProp")
-    i = i+1
-    plotLine(features[,c("numReads","tx_strand_bias")],labels, colours[i])
-    legend = c(legend,"tx_strand_bias")
-    i = i+1
-    plotLine(features[,c("numReads","SD")],labels, colours[i])
-    legend = c(legend,"SD")
-    i = i+1
-    plotLine(features[,c("numReads","SDend")],labels, colours[i])
-    legend = c(legend,"SDend")
-    i = i+1
-    plotLine(features[,c("numReads","numAstart")],labels, colours[i])
-    legend = c(legend,"numAstart")
-    i = i+1
-    plotLine(features[,c("numReads","numAend")],labels, colours[i])
-    legend = c(legend,"numAend")
-    i = i+1
-    plotLine(features[,c("numReads","numTstart")],labels, colours[i])
-    legend = c(legend,"numTstart")
-    i = i+1
-    plotLine(features[,c("numReads","numTend")],labels, colours[i])
-    legend = c(legend,"numTend")
-    i = i+1
-    plotLine(features[,c("numReads","transcriptProp")],labels, colours[i])
-    legend = c(legend,"transcriptProp")
-    i = i+1
-    plotLine(features[,c("numReads","transcriptPropMin")],labels, colours[i])
-    legend = c(legend,"transcriptPropMin")
+  for(feature in colnames(features)[-which(colnames(features)=="numReads")]){
+    plotLine(features[,c("numReads",feature)],labels, colours[i])
+    legend = c(legend,features)
     i = i+1
   }
-  if(F){
-    plotLine(features[,"logNumReads"],labels, colours[i])
-    legend = c(legend,"logNumReads")
-    i = i+1
-    plotLine(features[,"geneReadProp"],labels, colours[i])
-    legend = c(legend,"geneReadProp")
-    i = i+1
-    plotLine(features[,"tx_strand_bias"],labels, colours[i])
-    legend = c(legend,"tx_strand_bias")
-    i = i+1
-    plotLine(features[,"SD"],labels, colours[i])
-    legend = c(legend,"SD")
-    i = i+1
-    plotLine(features[,"SDend"],labels, colours[i])
-    legend = c(legend,"SDend")
-    i = i+1
-    plotLine(features[,"numAstart"],labels, colours[i])
-    legend = c(legend,"numAstart")
-    i = i+1
-    plotLine(features[,"numAend"],labels, colours[i])
-    legend = c(legend,"numAend")
-    i = i+1
-    plotLine(features[,"numTstart"],labels, colours[i])
-    legend = c(legend,"numTstart")
-    i = i+1
-    plotLine(features[,"numTend"],labels, colours[i])
-    legend = c(legend,"numTend")
-    i = i+1
-    plotLine(features[,"transcriptProp"],labels, colours[i])
-    legend = c(legend,"transcriptProp")
-    i = i+1
-    plotLine(features[,"transcriptPropMin"],labels, colours[i])
-    legend = c(legend,"transcriptPropMin")
-    i = i+1
-  }
+
+  # for(feature in colnames(features)[-which(colnames(features)=="numReads")]{
+  #   plotLine(features[,feature],labels, colours[i])
+  #   legend = c(legend,feature)
+  #   i = i+1
+  # }
   legend("bottomright", legend=legend, col = colours[1:i],lty=1, cex=1)
 }
 
