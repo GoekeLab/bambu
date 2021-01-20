@@ -3,29 +3,33 @@ library(BSgenome)
 library(ROCit)
 library(glmnet)
 
+if(F){
+  load("se_bambuTest.Rdata")
+  load("readGrgList_bambuTest.Rdata")
+  min.readCount = 2
+  annotations = bambuAnnotations
+  geneomeSequence = fa.file
+}
+
 txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
       annotations, withAdapters = FALSE, min.readCount = 2){
-    #save(se, file="se_bambuTest.Rdata")
-    #save(readGrgList, file="readGrgList_bambuTest.Rdata")
+
     options(scipen = 999)
     alignData = createAlignData(readGrgList)
     rm(readGrgList)
     alignData = annotateReadStartsAndEnds(alignData, se)
-    resultOutput = summeriseReadsByGroup(alignData, withAdapters = FALSE)
-    resultOutput = resultOutput[order(as.numeric(resultOutput$readClassIndex)),]
-    assays(se, withDimnames = F) = lapply(resultOutput, as.matrix)
-    rownames(se)=resultOutput$readClass
     combinedOutputs = combineSEs(list(se), annotations)
     combinedOutputs = addRowData(combinedOutputs, genomeSequence, annotations)
     thresholdIndex = which(rowSums(assays(combinedOutputs)$counts)
         >=min.readCount)
     #train the models and score RCs
     #gene model
+
     geneFeatures = prepareGeneModelFeatures(combinedOutputs[thresholdIndex,])
     if(checkFeatures(geneFeatures)){
     geneModel = trainGeneModel(geneFeatures$features, 
       geneFeatures$labels, geneFeatures$names, 
-      plot = "NULL", saveFig = F)
+      plot = NULL, saveFig = F)
     geneScore = getGeneScore(geneFeatures$features, geneFeatures$labels, 
       geneFeatures$names, model = geneModel)$score
     rowData(combinedOutputs)$geneScore = geneScore[rowData(combinedOutputs)$GENEID]
@@ -36,8 +40,6 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
       message("Gene Score not calculated")
       rowData(combinedOutputs)$geneScore = rep(1,nrow(combinedOutputs))
     }
-
-
     #transcript model
     #filter out novel genes to train transcript model
     txFeatures = prepareTranscriptModelFeatures(combinedOutputs,
@@ -46,8 +48,8 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
       txIndex = thresholdIndex[thresholdIndex %in% 
         which(!rowData(combinedOutputs)$novel)]
       transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
-        txFeatures$labels[txIndex], plot = "NULL", saveFig = F)
-      transcriptScore = predict(transcriptModel, newx = txFeatures,
+        txFeatures$labels[txIndex], plot = NULL, saveFig = F)
+      transcriptScore = predict(transcriptModel, newx = txFeatures$features,
         s = "lambda.min", type="response")
       rowData(combinedOutputs)$transcriptScore = transcriptScore
       # seSorted = seFrac[order(transcriptScore, decreasing = T),]
@@ -202,7 +204,6 @@ combineSEs = function(combinedOutputs, annotations){
 
 
 addRowData = function(combinedOutputs, genomeSequence, annotations){
-  
   exons = str_split(rowData(combinedOutputs)$intronStarts,",")
   rowData(combinedOutputs)$numExons = sapply(exons, FUN = length)+1
   rowData(combinedOutputs)$numExons[is.na(exons)] = 1
@@ -214,16 +215,13 @@ addRowData = function(combinedOutputs, genomeSequence, annotations){
   rowData(combinedOutputs)$novel = grepl("gene.", 
       rowData(combinedOutputs)$GENEID)
   combinedOutputs = calculateGeneProportion(combinedOutputs)
-  combinedOutputs = getTranscriptProp(combinedOutputs, readClassesList)
+  #combinedOutputs = getTranscriptProp(combinedOutputs, readClassesList)
   combinedOutputs = countPolyATerminals(combinedOutputs, genomeSequence)
  
   return(combinedOutputs)
 }
 
 assignGeneIDs <- function(se, annotationGrangesList, min.exonOverlap = 35){
-  
-  start_time = Sys.time()
-  
   ## (1) Spliced Reads
    seFilteredSpliced <- se[(rowData(se)$confidenceType == 'highConfidenceJunctionReads' | rowData(se)$confidenceType == 'lowConfidenceJunctionReads'),]
   
@@ -445,11 +443,38 @@ getReadClassClassifications = function(query, subject, maxDist = 5){
 getTranscriptProp = function(se, readClassesList){
   # calculates the min and max contributions a read class makes to all
   # the transcripts it is compatible too
-  allOverlaps = NULL
+  #allOverlaps = NULL
   i= 0
-  for(chr in seqlevels(readClassesList)){
-    selection = which(unlist(runValue(seqnames(readClassesList))==chr))
-    readClassListTemp = readClassesList[selection]
+
+  # readClassListByChr = lapply(seqlevels(readClassesList), FUN = function(chr){
+  #   selection = which(unlist(runValue(seqnames(readClassesList))==chr))
+  #   return(readClassesList[selection])
+  # })
+  # i=0
+  # allOverlaps = lapply(readClassListByChr, FUN = function(readClassListTemp){
+  #   query <- cutStartEndFromGrangesList(readClassListTemp)
+  #   
+  #   overlaps = countOverlaps(query, readClassListTemp, type = 'within')
+  #   megaRCs = readClassesList[which(overlaps == 1),]
+  #   overlaps = findOverlaps(query, megaRCs, type = 'within')
+  #   
+  #   #account for the index change due to seperating the readclasses by chr
+  #   overlaps = as.matrix(overlaps)+i
+  #   i <<- i + length(readClassListTemp)
+  #   
+  #   return(overlaps)
+  # })
+  # print(Sys.time() - start_time)
+  # allOverlaps = do.call(rbind, allOverlaps)
+  # 
+  
+  allOverlaps = list()
+  readClassesListToExtract = readClassesList
+  for(x in 1:length(seqlevels(readClassesList))){
+    chr = seqlevels(readClassesList)[x]
+    selection = which(unlist(runValue(seqnames(readClassesListToExtract))==chr))
+    readClassListTemp = readClassesListToExtract[selection]
+    readClassesListToExtract= readClassesListToExtract[-selection]
     query <- cutStartEndFromGrangesList(readClassListTemp)
     
     overlaps = countOverlaps(query, readClassListTemp, type = 'within')
@@ -459,8 +484,10 @@ getTranscriptProp = function(se, readClassesList){
     #account for the index change due to seperating the readclasses by chr
     overlaps = as.matrix(overlaps)+i
     i = i + length(readClassListTemp)
-    allOverlaps = rbind(allOverlaps, overlaps)
+    #allOverlaps = rbind(allOverlaps, overlaps)
+    allOverlaps[[x]]=overlaps
   }
+  allOverlaps = do.call(rbind, allOverlaps)
   allCompats = allOverlaps[,'subjectHits']
   compatIndex = allOverlaps[,'queryHits']
   compatCounts = rowSums(assays(se)$counts)[allOverlaps[,'queryHits']]

@@ -101,6 +101,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     }
 
     #txRange starts here!
+    save(se, file="se_bambuTest.Rdata")
+    save(readGrgList, file="readGrgList_bambuTest.Rdata")
     se = txrange.filterReadClasses(se, readGrgList, genomeSequence, annotations)
 
     return(se)
