@@ -24,6 +24,8 @@ rename_duplicatedNames <- function(runnames){
 
 
 #' From tx ranges to gene ranges
+#' @importFrom GenomicRanges reduce 
+#' @import data.table 
 #' @noRd
 txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {
     # rename names to geneIDs
@@ -37,7 +39,7 @@ txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {
     orderUnlistData$exon_endRank <- NULL
 
     exByGene <- splitAsList(orderUnlistData, names(orderUnlistData))
-    exByGene <- GenomicRanges::reduce(exByGene)
+    exByGene <- reduce(exByGene)
 
     # add exon_rank and endRank
     unlistData <- unlist(exByGene, use.names = FALSE)
@@ -49,8 +51,8 @@ txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {
         lapply(exon_rank[which(geneStrand == "-")], rev)
     # * assumes positive for exon ranking
     exon_endRank <- lapply(exon_rank, rev)
-    unlistData$exon_rank <- unlist(exon_rank)
-    unlistData$exon_endRank <- unlist(exon_endRank)
+    unlistData$exon_rank <- base::unlist(exon_rank)
+    unlistData$exon_endRank <- base::unlist(exon_endRank)
     exByGene <- relist(unlistData, partitioning)
 
     return(exByGene)

@@ -2,6 +2,7 @@
 #' @title transcript to gene expression
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
 #' @return A SummarizedExperiment object
+#' @import data.table 
 #' @export
 #' @examples
 #' se <- readRDS(system.file("extdata",

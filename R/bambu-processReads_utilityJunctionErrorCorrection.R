@@ -60,6 +60,7 @@ findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){
 
 
 #' Test splice sites
+#' @importFrom stats model.matrix
 #' @noRd
 testSpliceSites <- function(data, splice = "Start", prime = "start", 
     junctionModel = NULL, verbose = FALSE){ 
@@ -80,22 +81,22 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
     }
     predictionSplice.prime <- rep(NA, nrow(data))
     if (any(mySet.all)) {
-        mySet.training = 
+        mySet.training <- 
             which((annotatedSplice.prime | annotatedSplice)[mySet.all])
-        myData = data.frame(spliceScore / (spliceScore + spliceScore.prime),
+        myData <- data.frame(spliceScore / (spliceScore + spliceScore.prime),
             spliceScore, distSplice.prime, (spliceStrand.prime == "+"),
             (spliceStrand.prime == "-"), (spliceStrand == "+"))[mySet.all,]
         colnames(myData) <- paste('A',seq_len(ncol(myData)),sep = '.')
-        modelmatrix =
-            stats::model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
+        modelmatrix <- 
+            model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
-            myResults = fitBinomialModel(labels.train = 
+            myResults <- fitBinomialModel(labels.train = 
                 as.integer(annotatedSplice)[mySet.all][mySet.training], 
                 data.train = modelmatrix[mySet.training,],
                 data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
             predSplice.prime <- myResults[[2]]
-            predictions = myResults[[1]]
+            predictions <- myResults[[1]]
         } else {
             predictions = glmnet:::predict.cv.glmnet(
                 junctionModel[[predSplice.primeName]],
@@ -146,6 +147,7 @@ createSpliceMetadata <- function(annotatedJunctions, splice){
 }
 
 #' Predict splicing junctions
+#' @importFrom GenomicRanges GRanges
 #' @noRd
 predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     verbose = FALSE){
@@ -153,7 +155,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     ## if needed this can be a single function
     metadataList <- lapply(spliceVec, function(splice){
         annotatedJunctionsTmp <- 
-            GenomicRanges::GRanges(seqnames = seqnames(annotatedJunctions),
+            GRanges(seqnames = seqnames(annotatedJunctions),
             ranges = IRanges(start = get(tolower(splice))(annotatedJunctions),
             end = get(tolower(splice))(annotatedJunctions)), strand = '*')
         mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
@@ -191,6 +193,8 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
 }
 
 #' Fit binomial model
+#' @importFrom glmnet cv.glmnet
+#' @importFrom stats fisher.test
 #' @noRd
 fitBinomialModel <- function(labels.train, data.train, data.test, 
     show.cv=TRUE, maxSize.cv=10000){
@@ -201,21 +205,19 @@ fitBinomialModel <- function(labels.train, data.train, data.test,
         labels.train.cv <- labels.train[mySample]
         data.train.cv.test <- data.train[-mySample,]
         labels.train.cv.test <- labels.train[-mySample]
-        cv.fit <- glmnet::cv.glmnet(x = data.train.cv,
+        cv.fit <- cv.glmnet(x = data.train.cv,
             y = labels.train.cv, family = 'binomial')
         predictions <-
             glmnet:::predict.cv.glmnet(cv.fit, newx = data.train.cv.test,
             s = 'lambda.min')
         message('prediction accuracy (CV) (higher for splice 
                 donor than splice acceptor)')
-        testResults <- 
-            stats::fisher.test(table(predictions > 0,labels.train.cv.test))
+        testResults <- fisher.test(table(predictions > 0,labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
-    cv.fit <- 
-        glmnet::cv.glmnet(x = data.train, y = labels.train,family = 'binomial')
+    cv.fit <- cv.glmnet(x = data.train, y = labels.train,family = 'binomial')
     predictions <-
         glmnet:::predict.cv.glmnet(cv.fit, newx = data.test, s = 'lambda.min')
     return(list(predictions,cv.fit))
