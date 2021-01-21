@@ -24,7 +24,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             yieldSize <- yieldSize(reads)
         }
         reads <- BamFileList(reads)
-        names(reads) <- file_path_sans_ext(basename(reads))
+        names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     } else if (is(reads, "BamFileList")) {
         if (!is.null(yieldSize)) {
             yieldSize(reads) <- yieldSize
