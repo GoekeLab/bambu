@@ -7,7 +7,7 @@
 #' This function assumes that all elements for each list
 #' entry have the same strand.
 #' @usage getStrangeFromGrList(grl)
-#' @params grl a GRangesList
+#' @param grl a GRangesList
 #' @return an Rle object with strand information
 #' @examples
 #' query <- readRDS(system.file("extdata", 
@@ -26,8 +26,8 @@ getStrandFromGrList <- function(grl) {
 #' @noRd
 selectStartEndExonFromRangesList <- function(range, strand, direction){
     exons <- as.numeric(cumsum(elementNROWS(range)))
-    exonsSet <- c(1, exons[-(length(exons))]+1)
-    if (direction == "start"){
+    exonsSet <- c(1, exons[-(length(exons))] + 1)
+    if (direction == "start") {
         exonsSet[strand == "-"] <- exons[strand == "-"]
         return(unlist(range, use.names = FALSE)[exonsSet])
     } else{
@@ -64,8 +64,8 @@ calculateTerminalDistance <- function(queryTerminalExonRng,
     alternativeTerminal[strand == "-"] <- (-1)^(direction == "end") * 
         (get(setdiff(direction_names, direction))(
             queryTerminalExonRng[strand == '-']) -
-         get(setdiff(direction_names, direction))(
-             subjectTerminalExonRng[strand == '-']))
+        get(setdiff(direction_names, direction))(
+            subjectTerminalExonRng[strand == '-']))
     alternativeTerminal <- alternativeTerminal * !alternativeTerminalExon
     return(alternativeTerminal)
 }
@@ -116,7 +116,7 @@ annotateExonSkip <- function(spliceRng, fullRng, startRng, endRng){
         fill.gap = TRUE) == splice.FullSplice.Rng
     firstExonInIntron <- punion(mcols(start.Splice.Rng)$matchRng, 
         start.Splice.Rng, fill.gap = TRUE) == mcols(start.Splice.Rng)$matchRng
-    lastExonInIntron <- punion(mcols(start.Splice.Rng)$matchRng, end.Splice.Rng, 
+    lastExonInIntron <- punion(mcols(start.Splice.Rng)$matchRng, end.Splice.Rng,
         fill.gap = TRUE) == mcols(start.Splice.Rng)$matchRng
     exonSkippingVector <- pmax(0, tapply(exonSkipping,
         mcols(splice.FullSplice.Rng)$IdMap, sum) -
@@ -124,7 +124,7 @@ annotateExonSkip <- function(spliceRng, fullRng, startRng, endRng){
         mcols(start.Splice.Rng)$IdMap, sum) - 
         tapply(lastExonInIntron, 
         mcols(start.Splice.Rng)$IdMap, sum))
-  return(exonSkippingVector)
+    return(exonSkippingVector)
 }
 
 
@@ -132,6 +132,7 @@ annotateExonSkip <- function(spliceRng, fullRng, startRng, endRng){
 #' @description This function checks whether 
 #' there is alternative splicing in the 5'/3'
 #' end of an exon.
+#' @importFrom dplyr tibble %>% select
 #' @noRd
 annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
     splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
@@ -161,9 +162,9 @@ annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
         match.startSplice.end,
         spliceIdMap)
     endExonEndExtension <- findExonEndExtension(end.Splice.Rng,
-       match.startSplice.start,
-       match.startSplice.end,
-       spliceIdMap)
+        match.startSplice.start,
+        match.startSplice.end,
+        spliceIdMap)
     exonSplicingTable <- tibble(exon5Prime,exon3Prime,strand)
     exStrandNeg <- exonSplicingTable$strand == '-'
     exonSplicingTable$exon5Prime[!exStrandNeg] <- 
@@ -176,7 +177,8 @@ annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
         endExonEndExtension[!exStrandNeg]
     exonSplicingTable$exon3Prime[exStrandNeg] <- exon5Prime[exStrandNeg] - 
         endExonStartExtension[exStrandNeg] 
-    exonSplicingTable <- exonSplicingTable %>% select(exon5Prime,exon3Prime)
+    exonSplicingTable <- exonSplicingTable %>% 
+        dplyr::select(exon5Prime,exon3Prime)
     return(exonSplicingTable)
 }
 
@@ -237,9 +239,9 @@ findExonEndExtension <- function(splice.Rng, match.startSplice.start,
 #' @noRd
 expandRanges <- function(ranges,target){ 
     processedRng <- rep(ranges,elementNROWS(target))
-    mcols(processedRng)$IdMap <- rep(1:length(ranges),elementNROWS(target))
+    mcols(processedRng)$IdMap <- rep(seq_along(ranges),elementNROWS(target))
     mcols(processedRng)$matchRng <- unlist(target, use.names = FALSE)
-   return(processedRng)
+    return(processedRng)
 }
 
 #' splice ranges pre-processing
