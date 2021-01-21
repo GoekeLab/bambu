@@ -49,7 +49,6 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
     aMatArray <- formatAmat(tmp, multiMap)
     lambda <- sqrt(mean(n.obs))#suggested by Jiang and Salzman
     out <- initialiseOutput(dimnames(aMatArray)[[1]], g, K, n.obs) 
-    if (K == 0) return(out)
     #The following steps clean up the rc to tx matrix
     #step1:removes transcripts without any read class support
     a_mat <- aMatArray[,,1]
