@@ -1,13 +1,18 @@
 #' Function to prepare reads for processing from bam file
 #' @param bamFile bamFile
 #' @inheritParams bambu
+#' @importFrom methods is
+#' @importFrom Rsamtools yieldSize yieldSize<- BamFile isIncomplete 
+#'     ScanBamParam scanBamFlag
+#' @importFrom GenomicAlignments grglist readGAlignments
+#' @importFrom GenomicRanges width
 #' @noRd
 prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
-    if (methods::is(bamFile, "BamFile")) {
+    if (is(bamFile, "BamFile")) {
         if (!is.null(yieldSize)) {
-            Rsamtools::yieldSize(bamFile) <- yieldSize
+            yieldSize(bamFile) <- yieldSize
         } else {
-            yieldSize <- Rsamtools::yieldSize(bamFile)
+            yieldSize <- yieldSize(bamFile)
         }
     } else if (!grepl(".bam", bamFile)) {
         stop("Bam file is missing from arguments.")
@@ -15,16 +20,16 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
         if (is.null(yieldSize)) {
             yieldSize <- NA
         }
-        bamFile <- Rsamtools::BamFile(bamFile, yieldSize = yieldSize)
+        bamFile <- BamFile(bamFile, yieldSize = yieldSize)
     }
     bf <- open(bamFile)
     readGrgList <- list()
     counter <- 1
-    while (Rsamtools::isIncomplete(bf)) {
+    while (isIncomplete(bf)) {
         readGrgList[[counter]] <-
-            GenomicAlignments::grglist(GenomicAlignments::readGAlignments(bf,
-            param = Rsamtools::ScanBamParam(flag =
-                Rsamtools::scanBamFlag(isSecondaryAlignment = FALSE)),
+            grglist(readGAlignments(bf,
+            param = ScanBamParam(flag =
+                scanBamFlag(isSecondaryAlignment = FALSE)),
             use.names = FALSE))
         # readGrgList<-c(readGrgList,GenomicAlignments::grglist(reads))
         if (verbose) show(min(length(readGrgList),
@@ -38,7 +43,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
         readGrgList <- readGrgList[[1]]
     }
     # remove microexons of width 1bp from list
-    readGrgList <- readGrgList[GenomicRanges::width(readGrgList) > 1]
+    readGrgList <- readGrgList[width(readGrgList) > 1]
     mcols(readGrgList)$id <- seq_along(readGrgList)
     return(readGrgList)
 }

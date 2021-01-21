@@ -7,13 +7,14 @@
 #' equivalence classes between the transcripts,
 #' with \code{\link{mcols}} data having three columns:
 #' \itemize{
-#'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
-#'   defaults to empty
-#'   \item GENEID indicating whether filter to remove read classes
-#'   which are a subset of known transcripts(), defaults to TRUE
-#'   \item eqClass specifying minimun read count to consider a read class
-#'    valid in a sample, defaults to 2
+#'     \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
+#'     defaults to empty
+#'     \item GENEID indicating whether filter to remove read classes
+#'     which are a subset of known transcripts(), defaults to TRUE
+#'     \item eqClass specifying minimun read count to consider a read class
+#'     valid in a sample, defaults to 2
 #'   }
+#' @importFrom GenomicRanges makeGRangesListFromDataFrame 
 #' @noRd
 prepareAnnotationsFromGTF <- function(file) {
     if (missing(file)) {
@@ -27,7 +28,7 @@ prepareAnnotationsFromGTF <- function(file) {
         data$GENEID <- gsub("gene_id (.*?);.*", "\\1", data$attribute)
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
         geneData <- unique(data[, c("TXNAME", "GENEID")])
-        grlist <- GenomicRanges::makeGRangesListFromDataFrame(
+        grlist <- makeGRangesListFromDataFrame(
         data[, c("seqname", "start", "end", "strand", "TXNAME")],
             split.field = "TXNAME", keep.extra.columns = TRUE)
         grlist <- grlist[IRanges::order(start(grlist))]
@@ -65,6 +66,7 @@ prepareAnnotationsFromGTF <- function(file) {
 
 #' Get minimum equivalent class by Transcript
 #' @param exonsByTranscripts exonsByTranscripts
+#' @importFrom dplyr tibble
 #' @noRd
 getMinimumEqClassByTx <- function(exonsByTranscripts) {
     exByTxAnnotated_singleBpStartEnd <-

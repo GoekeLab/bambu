@@ -8,36 +8,39 @@
 #' @param bpParameters BioParallel parameter
 #' @param stranded stranded
 #' @param verbose verbose
+#' @importFrom Rsamtools yieldSize BamFileList yieldSize<-
+#' @importFrom methods is 
+#' @importFrom BiocParallel bplapply
+#' @importFrom BiocGenerics basename
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE) {
     # ===# create BamFileList object from character #===#
-    if (methods::is(reads, "BamFile")) {
+    if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
-            Rsamtools::yieldSize(reads) <- yieldSize
+            yieldSize(reads) <- yieldSize
         } else {
-            yieldSize <- Rsamtools::yieldSize(reads)
+            yieldSize <- yieldSize(reads)
         }
-        reads <- Rsamtools::BamFileList(reads)
+        reads <- BamFileList(reads)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
-    } else if (methods::is(reads, "BamFileList")) {
+    } else if (is(reads, "BamFileList")) {
         if (!is.null(yieldSize)) {
-            Rsamtools::yieldSize(reads) <- yieldSize
+            yieldSize(reads) <- yieldSize
         } else {
-            yieldSize <- min(Rsamtools::yieldSize(reads))
+            yieldSize <- min(yieldSize(reads))
         }
     } else if (any(!grepl("\\.bam$", reads))) {
         stop("Bam file is missing from arguments.")
     } else {
         if (is.null(yieldSize)) yieldSize <- NA
-        reads <- Rsamtools::BamFileList(reads, yieldSize = yieldSize)
+        reads <- BamFileList(reads, yieldSize = yieldSize)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     }
     genomeSequence <- checkInputSequence(genomeSequence)
     if (!verbose) message("Start generating read class files")
-    readClassList <- 
-        BiocParallel::bplapply(names(reads), function(bamFileName) {
+    readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
         readClass.outputDir = readClass.outputDir,
         genomeSequence = genomeSequence,annotations = annotations,
@@ -50,26 +53,28 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 
 #' Preprocess bam files and save read class files
 #' @inheritParams bambu
+#' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
-    refSeqLevels <-  GenomeInfoDb::seqlevels(genomeSequence)
-    if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% refSeqLevels)) {
+    refSeqLevels <- seqlevels(genomeSequence)
+    if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
-        readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
+        refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
+        readGrgList <- keepSeqlevels(readGrgList,
             value =  refSeqLevels,
             pruning.mode = "coarse")
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
-    if (!all(GenomeInfoDb::seqlevels(annotations) %in% refSeqLevels)) {
+    if (!all(seqlevels(annotations) %in% refSeqLevels)) {
     message("not all chromosomes from annotations present in reference genome 
     sequence, annotations without reference chrosomomse sequence are dropped")
-    annotations <- GenomeInfoDb::keepSeqlevels(annotations,
+    annotations <- keepSeqlevels(annotations,
         value = refSeqLevels,pruning.mode = "coarse")
     }
     # create error and strand corrected junction tables
@@ -80,14 +85,14 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
-    GenomeInfoDb::seqlevels(se) <- refSeqLevels
+    seqlevels(se) <- refSeqLevels
     
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
         if (file.exists(readClassFile)) {
             show(paste(readClassFile, "exists, will be overwritten"))
-         # warning is not printed, use show in addition
+            # warning is not printed, use show in addition
             warning(paste(readClassFile, "exists, will be overwritten"))
         } else {
             readClassFile <- BiocFileCache::bfcnew(BiocFileCache::BiocFileCache(
@@ -101,27 +106,28 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 }
 
 #' Check seqlevels for reads and annotations
+#' @importFrom GenomeInfoDb seqlevels
 #' @noRd
 seqlevelCheckReadsAnnotation <- function(reads, annotations){
-    if (length(intersect(GenomeInfoDb::seqlevels(reads),
-        GenomeInfoDb::seqlevels(annotations))) == 0)
+    if (length(intersect(seqlevels(reads),
+        seqlevels(annotations))) == 0)
         stop("Error: please provide annotation with matched seqlevel styles.")
-    if (!all(GenomeInfoDb::seqlevels(reads) %in% 
-        GenomeInfoDb::seqlevels(annotations))) 
+    if (!all(seqlevels(reads) %in% 
+        seqlevels(annotations))) 
         message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
 }
 
-  
 #' Function to create a object that can be queried by getSeq
 #' Either from fa file, or BSGenome object
-#' @importFrom BiocParallel bppram bpvec
+#' @importFrom methods is
+#' @importFrom Rsamtools FaFile
 #' @noRd
 checkInputSequence <- function(genomeSequence) {
     if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
         please provide fasta file or BSgenome name, see available.genomes()")
-    if (methods::is(genomeSequence, "character")) {
+    if (is(genomeSequence, "character")) {
         if (grepl(".fa", genomeSequence)) {
             if (.Platform$OS.type == "windows") {
                 genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
@@ -129,7 +135,7 @@ checkInputSequence <- function(genomeSequence) {
                     "[[", 1))
                 names(genomeSequence) <- newlevels
             } else {
-                genomeSequence <- Rsamtools::FaFile(genomeSequence)
+                genomeSequence <- FaFile(genomeSequence)
             }
         } else {
             genomeSequence <- BSgenome::getBSgenome(genomeSequence)

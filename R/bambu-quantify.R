@@ -1,6 +1,7 @@
 
 #' Perform quantification
 #' @inheritParams bambu
+#' @import data.table
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
     verbose = FALSE, min.exonDistance = 35, min.primarySecondaryDist = 5, 
@@ -24,7 +25,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
     colNameRC <- colnames(readClass)
     colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
         nGeneFordRate = countsOut[[3]])
-    seOutput <- SummarizedExperiment::SummarizedExperiment(
+    seOutput <- SummarizedExperiment(
         assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
             dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
             ncol =  1, dimnames = list(NULL, colNameRC)),
@@ -47,8 +48,8 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
 #' @inheritParams bambu
 #' @noRd
 bambu.quantDT <- function(readClassDt = readClassDt, 
-    emParameters = list(bias = TRUE, maxiter = 10000, conv = 10^(-2), 
-        minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
+    emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
+    minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
     } else if (any(!(c("gene_id", "tx_id", "read_class_id","nobs") %in% 
@@ -63,19 +64,28 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     readclassVec <- unique(readClassDt$read_class_id)
     readClassDt <- 
         simplifyNames(readClassDt,txVec, geneVec,ori_txvec, readclassVec)
-    d_rateInfo <- calculateDegradationRate(readClassDt)
+    d_mode <- emParameters[["degradationBias"]]
+    if (d_mode) {
+        d_rateOut <- calculateDegradationRate(readClassDt)
+    }else{
+        d_rateOut <- rep(NA,2)
+    }
     readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
-        d_rateInfo[[1]], d_mode = TRUE)
+        d_rateOut[1], d_mode = d_mode)
+    removeList <- removeUnObservedGenes(readClassDt)
+    readClassDt <- removeList[[1]] # keep only observed genes for estimation
+    outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
     start.time <- proc.time()
-    outList <- abundance_quantification(readClassDt,ncore = ncore,
-        bias = emParameters[["bias"]], maxiter = emParameters[["maxiter"]],
+    outListEst <- abundance_quantification(readClassDt,
+        ncore = ncore,
+        maxiter = emParameters[["maxiter"]],
         conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.time <- proc.time()
     if (verbose) message("Finished EM estimation in ",
         round((end.time - start.time)[3] / 60, 1), " mins.")
-    theta_est <- formatOutput(outList,ori_txvec,geneVec)
+    theta_est <- formatOutput(rbind(outList,outListEst),ori_txvec,geneVec)
     theta_est <- removeDuplicates(theta_est)
-    return(list(theta_est, d_rateInfo[[1]], d_rateInfo[[2]]))
+    return(list(theta_est, d_rateOut[1], d_rateOut[2]))
 }
 
 

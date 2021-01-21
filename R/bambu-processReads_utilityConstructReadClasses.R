@@ -49,20 +49,22 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 
 
 #' reconstruct spliced transripts
-#' @importFrom unstrsplit getFromNamespace
+#' @importFrom S4Vectors unstrsplit 
+#' @importFrom dplyr select %>%
+#' @importFrom GenomicRanges match
 #' @noRd
 constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
     readGrgList, stranded = FALSE) {
     options(scipen = 999)
-    allToUniqueJunctionMatch <- match(unlisted_junctions,
+    allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
         uniqueJunctions, ignore.strand = TRUE)
     correctedJunctionMatches <- 
-        match(uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
+        base::match(uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
             allToUniqueJunctionMatch], names(uniqueJunctions))
 
     unlisted_junctions <- correctIntronRanges(unlisted_junctions, 
         uniqueJunctions, correctedJunctionMatches)
-    if (!stranded) {
+    if (isFALSE(stranded)) {
         readStrand <- correctReadStrandById(
             as.factor(strand(unlisted_junctions)),
             id = mcols(unlisted_junctions)$id)
@@ -139,6 +141,8 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #' @param readGrgList reads GRangesList
 #' @param readStrand readStrand
 #' @param readConfidence readConfidence
+#' @importFrom dplyr tibble %>% group_by n summarise nth order_by arrange mutate
+#'     row_number .groups
 #' @noRd
 createReadTable <- function(unlisted_junctions, readGrgList,
     readStrand, readConfidence) {
@@ -177,10 +181,11 @@ getChrFromGrList <- function(grl) {
     return(unlist(seqnames(grl), use.names = FALSE)[cumsum(elementNROWS(grl))]) 
 }
 
-
+#' Create Exons By Read Class
+#' @importFrom GenomicRanges makeGRangesListFromFeatureFragments narrow 
 #' @noRd
 createExonsByReadClass <- function(readTable){
-    exonsByReadClass <- GenomicRanges::makeGRangesListFromFeatureFragments(
+    exonsByReadClass <- makeGRangesListFromFeatureFragments(
         seqnames = readTable$chr,
         fragmentStarts = 
             paste(readTable$start - 1, readTable$intronEnds, sep = ","),
@@ -209,17 +214,18 @@ createExonsByReadClass <- function(readTable){
 
 
 #' generate exonByReadClass
+#' @importFrom GenomicRanges granges unlist reduce 
 #' @noRd
 constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
     readClassListSpliced, stranded, verbose){
 
     start.ptm <- proc.time()
-    referenceExons <- unique(c(GenomicRanges::granges(unlist(
+    referenceExons <- unique(c(granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
             "highConfidenceJunctionReads" &
             mcols(readClassListSpliced)$strand.rc != "*"], 
         use.names = FALSE)),
-        GenomicRanges::granges(unlist(annotations, use.names = FALSE))))
+        granges(unlist(annotations, use.names = FALSE))))
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
@@ -245,6 +251,9 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
 
 #' reconstruct read classes using unspliced reads that fall
 #' within exons from annotations
+#' @importFrom GenomicRanges GRanges relist
+#' @importFrom dplyr %>% select group_by summarise .groups mutate cut_group_id
+#'     ungroup distinct 
 #' @noRd
 getUnsplicedReadClassByReference <- function(granges, grangesReference,
     confidenceType = "unspliced", stranded = TRUE) {
@@ -259,21 +268,21 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     ## create single exon read class by using the minimum end
     ## and maximum start of all overlapping exons (identical to
     ## minimum equivalent class)
-    hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
+    hitsDF <- hitsDF %>% select(queryHits, chr, start, end, strand) %>%
         group_by(queryHits, chr, strand) %>%
         summarise(start = max(start), end = min(end), .groups = "drop") %>%
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".", 
             cur_group_id())) %>% ungroup()
     readIds <- mcols(granges[hitsDF$queryHits])$id
-    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, readClassId) %>%
+    hitsDF <- hitsDF %>% select(chr, start, end, strand, readClassId) %>%
         group_by(readClassId) %>% mutate(readCount = n()) %>% 
         ungroup() %>% distinct() %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA) %>%
         dplyr::select(chr, start, end, strand, intronStarts, intronEnds, 
             confidenceType, readClassId, readCount)
-    exByReadClassUnspliced <- GenomicRanges::GRanges(
+    exByReadClassUnspliced <- GRanges(
         seqnames = hitsDF$chr,
         ranges = IRanges(start = hitsDF$start, end = hitsDF$end),
         strand = hitsDF$strand)
@@ -292,6 +301,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
 #' @param hitsWithin hitsWithin
 #' @param grangesReference grangesReference
 #' @param stranded stranded
+#' @importFrom dplyr as_tibble 
 #' @noRd
 initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
     hitsDF <- as_tibble(hitsWithin)

@@ -11,8 +11,8 @@ test_that("generic function of isoform quantification of data.table is list of 2
 
     lapply(1:5, function(s) {
         est <- bambu.quantDT(readClassDt = get(paste0("data", s)),
-            emParameters = list(bias = FALSE, maxiter = 10000, conv = 10^(-2), 
-            minvalue = 10^(-8)))
+            emParameters = list(degradationBias = FALSE, maxiter = 10000, 
+            conv = 10^(-2), minvalue = 10^(-8)))
         expect_type(est, "list")
         expect_equal(est, estOutput_woBC[[s]])
     })
@@ -20,8 +20,8 @@ test_that("generic function of isoform quantification of data.table is list of 2
     ## with bias correction
     lapply(1:5, function(s) {
         est <- bambu.quantDT(readClassDt = get(paste0("data", s)),
-            emParameters = list(bias = TRUE, maxiter = 10000, conv = 10^(-2), 
-            minvalue = 10^(-8)))
+            emParameters = list(degradationBias = TRUE, maxiter = 10000,
+            conv = 10^(-2), minvalue = 10^(-8)))
         expect_type(est, "list")
         expect_equal(est, estOutput_wBC[[s]])
     })
@@ -31,32 +31,47 @@ test_that("generic function of isoform quantification of data.table is list of 2
 
 
 test_that("bambu (isoform quantification of bam file) produces expected output", {
-    test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
-    fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+    test.bam <- system.file("extdata", 
+        "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
+        package = "bambu")
+    fa.file <- system.file("extdata", 
+        "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", 
+        package = "bambu")
 
 
-    txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
-    gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+    txdb <- AnnotationDbi::loadDb(system.file("extdata", 
+        "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", 
+        package = "bambu"))
+    gr <- readRDS(system.file("extdata", 
+        "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
+        package = "bambu"))
 
 
-    seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    seCombinedExpected <- readRDS(system.file("extdata", "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+    seExpected <- readRDS(system.file("extdata", 
+        "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+        package = "bambu"))
+    seCombinedExpected <- readRDS(system.file("extdata", 
+        "seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
+        package = "bambu"))
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = txdb, genome = fa.file, opt.em = list(bias = FALSE), discovery = FALSE)
+    se <- bambu(reads = test.bam, annotations = txdb, genome = fa.file,
+        opt.em = list(degradationBias = FALSE), discovery = FALSE)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(assays(se), assays(seExpected))
 
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(bias = FALSE), discovery = FALSE)
+    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, 
+        opt.em = list(degradationBias = FALSE), discovery = FALSE)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(assays(se), assays(seExpected))
 
 
     # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
     set.seed(1234)
-    seCombined <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genome = fa.file, discovery = FALSE)
+    seCombined <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), 
+        yieldSize = 1000), annotations = gr, genome = fa.file, discovery = FALSE)
     expect_s4_class(seCombined, "SummarizedExperiment")
     expect_equal(seCombined, seCombinedExpected)
 })
@@ -66,27 +81,43 @@ test_that("bambu (isoform quantification of bam file) produces expected output",
 test_that("bambu (isoform quantification of bam file and save readClassFiles) produces expected output", {
     ## ToDo: update data sets for comparison
 
-    test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
-    fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+    test.bam <- system.file("extdata", 
+        "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", 
+        package = "bambu")
+    fa.file <- system.file("extdata", 
+        "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", 
+        package = "bambu")
 
-    txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
-    gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+    txdb <- AnnotationDbi::loadDb(system.file("extdata", 
+        "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", 
+        package = "bambu"))
+    gr <- readRDS(system.file("extdata", 
+        "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
+        package = "bambu"))
     rcOutDir <- tempdir()
 
 
-    seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    seCombinedExtendedExpected <- readRDS(system.file("extdata", "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+    seExpected <- readRDS(system.file("extdata", 
+        "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+        package = "bambu"))
+    seCombinedExtendedExpected <- readRDS(system.file("extdata", 
+        "seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", 
+        package = "bambu"))
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(bias = FALSE), discovery = FALSE, rcOutDir = rcOutDir)
+    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file,
+        opt.em = list(degradationBias = FALSE), discovery = FALSE,
+        rcOutDir = rcOutDir)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(se, seExpected)
 
 
     # test case 2: bambu with multiple bam file, extending annotations, yieldSize lower than read count
     set.seed(1234)
-    seCombinedExtended <- bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000), annotations = gr, genome = fa.file, discovery = TRUE, rcOutDir = rcOutDir)
+    seCombinedExtended <- 
+        bambu(reads = Rsamtools::BamFileList(c(test.bam, test.bam), 
+        yieldSize = 1000), annotations = gr, genome = fa.file, discovery = TRUE, rcOutDir = rcOutDir)
     expect_s4_class(seCombinedExtended, "SummarizedExperiment")
     expect_equal(seCombinedExtended, seCombinedExtendedExpected)
 })
@@ -106,7 +137,8 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    seExtended <- bambu(rcFile = seReadClass1, annotations = gr, opt.em = list(bias = FALSE), discovery = TRUE)
+    seExtended <- bambu(rcFile = seReadClass1, annotations = gr, 
+        opt.em = list(degradationBias = FALSE), discovery = TRUE)
     expect_s4_class(seExtended, "SummarizedExperiment")
     expect_equal(seExtended, seExtendedExpected)
 

@@ -5,6 +5,8 @@
 #' @param stranded stranded
 #' @param verbose verbose
 #' @inheritParams bambu
+#' @importFrom GenomicRanges match
+#' @importFrom dplyr tibble %>% mutate select
 #' @noRd
 isore.constructJunctionTables <- function(unlisted_junctions, annotations,
     genomeSequence, stranded = FALSE, verbose = FALSE) {
@@ -24,7 +26,7 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
         stranded = stranded, verbose = verbose)
     # add annotation labels to junctions
     mcols(uniqueJunctions) <- tibble(as.data.frame(uniqueJunctions)) %>% 
-        mutate(annotatedJunction = (!is.na(GenomicRanges::match(uniqueJunctions,
+        mutate(annotatedJunction = (!is.na(match(uniqueJunctions,
             uniqueAnnotatedIntrons)))) %>% group_by(seqnames) %>% 
         mutate(annotatedStart = start %in% start[annotatedJunction],
             annotatedEnd = end %in% end[annotatedJunction]) %>% ungroup() %>%
@@ -39,6 +41,7 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
 
 
 #' Get unlisted intron ranges from exon ranges list
+#' @importFrom GenomicRanges GRanges
 #' @noRd
 unlistIntrons <- function(x, use.ids = TRUE, use.names = FALSE) {
     # License note: This function is adopted from the GenomicAlignments 
@@ -53,8 +56,7 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = FALSE) {
     seqnms <- rep(seqnames(flat)[firstseg], elementNROWS(gaps))
     strand <- rep(strand(flat)[firstseg], elementNROWS(gaps))
     
-    gr <- GenomicRanges::GRanges(seqnms, unlist(gaps,
-        use.names = use.names), strand)
+    gr <- GRanges(seqnms, unlist(gaps, use.names = use.names), strand)
     if (use.ids & !is.null(mcols(x, use.names = FALSE)$id)) 
         mcols(gr)$id <- rep(mcols(x)$id, elementNROWS(gaps))
     return(gr)
@@ -63,12 +65,14 @@ unlistIntrons <- function(x, use.ids = TRUE, use.names = FALSE) {
 
 
 #' Create Junction tables from unlisted junction granges
-#' @importFrom BiocParallel bppram bpvec
+#' @importFrom BiocGenerics unstrand
+#' @importFrom IRanges shift
+#' @importFrom dplyr tibble group_by %>% mutate ungroup select
 #' @noRd
 createJunctionTable <- function(unlisted_junctions,
     genomeSequence = NULL) {
     # License note: This function is adopted from the GenomicAlignments package 
-    uniqueJunctions <- sort(unique(BiocGenerics::unstrand(unlisted_junctions)))
+    uniqueJunctions <- sort(unique(unstrand(unlisted_junctions)))
     names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
         sep = ".")
     plus_score <- countMatches(uniqueJunctions,
@@ -79,9 +83,9 @@ createJunctionTable <- function(unlisted_junctions,
         ignore.strand = TRUE)
 
     junctionSeqStart <- BSgenome::getSeq(genomeSequence,
-        IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
+        shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
     junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
-        IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
+        shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
     
     mcols(uniqueJunctions) <- DataFrame(tibble(
         chr = as.factor(seqnames(uniqueJunctions)), 
@@ -161,6 +165,7 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junctions,
 
 
 #' Evaluate annoation overlap
+#' @importFrom GenomicRanges match
 #' @noRd
 evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
     ignore.strand = FALSE) {
@@ -169,8 +174,9 @@ evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
 }
 
 
-#' This function assigns a strand to each read based on the majority of junctions
-#' The strand of the junctions is infered by the sequence in createJunctionTables
+#' This function assigns a strand to each read based on the majority of 
+#' junctions. The strand of the junctions is infered by the sequence in 
+#' createJunctionTables
 #' @noRd
 updateStrandScoreByRead <- function(unlisted_junctions, uniqueJunctions){
     allJunctionToUniqueJunctionMatch <- match(unlisted_junctions,

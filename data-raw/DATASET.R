@@ -56,13 +56,13 @@ data5 <- data.frame(
 
 
 
-estOutput_woBC <- lapply(1:5, function(s) {
+estOutput_woBC <- lapply(seq_len(5), function(s) {
     est <- bambu.quantDT(readClassDt = get(paste0("data", s)), 
-        emParameters = list(bias = FALSE, maxiter = 10000, conv = 10^(-2), 
-            minvalue = 10^(-8)))
+        emParameters = list(degradationBias = FALSE, 
+            maxiter = 10000, conv = 10^(-2), minvalue = 10^(-8)))
 })
 
-estOutput_wBC <- lapply(1:5, function(s) {
+estOutput_wBC <- lapply(seq_len(5), function(s) {
     est <- bambu.quantDT(readClassDt = get(paste0("data", s)))
 })
 
@@ -135,7 +135,7 @@ geneTx <- as.data.table(mcols(tx))
 genecounts <- assays(se[[2]])$counts
 txcounts <- assays(se[[1]])$counts
 
-gr <-GRanges(seqnames = "9",
+gr <- GRanges(seqnames = "9",
              #ranges = IRanges(1, 1000000),
              ranges = IRanges(1,200000), # for example run in bambu.R only, for demonstration
              strand = "+")
@@ -156,7 +156,7 @@ write.table(genevec, file = geneList.file, sep = '\t',
 gtf.file <- "Homo_sapiens.GRCh38.91.gtf"
 new_gtf.file <- paste0(wkdir, "/Homo_sapiens.GRCh38.91_chr",as.character(seqnames(gr)),
                        "_",start(gr),"_",end(gr),".gtf")
-system(paste0("grep -f  ",geneList.file," ",gtf.file," > ",new_gtf.file))
+system2(paste0("grep -f  ",geneList.file," ",gtf.file," > ",new_gtf.file))
 
 ## make txdb for chr9
 gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
@@ -178,15 +178,15 @@ runname <- "GIS_A549_directRNA_Rep5-Run1"
 bamFile <- dir(paste0("/mnt/s3_ontdata.store.genome.sg/Nanopore/03_Mapping/Grch38/minimap2-2.17-directRNA/",runname),
                pattern = ".bam$", full.names = TRUE)
 outBam <- paste0(wkdir, "SGNex_A549_directRNA_replicate5_run1.bam")
-system(paste0('samtools-1.8 view -b ',bamFile,' "',
+system2(paste0('samtools-1.8 view -b ',bamFile,' "',
               paste0(as.character(seqnames(gr))),':',start(gr),'-',end(gr), '" > ', outBam))
-system(paste0("samtools-1.8 index ",outBam))
+system2(paste0("samtools-1.8 index ",outBam))
 
 ## generate .fa file
 fa.file <- paste0(wkdir,"bambu/inst/extdata/Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9.fa.gz")
 outFa <- paste0(wkdir,"Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa")
-system(paste0("samtools-1.8 faidx ",fa.file," ",paste0(as.character(seqnames(gr))),":",start(gr),"-",end(gr)," > ", outFa))
-system(paste0("zcat ",fa.file," | head -1"))
+system2(paste0("samtools-1.8 faidx ",fa.file," ",paste0(as.character(seqnames(gr))),":",start(gr),"-",end(gr)," > ", outFa))
+system2(paste0("zcat ",fa.file," | head -1"))
 
 
 ## generate annotation rds file
@@ -296,7 +296,7 @@ gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_100
 
 
 set.seed(1234)
-seOutput = bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(bias = FALSE), discovery = FALSE)
+seOutput = bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(degradationBias = FALSE), discovery = FALSE)
 saveRDS(seOutput, file = "./inst/extdata/seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 # set.seed(1234)
@@ -317,7 +317,7 @@ saveRDS(seOutputCombinedExtended, file = "./inst/extdata/seOutputCombinedExtende
 seReadClass1 <- system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
 gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 set.seed(1234)
-seOutputExtended <- bambu(rcFile = seReadClass1, annotations = gr, opt.em = list(bias = FALSE), discovery = TRUE)
+seOutputExtended <- bambu(rcFile = seReadClass1, annotations = gr, opt.em = list(degradationBias = FALSE), discovery = TRUE)
 saveRDS(seOutputExtended, file = "./inst/extdata/seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 

@@ -52,8 +52,11 @@ writeBambuOutput <- function(se, path, prefix = "") {
 #' @param annotation a \code{GRangesList} object
 #' @param file the output gtf file name
 #' @param geneIDs an optional dataframe of geneIDs (column 2) with
-#'                  the corresponding transcriptIDs (column 1)
+#'     the corresponding transcriptIDs (column 1)
 #' @return gtf a GTF dataframe
+#' @importFrom dplyr select as_tibble mutate %>% left_join arrange group_by
+#'     ungroup recode_factor
+#' @importFrom methods is
 #' @export
 #' @examples
 #' outputGtfFile <- tempfile()
@@ -65,7 +68,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
 writeToGTF <- function(annotation, file, geneIDs = NULL) {
     if (missing(annotation) | missing(file)) {
         stop("Both GRangesList and the name of the output file are required.")
-    } else if (!methods::is(annotation, "CompressedGRangesList")) {
+    } else if (!is(annotation, "CompressedGRangesList")) {
         stop("The inputted GRangesList is of the wrong class.")
     }
     df <- as_tibble(annotation)
@@ -84,7 +87,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     df$GENEID <- paste('gene_id "', df$GENEID, '";', sep = "")
     dfExon <- mutate(df, source = "Bambu", feature = "exon", score = ".",
         frame = ".", attributes = paste(GENEID, group_name, exon_rank)) %>%
-        dplyr::select(seqnames, source, feature, start, end, score,
+        select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
     dfTx <- as.data.frame(range(ranges(annotation)))
     dfTx <-
@@ -95,12 +98,12 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 
     dfTx <- mutate(dfTx,source = "Bambu", feature = "transcript", score = ".",
         frame = ".", attributes = paste(GENEID, group_name)) %>%
-        dplyr::select(seqnames, source, feature, start, end, score,
+        select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
 
     gtf <- rbind(dfTx, dfExon) %>% group_by(group_name) %>%
         arrange(as.character(seqnames), start) %>% ungroup() %>%
-        dplyr::select(seqnames, source, feature, start, end, score,
+        select(seqnames, source, feature, start, end, score,
         strand, frame, attributes)
     gtf <- mutate(gtf, strand = recode_factor(strand, `*` = "."))
     utils::write.table(gtf, file = file, quote = FALSE, row.names = FALSE,
@@ -117,11 +120,12 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 #' 'transcript_biotype', 'transcript_name')
 #' @return grlist a \code{GRangesList} object, with two columns
 #' \itemize{
-#'   \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
-#'                defaults to empty
-#'   \item GENEID indicating whether filter to remove read classes which are
-#'                a subset of known transcripts(), defaults to TRUE
+#'     \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
+#'         defaults to empty
+#'     \item GENEID indicating whether filter to remove read classes which are
+#'         a subset of known transcripts(), defaults to TRUE
 #'   }
+#' @importFrom GenomicRanges makeGRangesListFromDataFrame
 #' @export
 #' @examples
 #' gtf.file <- system.file("extdata",
@@ -133,7 +137,7 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
     if (missing(file)) {
         stop('A GTF file is required.')
     }else{
-        data <- read.delim(file,header = FALSE, comment.char = '#')
+        data <- utils::read.delim(file,header = FALSE, comment.char = '#')
         colnames(data) <- c("seqname","source","type","start",
             "end","score","strand","frame","attribute")
     data <- data[data$type == 'exon',]
@@ -146,8 +150,8 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
             data[,keep.extra.columns[extraColumn]] <-
                 gsub(paste0('.*',keep.extra.columns[extraColumn],
                 ' (.*?);.*'), '\\1',data$attribute)
-           data[grepl(';', data[,keep.extra.columns[extraColumn]]),
-               keep.extra.columns[extraColumn]] <- ''
+            data[grepl(';', data[,keep.extra.columns[extraColumn]]),
+                keep.extra.columns[extraColumn]] <- ''
         }
     }
     grlist <- makeGRangesListFromDataFrame(
