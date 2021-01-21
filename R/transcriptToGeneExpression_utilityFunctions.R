@@ -51,8 +51,8 @@ txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {
         lapply(exon_rank[which(geneStrand == "-")], rev)
     # * assumes positive for exon ranking
     exon_endRank <- lapply(exon_rank, rev)
-    unlistData$exon_rank <- base::unlist(exon_rank)
-    unlistData$exon_endRank <- base::unlist(exon_endRank)
+    unlistData$exon_rank <- unlist(exon_rank)
+    unlistData$exon_endRank <- unlist(exon_endRank)
     exByGene <- relist(unlistData, partitioning)
 
     return(exByGene)

@@ -30,7 +30,7 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
             uniqueAnnotatedIntrons)))) %>% group_by(seqnames) %>% 
         mutate(annotatedStart = start %in% start[annotatedJunction],
             annotatedEnd = end %in% end[annotatedJunction]) %>% ungroup() %>%
-        dplyr::select(score, spliceMotif, spliceStrand, junctionStartName, 
+        select(score, spliceMotif, spliceStrand, junctionStartName, 
             junctionEndName, startScore, endScore, id, annotatedJunction,
             annotatedStart, annotatedEnd)
     # correct junction coordinates using logistic regression classifier
@@ -104,7 +104,7 @@ createJunctionTable <- function(unlisted_junctions,
         group_by(chr, end) %>%  
         mutate(endScore = sum(score)) %>%
         ungroup() %>%
-        dplyr::select(score, plus_score, minus_score, spliceMotif, spliceStrand,
+        select(score, plus_score, minus_score, spliceMotif, spliceStrand,
             junctionStartName, junctionEndName, startScore, endScore, id))
     strand(uniqueJunctions) <- uniqueJunctions$spliceStrand
     return(uniqueJunctions)

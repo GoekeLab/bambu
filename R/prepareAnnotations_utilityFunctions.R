@@ -14,14 +14,13 @@
 #'     \item eqClass specifying minimun read count to consider a read class
 #'     valid in a sample, defaults to 2
 #'   }
-#' @importFrom utils read.delim
 #' @importFrom GenomicRanges makeGRangesListFromDataFrame 
 #' @noRd
 prepareAnnotationsFromGTF <- function(file) {
     if (missing(file)) {
         stop("A GTF file is required.")
     } else {
-        data <- read.delim(file, header = FALSE, comment.char = "#")
+        data <- utils::read.delim(file, header = FALSE, comment.char = "#")
         colnames(data) <- c("seqname", "source", "type", "start", "end",
             "score", "strand", "frame", "attribute")
         data <- data[data$type == "exon", ]
