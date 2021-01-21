@@ -179,7 +179,8 @@ createReadTable <- function(unlisted_junctions, readGrgList,
                 mcols(unlisted_junctions)$id), sep = ","),
         start = pmin(start(readRanges), intronStartCoordinatesInt),
         end = pmax(end(readRanges), intronEndCoordinatesInt),
-        strand = readStrand, confidenceType = readConfidence)
+        strand = readStrand, confidenceType = readConfidence,
+        alignmentStrand = as.factor(getStrandFromGrList(readGrgList)),)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     indices=group_indices(readTable %>% group_by(chr, strand, 
         intronEnds, intronStarts))
@@ -190,7 +191,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
         end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
         startSD = sd(start), endSD = sd(end), 
-        readCount.posStrand = sum(strand=='+', na.rm = T),
+        readCount.posStrand = sum(alignmentStrand=='+', na.rm = T),
         #readCount.sameStrand = sum(sameStrand),
         .groups = 'drop') %>% #arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -309,11 +310,12 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     names(indices) = mcols(granges[hitsDF$queryHits])$id
     indices = indices[indices2]
     names(indices) = names(indices2)
+    hitsDF$alignmentStrand = as.factor(strand(granges))[hitsDF$queryHits]
     hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, 
-        readClassId, queryHits) %>%
+        readClassId, queryHits, alignmentStrand) %>%
         group_by(readClassId) %>% mutate(readCount = n(),
         startSD = sd(start), endSD = sd(end), 
-        readCount.posStrand = sum(strand=='+')) %>% 
+        readCount.posStrand = sum(alignmentStrand=='+')) %>% 
         ungroup() %>% distinct() %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA) %>%

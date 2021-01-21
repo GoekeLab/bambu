@@ -19,6 +19,8 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
     #alignData = annotateReadStartsAndEnds(alignData, se)
     rm(readGrgList)
 
+    hist(assays(se)$strand_bias/assays(se)$counts)
+    
     se = combineSEs(list(se), annotations)
     se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowSums(assays(se)$counts)
@@ -430,7 +432,6 @@ getTranscriptProp = function(se, readClassesList){
   #   
   #   return(overlaps)
   # })
-  # print(Sys.time() - start_time)
   # allOverlaps = do.call(rbind, allOverlaps)
   # 
   
@@ -696,7 +697,7 @@ checkFeatures = function(features){
 
 trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T){
   if(sum(labels)==length(labels) | sum(labels)==0){return(NULL)}
-  geneScore = getGeneScore(features, labels, names)
+  geneScore = calculateGeneScore(features, labels, names)
   if(!is.null(plot)){
     if(saveFig){
       svg(paste0(savePath,'/',plot,"_ROC.svg"), width = 7, height = 7)
@@ -849,17 +850,17 @@ plotTranscriptModel = function(features, labels, plot){
   
   lines(c(0,1),c(0,1))
   
-  for(feature in colnames(features)[-which(colnames(features)=="numReads")]){
-    plotLine(features[,c("numReads",feature)],labels, colours[i])
-    legend = c(legend,features)
-    i = i+1
-  }
-
-  # for(feature in colnames(features)[-which(colnames(features)=="numReads")]{
-  #   plotLine(features[,feature],labels, colours[i])
-  #   legend = c(legend,feature)
+  # for(feature in colnames(features)[-which(colnames(features)=="numReads")]){
+  #   plotLine(features[,c("numReads",feature)],labels, colours[i])
+  #   legend = c(legend,features)
   #   i = i+1
   # }
+
+  for(feature in colnames(features)[-which(colnames(features)=="numReads")]){
+    plotLine(features[,feature],labels, colours[i])
+    legend = c(legend,feature)
+    i = i+1
+  }
   legend("bottomright", legend=legend, col = colours[1:i],lty=1, cex=1)
 }
 
