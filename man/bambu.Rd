@@ -73,9 +73,10 @@ algorithm estimation process:
 \itemize{
     \item maxiter specifying maximum number of run interations,
     defaults to 10000.
-    \item bias specifying whether to correct for bias, defaults to FALSE.
+    \item degradationBias correcting for degradation bias, defaults to TRUE.
     \item conv specifying the covergence trheshold control,
     defaults to 0.0001.
+    \item minvalue specifying the minvalue for convergence consideration
 }}
 
 \item{discovery}{A logical variable indicating whether annotations
