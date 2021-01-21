@@ -27,8 +27,7 @@ transcriptToGeneExpression <- function(se) {
     counts_gene_CPM <- dcast(unique(counts[, .(GENEID, variable,
         valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
     ## geneRanges
-    exByGene <- txRangesToGeneRanges(rowRanges(se),
-        TXNAMEGENEID_Map = rowDataSe[, .(TXNAME, GENEID)])
+    exByGene <- reducedRangesByGenes(rowRanges(se))
     if ("newTxClass" %in% colnames(rowDataSe)) {
         rowDataSe <- rowDataSe[, .(TXNAME, GENEID, newTxClass)]
         rowDataSe[, newGeneClass := ifelse(grepl("ENSG", GENEID),

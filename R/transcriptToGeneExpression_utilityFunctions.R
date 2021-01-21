@@ -25,35 +25,47 @@ rename_duplicatedNames <- function(runnames){
 
 #' From tx ranges to gene ranges
 #' @importFrom GenomicRanges reduce 
-#' @import data.table 
 #' @noRd
-txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {
-    # rename names to geneIDs
-    names(exByTx) <- as.data.table(TXNAMEGENEID_Map)[match(names(exByTx),
-        TXNAME)]$GENEID
-
-    # combine gene exon ranges and reduce overlapping ones
-    unlistData <- unlist(exByTx, use.names = TRUE)
-    orderUnlistData <- unlistData[order(names(unlistData))]
-    orderUnlistData$exon_rank <- NULL
-    orderUnlistData$exon_endRank <- NULL
-
-    exByGene <- splitAsList(orderUnlistData, names(orderUnlistData))
-    exByGene <- reduce(exByGene)
-
-    # add exon_rank and endRank
-    unlistData <- unlist(exByGene, use.names = FALSE)
-    partitionDesign <- cumsum(elementNROWS(exByGene))
-    partitioning <- PartitioningByEnd(partitionDesign, names = NULL)
-    geneStrand <- as.character(strand(unlistData))[partitionDesign]
-    exon_rank <- lapply(width((partitioning)), seq, from = 1)
-    exon_rank[which(geneStrand == "-")] <-
-        lapply(exon_rank[which(geneStrand == "-")], rev)
-    # * assumes positive for exon ranking
-    exon_endRank <- lapply(exon_rank, rev)
-    unlistData$exon_rank <- unlist(exon_rank)
-    unlistData$exon_endRank <- unlist(exon_endRank)
-    exByGene <- relist(unlistData, partitioning)
-
-    return(exByGene)
+reducedRangesByGenes <- function(annotations) {
+  annotations <- annotations[order(mcols(annotations)$GENEID)]
+  unlistData <- unlist(annotations)
+  geneIds <- mcols(annotations)$GENEID[match(names(unlistData), 
+      mcols(annotations)$TXNAME)]
+  partitioning <- PartitioningByEnd(cumsum(table(geneIds)),
+                                    names = NULL)
+  exonsByGene <- relist(unlistData, partitioning)
+  exonsByGeneReduced <- reduce(exonsByGene)
+  return(exonsByGeneReduced)
 }
+
+# From tx ranges to gene ranges
+# txRangesToGeneRanges <- function(exByTx, TXNAMEGENEID_Map) {
+#     # rename names to geneIDs
+#     names(exByTx) <- as.data.table(TXNAMEGENEID_Map)[match(names(exByTx),
+#         TXNAME)]$GENEID
+# 
+#     # combine gene exon ranges and reduce overlapping ones
+#     unlistData <- unlist(exByTx, use.names = TRUE)
+#     orderUnlistData <- unlistData[order(names(unlistData))]
+#     orderUnlistData$exon_rank <- NULL
+#     orderUnlistData$exon_endRank <- NULL
+# 
+#     exByGene <- splitAsList(orderUnlistData, names(orderUnlistData))
+#     exByGene <- reduce(exByGene)
+# 
+#     # add exon_rank and endRank
+#     unlistData <- unlist(exByGene, use.names = FALSE)
+#     partitionDesign <- cumsum(elementNROWS(exByGene))
+#     partitioning <- PartitioningByEnd(partitionDesign, names = NULL)
+#     geneStrand <- as.character(strand(unlistData))[partitionDesign]
+#     exon_rank <- lapply(width((partitioning)), seq, from = 1)
+#     exon_rank[which(geneStrand == "-")] <-
+#         lapply(exon_rank[which(geneStrand == "-")], rev)
+#     # * assumes positive for exon ranking
+#     exon_endRank <- lapply(exon_rank, rev)
+#     unlistData$exon_rank <- unlist(exon_rank)
+#     unlistData$exon_endRank <- unlist(exon_endRank)
+#     exByGene <- relist(unlistData, partitioning)
+# 
+#     return(exByGene)
+# }
