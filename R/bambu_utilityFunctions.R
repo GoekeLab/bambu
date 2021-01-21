@@ -1,9 +1,10 @@
 
 ## Functions to set basic parameters and check inputs
 #' setBiocParallelParameters
+#' @importFrom BiocParallel bpparam
 #' @noRd
 setBiocParallelParameters <- function(reads, readClass.file, ncore, verbose){
-    bpParameters <- BiocParallel::bpparam()
+    bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
     bpParameters$workers <- ifelse(max(length(reads),
         length(readClass.file)) == 1, 1, ncore)
@@ -37,7 +38,7 @@ setIsoreParameters <- function(isoreParameters){
 #' setEmParameters
 #' @noRd
 setEmParameters <- function(emParameters){
-    emParameters.default <- list(bias = TRUE, maxiter = 10000, 
+    emParameters.default <- list(degradationBias = TRUE, maxiter = 10000, 
         conv = 10^(-2), minvalue = 10^(-8))
     emParameters <- updateParameters(emParameters, emParameters.default)
     return(emParameters)
@@ -62,14 +63,15 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param reads path to BAM file(s)
 #' @param readClass.file path to readClass file(s)
 #' @param readClass.outputDir path to readClass output directory
+#' @importFrom methods is
 #' @noRd
 checkInputs <- function(annotations, reads, readClass.file,
                         readClass.outputDir, genomeSequence){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
-        if (methods::is(annotations, "TxDb")) {
+        if (is(annotations, "TxDb")) {
             annotations <- prepareAnnotations(annotations)
-        } else if (methods::is(annotations, "CompressedGRangesList")) {
+        } else if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
             if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
                 colnames(mcols(annotations)))) 
@@ -97,7 +99,7 @@ checkInputs <- function(annotations, reads, readClass.file,
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
     if (.Platform$OS.type == "windows") {
-        if (methods::is(genomeSequence, "FaFile")) 
+        if (is(genomeSequence, "FaFile")) 
             warning("Note that use of FaFile using Rsamtools in Windows is a bit
             fuzzy, recommend to provide the path as a string variable to avoid
             use of Rsamtools for opening.")
