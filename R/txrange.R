@@ -24,9 +24,17 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
     thresholdIndex = which(rowSums(assays(se)$counts)
         >=min.readCount)
     rowData(se)$geneScore = getGeneScore(se, thresholdIndex, 
-      plot = NULL, method = "xgboost")
+      plot = "NULL", method = "xgboost")
     rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, 
-      plot = NULL, method = "xgboost")
+      plot = "NULL", method = "xgboost")
+    
+    # test model on subset and nonsubset RCs
+    # subset = rowData(se)$compatibleCount >= 2 | 
+    #  (!rowData(se)$equal & rowData(se)$compatibleCount == 1)
+    # getTranscriptScore(se[which(!subset),], thresholdIndex, 
+    #                    plot = "NULL", method = "xgboost")
+    # getTranscriptScore(se[which(subset),], thresholdIndex, 
+    #                    plot = "NULL", method = "xgboost")
     return(se)
 }
 
@@ -180,6 +188,7 @@ addRowData = function(se, genomeSequence, annotations){
   classifications = getReadClassClassifications(readClassesList, annotations)
   rowData(se)$equal = classifications$equal
   rowData(se)$compatible = classifications$compatible
+  rowData(se)$compatibleCount = classifications$compatibleCount
   se = assignGeneIDs(se, annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
@@ -400,13 +409,16 @@ getReadClassClassifications = function(query, subject, maxDist = 5){
         type = 'within')
     compatible = rep(F, length(query))
     compatible[queryHits(olap)] = T
+    compatibleCount = rep(0, length(query))
+    compatTable = table(queryHits(olap))
+    compatibleCount[as.numeric(names(compatTable))] = compatTable
     
     olapEqual = findOverlaps(queryForOverlap, 
       cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal')
     equal = rep(F, length(query))
     equal[queryHits(olapEqual)] = T
     
-    return(list(equal = equal, compatible = compatible))
+    return(list(equal = equal, compatible = compatible, compatibleCount = compatibleCount))
 }
 
 getTranscriptProp = function(se, readClassesList){
@@ -699,7 +711,7 @@ checkFeatures = function(features){
 trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T, 
   method = "sgboost"){
   if(sum(labels)==length(labels) | sum(labels)==0){return(NULL)}
-  geneScore = calculateGeneScore(features, labels, names, method)
+  geneScore = calculateGeneScore(features, labels, names, method = method)
   if(!is.null(plot)){
     if(saveFig){
       svg(paste0(savePath,'/',plot,"_ROC.svg"), width = 7, height = 7)
