@@ -88,6 +88,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         annotations, stranded, verbose)
     se = isore.constructReadClassesOutput$se
     readGrgList = isore.constructReadClassesOutput$readGrgList
+    se = txrange.filterReadClasses(se, readGrgList, genomeSequence, annotations)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
@@ -104,12 +105,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         saveRDS(se, file = readClassFile)
         se <- readClassFile
     }
-
-    #txRange starts here!
-    save(se, file="se_bambuTest.Rdata")
-    save(readGrgList, file="readGrgList_bambuTest.Rdata")
-    se = txrange.filterReadClasses(se, readGrgList, genomeSequence, annotations)
-
     return(se)
 
 }
