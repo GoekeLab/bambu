@@ -18,10 +18,10 @@ keep.extra.columns=c('gene_name','gene_biotype',
 grlist a \code{GRangesList} object, with two columns
 \itemize{
     \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
-                defaults to empty
+        defaults to empty
     \item GENEID indicating whether filter to remove read classes which are
-                a subset of known transcripts(), defaults to TRUE
-  }
+        a subset of known transcripts(), defaults to TRUE
+}
 }
 \description{
 Outputs GRangesList object from reading a GTF file

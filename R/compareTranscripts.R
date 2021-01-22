@@ -30,25 +30,26 @@
 #' an annotation table in tibble by comparing ranges entries
 #' from transcripts between the query and subject GRangesLists.
 #' @usage compareTranscripts(query, subject)
-#' @params query a GRangesList
-#' @params subject a GRangesList
+#' @param query a GRangesList
+#' @param subject a GRangesList
 #' @return a tibble with the following annotations:
 #' \itemize{
-#'    \item alternativeFirstExon
-#'    \item alternativeTSS
-#'    \item internalFirstExon.query
-#'    \item internalFirstExon.subject
-#'    \item alternativeLastExon
-#'    \item alternativeTES
-#'    \item internalLastExon.query
-#'    \item internalLastExon.subject
-#'    \item intronRetention.subject
-#'    \item intronRetention.query
-#'    \item exonSkipping.query
-#'    \item exonSkipping.subject
-#'    \item exon5prime (splicing)
-#'    \item exon3prime (splicing)
+#'     \item alternativeFirstExon
+#'     \item alternativeTSS
+#'     \item internalFirstExon.query
+#'     \item internalFirstExon.subject
+#'     \item alternativeLastExon
+#'     \item alternativeTES
+#'     \item internalLastExon.query
+#'     \item internalLastExon.subject
+#'     \item intronRetention.subject
+#'     \item intronRetention.query
+#'     \item exonSkipping.query
+#'     \item exonSkipping.subject
+#'     \item exon5prime (splicing)
+#'     \item exon3prime (splicing)
 #' }
+#' @importFrom dplyr tibble 
 #' @examples
 #' query <- readRDS(system.file("extdata", 
 #'     "annotateSpliceOverlapByDist_testQuery.rds",

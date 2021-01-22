@@ -41,8 +41,8 @@ plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
             p_annotation <- ggbio::autoplot(txRanges,
                 group.selfish = TRUE)
             p_expression <-
-                ggbio::autoplot(as.matrix(log2(assays(se)$CPM[transcript_id,
-                ] + 1)), axis.text.angle = 45)
+                ggbio::autoplot(as.matrix(log2(assays(se)$CPM[transcript_id, ] +
+                1)), axis.text.angle = 45)
             p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression,
                 heights = c(1, 1))
             return(p)
@@ -56,8 +56,8 @@ plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
                     strand(txRanges), function(x) unique(as.character(x)))))
                 p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
                 p_expression <-
-                    ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec,
-                    ] + 1)), axis.text.angle = 45, hjust = 1)
+                    ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec, ] + 
+                    1)), axis.text.angle = 45, hjust = 1)
                 p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression,
                     top = g, heights = c(1, 1) )
                 return(p)
@@ -70,13 +70,15 @@ plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
 #' @param se a SummarizedExperiment object
 #' @param count.data a dataframe of log2CPM
 #' @param group.variable the sample groups
+#' @importFrom stats prcomp
+#' @import data.table
 #' @noRd
 plotPCA <- function(se, count.data, group.variable) {
     if (!is.null(group.variable)) {
         sample.info <- as.data.table(as.data.frame(colData(se)[, c(
             "name", group.variable )]))
         setnames(sample.info, seq_len(2), c("runname", "groupVar"))
-        pca_result <- stats::prcomp(t(as.matrix(count.data)))
+        pca_result <- prcomp(t(as.matrix(count.data)))
         plotData <- data.table(pca_result$x[, seq_len(2)], keep.rownames = TRUE)
         setnames(plotData, "rn", "runname")
         if (!all(plotData$runname %in% sample.info$runname)) {
@@ -91,7 +93,7 @@ plotPCA <- function(se, count.data, group.variable) {
             round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
             ggplot2::theme_minimal()
     } else {
-        pca_result <- stats::prcomp(t(as.matrix(count.data))) 
+        pca_result <- prcomp(t(as.matrix(count.data))) 
         plotData <- data.table(pca_result$x[, seq_len(2)], keep.rownames = TRUE)
         setnames(plotData, "rn", "runname")
         p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
@@ -108,9 +110,11 @@ plotPCA <- function(se, count.data, group.variable) {
 #' @param se a SummarizedExperiment object
 #' @param count.data a dataframe of log2CPM
 #' @param group.variable the sample groups
+#' @importFrom stats cor
+#' @impoprt data.table
 #' @noRd
 plotHeatmap <- function(se, count.data, group.variable) {
-    corData <- stats::cor(count.data, method = "spearman")
+    corData <- cor(count.data, method = "spearman")
     col_fun <- circlize::colorRamp2(
         seq(floor(range(corData)[1] * 10) / 10,
             ceiling(range(corData)[2] * 10) / 10, length.out = 2),

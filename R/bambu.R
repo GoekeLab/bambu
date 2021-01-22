@@ -50,7 +50,7 @@
 #' \itemize{
 #'     \item maxiter specifying maximum number of run interations,
 #'     defaults to 10000.
-#'     \item bias specifying whether to correct for bias, defaults to FALSE.
+#'     \item degradationBias correcting for degradation bias, defaults to TRUE.
 #'     \item conv specifying the covergence trheshold control,
 #'     defaults to 0.0001.
 #'     \item minvalue specifying the minvalue for convergence consideration
@@ -62,6 +62,8 @@
 #' @details
 #' @return A list of two SummarizedExperiment object for transcript expression
 #' and gene expression.
+#' @importFrom BiocParallel bplapply
+#' @importFrom SummarizedExperiment cbind
 #' @examples
 #' ## =====================
 #' test.bam <- system.file("extdata",
@@ -97,8 +99,9 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-                                            genomeSequence = genome, 
-            readClass.outputDir = rcOutDir, yieldSize, bpParameters, stranded, verbose)
+            genomeSequence = genome, 
+            readClass.outputDir = rcOutDir, yieldSize, 
+            bpParameters, stranded, verbose)
     } else {
         readClassList <- rcFile
     }
@@ -108,7 +111,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         if (!verbose) message("Finished extending annotations.")
     }
     if (!verbose) message("Start isoform quantification")
-    countsSe <- BiocParallel::bplapply(readClassList,
+    countsSe <- bplapply(readClassList,
         bambu.quantify,annotations = annotations,
         min.exonDistance = isoreParameters[["min.exonDistance"]],
         min.primarySecondaryDist =

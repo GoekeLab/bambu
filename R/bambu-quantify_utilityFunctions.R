@@ -1,12 +1,9 @@
 #' Nanopore transcript abundance quantification
 #' @title transcript_abundance_quantification
-#' @param method A string variable indicates the whether a one-step or two-step
-#' approach will be used. See \code{Details}
-#' for details on one-step and two-step approach.
 #' @param readClassDt A \code{data.table} with columns
-#' @importFrom BiocParallel bplapply
+#' @importFrom BiocParallel bpparam bplapply
 #' @noRd
-abundance_quantification <- function(readClassDt, ncore = 1, bias = TRUE,
+abundance_quantification <- function(readClassDt, ncore = 1,
     maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
     gene_sidList <- unique(readClassDt$gene_sid)
     if (ncore == 1) {
@@ -14,34 +11,22 @@ abundance_quantification <- function(readClassDt, ncore = 1, bias = TRUE,
             run_parallel,
             conv = conv,
             minvalue = minvalue, 
-            bias = bias,
             maxiter = maxiter,
             readClassDt = readClassDt
         )
     } else {
-        bpParameters <- BiocParallel::bpparam()
+        bpParameters <- bpparam()
         bpParameters$workers <- ncore
-
-        emResultsList <- BiocParallel::bplapply(as.list(gene_sidList),
+        emResultsList <- bplapply(as.list(gene_sidList),
             run_parallel,
             conv = conv,
             minvalue = minvalue, 
-            bias = bias,
             maxiter = maxiter,
             readClassDt = readClassDt,
             BPPARAM = bpParameters
         )
     }
-    estimates <- list(
-        do.call("rbind", lapply(
-            seq_along(emResultsList),
-            function(x) emResultsList[[x]][[1]]
-        )),
-        do.call("rbind", lapply(
-            seq_along(emResultsList),
-            function(x) emResultsList[[x]][[2]]
-        ))
-    )
+    estimates <- do.call("rbind", emResultsList)
     return(estimates)
 }
 
@@ -50,9 +35,10 @@ abundance_quantification <- function(readClassDt, ncore = 1, bias = TRUE,
 #' @title run_parallel
 #' @param g the serial id of gene
 #' @inheritParams abundance_quantification
+#' @importFrom methods is
+#' @import data.table
 #' @noRd
-run_parallel <-
-    function(g, conv, bias, minvalue, maxiter, readClassDt) {
+run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
     tmp <- unique(readClassDt[gene_sid == g])
     multiMap <- unique(tmp[, .(read_class_sid, multi_align)], 
             by = NULL)[order(read_class_sid)]$multi_align
@@ -60,62 +46,58 @@ run_parallel <-
             by = NULL)[order(read_class_sid)]$nobs
     K <- as.numeric(sum(n.obs))
     n.obs <- as.numeric(n.obs)/K
-    aMatList <- formatAmat(tmp, multiMap)
-    a_mat <- aMatList[["combined"]]
+    aMatArray <- formatAmat(tmp, multiMap)
     lambda <- sqrt(mean(n.obs))#suggested by Jiang and Salzman
-    out <- initialiseOutput(a_mat, g, K, n.obs) 
-    if (K == 0) return(out)
+    out <- initialiseOutput(dimnames(aMatArray)[[1]], g, K, n.obs) 
     #The following steps clean up the rc to tx matrix
     #step1:removes transcripts without any read class support
+    a_mat <- aMatArray[,,1]
+    if (is(a_mat,"numeric")) a_mat <- t(a_mat)
     rids <- which(apply(t(t(a_mat) * n.obs * K),1,sum) != 0)
-    a_mat <- a_mat[rids,]
     #step2: removes read classes without transcript assignment after step1
-    if (is(a_mat, "numeric")) {
-        cids <- 1
-    }else{
-        cids <- which(apply(a_mat,2,sum) != 0)
-        a_mat <- a_mat[,cids]
-    }
+    a_mat <- aMatArray[rids,,1]
+    cids <- which(apply(t(a_mat),1,sum) != 0)
     n.obs <- n.obs[cids]
-    aMatList[["full"]] <- aMatList[["full"]][rids, cids]
-    aMatList[["partial"]] <- aMatList[["partial"]][rids, cids]
-    aMatList[["unique"]] <- aMatList[["unique"]][rids, cids]
-    if (is.null(nrow(a_mat))) {
-        out[[1]][rids]$counts <- K*n.obs*a_mat
-        out[[1]][rids]$FullLengthCounts <- K*n.obs*aMatList$full
-        out[[1]][rids]$PartialLengthCounts <- K*n.obs*aMatList$partial
-        out[[1]][rids]$UniqueCounts <- K*n.obs*aMatList$unique
+    aMatArrayNew <- array(NA,dim = c(length(rids), length(cids),4))
+    aMatArrayNew <- aMatArray[rids,cids,, drop = FALSE]
+    if (is(aMatArrayNew[,,1],"numeric")) {
+        aMatArrayUpdated <- K*n.obs*aMatArrayNew
+        out[rids, `:=`(counts = aMatArrayUpdated[1],
+            FullLengthCounts = aMatArrayUpdated[2],
+            PartialLengthCounts = aMatArrayUpdated[3],
+            UniqueCounts = aMatArrayUpdated[4])]
     }else{
-        est_output <- emWithL1(X = as.matrix(a_mat), Y = n.obs,
-            lambda = lambda, d = bias, maxiter = maxiter,
+        est_output <- emWithL1(A = aMatArrayNew, Y = n.obs, K = K,
+            lambda = lambda, maxiter = maxiter,
             minvalue = minvalue, conv = conv)
-        out <- updateOutput(est_output, a_mat, rids, 
-            cids,out,aMatList, K, n.obs)
+        out <- modifyQuantOut(est_output, rids, cids, out)
     }
     return(out)
 }
 
-# This function generates the wide-format a matrix
+#' This function generates the wide-format a matrix
+#' @import data.table
 #' @noRd
 formatAmat <- function(tmp, multiMap){
-        tmp_wide <- dcast(tmp[order(nobs)],  tx_ori + 
-            fullTx ~ read_class_sid, value.var = "aval")
-        tmp_wide <- tmp_wide[CJ(tx_ori = unique(tmp_wide$tx_ori),
-            fullTx = c(TRUE,FALSE)), on = c("tx_ori", "fullTx")]
-        tmp_wide[is.na(tmp_wide)] <- 0
-        a_mat_full <- setDF(tmp_wide[which(fullTx)][,-c(1:2),with = FALSE])
-        a_mat_partial <- setDF(tmp_wide[which(!fullTx)][,-c(1:2),with = FALSE])
-        a_mat_unique <- a_mat <- a_mat_full + a_mat_partial
-        a_mat_unique[, which(multiMap)] <- 0
-        rownames(a_mat) <- rownames(a_mat_partial) <- rownames(a_mat_full) <-
-            rownames(a_mat_unique) <- unique(tmp_wide$tx_ori)
-        return(list(combined = a_mat, 
-                    full = a_mat_full, 
-                    partial = a_mat_partial,
-                    unique = a_mat_unique))
+    tmp_wide <- dcast(tmp[order(nobs)],  tx_ori + 
+        fullTx ~ read_class_sid, value.var = "aval")
+    tmp_wide <- tmp_wide[CJ(tx_ori = unique(tmp_wide$tx_ori),
+        fullTx = c(TRUE,FALSE)), on = c("tx_ori", "fullTx")]
+    tmp_wide[is.na(tmp_wide)] <- 0
+    a_mat_array <- array(NA,dim = c(nrow(tmp_wide)/2,
+        ncol(tmp_wide) - 2,4), 
+        dimnames = list(unique(tmp$tx_ori), unique(tmp$read_class_sid), NULL))
+    a_mat_array[,,2] <- 
+        as.matrix(tmp_wide[which(fullTx)][,-seq_len(2),with = FALSE])
+    a_mat_array[,,3] <- 
+        as.matrix(tmp_wide[which(!fullTx)][,-seq_len(2),with = FALSE])
+    a_mat_array[,,4] <- a_mat_array[,,1] <- a_mat_array[,,2] + a_mat_array[,,3]
+    a_mat_array[, which(multiMap), 4] <- 0
+    return(a_mat_array)
 }
 
-# This function generates a_mat values for all transcripts 
+#' This function generates a_mat values for all transcripts 
+#' @import data.table
 #' @noRd
 modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
         tmp[, multi_align := (length(unique(tx_sid)) > 1),
@@ -128,9 +110,9 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
             sum(.SD[which(!fullTx)]$rc_width*d_rate/1000),
             rc_width*d_rate/1000), by = list(gene_sid,tx_ori)]
         if (d_rate == 0) {
-             tmp[, par_status := all(!fullTx & multi_align),
-             by = list(read_class_sid, gene_sid)]
-             tmp[which(par_status), aval := 0.01]
+            tmp[, par_status := all(!fullTx & multi_align),
+            by = list(read_class_sid, gene_sid)]
+            tmp[which(par_status), aval := 0.01]
         }
         tmp[, aval := pmax(pmin(aval,1),0)] #d_rate should be contained to 0-1
         tmp[multi_align & fullTx,
@@ -141,35 +123,19 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 
 
 
-# This function initialises the final estimates with default values
+#' This function initialises the final estimates with default values
+#' @import data.table
 #' @noRd 
-initialiseOutput <- function(a_mat, g, K, n.obs){
-    return(list(data.table(tx_sid = rownames(a_mat),counts = 0,
+initialiseOutput <- function(matNames, g, K, n.obs){
+    return(data.table(tx_sid = matNames,counts = 0,
                 FullLengthCounts = 0, PartialLengthCounts = 0,
                 UniqueCounts = 0, theta = 0, gene_sid = g, 
-                ntotal = as.numeric(K)),
-                data.table(read_class_sid = colnames(a_mat),biasEstimates = 0,
-                gene_sid = g,ntotal = as.numeric(K))))#pre-define output
+                ntotal = as.numeric(K)))
 }
 
-# This function generates the estimates for overall, full, partial, and unique
-# estimates
-#' @noRd
-updateOutput <- function(est_output, a_mat, rids, cids,
-    out, aMatList, K, n.obs){
-    est_output[["counts"]] <- 
-        getFullandPartialEstimates(a_mat, a_mat, est_output, n.obs)
-    est_output[["FullLengthCounts"]] <- 
-        getFullandPartialEstimates(aMatList[["full"]], a_mat, est_output, n.obs)
-    est_output[["PartialLengthCounts"]] <- getFullandPartialEstimates(
-        aMatList[["partial"]], a_mat, est_output, n.obs)
-    est_output[["UniqueCounts"]] <- getFullandPartialEstimates(
-        a_mat = aMatList[["unique"]], a_mat_sum = a_mat, est_output, n.obs)
-    out <- modifyQuantOut(est_output, a_mat, rids, cids, out, K)
-    return(out)
-}
 
 #' Calculate degradation rate based on equiRC read counts 
+#' @import data.table
 #' @noRd
 calculateDegradationRate <- function(readClassDt){
     rcCount <- unique(readClassDt[, .(gene_sid,read_class_sid, nobs)])
@@ -188,43 +154,31 @@ calculateDegradationRate <- function(readClassDt){
         warning("There is not enough read count and full length coverage!
             Hence degradation rate is estimated using all data!")
     } else {
-         geneCountLength <- geneCountLength[nobs >= 30 & ((nobs - dObs) >= 5)]
+        geneCountLength <- geneCountLength[nobs >= 30 & ((nobs - dObs) >= 5)]
     }
     d_rate <- median(geneCountLength$d_rate * 1000/geneCountLength$gene_len,
         na.rm = TRUE)
-    return(list(d_rate, nrow(geneCountLength)))
+    return(c(d_rate, nrow(geneCountLength)))
 }
 
 
-# Modify default quant output using estimated outputs
+#' Modify default quant output using estimated outputs
+#' @import data.table
 #' @noRd
-modifyQuantOut <- function(est_output, a_mat, rids, cids, out,K){
-    out[[1]][rids]$theta <- est_output[["theta"]]
-    out[[1]][rids]$counts <- K * est_output[["counts"]]
-    out[[1]][rids]$FullLengthCounts <- K * est_output[["FullLengthCounts"]]
-    out[[1]][rids]$PartialLengthCounts <- 
-        K * est_output[["PartialLengthCounts"]]
-    out[[1]][rids]$UniqueCounts <- K * est_output[["UniqueCounts"]]
-    out[[2]][cids]$biasEstimates <- as.numeric(t(est_output[["b"]]))
+modifyQuantOut <- function(est_output, rids, cids, out){
+    est_out <- est_output[["theta"]]
+    out[rids, `:=`(theta = est_out[1,],
+        counts = est_out[2,],
+        FullLengthCounts = est_out[3,],
+        PartialLengthCounts = est_out[4,],
+        UniqueCounts = est_out[5,])]
     return(out)
 }
 
-# This function uses the E-step in the EM algorithm to compute the expected
-# relative read count attributed to each transcript from each read class, note 
-# there are a_mat, one is the overall sampling matrix, i.e., a_mat_sum
-#' @param a_mat This is the sampling matrix of the target estimates
-#' @param a_mat_sum This is the sampling matrix of the overall estimates, it 
-#' will be mainly used in normalizing the count.
-#' @noRd
-getFullandPartialEstimates <- function(a_mat, a_mat_sum, est_output, 
-    n.obs){
-    atheta <- a_mat * est_output[["theta"]]
-    atheta_sum <- a_mat_sum * est_output[["theta"]]
-    return(colSums(n.obs * t(atheta) / colSums(atheta_sum), na.rm = TRUE))
-}
 
-# This function converts transcript, gene, and read class names to simple
-# integers for more efficient computation
+#' This function converts transcript, gene, and read class names to simple
+#' integers for more efficient computation
+#' @import data.table
 #' @noRd
 simplifyNames <- function(readClassDt, txVec, geneVec,ori_txvec, readclassVec){
     readClassDt <- as.data.table(readClassDt)
@@ -239,9 +193,9 @@ simplifyNames <- function(readClassDt, txVec, geneVec,ori_txvec, readclassVec){
 
 #' This function converts transcript and gene ids back to transcript and gene 
 #' names 
+#' @import data.table
 #' @noRd
-formatOutput <- function(outList, ori_txvec, geneVec){
-    theta_est <- outList[[1]]
+formatOutput <- function(theta_est, ori_txvec, geneVec){
     theta_est[, `:=`(tx_name = ori_txvec[as.numeric(tx_sid)],
         gene_name = geneVec[gene_sid])]
     theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
@@ -253,7 +207,8 @@ formatOutput <- function(outList, ori_txvec, geneVec){
 }
 
 
-## Remove duplicate transcript counts originated from multiple genes
+#' Remove duplicate transcript counts originated from multiple genes
+#' @import data.table
 #' @noRd
 removeDuplicates <- function(counts){
     counts_final <- unique(counts[, list(counts = sum(counts),
@@ -265,14 +220,33 @@ removeDuplicates <- function(counts){
     return(counts_final)
 }
 
-#' @useDynLib bambu, .registration = TRUE
-#' @importFrom Rcpp sourceCpp
-NULL
+#' @import data.table
+#' @noRd
+removeUnObservedGenes <- function(readClassDt){
+    uoGenes <- unique(readClassDt[,.I[sum(nobs) == 0], by = gene_sid]$gene_sid)
+    if (length(uoGenes) > 0) {
+        uo_txGeneDt <- 
+            unique(readClassDt[(gene_sid %in% uoGenes),.(tx_ori,gene_sid)])
+        readClassDt <- readClassDt[!(gene_sid %in% uoGenes)]
+        outList <- data.table(tx_sid = uo_txGeneDt$tx_ori,
+            counts = 0, 
+            FullLengthCounts = 0,
+            PartialLengthCounts = 0,
+            UniqueCounts = 0,
+            theta = 0,
+            gene_sid = uo_txGeneDt$gene_sid, ntotal = 0)
+    }else{
+        outList <- NULL
+    }
+    return(list(readClassDt, outList))
+}
+
 
 
 #' This function aims to aggregate RC to equiRCs with the consideration of full
 #' or partial alignment status and add empty read class depends on the minimal 
 #' eqClass from annotations
+#' @import data.table
 #' @noRd
 genEquiRCs <- function(readClass, annotations){
     ## aggregate rc's based on their alignment to full or partial transcripts
@@ -291,6 +265,7 @@ genEquiRCs <- function(readClass, annotations){
 #' This function formats the distance table obtained from readClass by checking 
 #' the distance between readClass and transcripts to create equiValence read 
 #' classes
+#' @import data.table
 #' @noRd
 splitReadClass <- function(readClass){
     rcWidth <- data.table(readClassId = rownames(readClass),
@@ -315,6 +290,7 @@ splitReadClass <- function(readClass){
 }
 
 #' get the count and rc_width for each equiRC
+#' @import data.table
 #' @noRd
 getUniCountPerEquiRC <- function(distTable){
     eqClassTable <- 
@@ -323,8 +299,8 @@ getUniCountPerEquiRC <- function(distTable){
     eqClassTable[, `:=`(rc_width = ifelse(all(!equal), max(totalWidth), 
         max(firstExonWidth))), 
         by = list(read_class_id, GENEID)]
-    eqClassTable <- unique(eqClassTable[, .(read_class_id,readClassId, readCount, 
-        GENEID, rc_width)], by = NULL)
+    eqClassTable <- unique(eqClassTable[, .(read_class_id,readClassId, 
+        readCount, GENEID, rc_width)], by = NULL)
     eqClassTable[, nobs := sum(readCount), by = list(read_class_id, GENEID)]
     eqClassTable <- unique(eqClassTable[,.(read_class_id, GENEID, nobs,
         rc_width)],by = NULL)
@@ -341,12 +317,13 @@ getUniCountPerEquiRC <- function(distTable){
 #' shared read class observed, if just using the observed shared read class, we 
 #' probably will see each of the transcript being similarly distributed, but we 
 #' know that of the three transcripts, two of them are longer and have a unique 
-#' part, in that case, if we add two empty read class for these two transcripts, 
+#' part, in that case, if we add two empty read class for these two transcripts,
 #' then we would know that given no unique read support found for these two 
 #' longer transcripts, then the read count from this shared read class shall 
 #' be more assigned to this smaller transcript. 
 #' From this angle of view, both the full and partial of the minimal eqRC should
 #' be added
+#' @import data.table
 #' @noRd
 addEmptyRC <- function(annotations, equiRCTable){
     rcAnno <- data.table(as.data.frame(mcols(annotations)))
@@ -356,7 +333,7 @@ addEmptyRC <- function(annotations, equiRCTable){
         paste0(TXNAME, "Start"), eqClass), 
         tx_id = paste0(TXNAME, "Start")), by = TXNAME]
     rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"\\."),
-        paste0(TXNAME, "Start\\."), eqClass)), by = TXNAME]
+        paste0(TXNAME, "Start\\."), read_class_id)), by = TXNAME]
     setnames(rcAnno_partial, "TXNAME", "tx_id")
     rcAnnoDt <-
         rbind(unique(rcAnno[, .(tx_id, GENEID, read_class_id)], by = NULL),
@@ -374,14 +351,15 @@ addEmptyRC <- function(annotations, equiRCTable){
 #' @noRd
 changeSymbol <- function(eqClass, txVec, from_symbol, to_symbol){
     uni_charVec <- unique(substr(txVec,1,1))
-     for (uni_char in uni_charVec) {
+    for (uni_char in uni_charVec) {
         eqClass = gsub(paste0("\\",from_symbol,uni_char,""),
         paste0("\\",to_symbol,uni_char,""), eqClass)
-     }
+    }
     return(eqClass)
 }
 
 #' This function creates the multi-mapping of read_class_id to tx_id
+#' @import data.table
 #' @noRd 
 createMultimappingBaseOnEmptyRC <- function(rcDt, 
     from_symbol = ".", to_symbol = "&"){
@@ -405,6 +383,12 @@ createMultimappingBaseOnEmptyRC <- function(rcDt,
         rcDt$tx_id, from_symbol = to_symbol, to_symbol = from_symbol)
     return(rcDt)
 }
+
+
+#' @useDynLib bambu, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
+NULL
+
 
 #' @noRd
 .onUnload <- function(libpath) {
