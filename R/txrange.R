@@ -2,13 +2,14 @@ suppressMessages(require(stringr))
 library(BSgenome)
 library(ROCit)
 library(glmnet)
+library(xgboost)
 
 if(F){
   load("se_bambuTest.Rdata")
   load("readGrgList_bambuTest.Rdata")
   min.readCount = 2
   annotations = bambuAnnotations
-  geneomeSequence = fa.file
+  genomeSequence = fa.file
 }
 
 txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
@@ -18,15 +19,14 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
     #alignData = createAlignData(readGrgList)
     #alignData = annotateReadStartsAndEnds(alignData, se)
     rm(readGrgList)
-
-    hist(assays(se)$strand_bias/assays(se)$counts)
-    
     se = combineSEs(list(se), annotations)
     se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowSums(assays(se)$counts)
         >=min.readCount)
-    rowData(se)$geneScore = getGeneScore(se, thresholdIndex, plot = "NULL")
-    rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, plot = "NULL")
+    rowData(se)$geneScore = getGeneScore(se, thresholdIndex, 
+      plot = NULL, method = "xgboost")
+    rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, 
+      plot = NULL, method = "xgboost")
     return(se)
 }
 
@@ -165,28 +165,29 @@ combineSEs = function(combinedOutputs, annotations){
       isore.combineTranscriptCandidates(combinedOutputs[[i]], readClassSeRef =
       combinedTxCandidates)
   }
-  colnames(rowData(combinedTxCandidates)) = c(c("chr.rc", "start.rc", "end.rc", "strand.rc"), 
+  colnames(rowData(combinedTxCandidates)) = c(c("chr.rc", "start.rc",
+     "end.rc", "strand.rc"), 
     colnames(rowData(combinedOutputs[[1]])[-1:-4]))
   return(combinedTxCandidates)
 }
 
 
-addRowData = function(combinedOutputs, genomeSequence, annotations){
-  exons = str_split(rowData(combinedOutputs)$intronStarts,",")
-  rowData(combinedOutputs)$numExons = sapply(exons, FUN = length)+1
-  rowData(combinedOutputs)$numExons[is.na(exons)] = 1
-  readClassesList = convertSEtoGRangesList(combinedOutputs)
+addRowData = function(se, genomeSequence, annotations){
+  exons = str_split(rowData(se)$intronStarts,",")
+  rowData(se)$numExons = sapply(exons, FUN = length)+1
+  rowData(se)$numExons[is.na(exons)] = 1
+  readClassesList = convertSEtoGRangesList(se)
   classifications = getReadClassClassifications(readClassesList, annotations)
-  rowData(combinedOutputs)$equal = classifications$equal
-  rowData(combinedOutputs)$compatible = classifications$compatible
-  combinedOutputs = assignGeneIDs(combinedOutputs, annotations)
-  rowData(combinedOutputs)$novel = grepl("gene.", 
-      rowData(combinedOutputs)$GENEID)
-  combinedOutputs = calculateGeneProportion(combinedOutputs)
-  #combinedOutputs = getTranscriptProp(combinedOutputs, readClassesList)
-  combinedOutputs = countPolyATerminals(combinedOutputs, genomeSequence)
+  rowData(se)$equal = classifications$equal
+  rowData(se)$compatible = classifications$compatible
+  se = assignGeneIDs(se, annotations)
+  rowData(se)$novel = grepl("gene.", 
+      rowData(se)$GENEID)
+  se = calculateGeneProportion(se)
+  #se = getTranscriptProp(se, readClassesList)
+  se = countPolyATerminals(se, genomeSequence)
  
-  return(combinedOutputs)
+  return(se)
 }
 
 assignGeneIDs <- function(se, annotationGrangesList, min.exonOverlap = 35){
@@ -664,14 +665,14 @@ prepareGeneModelFeatures = function(se){
   return(list(features=features, labels = labels, names = geneIDs))
 }
 
-getGeneScore = function(se, thresholdIndex, plot = NULL){
+getGeneScore = function(se, thresholdIndex, plot = NULL, method = "sgboost"){
   geneFeatures = prepareGeneModelFeatures(se[thresholdIndex,])
     if(checkFeatures(geneFeatures)){
     geneModel = trainGeneModel(geneFeatures$features, 
       geneFeatures$labels, geneFeatures$names, 
-      plot = plot, saveFig = F)
+      plot = plot, saveFig = F, method)
     geneScore = calculateGeneScore(geneFeatures$features, geneFeatures$labels, 
-      geneFeatures$names, model = geneModel)$score
+      geneFeatures$names, model = geneModel, method = method)$score
     rowData(se)$geneScore = geneScore[rowData(se)$GENEID]
     # seSorted = seTrimmed[order(geneScore, decreasing = T),]  
     # rowData(seSorted)$FDR = cumsum(!grepl("gene.",
@@ -695,16 +696,17 @@ checkFeatures = function(features){
   return(T)
 }
 
-trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T){
+trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T, 
+  method = "sgboost"){
   if(sum(labels)==length(labels) | sum(labels)==0){return(NULL)}
-  geneScore = calculateGeneScore(features, labels, names)
+  geneScore = calculateGeneScore(features, labels, names, method)
   if(!is.null(plot)){
     if(saveFig){
       svg(paste0(savePath,'/',plot,"_ROC.svg"), width = 7, height = 7)
-      plotGeneModel(features, labels)
+      plotGeneModel(features, labels, method = method)
       dev.off()
     } else{
-      plotGeneModel(features, labels)
+      plotGeneModel(features, labels, method = method)
     }
     if(saveFig){
       svg(paste0(savePath,plot, "_Pres_Sens.svg"), width = 7, height = 7)
@@ -728,14 +730,15 @@ trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T){
   return(geneScore$model$cvfit)
 }
 
-calculateGeneScore = function(features, labels, names, model = NULL){
+calculateGeneScore = function(features, labels, names, model = NULL, 
+  method = "xgboost"){
   if(!is.null(model)){
-    score = as.numeric(predict(model, newx = as.matrix(features), 
+    score = as.numeric(predict(model, as.matrix(features), 
       s = "lambda.min",type="response"))
   } else{
-    result = calculateScore(cbind(features,labels))
+    result = calculateScore(features,labels, method = method)
     model = result
-    score = as.numeric(predict(result$cvfit, newx = as.matrix(features), 
+    score = as.numeric(predict(result$cvfit, as.matrix(features), 
       s = "lambda.min",type="response"))
   }
   names(score) = names
@@ -743,15 +746,16 @@ calculateGeneScore = function(features, labels, names, model = NULL){
   return(list(score=score, model = model))
 }
 
-getTranscriptScore = function(se, thresholdIndex, plot = NULL){
+getTranscriptScore = function(se, thresholdIndex, plot = NULL, 
+  method = "xgboost"){
   txFeatures = prepareTranscriptModelFeatures(se,
     withAdapters = withAdapters)
   if(checkFeatures(txFeatures)){
     txIndex = thresholdIndex[thresholdIndex %in% 
       which(!rowData(se)$novel)]
     transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
-      txFeatures$labels[txIndex], plot = plot, saveFig = F)
-    transcriptScore = predict(transcriptModel, newx = txFeatures$features,
+      txFeatures$labels[txIndex], plot = plot, saveFig = F, method = method)
+    transcriptScore = predict(transcriptModel, txFeatures$features,
       s = "lambda.min", type="response")
     rowData(se)$transcriptScore = transcriptScore
     # seSorted = seFrac[order(transcriptScore, decreasing = T),]
@@ -762,15 +766,17 @@ getTranscriptScore = function(se, thresholdIndex, plot = NULL){
     rowData(se)$transcriptScore = rep(1,nrow(se))
   }
 }
-trainTranscriptModel = function(features, labels, plot = NULL, saveFig = T){
-  result=calculateScore(cbind(features, labels))
+trainTranscriptModel = function(features, labels, plot = NULL, saveFig = T, 
+  method = "xgboost"){
+  print(method)
+  result=calculateScore(features, labels, method = method)
   if(!is.null(plot)){
     if(saveFig){
       svg(paste0('/',plot,"_ROC.svg"), width = 7, height = 7)
-      plotTranscriptModel(features, labels, plot)
+      plotTranscriptModel(features, labels, plot, method = method)
       dev.off()
     } else{
-      plotTranscriptModel(features, labels, plot)
+      plotTranscriptModel(features, labels, plot, method = method)
     }
 
     if(saveFig){
@@ -794,13 +800,13 @@ trainTranscriptModel = function(features, labels, plot = NULL, saveFig = T){
   return(result$cvfit)
 }
 
-plotGeneModel = function(features, labels){
+plotGeneModel = function(features, labels, method = "xgboost"){
   colours = c('black','gray','red','blue', 'green', 'purple', 'orange', 
     'yellow', 'brown', 'pink', 'teal', 'darksalmon', 'darkslategray4', 
     'deeppink2', 'goldenrod', 'burlywood1')
   legend = NULL
   i=1
-  result = calculateScore(cbind(features,labels))
+  result = calculateScore(features,labels, method = method)
   x=rocit(score=result$score, class=result$testLabels)
   base::plot(x$FPR, x$TPR, col=colours[i],  main="Gene Score ROC", type ='l')
   text(0.8,0.6,c(paste0("All-AUC:",as.character(signif(x$AUC,3)))), cex=1.5)
@@ -823,20 +829,20 @@ plotGeneModel = function(features, labels){
   legend("bottomright", legend=legend, col = colours[1:i],lty=1, cex=1)
 }
 
-plotTranscriptModel = function(features, labels, plot){
+plotTranscriptModel = function(features, labels, plot, method = "xgboost"){
   legend = NULL
   i= 1
   colours = c('black','gray','red','blue', 'green', 'purple', 'orange', 
     'yellow', 'brown', 'pink', 'darksalmon', 'darkslategray4', 'deeppink2', 
     'goldenrod', 'burlywood1')
   
-  result = calculateScore(cbind(features, labels))
+  result = calculateScore(features, labels, method = method)
   x=rocit(score=result$score, class=result$testLabels)
   base::plot(x$FPR, x$TPR, col=colours[i],  main="Transcript Score ROC", 
     type ='l')
   text(0.4,0.2,c(paste0("Trained on:",as.character(result$trainCount))), 
     cex=1.5)
-  text(0.4,0.1,c(paste0("Tested on:",as.character(length(result$testLabels)))), 
+  text(0.4,0.1,c(paste0("Tested on:",as.character(length(result$testLabels)))),
     cex=1.5)
   text(0.8,0.6,c(paste0("All-AUC:",as.character(signif(x$AUC,3)))), cex=1.5)
   legend = c(legend, c("All"))
@@ -864,11 +870,11 @@ plotTranscriptModel = function(features, labels, plot){
   legend("bottomright", legend=legend, col = colours[1:i],lty=1, cex=1)
 }
 
-plotLine = function(features, labels, colour, log = F){
+plotLine = function(features, labels, colour, log = F, method = "xgboost"){
   if(!is.matrix(features)){
     score = features
   } else {
-    result = calculateScore(cbind(features,labels), log = log)
+    result = calculateScore(features,labels, log = log, method = method)
     score = result$score
     labels = result$testLabels
   }
@@ -876,7 +882,45 @@ plotLine = function(features, labels, colour, log = F){
   lines(x$FPR, x$TPR, col=colour,  main="reads")
 }
 
-calculateScore = function(input, finalFeatureIndex, model = NULL, log = F){
+calculateScore = function(input, labels, model = NULL, log = F, 
+  method = "xgboost"){
+  if(method == "xgboost"){
+    return(fit_xgb(input, labels))
+  } else{
+    return(fit_glmnet(input,labels, log = log))
+  }
+}
+
+fit_xgb = function(features, labels) {
+
+  # Sample the data into train, val and test sets
+  train_idx = sample(nrow(features), floor(0.9*nrow(features)))
+  val_idx = setdiff(seq_len(nrow(features)),train_idx)
+  
+  train_data= features[train_idx,]
+  val_data = features[val_idx,]
+  train_labels = labels[train_idx]
+  val_labels = labels[val_idx]
+  
+  x_mat_train = as.matrix(train_data)
+  x_mat_val = as.matrix(val_data)
+
+  # Fit the xgb model
+  negative_labels = sum(train_labels == 0)
+  positive_labels = sum(train_labels == 1)
+  xgb_time = system.time({xgb_model = xgboost(data = x_mat_train, 
+  label = train_labels, nthread=2, max.depth = 3, nround= 100, 
+  objective = "binary:logistic", 
+  scale_pos_weight=negative_labels/positive_labels, verbose = 0)})
+  xgb_probs = predict(xgb_model, x_mat_val)
+  return (list(score = xgb_probs, cvfit = xgb_model, testData = val_data, 
+    testLabels = val_labels, trainCount = nrow(train_data), 
+    indicesTest = val_idx))
+  
+}
+
+fit_glmnet = function(input, labels, model = NULL, log = F) {
+  input = cbind(input,labels)
   finalFeatureIndex = ncol(input)-1
   sampleSizeTraining=0
   sampleSizeValidation=0
