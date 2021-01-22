@@ -317,3 +317,99 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
     }
     return(hitsDF)
 }
+
+
+
+  assignGeneIdsByReference <- function(grl, annotations) {
+    # (1) assign gene Ids based on first intron match to annotations
+    geneRanges <- reducedRangesByGenes(annotations)
+    ov=findOverlaps(grl, geneRanges)
+    geneIds <- rep(NA, length(grl))
+    uniqueHits <- which(queryHits(ov) %in% which(countQueryHits(ov)==1))
+    geneIds[queryHits(ov)[uniqueHits]] <- names(geneRanges)[subjectHits(ov)[uniqueHits]]
+    
+    ## next for non unique hits select one gene (maximum overlap? using expand ranges? 
+    multiHits <- which(queryHits(ov) %in% which(countQueryHits(ov)>1))
+    expandedRanges <- expandRangesList(ranges(grl[queryHits(ov)[multiHits]]),
+                                       ranges(geneRanges[subjectHits(ov)[multiHits]]))
+    rangeIntersect <- pintersect(expandedRanges, mcols(expandedRanges)$matchRng, resolve.empty = 'start.x')
+    intersectById <- tapply(width(rangeIntersect), mcols(expandedRanges)$IdMap, sum)
+    
+    filteredMultiHits <- as_tibble(ov[multiHits]) %>% mutate(intersectWidth = intersectById) %>% 
+      group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% slice(1)
+    geneIds[filteredMultiHits$queryHits] <- names(geneRanges)[filteredMultiHits$subjectHits]
+    
+    return(geneIds)
+    }
+  
+  #for test purpose
+  #grl <- IRangesList(IRanges(c(1,90),c(5,95)), IRanges(c(10,20),c(15,25)), IRanges(c(20,30,40), c(25,35,45)),IRanges(c(40,50),c(45,55)), IRanges(c(50,60),c(55,65)), IRanges(c(70,80),c(75,85)),IRanges(c(80,90),c(85,95)), IRanges(c(200,210),c(205,215)), IRanges(c(300),c(305)))
+  
+  assignGeneIdsNoReference <- function(grl) {
+    
+    newTxIds <- 1:length(grl)
+    newGeneByNewTxId <- rep(NA, length(newTxIds)) # will be filled in
+    newTxIdsByExon <- rep(newTxIds, times=elementNROWS(grl))
+    
+    grSetReduced <- reduce(unlist(grl), with.revmap=T)
+    newExonId <- 1:length(grSetReduced)
+    revmap=mcols(grSetReduced)$revmap
+    newExonIdByMergedExon <- rep(newExonId, times=elementNROWS(revmap))
+    newTxIdsByMergedExon <- newTxIdsByExon[unlist(revmap)]
+    
+    # (1) create initial gene, exon, transcript map
+    exonTxMap <- tibble(newExonId=newExonIdByMergedExon, newTxId=newTxIdsByMergedExon) %>% distinct()
+    geneExonMap <-tibble(newGeneId=newExonIdByMergedExon, newExonId=newExonIdByMergedExon) %>% distinct()
+    geneTxMap <- tibble(newGeneId=newExonIdByMergedExon, newTxId=newTxIdsByMergedExon) %>% distinct()
+    
+    show(table(is.na(newGeneByNewTxId)))
+    # (2) select genes with only unique transcripts (complete assignment)
+    exonGeneMap_filter1 <-  geneTxMap %>% group_by(newTxId) %>% mutate(nTx=n()) %>% 
+      group_by(newGeneId) %>% filter(sum(nTx)==n()) 
+    
+    newGeneByNewTxId[exonGeneMap_filter1$newTxId] <- exonGeneMap_filter1$newGeneId
+    show(table(is.na(newGeneByNewTxId)))
+    
+    if(any(is.na(newGeneByNewTxId))) {
+      # (3.1) second iteration: non assigned genes
+      geneTxMap <- geneTxMap %>% filter(!(newGeneId %in% exonGeneMap_filter1$newGeneId))
+      exonTxMap <- exonTxMap %>% filter(!(newTxId %in% exonGeneMap_filter1$newTxId))
+      geneExonMap <- geneExonMap %>% filter(!(newGeneId %in% exonGeneMap_filter1$newGeneId))
+      
+      ## (1) select gene Ids (first exons, can't be merged)
+      refGeneExonList <- left_join(exonTxMap, rename(exonTxMap, newExonId.merge=newExonId)) %>% filter(newExonId<newExonId.merge) %>% filter(!(newExonId %in% newExonId.merge)) %>% select(newExonId, newExonId.merge) %>% distinct() %>% left_join(geneExonMap)  %>%  select(newGeneId, newExonId.merge) %>% distinct()
+      
+      #extend to the right
+      refGeneTxMap <- left_join(refGeneExonList,  exonTxMap, by=c('newExonId.merge'='newExonId')) %>% select(newGeneId, newTxId) %>% distinct()
+      
+      refGeneTxMap <- rbind(geneTxMap %>% filter(newGeneId %in% refGeneTxMap$newGeneId), refGeneTxMap) %>% distinct()
+      refGenExonMap <- left_join(refGeneTxMap, exonTxMap) %>% select(newGeneId, newExonId) %>% distinct()
+      length_tmp = 0
+      
+      while(length_tmp<nrow(refGenExonMap)) {
+        show('extend exons loop')
+        length_tmp=nrow(refGenExonMap)
+        refGeneTxMap <- left_join(refGenExonMap,  exonTxMap) %>% select(newGeneId, newTxId) %>% distinct()
+        refGenExonMap <- left_join(refGeneTxMap, exonTxMap) %>% select(newGeneId, newExonId) %>% distinct()
+      }
+      geneTxMap <- refGeneTxMap
+      geneExonMap <- refGenExonMap
+      
+      # combined gene ids
+      geneGeneMap <- left_join(geneTxMap, rename(geneTxMap, newGeneId.merge=newGeneId)) %>% filter(newGeneId<newGeneId.merge) %>%filter(!(newGeneId %in% newGeneId.merge)) %>% select(newGeneId, newGeneId.merge) %>% distinct()
+      geneTxMap <- rbind(geneTxMap %>%filter(!(newGeneId %in% geneGeneMap$newGeneId.merge)), left_join(geneGeneMap, geneTxMap, by=c('newGeneId.merge'='newGeneId')) %>% select(newGeneId, newTxId)) %>% distinct()
+      
+      newGeneByNewTxId[geneTxMap$newTxId] <- geneTxMap$newGeneId
+      show(table(is.na(newGeneByNewTxId)))
+    }
+    return(newGeneByNewTxId)
+  }
+  
+    
+  assignGeneIds <- function(grl, annotations) {
+    geneIds <- assignGeneIdsByReference(grl, annotations) 
+    newGeneSet <- which(is.na(geneIds))
+    newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
+    geneIds[newGeneSet] <- newGeneIds
+  return(geneIds)
+  }
