@@ -38,6 +38,7 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
     return(se)
 }
 
+#deprecated
 createAlignData = function(readGrgList){
   #converts the readGrgList into a simple matrix
   #todo, instead of this function just use mcols
@@ -53,6 +54,7 @@ createAlignData = function(readGrgList){
   return(alignData)
 }
 
+#deprecated
 annotateReadStartsAndEnds = function(alignData, se){
   #assign labels to reads
   #rownames(allReadClasses)=allReadClasses$`readClasses$readClassId`
@@ -78,6 +80,7 @@ annotateReadStartsAndEnds = function(alignData, se){
   return(alignData)
 }
 
+#deprecated
 simplifyAdapterData = function(alignData){
   # NOT USED WHEN NO ADAPTERS IN DATA
   alignData$adap5 = grepl('5', alignData$predictedStrand, fixed=TRUE)
@@ -126,6 +129,7 @@ simplifyAdapterData = function(alignData){
    return(alignData)
 }
 
+#deprecated
 summeriseReadsByGroup <- function(alignData, withAdapters = FALSE){
   
   alignData=alignData[which(!is.na(alignData$readClass)),]
