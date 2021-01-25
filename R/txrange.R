@@ -189,7 +189,7 @@ addRowData = function(se, genomeSequence, annotations){
   rowData(se)$equal = classifications$equal
   rowData(se)$compatible = classifications$compatible
   rowData(se)$compatibleCount = classifications$compatibleCount
-  se = assignGeneIDs(se, annotations)
+  rowData(se)$GENEID = assignGeneIds(readClassesList, annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
   se = calculateGeneProportion(se)
@@ -764,6 +764,7 @@ getTranscriptScore = function(se, thresholdIndex, plot = NULL,
   if(checkFeatures(txFeatures)){
     txIndex = thresholdIndex[thresholdIndex %in% 
       which(!rowData(se)$novel)]
+    #txIndex = thresholdIndex
     transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
       txFeatures$labels[txIndex], plot = plot, saveFig = F, method = method)
     transcriptScore = predict(transcriptModel, txFeatures$features,
