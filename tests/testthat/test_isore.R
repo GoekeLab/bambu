@@ -24,33 +24,61 @@ test_that("isore.constructReadClasses completes successfully", {
         "seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
         package = "bambu"
     ))
-
+    
+   
+    genomeSequence <- checkInputSequence(genomeSequence)
+    refSeqLevels <-  GenomeInfoDb::seqlevels(genomeSequence)
+    if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% refSeqLevels)) {
+        message("not all chromosomes from reads present in reference genome 
+            sequence, reads without reference chromosome sequence are dropped")
+        readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
+            value =  refSeqLevels,
+            pruning.mode = "coarse")
+        # reassign Ids after seqlevels are dropped
+        mcols(readGrgList)$id <- seq_along(readGrgList) 
+    }
+    if (!all(GenomeInfoDb::seqlevels(gr) %in% refSeqLevels)) {
+    message("not all chromosomes from annotations present in reference genome 
+    sequence, annotations without reference chrosomomse sequence are dropped")
+    gr <- GenomeInfoDb::keepSeqlevels(gr,
+        value = refSeqLevels,pruning.mode = "coarse")
+    }
+    unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
+    uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
+        annotations = gr,genomeSequence)
+    
     seReadClassUnstranded <- isore.constructReadClasses(
         readGrgList = readGrgList,
-        runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_unstranded",
-        annotationGrangesList = gr,
-        genomeSequence = genomeSequence,
+        unlisted_junctions, 
+        uniqueJunctions,
+        runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000",
+        annotations = gr,
         stranded = FALSE,
-        ncore = 1,
         verbose = FALSE
     )
+    GenomeInfoDb::seqlevels(seReadClassUnstranded) <- refSeqLevels
     ## in case of testing on Mac
-    names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronStarts) <- NULL
-    names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronEnds) <- NULL
+    names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronStarts) <-
+        names(seReadClassUnstrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
+    names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronEnds) <- 
+        names(seReadClassUnstrandedExpected@rowRanges@elementMetadata@listData$intronEnds) <- NULL
     expect_equal(seReadClassUnstranded, seReadClassUnstrandedExpected)
 
 
     seReadClassStranded <- isore.constructReadClasses(
         readGrgList = readGrgList,
-        runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_stranded",
-        annotationGrangesList = gr,
-        genomeSequence = genomeSequence,
+        unlisted_junctions, 
+        uniqueJunctions,
+        runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_Stranded",
+        annotations = gr,
         stranded = TRUE,
-        ncore = 1,
         verbose = FALSE
     )
-    names(seReadClassStranded@rowRanges@elementMetadata@listData$intronStarts) <- NULL
-    names(seReadClassStranded@rowRanges@elementMetadata@listData$intronEnds) <- NULL
+    GenomeInfoDb::seqlevels(seReadClassStranded) <- refSeqLevels
+    names(seReadClassStranded@rowRanges@elementMetadata@listData$intronStarts) <- 
+        names(seReadClassStrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
+    names(seReadClassStranded@rowRanges@elementMetadata@listData$intronEnds) <- 
+        names(seReadClassStrandedExpected@rowRanges@elementMetadata@listData$intronEnds) <- NULL
     expect_equal(seReadClassStranded, seReadClassStrandedExpected)
 })
 
@@ -143,6 +171,7 @@ test_that("isore.estimateDistanceToAnnotations completes successfully", {
         annotationGrangesList = extendedAnnotations,
         min.exonDistance = 35
     )
-    names(seWithDist@metadata$distTable$readCount) <- NULL
+    names(seWithDist@metadata$distTable$readCount) <- 
+        names(seWithDistExpected@metadata$distTable$readCount) <- NULL
     expect_equal(seWithDist, seWithDistExpected)
 })

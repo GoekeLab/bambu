@@ -14,13 +14,6 @@
 #' @details \code{\link{type}} indicates the type of plots to be plotted. There
 #' are two types of plots can be chosen, PCA or heatmap.
 #' @return A heatmap plot for all samples
-#' @importFrom stats prcomp
-#' @importFrom ggplot2 ggplot
-#' @importFrom ComplexHeatmap Heatmap
-#' @importFrom circlize colorRamp2
-#' @importFrom RColorBrewer brewer.pal
-#' @importFrom ggbio autoplot
-#' @importFrom gridExtra grid.arrange
 #' @export
 #' @examples
 #' se <- readRDS(system.file("extdata",
