@@ -255,7 +255,6 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
     counts.spliced <- cbind(counts.splicedRef, counts.splicedNew)
     start.spliced <- cbind(start.splicedRef, start.splicedNew)
     end.spliced <- cbind(end.splicedRef, end.splicedNew)
-    print("createSEforSplicedTx")
     strand_bias.spliced = getSplicedAssay("strand_bias")
     startSD.spliced = getSplicedAssay("startSD")
     endSD.spliced = getSplicedAssay("endSD")
@@ -266,11 +265,9 @@ createSEforSplicedTx <- function(rowData.spliced, readClassSeRef,
         mutate(confidenceType = "highConfidenceJunctionReads")
     se.spliced <- SummarizedExperiment(
         assays = SimpleList(counts = counts.spliced, 
-        start = start.spliced,end = end.spliced, 
+        start = start.spliced,end = end.spliced,
         strand_bias=strand_bias.spliced,
-        startSD=startSD.spliced,
-        endSD=endSD.spliced,
-        uniqueReads=uniqueReads.spliced),
+        startSD=startSD.spliced, endSD=endSD.spliced),
         rowData = rowData.spliced, colData = colDataCombined)
     print("createSEforSplicedTx 2" )
     return(se.spliced)
@@ -365,8 +362,7 @@ createSEforUnsplicedTx <- function(readClassSeRef, readClassSe,
         assays = SimpleList(counts = counts.unspliced,
         start = start.unspliced, end = end.unspliced,
         strand_bias = strand_bias.unspliced,
-        startSD = startSD.unspliced,
-        endSD = endSD.unspliced),
+        startSD = startSD.unspliced, endSD = endSD.unspliced),
         rowData = rowData.unspliced, colData = colDataCombined)
     return(se.unspliced)
 }
@@ -474,30 +470,9 @@ createRefFromReadClassSE <- function(readClassSe){
     strand_bias = assays(readClassSe)$strand_bias
     startSD = assays(readClassSe)$startSD
     endSD = assays(readClassSe)$endSD
-    if(!is.null(assays(readClassSe)$adapNumReads)){
-      adapNumReads = assays(readClassSe)$adapNumReads
-      adapEndNumReads = assays(readClassSe)$adapEndNumReads
-      adaptDist = assays(readClassSe)$adaptDist
-      adapEndDist = assays(readClassSe)$adapEndDist
-      bothAdapters = assays(readClassSe)$bothAdapters
-      polyAEnd = assays(readClassSe)$polyAEnd
-      assaysList = SimpleList(counts=counts,
+    assaysList = SimpleList(counts=counts,
             start=start, end=end, strand_bias=strand_bias,
-            startSD=startSD, endSD=endSD, TSSscore = TSSscore,
-            TESscore = TESscore, uniqueReads=uniqueReads,
-            adapNumReads = adapNumReads, 
-            adapEndNumReads = adapEndNumReads,
-            adaptDist = adaptDist,
-            adapEndDist = adapEndDist,
-            bothAdapters = bothAdapters,
-            polyAEnd = polyAEnd
-      )
-    } else{
-      assaysList = SimpleList(counts=counts,
-            start=start, end=end, strand_bias=strand_bias,
-            startSD=startSD, endSD=endSD
-      )
-    }
+            startSD=startSD, endSD=endSD)
     readClassSeRef <- SummarizedExperiment(
         assays = assaysList,
         rowData = rowData, colData = colData(readClassSe))

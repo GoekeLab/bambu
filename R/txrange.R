@@ -2,54 +2,40 @@ suppressMessages(require(stringr))
 library(BSgenome)
 library(ROCit)
 library(glmnet)
+library(xgboost)
+
+if(F){
+  load("se_bambuTest.Rdata")
+  load("readGrgList_bambuTest.Rdata")
+  min.readCount = 2
+  annotations = bambuAnnotations
+  genomeSequence = fa.file
+}
 
 txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
       annotations, withAdapters = FALSE, min.readCount = 2){
-       #save(se, file="se_bambuTest.Rdata")
-    #save(readGrgList, file="readGrgList_bambuTest.Rdata")
+
     options(scipen = 999)
-    alignData = createAlignData(readGrgList)
+    #alignData = createAlignData(readGrgList)
+    #alignData = annotateReadStartsAndEnds(alignData, se)
     rm(readGrgList)
-    alignData = annotateReadStartsAndEnds(alignData, se)
-    resultOutput = summeriseReadsByGroup(alignData, withAdapters = FALSE)
-    resultOutput = resultOutput[order(as.numeric(resultOutput$readClassIndex)),]
-    assays(se, withDimnames = F) = lapply(resultOutput, as.matrix)
-    rownames(se)=resultOutput$readClass
-    combinedOutputs = combineSEs(list(se), annotations)
-    combinedOutputs = addRowData(combinedOutputs, genomeSequence, annotations)
-
-    thresholdIndex = which(rowSums(assays(combinedOutputs)$counts)
+    se = combineSEs(list(se), annotations)
+    se = addRowData(se, genomeSequence, annotations)
+    thresholdIndex = which(rowSums(assays(se)$counts)
         >=min.readCount)
-
-    #train the models and score RCs
-    #gene model
-    geneFeatures = prepareGeneModelFeatures(combinedOutputs[thresholdIndex,])
-    geneModel = trainGeneModel(geneFeatures$features, 
-      geneFeatures$labels, geneFeatures$names, 
-      plot = "NULL", saveFig = F)
-    geneScore = getGeneScore(geneFeatures$features, geneFeatures$labels, 
-      geneFeatures$names, model = geneModel)$score[rowData(seWithNovel)$GENEID]
-    rowData(combinedOutputs)$geneScore = geneScore[rowData(combinedOutputs)$GENEID]
-    # seSorted = seTrimmed[order(geneScore, decreasing = T),]  
-    # rowData(seSorted)$FDR = cumsum(!grepl("gene.",
-    #   rowData(seSorted)$GENEID))/(1:nrow(rowData(seSorted)))
-
-    #transcript model
-    #filter out novel genes to train transcript model
-    txFeatures = prepareTranscriptModelFeatures(combinedOutputs,
-      withAdapters = withAdapters)
-    txIndex = thresholdIndex[thresholdIndex %in% 
-      which(!rowData(combinedOutputs)$novel)]
-    transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
-      txFeatures$labels[txIndex], plot = "NULL", saveFig = F)
-    transcriptScore = predict(transcriptModel, newx = txfeatures,
-      s = "lambda.min", type="response")
-    rowData(combinedOutputs)$transcriptScore = transcriptScore
-    # seSorted = seFrac[order(transcriptScore, decreasing = T),]
-    # rowData(seSorted)$FDR = cumsum(rowData(seSorted)$equal != "NOVEL")/
-    # (1:nrow(rowData(seSorted)))
-
-    return(combinedOutputs)
+    rowData(se)$geneScore = getGeneScore(se, thresholdIndex, 
+      plot = "NULL", method = "xgboost")
+    rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, 
+      plot = "NULL", method = "xgboost")
+    
+    # test model on subset and nonsubset RCs
+    # subset = rowData(se)$compatibleCount >= 2 | 
+    #  (!rowData(se)$equal & rowData(se)$compatibleCount == 1)
+    # getTranscriptScore(se[which(!subset),], thresholdIndex, 
+    #                    plot = "NULL", method = "xgboost")
+    # getTranscriptScore(se[which(subset),], thresholdIndex, 
+    #                    plot = "NULL", method = "xgboost")
+    return(se)
 }
 
 createAlignData = function(readGrgList){
@@ -187,38 +173,35 @@ combineSEs = function(combinedOutputs, annotations){
       isore.combineTranscriptCandidates(combinedOutputs[[i]], readClassSeRef =
       combinedTxCandidates)
   }
+  colnames(rowData(combinedTxCandidates)) = c(c("chr.rc", "start.rc",
+     "end.rc", "strand.rc"), 
+    colnames(rowData(combinedOutputs[[1]])[-1:-4]))
+  return(combinedTxCandidates)
+}
+
+
+addRowData = function(se, genomeSequence, annotations){
+  exons = str_split(rowData(se)$intronStarts,",")
+  rowData(se)$numExons = sapply(exons, FUN = length)+1
+  rowData(se)$numExons[is.na(exons)] = 1
+  readClassesList = convertSEtoGRangesList(se)
+  classifications = getReadClassClassifications(readClassesList, annotations)
+  rowData(se)$equal = classifications$equal
+  rowData(se)$compatible = classifications$compatible
+  rowData(se)$compatibleCount = classifications$compatibleCount
+  se = assignGeneIDs(se, annotations)
+  rowData(se)$novel = grepl("gene.", 
+      rowData(se)$GENEID)
+  se = calculateGeneProportion(se)
+  #se = getTranscriptProp(se, readClassesList)
+  se = countPolyATerminals(se, genomeSequence)
+ 
   return(se)
 }
 
-
-addRowData = function(combinedOutputs, genomeSequence, annotations){
-  
-  exons = str_split(rowData(combinedOutputs)$intronStarts,",")
-  rowData(combinedOutputs)$numExons = sapply(exons, FUN = length)+1
-  rowData(combinedOutputs)$numExons[is.na(exons)] = 1
-  
-  readClassesList = convertSEtoGRangesList(combinedOutputs)
-
-  classifications = getReadClassClassifications(readClassesList, annotations)
-  rowData(combinedOutputs)$equal = classifications$equal
-  rowData(combinedOutputs)$compatible = classifications$compatible
-  combinedOutputs = assignGeneIDs(combinedOutputs, annotations)
-  rowData(combinedOutputs)$novel = grepl("gene.", 
-      rowData(combinedOutputs)$GENEID)
-  combinedOutputs = calculateGeneProportion(combinedOutputs)
-  combinedOutputs = getTranscriptProp(combinedOutputs, readClassesList)
-  combinedOutputs = countPolyATerminals(combinedOutputs, genomeSequence)
-
-  return(combinedOutputs)
-}
-
 assignGeneIDs <- function(se, annotationGrangesList, min.exonOverlap = 35){
-  
-  start_time = Sys.time()
-  
   ## (1) Spliced Reads
-  #se <- isore.combineTranscriptCandidates(se) #does this do anything for just one sample other than making start and end columns?
-  seFilteredSpliced <- se[(rowData(se)$confidenceType == 'highConfidenceJunctionReads' | rowData(se)$confidenceType == 'lowConfidenceJunctionReads'),]
+   seFilteredSpliced <- se[(rowData(se)$confidenceType == 'highConfidenceJunctionReads' | rowData(se)$confidenceType == 'lowConfidenceJunctionReads'),]
   
   mcols(seFilteredSpliced)$GENEID <- NA
   
@@ -362,105 +345,6 @@ assignGeneIDs <- function(se, annotationGrangesList, min.exonOverlap = 35){
   return(seCombined)
 }
 
-assignGeneIDs2 = function(se, annotations){
-  #NOT YET IMPLEMENTED
-  mcols(se)$GENEID <- NA
-  mcols(se)$GENEID[queryHits(ovExon[mcols(ovExon)$compatible][!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))])] <- mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$compatible])[!duplicated(queryHits(ovExon[mcols(ovExon)$compatible]))]])$GENEID # annotate with compatible gene id,
-  mcols(se)$GENEID[queryHits(ovExon[mcols(ovExon)$equal][!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))])] <- mcols(annotationGrangesList[subjectHits(ovExon[mcols(ovExon)$equal])[!duplicated(queryHits(ovExon[mcols(ovExon)$equal]))]])$GENEID # annotate as identical,
-  exonsByReadClass = getExonsByReadClass(se)
-  se[(rowData(se)$confidenceType == 'highConfidenceJunctionReads' | rowData(se)$confidenceType == 'lowConfidenceJunctionReads'),]$GENEID = geneAssignmentByIntrons(se, annotations, exonsByReadClass$spliced)
-  se = geneAssignmentArbitraryOverlap(se, annotations, c(exonsByReadClass$spliced, exonsByReadClass$unspliced))
-  
-  getExonsByReadClass = function(se){
-    seFilteredSpliced <- se[(rowData(se)$confidenceType == 'highConfidenceJunctionReads' | rowData(se)$confidenceType == 'lowConfidenceJunctionReads'),]
-    exonEndsShifted <-paste(rowData(seFilteredSpliced)$intronStarts,
-                            rowData(seFilteredSpliced)$end.rc + 1,
-                            sep=',')
-    exonStartsShifted <- paste(rowData(seFilteredSpliced)$start.rc - 1,
-                               rowData(seFilteredSpliced)$intronEnds,
-                               sep=',')
-    exonsByReadClass <- makeGRangesListFromFeatureFragments(seqnames=rowData(seFilteredSpliced)$chr.rc,
-                                                            fragmentStarts=exonStartsShifted,
-                                                            fragmentEnds=exonEndsShifted,
-                                                            strand=rowData(seFilteredSpliced)$strand.rc)
-    exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)  # correct junction to exon differences in coordinates
-    names(exonsByReadClass) <- 1:length(exonsByReadClass)
-    
-    seFilteredUnspliced <- se[(rowData(se)$confidenceType == 'unsplicedNew' | rowData(se)$confidenceType == 'unsplicedWithin'), ]
-    exonsByReadClassUnspliced= GRanges(seqnames=rowData(seFilteredUnspliced)$chr.rc,
-                                       ranges=IRanges(start=rowData(seFilteredUnspliced)$start.rc,
-                                                      end=rowData(seFilteredUnspliced)$end.rc),
-                                       strand=rowData(seFilteredUnspliced)$strand.rc)
-    #exonRangesCombined<- c(exonsByReadClass, exonsByReadClassUnspliced)
-    #names(exonRangesCombined) <- 1:length(exonRangesCombined)
-    return(list(spliced = exonsByReadClass, unspliced = exonsByReadClassUnspliced))
-  }
-  
-  geneAssignmentByIntrons = function(se, annotationGrangesList, exonsByReadClass){
-    ## using intron matches
-    se <- se[(rowData(se)$confidenceType == 'highConfidenceJunctionReads' | rowData(se)$confidenceType == 'lowConfidenceJunctionReads'),]
-    
-    intronsByReadClass= makeGRangesListFromFeatureFragments(seqnames=rowData(se)$chr.rc,
-                                                            fragmentStarts=rowData(se)$intronStarts,
-                                                            fragmentEnds=rowData(se)$intronEnds,
-                                                            strand=rowData(se)$strand.rc)
-    unlistedIntrons <- unlist(intronsByReadClass, use.names=TRUE)
-    
-    unlistedIntronsAnnotations <- unlist(myGaps(annotationGrangesList))
-    mcols(unlistedIntronsAnnotations)$GENEID <- mcols(annotationGrangesList)$GENEID[match(names(unlistedIntronsAnnotations), mcols(annotationGrangesList)$TXNAME)]
-    
-    ## assign gene ids based on the maximum number of matching introns/splice junctions
-    overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,
-                                                       unlistedIntronsAnnotations,
-                                                       type='equal',
-                                                       select='all',
-                                                       ignore.strand=FALSE)
-    
-    maxGeneCountPerNewTx <- tbl_df(data.frame(txId=names(unlistedIntrons)[queryHits(overlapsNewIntronsAnnotatedIntrons)],
-                                              geneId=mcols(unlistedIntronsAnnotations)$GENEID[subjectHits(overlapsNewIntronsAnnotatedIntrons)],
-                                              stringsAsFactors=FALSE)) %>%
-      group_by(txId, geneId) %>%
-      summarise(geneCount=n()) %>%
-      group_by(txId) %>%
-      filter(geneCount == max(geneCount)) %>%
-      filter(!duplicated(txId)) %>%
-      ungroup()
-
-
-    geneIdByIntron <- rep(NA,length(exonsByReadClass))
-    geneIdByIntron <- maxGeneCountPerNewTx$geneId[match(names(exonsByReadClass), maxGeneCountPerNewTx$txId)]
-    mcols(se)$GENEID[is.na(mcols(se)$GENEID)] <- geneIdByIntron[is.na(mcols(se)$GENEID)]
-    return(mcols(se)$GENEID)
-  }
-  
-  geneAssignmentArbitraryOverlap = function(exonRangesCombined, annotationGrangesList){
-    exonMatchGene <- findOverlaps(exonRangesCombined,
-                                  annotationGrangesList,
-                                  select='arbitrary',
-                                  minoverlap=min.exonOverlap)
-    geneIdByExon <- rep(NA,length(exonRangesCombined))
-    geneIdByExon[!is.na(exonMatchGene)] <- mcols(annotationGrangesList)$GENEID[exonMatchGene[!is.na(exonMatchGene)]]
-    geneIdByExon[!is.na(mcols(se)$GENEID)] <-  mcols(se)$GENEID[!is.na(mcols(se)$GENEID)]
-    
-    exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
-                                  exonRangesCombined[!is.na(geneIdByExon)],
-                                  select = 'arbitrary',
-                                  minoverlap = min.exonOverlap)
-    while(any(!is.na(exonMatchGene))) {
-      geneIdByExon[is.na(geneIdByExon)][!is.na(exonMatchGene)] <- geneIdByExon[!is.na(geneIdByExon)][exonMatchGene[!is.na(exonMatchGene)]]
-    }
-    mcols(se)$GENEID[is.na(mcols(se)$GENEID)] <- geneIdByExon[is.na(mcols(se)$GENEID)]
-    
-    if(any(is.na(mcols(se)$GENEID))){
-      
-      newGeneIds <- assignNewGeneIds(exonRangesCombined[is.na(mcols(se)$GENEID)], minoverlap=5, ignore.strand=F)
-      
-      mcols(se)$GENEID[as.integer(newGeneIds$readClassId)] <- newGeneIds$geneId
-    }
-    return(se)
-  }
-}
-
 calculateGeneProportion = function(resultOutput){
   countsTBL <- as_tibble(assays(resultOutput)$counts) %>%
     mutate(geneId = rowData(resultOutput)$GENEID) %>%
@@ -485,15 +369,16 @@ convertSEtoGRangesList = function(combinedOutputs){
   singleExonIndex = which(is.na(rowData(combinedOutputs)$intronStarts))
   exonEndsShifted[singleExonIndex] = 
     rowData(combinedOutputs)$end.rc[singleExonIndex] + 1
+
   exonStartsShifted[singleExonIndex] = 
     rowData(combinedOutputs)$start.rc[singleExonIndex] - 1
-  
+
   readClassList= makeGRangesListFromFeatureFragments(
     seqnames=rowData(combinedOutputs)$chr.rc,
-    fragmentStarts=exonStartsShifted,
-    fragmentEnds=exonEndsShifted,
+    fragmentStarts=as.character(exonStartsShifted),
+    fragmentEnds=as.character(exonEndsShifted),
     strand=rowData(combinedOutputs)$strand.rc)
-  
+
    # correct junction to exon differences in coordinates
   readClassList <- narrow(readClassList, start = 2, end = -2) 
   
@@ -524,23 +409,52 @@ getReadClassClassifications = function(query, subject, maxDist = 5){
         type = 'within')
     compatible = rep(F, length(query))
     compatible[queryHits(olap)] = T
+    compatibleCount = rep(0, length(query))
+    compatTable = table(queryHits(olap))
+    compatibleCount[as.numeric(names(compatTable))] = compatTable
     
     olapEqual = findOverlaps(queryForOverlap, 
       cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal')
     equal = rep(F, length(query))
     equal[queryHits(olapEqual)] = T
     
-    return(list(equal = equal, compatible = compatible))
+    return(list(equal = equal, compatible = compatible, compatibleCount = compatibleCount))
 }
 
 getTranscriptProp = function(se, readClassesList){
   # calculates the min and max contributions a read class makes to all
   # the transcripts it is compatible too
-  allOverlaps = NULL
+  #allOverlaps = NULL
   i= 0
-  for(chr in seqlevels(readClassesList)){
-    selection = which(unlist(runValue(seqnames(readClassesList))==chr))
-    readClassListTemp = readClassesList[selection]
+
+  # readClassListByChr = lapply(seqlevels(readClassesList), FUN = function(chr){
+  #   selection = which(unlist(runValue(seqnames(readClassesList))==chr))
+  #   return(readClassesList[selection])
+  # })
+  # i=0
+  # allOverlaps = lapply(readClassListByChr, FUN = function(readClassListTemp){
+  #   query <- cutStartEndFromGrangesList(readClassListTemp)
+  #   
+  #   overlaps = countOverlaps(query, readClassListTemp, type = 'within')
+  #   megaRCs = readClassesList[which(overlaps == 1),]
+  #   overlaps = findOverlaps(query, megaRCs, type = 'within')
+  #   
+  #   #account for the index change due to seperating the readclasses by chr
+  #   overlaps = as.matrix(overlaps)+i
+  #   i <<- i + length(readClassListTemp)
+  #   
+  #   return(overlaps)
+  # })
+  # allOverlaps = do.call(rbind, allOverlaps)
+  # 
+  
+  allOverlaps = list()
+  readClassesListToExtract = readClassesList
+  for(x in 1:length(seqlevels(readClassesList))){
+    chr = seqlevels(readClassesList)[x]
+    selection = which(unlist(runValue(seqnames(readClassesListToExtract))==chr))
+    readClassListTemp = readClassesListToExtract[selection]
+    readClassesListToExtract= readClassesListToExtract[-selection]
     query <- cutStartEndFromGrangesList(readClassListTemp)
     
     overlaps = countOverlaps(query, readClassListTemp, type = 'within')
@@ -550,8 +464,10 @@ getTranscriptProp = function(se, readClassesList){
     #account for the index change due to seperating the readclasses by chr
     overlaps = as.matrix(overlaps)+i
     i = i + length(readClassListTemp)
-    allOverlaps = rbind(allOverlaps, overlaps)
+    #allOverlaps = rbind(allOverlaps, overlaps)
+    allOverlaps[[x]]=overlaps
   }
+  allOverlaps = do.call(rbind, allOverlaps)
   allCompats = allOverlaps[,'subjectHits']
   compatIndex = allOverlaps[,'queryHits']
   compatCounts = rowSums(assays(se)$counts)[allOverlaps[,'queryHits']]
@@ -595,7 +511,7 @@ countPolyATerminals = function(se, genomeSequence){
     end.field = "end.rc", seqnames.field = "chr.rc",
     strand.field = "strand.rc")
   strand(RCranges)[which(as.character(strand(RCranges))=='*')]='+'
-  genomeSequence = loadGenomeAnnotation(genomeSequence)
+  genomeSequence = checkInputSequence(genomeSequence)
   
   startSeqs = as.character(BSgenome::getSeq(genomeSequence,resize(RCranges,10,
     fix="start")[which(as.character(seqnames(RCranges)) %in%
@@ -667,8 +583,7 @@ getAgnosticFeatures = function(input){
   transcriptPropMin[is.na(transcriptPropMin)] = 0
 
   features = cbind(numReads, SD, SDend, geneReadProp, tx_strand_bias,
-    numAstart, numAend, alignedPolyAstart, alignedPolyAend, numTstart,
-    numTend, alignedPolyTstart, alignedPolyTend, transcriptProp,
+    numAstart, numAend, numTstart, numTend, transcriptProp,
     transcriptPropMin)
   
   return(features)
@@ -727,15 +642,17 @@ prepareGeneModelFeatures = function(se){
   numReadsLog = log(numReads,2)
   numReadsLog[is.infinite(numReadsLog)]=0
 
-  strand_bias = 1-abs(0.5-(as.numeric(by(assays(se)$strand_bias, rowData(se)$GENEID, sum))/numReads))
+  strand_bias = 1-abs(0.5-(as.numeric(by(assays(se)$strand_bias, 
+    rowData(se)$GENEID, sum))/numReads))
   strand_bias[is.na(strand_bias)]=0
-  #as.numeric(by(assays(se3)$startSD, rowData(se3)$GENEID, mean))
-  #as.numeric(by(assays(se3)$endSD, rowData(se3)$GENEID, mean))
   #how many read classes does a gene have
   numRCs = table(rowData(se)$GENEID)
   
   #number of non-subset read classes
-  subset = (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),length)>=2 | (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),length)==1 & rowData(se)$resultOutput.equal == "NOVEL" & rowData(se)$resultOutput.compatible != "non_compatible_match"))
+  subset = (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),
+    length)>=2 | (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),
+    length)==1 & rowData(se)$resultOutput.equal == "NOVEL" & 
+    rowData(se)$resultOutput.compatible != "non_compatible_match"))
   subsetRCs = table(rowData(se)$GENEID[subset])
   temp = numRCs
   temp[names(subsetRCs)] = temp[names(subsetRCs)]-subsetRCs
@@ -747,48 +664,74 @@ prepareGeneModelFeatures = function(se){
   isSpliced = ifelse(numExons>1,1,0)
   
   #highCOnfidence
-  highConfidence = by(rowData(se)$confidenceType, rowData(se)$GENEID, function(x){
-    ifelse("highConfidenceJunctionReads" %in% x, 1,0)
-  })
+  highConfidence = by(rowData(se)$confidenceType, rowData(se)$GENEID, 
+    function(x){
+      ifelse("highConfidenceJunctionReads" %in% x, 1,0)
+    })
   highConfidence = as.numeric(highConfidence)
 
-  #percentage of reads that are non-multialigned
-  # uniqueReadsProp = by(assays(se)$uniqueReads, rowData(se)$GENEID, sum)
-  # uniqueReadsProp = as.numeric(highConfidence)/numReads
-  
-  features = cbind(numReadsLog,strand_bias, numRCs, numNonSubsetRCs, numExons, isSpliced, highConfidence)
-  
-  #features = cbind(numReadsLog,strand_bias, numRCs, numNonSubsetRCs, numExons, isSpliced, highConfidence)
-  
+  features = cbind(numReadsLog,strand_bias, numRCs, numNonSubsetRCs,
+    numExons, isSpliced, highConfidence)
+
   return(list(features=features, labels = labels, names = geneIDs))
 }
 
-trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T){
-  
+getGeneScore = function(se, thresholdIndex, plot = NULL, method = "sgboost"){
+  geneFeatures = prepareGeneModelFeatures(se[thresholdIndex,])
+    if(checkFeatures(geneFeatures)){
+    geneModel = trainGeneModel(geneFeatures$features, 
+      geneFeatures$labels, geneFeatures$names, 
+      plot = plot, saveFig = F, method)
+    geneScore = calculateGeneScore(geneFeatures$features, geneFeatures$labels, 
+      geneFeatures$names, model = geneModel, method = method)$score
+    rowData(se)$geneScore = geneScore[rowData(se)$GENEID]
+    # seSorted = seTrimmed[order(geneScore, decreasing = T),]  
+    # rowData(seSorted)$FDR = cumsum(!grepl("gene.",
+    #   rowData(seSorted)$GENEID))/(1:nrow(rowData(seSorted)))
+    } else {
+      message("Gene Score not calculated")
+      rowData(se)$geneScore = rep(1,nrow(se))
+    }
+}
+
+checkFeatures = function(features){
+  labels = features$labels
+  if(sum(labels)==length(labels) | sum(labels)==0){
+    message("Missing presence of both TRUE and FALSE labels.")
+    return(F)
+  }
+  if(length(labels)<50){
+    message("Not enough data points")
+    return(F)
+  }
+  return(T)
+}
+
+trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T, 
+  method = "sgboost"){
   if(sum(labels)==length(labels) | sum(labels)==0){return(NULL)}
-  
-  geneScore = getGeneScore(features, labels, names)
-  
+  geneScore = calculateGeneScore(features, labels, names, method = method)
   if(!is.null(plot)){
-    
     if(saveFig){
       svg(paste0(savePath,'/',plot,"_ROC.svg"), width = 7, height = 7)
-      plotGeneModel(features, labels)
+      plotGeneModel(features, labels, method = method)
       dev.off()
     } else{
-      plotGeneModel(features, labels)
+      plotGeneModel(features, labels, method = method)
     }
-    
     if(saveFig){
       svg(paste0(savePath,plot, "_Pres_Sens.svg"), width = 7, height = 7)
     }
-    measure = measureit(score = geneScore$model$score, class = geneScore$model$testLabels, measure = c("SENS", "PREC"))
+    measure = measureit(score = geneScore$model$score, 
+      class = geneScore$model$testLabels, measure = c("SENS", "PREC"))
     measure$PREC[1]=1
     base::plot(measure$PREC~measure$SENS, type = "l")
-    colours = c("red","orange","yellow","green", "turquoise", "blue","purple", "plum", "gray","black")
+    colours = c("red","orange","yellow","green", "turquoise", "blue",
+      "purple", "plum", "gray","black")
     thresholds = c(.9, .8, .7, .6, .5, .4, .3, .2, .1, 0)
     for(i in 1:10){
-      abline(v = measure$SENS[sum(unique(geneScore$model$score)>thresholds[i])+1], lwd=1, lty = 2, col = colours[i])
+      v = measure$SENS[sum(unique(geneScore$model$score)>thresholds[i])+1]
+      abline(v = v, lwd=1, lty = 2, col = colours[i])
     }
     if(saveFig){
       dev.off()
@@ -798,68 +741,84 @@ trainGeneModel = function(features, labels, names, plot = NULL, saveFig = T){
   return(geneScore$model$cvfit)
 }
 
-getGeneScore = function(features, labels, names, model = NULL){
-
+calculateGeneScore = function(features, labels, names, model = NULL, 
+  method = "xgboost"){
   if(!is.null(model)){
-    
-    score = as.numeric(predict(model, newx = as.matrix(features), s = "lambda.min",type="response"))
-    
+    score = as.numeric(predict(model, as.matrix(features), 
+      s = "lambda.min",type="response"))
   } else{
-    
-    result = calculateScore(cbind(features,labels))
+    result = calculateScore(features,labels, method = method)
     model = result
-    score = as.numeric(predict(result$cvfit, newx = as.matrix(features), s = "lambda.min",type="response"))
-
+    score = as.numeric(predict(result$cvfit, as.matrix(features), 
+      s = "lambda.min",type="response"))
   }
-  
   names(score) = names
-  #scoreByRC = score[rowData(se)$GENEID]
   
   return(list(score=score, model = model))
 }
 
-trainTranscriptModel = function(features, labels, plot = NULL, saveFig = T){
-  
-  result=calculateScore(cbind(features, labels))
-
+getTranscriptScore = function(se, thresholdIndex, plot = NULL, 
+  method = "xgboost"){
+  txFeatures = prepareTranscriptModelFeatures(se,
+    withAdapters = withAdapters)
+  if(checkFeatures(txFeatures)){
+    txIndex = thresholdIndex[thresholdIndex %in% 
+      which(!rowData(se)$novel)]
+    transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
+      txFeatures$labels[txIndex], plot = plot, saveFig = F, method = method)
+    transcriptScore = predict(transcriptModel, txFeatures$features,
+      s = "lambda.min", type="response")
+    rowData(se)$transcriptScore = transcriptScore
+    # seSorted = seFrac[order(transcriptScore, decreasing = T),]
+    # rowData(seSorted)$FDR = cumsum(rowData(seSorted)$equal != "NOVEL")/
+    # (1:nrow(rowData(seSorted)))
+  } else {
+    message("Transcript Score not calculated")
+    rowData(se)$transcriptScore = rep(1,nrow(se))
+  }
+}
+trainTranscriptModel = function(features, labels, plot = NULL, saveFig = T, 
+  method = "xgboost"){
+  print(method)
+  result=calculateScore(features, labels, method = method)
   if(!is.null(plot)){
-    #print(paste0(savePath,'/',plot,"_ROC.svg"))
     if(saveFig){
       svg(paste0('/',plot,"_ROC.svg"), width = 7, height = 7)
-      plotTranscriptModel(features, labels, plot)
+      plotTranscriptModel(features, labels, plot, method = method)
       dev.off()
     } else{
-      plotTranscriptModel(features, labels, plot)
+      plotTranscriptModel(features, labels, plot, method = method)
     }
 
     if(saveFig){
       svg(paste0(savePath,'/',plot, "_Pres_Sens.svg"), width = 7, height = 7)
     }
-    measure = measureit(score = result$score, class = result$testLabels, measure = c("SENS", "PREC"))
+    measure = measureit(score = result$score, class = result$testLabels,
+      measure = c("SENS", "PREC"))
     base::plot(measure$PREC~measure$SENS, type = "l")
     #draw lines to where the thresholds are at the moment
-    colours = c("red","orange","yellow","green", "turquoise", "blue","purple", "plum", "gray","black")
+    colours = c("red","orange","yellow","green", "turquoise", "blue","purple", 
+      "plum", "gray","black")
     thresholds = c(.9, .8, .7, .6, .5, .4, .3, .2, .1, 0)
     for(i in 1:10){
-      abline(v = measure$SENS[sum(unique(result$score)>thresholds[i])+1], lwd=1, lty = 2, col = colours[i])
+      abline(v = measure$SENS[sum(unique(result$score)>thresholds[i])+1], 
+        lwd=1, lty = 2, col = colours[i])
     }
     if(saveFig){
       dev.off()
     }
-    
   }
-  
   return(result$cvfit)
 }
 
-plotGeneModel = function(features, labels){
-  colours = c('black','gray','red','blue', 'green', 'purple', 'orange', 'yellow', 'brown', 'pink', 'teal', 'darksalmon', 'darkslategray4', 'deeppink2', 'goldenrod', 'burlywood1')
+plotGeneModel = function(features, labels, method = "xgboost"){
+  colours = c('black','gray','red','blue', 'green', 'purple', 'orange', 
+    'yellow', 'brown', 'pink', 'teal', 'darksalmon', 'darkslategray4', 
+    'deeppink2', 'goldenrod', 'burlywood1')
   legend = NULL
   i=1
-  
-  result = calculateScore(cbind(features,labels))
+  result = calculateScore(features,labels, method = method)
   x=rocit(score=result$score, class=result$testLabels)
-  #x=rocit(score=score, class=labels)
   base::plot(x$FPR, x$TPR, col=colours[i],  main="Gene Score ROC", type ='l')
   text(0.8,0.6,c(paste0("All-AUC:",as.character(signif(x$AUC,3)))), cex=1.5)
   i = i+1
@@ -870,42 +829,32 @@ plotGeneModel = function(features, labels){
   lines(x$FPR, x$TPR, col=colours[i],  main="reads")
   i = i+1
   legend = c(legend,"numReads")
-  
   #random baseline
   lines(c(0,1),c(0,1))
-  
-  plotLine(features[,c("numReadsLog","numNonSubsetRCs")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"numNonSubsetRCs")
-  plotLine(features[,c("numReadsLog","numExons")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"numExons")
-  plotLine(features[,c("numReadsLog","isSpliced")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"isSpliced")
-  plotLine(features[,c("numReadsLog","strand_bias")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"strand_bias")
-  # plotLine(features[,c("numReadsLog","uniqueReadsProp")],labels, colours[i])
-  # i = i+1
-  # legend = c(legend,"uniqueReadsProp")
-  plotLine(features[,c("numReadsLog","numRCs")],labels, colours[i])
-  i = i+1
-  legend = c(legend,"numRCs")
-  
+
+  for(feature in colnames(features)[-which(colnames(features)=="numReadsLog")]){
+    plotLine(features[,c("numReadsLog",feature)],labels, colours[i])
+    legend = c(legend,feature)
+    i = i+1
+  }
   legend("bottomright", legend=legend, col = colours[1:i],lty=1, cex=1)
 }
 
-plotTranscriptModel = function(features, labels, plot){
+plotTranscriptModel = function(features, labels, plot, method = "xgboost"){
   legend = NULL
   i= 1
-  colours = c('black','gray','red','blue', 'green', 'purple', 'orange', 'yellow', 'brown', 'pink', 'darksalmon', 'darkslategray4', 'deeppink2', 'goldenrod', 'burlywood1')
+  colours = c('black','gray','red','blue', 'green', 'purple', 'orange', 
+    'yellow', 'brown', 'pink', 'darksalmon', 'darkslategray4', 'deeppink2', 
+    'goldenrod', 'burlywood1')
   
-  result = calculateScore(cbind(features, labels))
+  result = calculateScore(features, labels, method = method)
   x=rocit(score=result$score, class=result$testLabels)
-  base::plot(x$FPR, x$TPR, col=colours[i],  main="Transcript Score ROC", type ='l')
-  text(0.4,0.2,c(paste0("Trained on:",as.character(result$trainCount))), cex=1.5)
-  text(0.4,0.1,c(paste0("Tested on:",as.character(length(result$testLabels)))), cex=1.5)
+  base::plot(x$FPR, x$TPR, col=colours[i],  main="Transcript Score ROC", 
+    type ='l')
+  text(0.4,0.2,c(paste0("Trained on:",as.character(result$trainCount))), 
+    cex=1.5)
+  text(0.4,0.1,c(paste0("Tested on:",as.character(length(result$testLabels)))),
+    cex=1.5)
   text(0.8,0.6,c(paste0("All-AUC:",as.character(signif(x$AUC,3)))), cex=1.5)
   legend = c(legend, c("All"))
   i = i+1
@@ -918,211 +867,118 @@ plotTranscriptModel = function(features, labels, plot){
   
   lines(c(0,1),c(0,1))
   
-  if(T){
-    plotLine(features[,c("numReads","geneReadProp")],labels, colours[i])
-    legend = c(legend,"geneReadProp")
-    i = i+1
-    plotLine(features[,c("numReads","tx_strand_bias")],labels, colours[i])
-    legend = c(legend,"tx_strand_bias")
-    i = i+1
-    plotLine(features[,c("numReads","SD")],labels, colours[i])
-    legend = c(legend,"SD")
-    i = i+1
-    plotLine(features[,c("numReads","SDend")],labels, colours[i])
-    legend = c(legend,"SDend")
-    i = i+1
-    # plotLine(features[,c("numReads","uniqueReads")],labels, colours[i])
-    # legend = c(legend,"uniqueReads")
-    # i = i+1
-    plotLine(features[,c("numReads","numAstart")],labels, colours[i])
-    legend = c(legend,"numAstart")
-    i = i+1
-    plotLine(features[,c("numReads","numAend")],labels, colours[i])
-    legend = c(legend,"numAend")
-    i = i+1
-    plotLine(features[,c("numReads","alignedPolyAstart")],labels, colours[i])
-    legend = c(legend,"alignedPolyAstart")
-    i = i+1
-    plotLine(features[,c("numReads","alignedPolyAend")],labels, colours[i])
-    legend = c(legend,"alignedPolyAend")
-    i = i+1
-    plotLine(features[,c("numReads","numTstart")],labels, colours[i])
-    legend = c(legend,"numTstart")
-    i = i+1
-    plotLine(features[,c("numReads","numTend")],labels, colours[i])
-    legend = c(legend,"numTend")
-    i = i+1
-    # plotLine(features[,c("numReads","alignedPolyTstart")],labels, colours[i])
-    # legend = c(legend,"alignedPolyTstart")
-    # i = i+1
-    # plotLine(features[,c("numReads","alignedPolyTend")],labels, colours[i])
-    # legend = c(legend,"alignedPolyTend")
-    # i = i+1
-    # plotLine(features[,c("numReads","bothAdapters")],labels, colours[i])
-    # legend = c(legend,"bothAdapters")
-    # i = i+1
-    # plotLine(features[,c("numReads","polyAEnd")],labels, colours[i])
-    # legend = c(legend,"polyAEnd")
-    # i = i+1
-    # plotLine(features[,c("numReads","bothAdaptersProp")],labels, colours[i])
-    # legend = c(legend,"bothAdaptersProp")
-    # i = i+1
-    # plotLine(features[,c("numReads","polyAEndProp")],labels, colours[i])
-    # legend = c(legend,"polyAEndProp")
-    # i = i+1
-    # plotLine(features[,c("numReads","TSSscore")],labels, colours[i])
-    # legend = c(legend,"TSSscore")
-    # i = i+1
-    # plotLine(features[,c("numReads","TESscore")],labels, colours[i])
-    # legend = c(legend,"TESscore")
-    # i = i+1
-    # plotLine(features[,c("numReads","bothTSSandTES")],labels, colours[i])
-    # legend = c(legend,"bothTSSandTES")
-    # i = i+1
-    plotLine(features[,c("numReads","transcriptProp")],labels, colours[i])
-    legend = c(legend,"transcriptProp")
-    i = i+1
-    plotLine(features[,c("numReads","transcriptPropMin")],labels, colours[i])
-    legend = c(legend,"transcriptPropMin")
+  # for(feature in colnames(features)[-which(colnames(features)=="numReads")]){
+  #   plotLine(features[,c("numReads",feature)],labels, colours[i])
+  #   legend = c(legend,features)
+  #   i = i+1
+  # }
+
+  for(feature in colnames(features)[-which(colnames(features)=="numReads")]){
+    plotLine(features[,feature],labels, colours[i])
+    legend = c(legend,feature)
     i = i+1
   }
-  if(F){
-    plotLine(features[,"logNumReads"],labels, colours[i])
-    legend = c(legend,"logNumReads")
-    i = i+1
-    plotLine(features[,"geneReadProp"],labels, colours[i])
-    legend = c(legend,"geneReadProp")
-    i = i+1
-    plotLine(features[,"tx_strand_bias"],labels, colours[i])
-    legend = c(legend,"tx_strand_bias")
-    i = i+1
-    plotLine(features[,"SD"],labels, colours[i])
-    legend = c(legend,"SD")
-    i = i+1
-    plotLine(features[,"SDend"],labels, colours[i])
-    legend = c(legend,"SDend")
-    i = i+1
-    # plotLine(features[,"uniqueReads"],labels, colours[i])
-    # legend = c(legend,"uniqueReads")
-    # i = i+1
-    plotLine(features[,"numAstart"],labels, colours[i])
-    legend = c(legend,"numAstart")
-    i = i+1
-    plotLine(features[,"numAend"],labels, colours[i])
-    legend = c(legend,"numAend")
-    i = i+1
-    plotLine(features[,"alignedPolyAstart"],labels, colours[i])
-    legend = c(legend,"alignedPolyAstart")
-    i = i+1
-    plotLine(features[,"alignedPolyAend"],labels, colours[i])
-    legend = c(legend,"alignedPolyAend")
-    i = i+1
-    plotLine(features[,"numTstart"],labels, colours[i])
-    legend = c(legend,"numTstart")
-    i = i+1
-    plotLine(features[,"numTend"],labels, colours[i])
-    legend = c(legend,"numTend")
-    i = i+1
-    # plotLine(features[,"alignedPolyTstart"],labels, colours[i])
-    # legend = c(legend,"alignedPolyTstart")
-    # i = i+1
-    # plotLine(features[,"alignedPolyTend"],labels, colours[i])
-    # legend = c(legend,"alignedPolyTend")
-    # i = i+1
-    # plotLine(features[,"bothAdapters"],labels, colours[i])
-    # legend = c(legend,"bothAdapters")
-    # i = i+1
-    # plotLine(features[,"polyAEnd"],labels, colours[i])
-    # legend = c(legend,"polyAEnd")
-    # i = i+1
-    # plotLine(features[,"bothAdaptersProp"],labels, colours[i])
-    # legend = c(legend,"bothAdaptersProp")
-    # i = i+1
-    # plotLine(features[,"polyAEndProp"],labels, colours[i])
-    # legend = c(legend,"polyAEndProp")
-    # i = i+1
-    # plotLine(features[,"TSSscore"],labels, colours[i])
-    # legend = c(legend,"TSSscore")
-    # i = i+1
-    # plotLine(features[,"TESscore"],labels, colours[i])
-    # legend = c(legend,"TESscore")
-    # i = i+1
-    # plotLine(features[,"bothTSSandTES"],labels, colours[i])
-    # legend = c(legend,"bothTSSandTES")
-    # i = i+1
-    plotLine(features[,"transcriptProp"],labels, colours[i])
-    legend = c(legend,"transcriptProp")
-    i = i+1
-    plotLine(features[,"transcriptPropMin"],labels, colours[i])
-    legend = c(legend,"transcriptPropMin")
-    i = i+1
-  }
-  
-  
   legend("bottomright", legend=legend, col = colours[1:i],lty=1, cex=1)
-  
 }
 
-plotLine = function(features, labels, colour, log = F){
+plotLine = function(features, labels, colour, log = F, method = "xgboost"){
   if(!is.matrix(features)){
     score = features
   } else {
-    result = calculateScore(cbind(features,labels), log = log)
+    result = calculateScore(features,labels, log = log, method = method)
     score = result$score
     labels = result$testLabels
   }
-  #score = as.numeric(predict(result$cvfit, newx = result$testData, s = "lambda.min",type="response"))
   x=rocit(score=score, class=labels)
   lines(x$FPR, x$TPR, col=colour,  main="reads")
 }
 
-calculateScore = function(input, finalFeatureIndex, model = NULL, log = F){
+calculateScore = function(input, labels, model = NULL, log = F, 
+  method = "xgboost"){
+  if(method == "xgboost"){
+    return(fit_xgb(input, labels))
+  } else{
+    return(fit_glmnet(input,labels, log = log))
+  }
+}
+
+fit_xgb = function(features, labels) {
+
+  # Sample the data into train, val and test sets
+  train_idx = sample(nrow(features), floor(0.9*nrow(features)))
+  val_idx = setdiff(seq_len(nrow(features)),train_idx)
+  
+  train_data= features[train_idx,]
+  val_data = features[val_idx,]
+  train_labels = labels[train_idx]
+  val_labels = labels[val_idx]
+  
+  x_mat_train = as.matrix(train_data)
+  x_mat_val = as.matrix(val_data)
+
+  # Fit the xgb model
+  negative_labels = sum(train_labels == 0)
+  positive_labels = sum(train_labels == 1)
+  xgb_time = system.time({xgb_model = xgboost(data = x_mat_train, 
+  label = train_labels, nthread=2, max.depth = 3, nround= 100, 
+  objective = "binary:logistic", 
+  scale_pos_weight=negative_labels/positive_labels, verbose = 0)})
+  xgb_probs = predict(xgb_model, x_mat_val)
+  return (list(score = xgb_probs, cvfit = xgb_model, testData = val_data, 
+    testLabels = val_labels, trainCount = nrow(train_data), 
+    indicesTest = val_idx))
+  
+}
+
+fit_glmnet = function(input, labels, model = NULL, log = F) {
+  input = cbind(input,labels)
   finalFeatureIndex = ncol(input)-1
   sampleSizeTraining=0
   sampleSizeValidation=0
-  if(is.null(model)){
-    #split data for training
+  if(is.null(model)){     #split data for training
     fractionTraining   <- 0.60
     fractionValidation <- 0.20
     fractionTest       <- 0.20
-    
-    # Compute sample sizes.
     sampleSizeTraining   <- floor(fractionTraining   * nrow(input))
     sampleSizeValidation <- floor(fractionValidation * nrow(input))
     sampleSizeTest       <- floor(fractionTest       * nrow(input))
-    
-    # Create the randomly-sampled indices for the dataframe. Use setdiff() to
-    # avoid overlapping subsets of indices.
-    indicesTraining    <- sort(sample(seq_len(nrow(input)), size=sampleSizeTraining))
+    indicesTraining    <- sort(sample(seq_len(nrow(input)), 
+      size=sampleSizeTraining))
     indicesNotTraining <- setdiff(seq_len(nrow(input)), indicesTraining)
-    indicesValidation  <- sort(sample(indicesNotTraining, size=sampleSizeValidation))
+    indicesValidation  <- sort(sample(indicesNotTraining, 
+      size=sampleSizeValidation))
     indicesTest        <- setdiff(indicesNotTraining, indicesValidation)
-    
-    # Finally, output the three dataframes for training, validation and test.
     dfTraining   <- input[indicesTraining, ]
     dfValidation <- input[indicesValidation, ]
     dfTest       <- input[indicesTest, ]
-    
-    #fit=glmnet(dfTraining[,1:finalFeatureIndex],dfTraining[,finalFeatureIndex+1])
     if(!log){
-      cvfit = cv.glmnet(as.matrix(rbind(dfTraining[,1:finalFeatureIndex],dfValidation[,1:finalFeatureIndex])), c(dfTraining[,finalFeatureIndex+1],dfValidation[,finalFeatureIndex+1]),family = "binomial", type.measure = "class")
+      cvfit = cv.glmnet(as.matrix(rbind(dfTraining[,1:finalFeatureIndex],
+        dfValidation[,1:finalFeatureIndex])), 
+        c(dfTraining[,finalFeatureIndex+1],dfValidation[,finalFeatureIndex+1]),
+        family = "binomial", type.measure = "class")
     } else {
-      cvfit = glmnet(as.matrix(rbind(dfTraining[,1:finalFeatureIndex],dfValidation[,1:finalFeatureIndex])), c(dfTraining[,finalFeatureIndex+1],dfValidation[,finalFeatureIndex+1]),family = "binomial", type.measure = "class")
-    }
-    #cvfit = cv.glmnet(as.matrix(rbind(dfTraining[,1:finalFeatureIndex],dfValidation[,1:finalFeatureIndex])), c(dfTraining[,finalFeatureIndex+1],dfValidation[,finalFeatureIndex+1]))
-  } else{
+      cvfit = glmnet(as.matrix(rbind(dfTraining[,1:finalFeatureIndex],
+        dfValidation[,1:finalFeatureIndex])), c(dfTraining[,finalFeatureIndex+1],
+        dfValidation[,finalFeatureIndex+1]),family = "binomial", 
+        type.measure = "class")
+      }
+    } else{
     dfTest = input
     cvfit = model
   }
-  
   if(!log){
-    score = as.numeric(predict(cvfit, newx = as.matrix(dfTest[,1:finalFeatureIndex]), s="lambda.min",type="response"))
+    score = as.numeric(predict(cvfit, 
+      newx = as.matrix(dfTest[,1:finalFeatureIndex]), 
+      s="lambda.min",type="response"))
   } else {
-    score = as.numeric(predict(cvfit, newx = as.matrix(dfTest[,1:finalFeatureIndex]),s = 0.01, type="response"))
+    score = as.numeric(predict(cvfit, 
+      newx = as.matrix(dfTest[,1:finalFeatureIndex]),
+      s = 0.01, type="response"))
   }
-  #score = as.numeric(predict(cvfit, newx = as.matrix(dfTest[,1:finalFeatureIndex]), s="lambda.min",type="response"))
   testLabels = dfTest[,finalFeatureIndex+1]
   testData = dfTest[,1:finalFeatureIndex]
-  
-  return(list(score=score, cvfit=cvfit, testData = testData, testLabels=testLabels, trainCount = sampleSizeTraining + sampleSizeValidation, indicesTest = indicesTest))
+  return(list(score=score, cvfit=cvfit, testData = testData, 
+    testLabels=testLabels, 
+    trainCount = sampleSizeTraining + sampleSizeValidation, 
+    indicesTest = indicesTest))
 }
