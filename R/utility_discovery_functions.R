@@ -1004,7 +1004,7 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
         unlist((filter(distTable, compatible) %>% distinct()))
     start.ptm <- proc.time()
     # assign read classes to genes based on the highest read count per gene
-    readClassToGeneIdTable <- select(distTable, readClassId, GENEID,
+    readClassToGeneIdTable <- dplyr::select(distTable, readClassId, GENEID,
         readCount) %>% group_by(GENEID) %>%
         mutate(geneCount = sum(readCount)) %>% distinct() %>%
         group_by(readClassId) %>% filter(geneCount == max(geneCount)) %>%
@@ -1048,7 +1048,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
     distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId, ] 
 
     if (additionalFiltering) 
-        distTable <- left_join(distTable, select(readClassTable,
+        distTable <- left_join(distTable, dplyr::select(readClassTable,
             readClassId, confidenceType), by = "readClassId") %>%
             mutate(relativeReadCount = readCount / txNumberFiltered)
     distTable <- dplyr::select(distTable, annotationTxId, readClassId,
