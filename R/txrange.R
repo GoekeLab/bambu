@@ -24,9 +24,9 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
     thresholdIndex = which(rowSums(assays(se)$counts)
         >=min.readCount)
     rowData(se)$geneScore = getGeneScore(se, thresholdIndex, 
-      plot = "NULL", method = "xgboost")
+      plot = NULL, method = "xgboost")
     rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, 
-      plot = "NULL", method = "xgboost")
+      plot = NULL, method = "xgboost")
     
     # test model on subset and nonsubset RCs
     # subset = rowData(se)$compatibleCount >= 2 | 
