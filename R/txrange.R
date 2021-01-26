@@ -38,138 +38,6 @@ txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
     return(se)
 }
 
-#deprecated
-createAlignData = function(readGrgList){
-  #converts the readGrgList into a simple matrix
-  #todo, instead of this function just use mcols
-  seqnames = unlist(runValue(seqnames(readGrgList)))
-  strand = unlist(runValue(strand(readGrgList)))
-  start = min(start(readGrgList))
-  end = max(end(readGrgList))
-  qwidth = sum(width(readGrgList))
-  readClass = mcols(readGrgList)$readClass
-  readClassIndex = mcols(readGrgList)$readClassIndex
-  alignData = as.data.frame(cbind(seqnames,strand,qwidth, start,end, 
-      readClass, readClassIndex))
-  return(alignData)
-}
-
-#deprecated
-annotateReadStartsAndEnds = function(alignData, se){
-  #assign labels to reads
-  #rownames(allReadClasses)=allReadClasses$`readClasses$readClassId`
-  #RCstrand = allReadClasses[alignData$readClass,]$strand
-  RCstrand = rowData(se)[alignData$readClass,]$strand.rc
-  starts = alignData$start
-  starts[which(RCstrand == '-' )]=alignData[which(RCstrand == '-' ),]$end
-  #TODO deal with single exon reads which are assigned *
-  starts = as.numeric(starts)
-  ends = alignData$end
-  ends[which(RCstrand == '-' )]=alignData[which(RCstrand == '-' ),]$start
-  ends = as.numeric(ends)
-  
-  txstrand = alignData$strand
-  revindex = which(RCstrand == '-' & txstrand == '-')
-  txstrand[which(RCstrand == '-' & txstrand == '+')] = '-'
-  txstrand[revindex] = '+'
-  txstrand[which(RCstrand == "*")] = "*"
-  
-  alignData$tssStart=as.numeric(starts)
-  alignData$tesEnd=as.numeric(ends)
-  alignData$txstrand = txstrand
-  return(alignData)
-}
-
-#deprecated
-simplifyAdapterData = function(alignData){
-  # NOT USED WHEN NO ADAPTERS IN DATA
-  alignData$adap5 = grepl('5', alignData$predictedStrand, fixed=TRUE)
-  alignData$adap3 = grepl('3', alignData$predictedStrand, fixed=TRUE)
-
-  alignData$adap5pos = grepl('5+', alignData$predictedStrand, fixed=TRUE)
-  alignData$adap3pos = grepl('3+', alignData$predictedStrand, fixed=TRUE)
-  alignData$adap5neg = grepl('5-', alignData$predictedStrand, fixed=TRUE)
-  alignData$adap3neg = grepl('3-', alignData$predictedStrand, fixed=TRUE)
-
-  alignData$adapPos = (alignData$adap5pos & alignData$adap3pos & 
-    alignData$strand=="+") | 
-    (alignData$adap5neg & alignData$adap3neg & alignData$strand=="-")
-  alignData$adapNeg = (alignData$adap5neg & alignData$adap3neg & 
-    alignData$strand=="+") | 
-    (alignData$adap5pos & alignData$adap3pos & alignData$strand=="-")
-  
-  alignData$adapDist5 = as.numeric(alignData$barcode5Prime.minus.start)
-  pos5 = which(grepl('5+',alignData$predictedStrand, fixed=TRUE))
-  alignData$adapDist5[pos5] = as.numeric(alignData$widthRead5prime[pos5])-
-    as.numeric(alignData$barcode5Prime.plus.end[pos5])
-  alignData$adapDist5[!alignData$adap5] = NA
-  
-  alignData$adapDist3 = as.numeric(alignData$barcode3Prime.minus.start)
-  pos3 = which(grepl('3-',alignData$predictedStrand, fixed=TRUE))
-  alignData$adapDist3[pos3] = as.numeric(alignData$widthRead3prime[pos3])-
-    as.numeric(alignData$barcode3Prime.plus.end[pos3])
-  alignData$adapDist3[!alignData$adap3] = NA
-  
-  #polyA data
-  #alignData$polyApos = rep(0,nrow(alignData))
-  alignData$polyApos = as.numeric(alignData$polyA3Prime.plus.score) *
-    100/as.numeric(alignData$polyA3Prime.plus.pid)
-  alignData$polyApos[which(alignData$strand=="-")] = 
-    as.numeric(alignData$polyA3Prime.minus.score)[which(alignData$strand=="-")] * 
-    100/as.numeric(alignData$polyA3Prime.minus.pid)[which(alignData$strand=="-")]
-  alignData$polyAneg = as.numeric(alignData$polyA3Prime.minus.score) * 
-    100/as.numeric(alignData$polyA3Prime.minus.pid)
-  alignData$polyAneg[which(alignData$strand=="-")] = 
-    as.numeric(alignData$polyA3Prime.plus.score)[which(alignData$strand=="-")] * 
-    100/as.numeric(alignData$polyA3Prime.plus.pid)[which(alignData$strand=="-")]
-  
-  #if polyA is present opposide side of sequencing start site
-  alignData$polyAFull = alignData$txstrand=="+" & alignData$polyApos > 10 
-
-   return(alignData)
-}
-
-#deprecated
-summeriseReadsByGroup <- function(alignData, withAdapters = FALSE){
-  
-  alignData=alignData[which(!is.na(alignData$readClass)),]
-
-  if(withAdapters){
-    result <- alignData %>%
-      dplyr::select(readClassIndex, readClass, strand, txstrand, uniqueRead, 
-        tssStart, tesEnd, adap5, adap3, adapPos, adapNeg, adapDist5, 
-        adapDist3, polyApos, polyAneg) %>%
-      group_by(readClassIndex) %>%
-      summarise(readClass = readClass[1],
-                counts = n(),
-                strand_bias = sum(txstrand == '+'),
-                startSD = sd(tssStart),
-                endSD = sd(tesEnd),
-                uniqueReads = sum(uniqueRead),
-                adapNumReads = sum(adap5),
-                adapEndNumReads = sum(adap3),
-                adaptDist = median(adapDist5,na.rm = T),
-                adapEndDist = median(adapDist3,na.rm = T),
-                bothAdapters = sum(adapPos | adapNeg),
-                polyA = max(median(polyApos), median(polyAneg)),
-                polyAEnd = sum(polyApos >= 10 & txstrand == '+', na.rm = T)
-      )
-  } else{
-    result <- alignData %>%
-      dplyr::select(readClassIndex, readClass, strand, txstrand, 
-        tssStart, tesEnd) %>%
-      group_by(readClassIndex) %>%
-      summarise(readClass = readClass[1],
-                counts = n(),
-                strand_bias = sum(txstrand == '+'),
-                startSD = sd(tssStart),
-                endSD = sd(tesEnd),
-      )
-  }
-  rownames(result)=result$readClass
-  return(result)
-}
-
 combineSEs = function(combinedOutputs, annotations){
   combinedTxCandidates = NULL
   for(i in 1:length(combinedOutputs)){
@@ -182,7 +50,6 @@ combineSEs = function(combinedOutputs, annotations){
     colnames(rowData(combinedOutputs[[1]])[-1:-4]))
   return(combinedTxCandidates)
 }
-
 
 addRowData = function(se, genomeSequence, annotations){
   exons = str_split(rowData(se)$intronStarts,",")
@@ -197,7 +64,6 @@ addRowData = function(se, genomeSequence, annotations){
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
   se = calculateGeneProportion(se)
-  #se = getTranscriptProp(se, readClassesList)
   se = countPolyATerminals(se, genomeSequence)
  
   return(se)
@@ -280,62 +146,6 @@ getReadClassClassifications = function(query, subject, maxDist = 5){
       compatibleCount = compatibleCount))
 }
 
-getTranscriptProp = function(se, readClassesList){
-  # calculates the min and max contributions a read class makes to all
-  i= 0
-  allOverlaps = list()
-  readClassesListToExtract = readClassesList
-  for(x in 1:length(seqlevels(readClassesList))){
-    chr = seqlevels(readClassesList)[x]
-    selection = which(unlist(runValue(seqnames(readClassesListToExtract))==chr))
-    readClassListTemp = readClassesListToExtract[selection]
-    readClassesListToExtract= readClassesListToExtract[-selection]
-    query <- cutStartEndFromGrangesList(readClassListTemp)
-    overlaps = countOverlaps(query, readClassListTemp, type = 'within')
-    megaRCs = readClassesList[which(overlaps == 1),]
-    overlaps = findOverlaps(query, megaRCs, type = 'within')
-    #account for the index change due to seperating the readclasses by chr
-    overlaps = as.matrix(overlaps)+i
-    i = i + length(readClassListTemp)
-    #allOverlaps = rbind(allOverlaps, overlaps)
-    allOverlaps[[x]]=overlaps
-  }
-  allOverlaps = do.call(rbind, allOverlaps)
-  allCompats = allOverlaps[,'subjectHits']
-  compatIndex = allOverlaps[,'queryHits']
-  compatCounts = rowSums(assays(se)$counts)[allOverlaps[,'queryHits']]
-  
-  #inverse the data so read classes are grouped now by transcript
-  annotationSubsets = by(compatIndex,allCompats, FUN = c)
-  transcriptSums = by(cbind(compatCounts,compatIndex),allCompats, 
-    FUN = function(x){
-      counts = as.numeric(x[,1])
-      transcriptProp = counts/sum(counts)
-      names(transcriptProp) =  x[,2]
-      return(transcriptProp)
-  })
-  #align the proportions with the read class names
-  transcriptProp = unlist(transcriptSums)
-  indexes = unlist(sapply(transcriptSums, FUN = names))
-  x = as.data.frame(cbind(transcriptProp, indexes))
-
-  topTranscriptProp_RC = x %>% group_by(indexes) %>% 
-    top_n(1, transcriptProp) %>% distinct(indexes, transcriptProp, 
-    .keep_all = TRUE) 
-  bottomTranscriptProp_RC = x %>% group_by(indexes) %>% 
-    top_n(-1, transcriptProp) %>% 
-    distinct(indexes, transcriptProp, .keep_all = TRUE) 
-
-  rowData(se)$transcriptProp = rep(0, nrow(se))
-  rowData(se)$transcriptPropMin = rep(0, nrow(se))
-  rowData(se)[as.numeric(topTranscriptProp_RC$indexes),]$transcriptProp = 
-    topTranscriptProp_RC$transcriptProp
-  rowData(se)[as.numeric(bottomTranscriptProp_RC$indexes),]$transcriptPropMin =
-    bottomTranscriptProp_RC$transcriptProp
-
-  return(se)
-}
-
 countPolyATerminals = function(se, genomeSequence){
   #counts A/T's at 5' and 3' of RCs on genome
   #get all first/last exons
@@ -377,10 +187,6 @@ prepareTranscriptModelFeatures = function(input, withAdapters = F){
   
   features = getAgnosticFeatures(input)
   
-  if("adapNumReads" %in% names(assays(input))){
-    features(cbind(features,getAdapterFeatures(input)))
-  }
-  
   return(list(features = features, labels = labels))
 }
 
@@ -418,48 +224,6 @@ getAgnosticFeatures = function(input){
     numAstart, numAend, numTstart, numTend, transcriptProp,
     transcriptPropMin)
   
-  return(features)
-}
-
-getAdapterFeatures = function(input){
-adapter_reads=log(rowSums(assays(input)$adapNumReads),2)
-  adapter_reads[is.na(adapter_reads)]=0
-  
-  adapterEnd_reads=log(rowSums(assays(input)$adapEndNumReads),2)
-  adapterEnd_reads[is.na(adapterEnd_reads)]=0
-  
-  adapter_prop = adapter_reads/numReads
-  adapter_prop[is.na(adapter_prop)]=0
-  adapter_prop[is.infinite(adapter_prop)]=0
-  
-  adapterend_prop = adapterEnd_reads/numReads
-  adapterend_prop[is.na(adapterend_prop)]=0
-  adapterend_prop[is.infinite(adapterend_prop)]=0
-  
-  adapter_distance = apply(cbind(assays(input)$adaptDist, 
-    assays(input)$counts),1,FUN = applyWeightedMean)
-  adapter_distance[is.na(adapter_distance)]=100
-  adapter_distance[adapter_distance<=40]=1
-  adapter_distance[adapter_distance>40]=0
-  
-  adapterend_distance = apply(cbind(assays(input)$adaptEndDist, 
-    assays(input)$counts),1,FUN = applyWeightedMean)
-  adapterend_distance[is.na(adapterend_distance)]=100
-  adapterend_distance[adapterend_distance<=30]=1
-  adapterend_distance[adapterend_distance>30]=0
-  
-  bothAdapters = rowSums(assays(input)$bothAdapters)
-  
-  polyAEnd = rowSums(assays(input)$polyAEnd)
-  
-  bothAdaptersProp = rowSums(assays(input)$bothAdapters)/numReads
-  
-  polyAEndProp = rowSums(assays(input)$polyAEnd)/numReads
-  
-  features = cbind(adapter_prop, adapterend_prop, adapter_distance, 
-    adapterend_distance, bothAdapters, polyAEnd, bothAdaptersProp, 
-    polyAEndProp)
-
   return(features)
 }
 
