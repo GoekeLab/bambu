@@ -38,15 +38,22 @@
 #'     to be considered valid as new, defaults to 35
 #'     \item min.exonOverlap specifying minimum number of bases shared with
 #'     annotation to be assigned to the same gene id, defaults 10 base pairs
+#'     \item min.primarySecondaryDist specifying the minimum number of distance 
+#'     threshold
+#'     \item min.primarySecondaryDistStartEnd1 specifying the minimum number 
+#'     of distance threshold, used for extending annotation
+#'     \item min.primarySecondaryDistStartEnd2 specifying the minimum number 
+#'     of distance threshold, used for estimating distance to annotation
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \itemize{
 #'     \item maxiter specifying maximum number of run interations,
 #'     defaults to 10000.
-#'     \item bias specifying whether to correct for bias, defaults to FALSE.
+#'     \item degradationBias correcting for degradation bias, defaults to TRUE.
 #'     \item conv specifying the covergence trheshold control,
 #'     defaults to 0.0001.
+#'     \item minvalue specifying the minvalue for convergence consideration
 #' }
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended for quantification.
@@ -55,6 +62,8 @@
 #' @details
 #' @return A list of two SummarizedExperiment object for transcript expression
 #' and gene expression.
+#' @importFrom BiocParallel bplapply
+#' @importFrom SummarizedExperiment cbind
 #' @examples
 #' ## =====================
 #' test.bam <- system.file("extdata",
@@ -69,12 +78,11 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = FALSE)
 #' @export
-bambu <- function(reads = NULL, rcFile = NULL,
-    rcOutDir = NULL, annotations = NULL, genome = NULL,
-    stranded = FALSE, ncore = 1, yieldSize = NULL, opt.discovery = NULL,
-    opt.em = NULL, discovery = TRUE, verbose = FALSE) {
-    annotations <-
-        checkInputs(annotations, reads, readClass.file = rcFile, 
+bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
+    annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
+    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
+    discovery = TRUE, verbose = FALSE) {
+    annotations <- checkInputs(annotations, reads, readClass.file = rcFile, 
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     emParameters <- setEmParameters(emParameters = opt.em)
@@ -83,19 +91,17 @@ bambu <- function(reads = NULL, rcFile = NULL,
     if (bpParameters$workers > 1) ncore <- 1
     rm.readClassSe <- FALSE
     if (!is.null(reads)) {
-        #===# When more than 10 samples, files saved to temporary directory
         if (length(reads) > 10 & (is.null(rcOutDir))) {
-            rcOutDir <- tempdir()
+            rcOutDir <- tempdir() #>=10 samples, save to temp folder
             message(paste0("There are more than 10 samples, read class files
                 will be temporarily saved to ", rcOutDir,
                 " for more efficient processing"))
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
-        readClassList <- processReads(reads, readClass.file = rcFile,
-            annotations, genomeSequence = genome, 
-            readClass.outputDir = rcOutDir,
-            yieldSize, bpParameters, stranded,
-            ncore, verbose)
+        readClassList <- bambu.processReads(reads, annotations, 
+            genomeSequence = genome, 
+            readClass.outputDir = rcOutDir, yieldSize, 
+            bpParameters, stranded, verbose)
     } else {
         readClassList <- rcFile
     }
@@ -105,17 +111,18 @@ bambu <- function(reads = NULL, rcFile = NULL,
         if (!verbose) message("Finished extending annotations.")
     }
     if (!verbose) message("Start isoform quantification")
-    countsSe <- BiocParallel::bplapply(readClassList,
+    countsSe <- bplapply(readClassList,
         bambu.quantify,annotations = annotations,
         min.exonDistance = isoreParameters[["min.exonDistance"]],
+        min.primarySecondaryDist =
+            isoreParameters[['min.primarySecondaryDist']], 
+        min.primarySecondaryDistStartEnd =
+            isoreParameters[['min.primarySecondaryDistStartEnd2']],
         emParameters = emParameters, ncore = ncore,
         verbose = verbose, BPPARAM = bpParameters)
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
     rowRanges(countsSe) <- annotations
     if (!verbose) message("Finished isoform quantification.")
-    # ===# Clean up temp directory
-    if (rm.readClassSe) file.remove(unlist(readClassList))
+    if (rm.readClassSe) file.remove(unlist(readClassList))#Clean temp directory
     return(countsSe)
 }
-
-

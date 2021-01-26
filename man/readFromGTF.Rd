@@ -4,19 +4,24 @@
 \alias{readFromGTF}
 \title{convert a GTF file into a GRangesList}
 \usage{
-readFromGTF(file)
+readFromGTF(file, keep.extra.columns = NULL)
 }
 \arguments{
 \item{file}{a .gtf file}
+
+\item{keep.extra.columns}{a vector with names of columns to keep from 
+the the attributes in the gtf file. For ensembl, this could be 
+keep.extra.columns=c('gene_name','gene_biotype',
+'transcript_biotype', 'transcript_name')}
 }
 \value{
 grlist a \code{GRangesList} object, with two columns
 \itemize{
     \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
-                defaults to empty
+        defaults to empty
     \item GENEID indicating whether filter to remove read classes which are
-                a subset of known transcripts(), defaults to TRUE
-    }
+        a subset of known transcripts(), defaults to TRUE
+}
 }
 \description{
 Outputs GRangesList object from reading a GTF file

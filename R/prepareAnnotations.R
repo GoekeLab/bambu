@@ -3,6 +3,8 @@
 #' @title prepare annotations from txdb object or gtf file
 #' @param x A \code{TxDb} object or a gtf file
 #' @return A \code{GRangesList} object
+#' @importFrom methods is
+#' @importFrom GenomicFeatures exonsBy
 #' @export
 #' @examples
 #' gtf.file <- system.file("extdata",
@@ -11,8 +13,8 @@
 #' )
 #' prepareAnnotations(x = gtf.file)
 prepareAnnotations <- function(x) {
-    if (methods::is(x, "TxDb")) {
-        exonsByTx <- GenomicFeatures::exonsBy(x, by = "tx", use.names = TRUE)
+    if (is(x, "TxDb")) {
+        exonsByTx <- exonsBy(x, by = "tx", use.names = TRUE)
         if (any(duplicated(names(exonsByTx)))) {
             warning("transcript names are not unique,
             only one transcript per ID will be kept")
@@ -50,5 +52,3 @@ prepareAnnotations <- function(x) {
         }
     }
 }
-
-

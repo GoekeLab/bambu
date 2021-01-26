@@ -60,6 +60,12 @@ reconstruction process:
     to be considered valid as new, defaults to 35
     \item min.exonOverlap specifying minimum number of bases shared with
     annotation to be assigned to the same gene id, defaults 10 base pairs
+    \item min.primarySecondaryDist specifying the minimum number of distance 
+    threshold
+    \item min.primarySecondaryDistStartEnd1 specifying the minimum number 
+    of distance threshold, used for extending annotation
+    \item min.primarySecondaryDistStartEnd2 specifying the minimum number 
+    of distance threshold, used for estimating distance to annotation
 }}
 
 \item{opt.em}{A list of controlling parameters for quantification
@@ -67,9 +73,10 @@ algorithm estimation process:
 \itemize{
     \item maxiter specifying maximum number of run interations,
     defaults to 10000.
-    \item bias specifying whether to correct for bias, defaults to FALSE.
+    \item degradationBias correcting for degradation bias, defaults to TRUE.
     \item conv specifying the covergence trheshold control,
     defaults to 0.0001.
+    \item minvalue specifying the minvalue for convergence consideration
 }}
 
 \item{discovery}{A logical variable indicating whether annotations
