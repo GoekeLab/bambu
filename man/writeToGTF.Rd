@@ -7,11 +7,12 @@
 writeToGTF(annotation, file, geneIDs = NULL)
 }
 \arguments{
-\item{annotation}{a \code{\link{GRangesList}} object}
+\item{annotation}{a \code{GRangesList} object}
 
 \item{file}{the output gtf file name}
 
-\item{geneIDs}{an optional dataframe of geneIDs (column 2) with the corresponding transcriptIDs (column 1)}
+\item{geneIDs}{an optional dataframe of geneIDs (column 2) with
+the corresponding transcriptIDs (column 1)}
 }
 \value{
 gtf a GTF dataframe
@@ -21,8 +22,9 @@ Write annotation GRangesList into a GTF file
 }
 \examples{
 outputGtfFile <- tempfile()
-gr <- readRDS(system.file("extdata", 
-"annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
-package = "bambu"))
+gr <- readRDS(system.file("extdata",
+    "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
+    package = "bambu"
+))
 writeToGTF(gr, outputGtfFile)
 }
