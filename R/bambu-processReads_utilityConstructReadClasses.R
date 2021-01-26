@@ -43,7 +43,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     mcols(exonsByRC) <- mcols(exonsByRC)[, c("chr.rc", "strand.rc", 
         "intronStarts", "intronEnds", "confidenceType")]
     #Note: work with integer Ids, remove read class IDs later on
-    mcols(exonsByRC)$rcId <- 1:nrow(length(exonsByRC))
+    mcols(exonsByRC)$id <- 1:nrow(length(exonsByRC))
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
         rowRanges = exonsByRC, colData = colDataDf)
     return(se)
