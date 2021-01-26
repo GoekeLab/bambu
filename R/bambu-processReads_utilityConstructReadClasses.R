@@ -18,33 +18,49 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     mcols(reads.singleExon)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
     #only keep multi exons reads in readGrgList    
-    readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
-    if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
+    readGrgListME <- readGrgList[elementNROWS(readGrgList) > 1]
+    if (!identical(mcols(readGrgListME)$id,unique(mcols(unlisted_junctions)$id))) 
         warning("read Id not sorted, can result in wrong assignments.
             Please report error")
-
     start.ptm <- proc.time()
-    exonsByRC.spliced <- constructSplicedReadClasses(
+    constructSplicedReadClassesOutput <- constructSplicedReadClasses(
         uniqueJunctions = uniqueJunctions,
         unlisted_junctions = unlisted_junctions,
-        readGrgList = readGrgList,
+        readGrgList = readGrgListME,
         stranded = stranded)
+    exonsByRC.spliced = constructSplicedReadClassesOutput$readClassList
+    indices = constructSplicedReadClassesOutput$indices
+    readIds = as.numeric(names(indices))
+    readClasses = as.data.frame(mcols(exonsByRC.spliced))
+    readMatrix=matrix(nrow=length(readGrgList),ncol=2)
+    readMatrix[readIds,]=cbind(readClasses$readClassId[indices],indices)
     end.ptm <- proc.time()
     if (verbose) 
     message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
 
-    exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
-        annotations, exonsByRC.spliced, stranded, verbose)
+    constructUnsplicedReadClassesOutput <- constructUnsplicedReadClasses(reads.singleExon, 
+        annotations, exonsByRC.spliced, readMatrix, stranded, verbose)
+    exonsByRC.unspliced = constructUnsplicedReadClassesOutput$exonsByReadClass
+    readMatrix = constructUnsplicedReadClassesOutput$readMatrix
     exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
+    mcols(readGrgList)$readClass = readMatrix[,1]
+    mcols(readGrgList)$readClassIndex = readMatrix[,2]
     counts <- matrix(mcols(exonsByRC)$readCount,
+        dimnames = list(names(exonsByRC), runName))
+    startSD <- matrix(mcols(exonsByRC)$startSD,
+        dimnames = list(names(exonsByRC), runName))
+    endSD <- matrix(mcols(exonsByRC)$endSD,
+        dimnames = list(names(exonsByRC), runName))
+    posStrandCounts <- matrix(mcols(exonsByRC)$readCount.posStrand,
         dimnames = list(names(exonsByRC), runName))
     colDataDf <- DataFrame(name = runName, row.names = runName)
     mcols(exonsByRC) <- mcols(exonsByRC)[, c("chr.rc", "strand.rc", 
-        "intronStarts", "intronEnds", "confidenceType")]
-    se <- SummarizedExperiment(assays = SimpleList(counts = counts),
+        "start.rc", "end.rc","intronStarts", "intronEnds", "confidenceType")]
+    se <- SummarizedExperiment(assays = SimpleList(counts = counts, 
+    startSD = startSD, endSD = endSD, strand_bias = posStrandCounts),
         rowRanges = exonsByRC, colData = colDataDf)
-    return(se)
+    return(list(se=se, readGrgList=readGrgList))
 }
 
 
@@ -81,14 +97,19 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         mcols(unlisted_junctions)$id))) > 0)
     readConfidence[lowConfidenceReads] <- "lowConfidenceJunctionReads"
 
-    readTable <- createReadTable(unlisted_junctions, readGrgList,
+    createReadTableOutput <- createReadTable(unlisted_junctions, readGrgList,
         readStrand, readConfidence)
+    readTable = createReadTableOutput$readTable
+    indices = createReadTableOutput$indices
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
-        intronStarts, intronEnds, confidenceType, readCount)
+        start.rc = start, end.rc = end, startSD = startSD, endSD = endSD, 
+        readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
+        confidenceType, readCount)
+    readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
-    return(exonsByReadClass)
+    return(list(readClassList = exonsByReadClass, indices = indices))
 }
 
 #' this functions uses the uniqueJunction table which has reference junctions
@@ -153,7 +174,6 @@ createReadTable <- function(unlisted_junctions, readGrgList,
     intronEndCoordinatesInt <- 
         as.integer(max(splitAsList(end(unlisted_junctions),
         mcols(unlisted_junctions)$id)) + 2)
-    
     readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
         intronStarts = 
             unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
@@ -163,17 +183,23 @@ createReadTable <- function(unlisted_junctions, readGrgList,
                 mcols(unlisted_junctions)$id), sep = ","),
         start = pmin(start(readRanges), intronStartCoordinatesInt),
         end = pmax(end(readRanges), intronEndCoordinatesInt),
-        strand = readStrand,
-        confidenceType = readConfidence)
+        strand = readStrand, confidenceType = readConfidence,
+        alignmentStrand = as.factor(getStrandFromGrList(readGrgList)),)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
+    indices=group_indices(readTable %>% group_by(chr, strand, 
+        intronEnds, intronStarts))
+    names(indices) = mcols(readGrgList)$id
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
         summarise(readCount = n(),
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
         end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
-        .groups = 'drop') %>% arrange(chr, start, end) %>%
+        startSD = sd(start), endSD = sd(end), 
+        readCount.posStrand = sum(alignmentStrand=='+', na.rm = T),
+        #readCount.sameStrand = sum(sameStrand),
+        .groups = 'drop') %>% #arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
-    return(readTable)
+    return(list(readTable = readTable, indices = indices))
 }
 
 #' @noRd
@@ -217,8 +243,7 @@ createExonsByReadClass <- function(readTable){
 #' @importFrom GenomicRanges granges unlist reduce 
 #' @noRd
 constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
-    readClassListSpliced, stranded, verbose){
-
+    readClassListSpliced, readMatrix, stranded, verbose){
     start.ptm <- proc.time()
     referenceExons <- unique(c(granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
@@ -231,20 +256,34 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
+    rcsUnsplAnno = rcUnsplicedAnnotation$exonsByReadClass
+    rcsUnsplAnno = rcsUnsplAnno[unique(names(rcsUnsplAnno))]
+    indices = rcUnsplicedAnnotation$indices
+    readIds = as.numeric(names(indices))
+    readMatrix[readIds,1] = names(unlist(rcsUnsplAnno))[indices]
+    readMatrix[readIds,2]= indices + length(readClassListSpliced)
     reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
-        rcUnsplicedAnnotation$readIds]
+        readIds]
     referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
     #(2) reads do not fall within a annotated exon/high confidence read class 
     # exon are summarised based on the union of overlapping unspliced reads
     rcUnsplicedReduced <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
+    rcsUnsplReduced = rcUnsplicedReduced$exonsByReadClass
+    rcsUnsplReduced = rcsUnsplReduced[unique(names(rcsUnsplReduced))]
+    indices = rcUnsplicedReduced$indices
+    indices2 = indices + length(readClassListSpliced) + length(rcsUnsplAnno)
+    readIds = as.numeric(names(indices))
+    readMatrix[readIds,1]=names(unlist(rcsUnsplReduced))[indices]
+    readMatrix[readIds,2]=indices2 
+    exonsByReadClass <- c(rcsUnsplAnno,
+        rcsUnsplReduced)
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass,
-        rcUnsplicedReduced$exonsByReadClass)
-    return(exonsByReadClass)
+
+    return(list(exonsByReadClass = exonsByReadClass, readMatrix = readMatrix))
 }
 
 
@@ -268,21 +307,31 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     ## create single exon read class by using the minimum end
     ## and maximum start of all overlapping exons (identical to
     ## minimum equivalent class)
-    hitsDF <- hitsDF %>% select(queryHits, chr, start, end, strand) %>%
+    indices2=group_indices(hitsDF %>% group_by(queryHits, chr, strand))
+    names(indices2) = mcols(granges[hitsDF$queryHits])$id
+    hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
         group_by(queryHits, chr, strand) %>%
         summarise(start = max(start), end = min(end), .groups = "drop") %>%
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".", 
             cur_group_id())) %>% ungroup()
-    readIds <- mcols(granges[hitsDF$queryHits])$id
-    hitsDF <- hitsDF %>% select(chr, start, end, strand, readClassId) %>%
-        group_by(readClassId) %>% mutate(readCount = n()) %>% 
+    indices=group_indices(hitsDF %>% group_by(readClassId))
+    names(indices) = mcols(granges[hitsDF$queryHits])$id
+    indices = indices[indices2]
+    names(indices) = names(indices2)
+    hitsDF$alignmentStrand = as.factor(strand(granges))[hitsDF$queryHits]
+    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, 
+        readClassId, queryHits, alignmentStrand) %>%
+        group_by(readClassId) %>% mutate(readCount = n(),
+        startSD = sd(start), endSD = sd(end), 
+        readCount.posStrand = sum(alignmentStrand=='+')) %>% 
         ungroup() %>% distinct() %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA) %>%
         dplyr::select(chr, start, end, strand, intronStarts, intronEnds, 
-            confidenceType, readClassId, readCount)
-    exByReadClassUnspliced <- GRanges(
+            confidenceType, readClassId, readCount, startSD,
+            endSD, readCount.posStrand, queryHits)
+    exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
         ranges = IRanges(start = hitsDF$start, end = hitsDF$end),
         strand = hitsDF$strand)
@@ -292,9 +341,10 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     exByReadClassUnspliced <- relist(exByReadClassUnspliced, partitioning)
     names(exByReadClassUnspliced) <- hitsDF$readClassId
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
-        intronStarts, intronEnds, confidenceType, readCount)
+        start.rc = start, end.rc = end, intronStarts, intronEnds,
+        confidenceType, readCount, startSD, endSD, readCount.posStrand)
     mcols(exByReadClassUnspliced) <- hitsDF
-    return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
+    return(list(exonsByReadClass = exByReadClassUnspliced, indices = indices))
 }
 
 #' initiate the hits dataframe
@@ -317,3 +367,131 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
     }
     return(hitsDF)
 }
+
+
+
+assignGeneIdsByReference <- function(grl, annotations) {
+    # (1) assign gene Ids based on first intron match to annotations
+    geneRanges <- reducedRangesByGenes(annotations)
+    ov=findOverlaps(grl, geneRanges)
+    geneIds <- rep(NA, length(grl))
+    uniqueHits <- which(queryHits(ov) %in% which(countQueryHits(ov)==1))
+    geneIds[queryHits(ov)[uniqueHits]] <- 
+        names(geneRanges)[subjectHits(ov)[uniqueHits]]
+    
+    ## next for non unique hits select one gene (maximum overlap)
+    multiHits <- which(queryHits(ov) %in% which(countQueryHits(ov)>1))
+    expandedRanges <- expandRangesList(ranges(grl[queryHits(ov)[multiHits]]),
+                        ranges(geneRanges[subjectHits(ov)[multiHits]]))
+    rangeIntersect <- pintersect(expandedRanges, 
+        mcols(expandedRanges)$matchRng, resolve.empty = 'start.x')
+    intersectById <- tapply(width(rangeIntersect), 
+        mcols(expandedRanges)$IdMap, sum)
+
+    filteredMultiHits <- as_tibble(ov[multiHits]) %>% 
+        mutate(intersectWidth = intersectById) %>% 
+        group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% 
+        dplyr::slice(1)
+    geneIds[filteredMultiHits$queryHits] <- 
+        names(geneRanges)[filteredMultiHits$subjectHits]
+    
+    return(geneIds)
+    }
+  
+  #for test purpose
+  #grl <- IRangesList(IRanges(c(1,90),c(5,95)), IRanges(c(10,20),c(15,25)), IRanges(c(20,30,40), c(25,35,45)),IRanges(c(40,50),c(45,55)), IRanges(c(50,60),c(55,65)), IRanges(c(70,80),c(75,85)),IRanges(c(80,90),c(85,95)), IRanges(c(200,210),c(205,215)), IRanges(c(300),c(305)))
+  
+  assignGeneIdsNoReference <- function(grl) {
+    newTxIds <- 1:length(grl)
+    newGeneByNewTxId <- rep(NA, length(newTxIds))
+    newTxIdsByExon <- rep(newTxIds, times=elementNROWS(grl))
+    grSetReduced <- reduce(unlist(grl), with.revmap=T)
+    newExonId <- 1:length(grSetReduced)
+    revmap=mcols(grSetReduced)$revmap
+    newExonIdByMergedExon <- rep(newExonId, times=elementNROWS(revmap))
+    newTxIdsByMergedExon <- newTxIdsByExon[unlist(revmap)]
+    # (1) create initial gene, exon, transcript map
+    exonTxMap <- tibble(newExonId=newExonIdByMergedExon, 
+        newTxId=newTxIdsByMergedExon) %>% distinct()
+    geneExonMap <-tibble(newGeneId=newExonIdByMergedExon, 
+        newExonId=newExonIdByMergedExon) %>% distinct()
+    geneTxMap <- tibble(newGeneId=newExonIdByMergedExon, 
+        newTxId=newTxIdsByMergedExon) %>% distinct()
+    # (2) select genes with only unique transcripts (complete assignment)
+    exonGeneMap_filter1 <-  geneTxMap %>% group_by(newTxId) %>% 
+        mutate(nTx=n()) %>% group_by(newGeneId) %>% filter(sum(nTx)==n()) 
+    newGeneByNewTxId[exonGeneMap_filter1$newTxId] <- 
+        paste0("gene.", exonGeneMap_filter1$newGeneId)
+    
+    if(any(is.na(newGeneByNewTxId))) {
+      refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, geneExonMap, 
+        exonGeneMap_filter1, newExonId)
+      newGeneIds = paste0("gene.", refGeneTxMap$newGeneId)
+      newGeneByNewTxId[refGeneTxMap$newTxId]<-newGeneIds
+    }
+    return(newGeneByNewTxId)
+  }
+  
+  assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap, 
+        exonGeneMap_filter1, newExonId){
+    # (3.1) second iteration: non assigned genes
+    geneTxMap <- geneTxMap %>% 
+    filter(!(newGeneId %in% exonGeneMap_filter1$newGeneId))
+    exonTxMap <- exonTxMap %>% 
+    filter(!(newTxId %in% exonGeneMap_filter1$newTxId))
+    geneExonMap <- geneExonMap %>% 
+    filter(!(newGeneId %in% exonGeneMap_filter1$newGeneId))
+    
+    ## (1) select gene Ids (first exons, can't be merged)
+    refGeneExonList = getRefGeneExonList(exonTxMap, geneExonMap)
+    #extend to the right
+    refGeneTxMap <- left_join(refGeneExonList,  exonTxMap, 
+    by=c('newExonId.merge'='newExonId')) %>% 
+    dplyr::select(newGeneId, newTxId) %>% distinct()
+    refGeneTxMap <- rbind(geneTxMap %>% filter(newGeneId %in% 
+    refGeneTxMap$newGeneId), refGeneTxMap) %>% distinct()
+    refGenExonMap <- left_join(refGeneTxMap, exonTxMap, by = "newTxId") %>% 
+    dplyr::select(newGeneId, newExonId) %>% distinct()
+    length_tmp = 0
+    while(length_tmp<nrow(refGenExonMap)) {
+        length_tmp=nrow(refGenExonMap)
+        refGeneTxMap <- left_join(refGenExonMap,  exonTxMap,
+            by = "newExonId") %>% 
+            dplyr::select(newGeneId, newTxId) %>% distinct()
+        refGenExonMap <- left_join(refGeneTxMap, exonTxMap,
+            by = "newTxId") %>% 
+            dplyr::select(newGeneId, newExonId) %>% distinct()
+    }
+    # combined gene ids
+    geneGeneMap <- left_join(refGeneTxMap, dplyr::rename(refGeneTxMap, 
+    newGeneId.merge=newGeneId), by = "newTxId") %>% 
+    filter(newGeneId<newGeneId.merge) %>% 
+    filter(!(newGeneId %in% newGeneId.merge)) %>% 
+    dplyr::select(newGeneId, newGeneId.merge) %>% distinct()
+    refGeneTxMap <- rbind(refGeneTxMap %>% filter(!(newGeneId %in% 
+        geneGeneMap$newGeneId.merge)), left_join(geneGeneMap, refGeneTxMap, 
+        by=c('newGeneId.merge'='newGeneId')) %>% 
+        dplyr::select(newGeneId, newTxId)) %>% distinct()
+    return(refGeneTxMap)
+  }
+
+  getRefGeneExonList = function(exonTxMap, geneExonMap){
+    refGeneExonList <- left_join(exonTxMap, 
+        dplyr::rename(exonTxMap, newExonId.merge=newExonId), 
+        by = "newTxId") %>% 
+        filter(newExonId<newExonId.merge) %>% 
+        filter(!(newExonId %in% newExonId.merge)) %>% 
+        dplyr::select(newExonId, newExonId.merge) %>% 
+        distinct() %>% left_join(geneExonMap, by = "newExonId")  %>%  
+        dplyr::select(newGeneId, newExonId.merge) %>% distinct()
+    return(refGeneExonList)
+  }
+    
+  assignGeneIds <- function(grl, annotations) {
+    geneIds <- assignGeneIdsByReference(grl, annotations) 
+    newGeneSet <- which(is.na(geneIds))
+    newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
+    geneIds[newGeneSet] <- newGeneIds
+  return(geneIds)
+  }
+
