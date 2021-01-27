@@ -12,7 +12,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         min.primarySecondaryDist = min.primarySecondaryDist,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
-    readClassDt <- genEquiRCs(readClass, annotations)
+    readClassDt <- genEquiRCs(readClass, annotations, verbose)
     tx_len <- rbind(data.table(tx_id = names(annotations),
         tx_len = sum(width(annotations))),
         data.table(tx_id = paste0(names(annotations),"Start"),
@@ -66,12 +66,12 @@ bambu.quantDT <- function(readClassDt = readClassDt,
         simplifyNames(readClassDt,txVec, geneVec,ori_txvec, readclassVec)
     d_mode <- emParameters[["degradationBias"]]
     if (d_mode) {
-        d_rateOut <- calculateDegradationRate(readClassDt)
+        d_rateOut <- calculateDegradationRate(readClassDt, verbose)
     }else{
         d_rateOut <- rep(NA,2)
     }
     readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
-        d_rateOut[1], d_mode = d_mode)
+        d_rateOut[1], d_mode = d_mode, verbose)
     removeList <- removeUnObservedGenes(readClassDt)
     readClassDt <- removeList[[1]] # keep only observed genes for estimation
     outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
