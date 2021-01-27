@@ -56,16 +56,17 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
     rids <- which(apply(t(t(a_mat) * n.obs * K),1,sum) != 0)
     #step2: removes read classes without transcript assignment after step1
     a_mat <- aMatArray[rids,,1]
+    if (is(a_mat,"numeric")) a_mat <- t(a_mat)
     cids <- which(apply(t(a_mat),1,sum) != 0)
     n.obs <- n.obs[cids]
     aMatArrayNew <- array(NA,dim = c(length(rids), length(cids),4))
     aMatArrayNew <- aMatArray[rids,cids,, drop = FALSE]
     if (is(aMatArrayNew[,,1],"numeric")) {
         aMatArrayUpdated <- K*n.obs*aMatArrayNew
-        out[rids, `:=`(counts = aMatArrayUpdated[1],
-            FullLengthCounts = aMatArrayUpdated[2],
-            PartialLengthCounts = aMatArrayUpdated[3],
-            UniqueCounts = aMatArrayUpdated[4])]
+        out[rids, `:=`(counts = sum(aMatArrayUpdated[,,1]),
+            FullLengthCounts = sum(aMatArrayUpdated[,,2]),
+            PartialLengthCounts = sum(aMatArrayUpdated[,,3]),
+            UniqueCounts = sum(aMatArrayUpdated[,,4]))]
     }else{
         est_output <- emWithL1(A = aMatArrayNew, Y = n.obs, K = K,
             lambda = lambda, maxiter = maxiter,
@@ -99,7 +100,8 @@ formatAmat <- function(tmp, multiMap){
 #' This function generates a_mat values for all transcripts 
 #' @import data.table
 #' @noRd
-modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
+modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode, verbose){
+        start.time <- proc.time()
         tmp[, multi_align := (length(unique(tx_sid)) > 1),
             by = list(read_class_sid, gene_sid)]
         if (!d_mode) {
@@ -117,7 +119,11 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
         tmp[, aval := pmax(pmin(aval,1),0)] #d_rate should be contained to 0-1
         tmp[multi_align & fullTx,
             aval := pmin(1,pmax(aval,rc_width*d_rate/1000))]
+        tmp[which(multi_align), aval := exp(aval)]
         tmp[which(!multi_align), aval := 1]
+        end.time <- proc.time()
+        if (verbose) message("Finished modify alignment weights in ",
+            round((end.time - start.time)[3] / 60, 1), " mins.")
         return(tmp)
 }
 
@@ -137,7 +143,8 @@ initialiseOutput <- function(matNames, g, K, n.obs){
 #' Calculate degradation rate based on equiRC read counts 
 #' @import data.table
 #' @noRd
-calculateDegradationRate <- function(readClassDt){
+calculateDegradationRate <- function(readClassDt, verbose){
+    start.time <- proc.time()
     rcCount <- unique(readClassDt[, .(gene_sid,read_class_sid, nobs)])
     rcCountPar <-
         unique(readClassDt[which(!fullTx), .(gene_sid,read_class_sid, nobs)])
@@ -158,6 +165,9 @@ calculateDegradationRate <- function(readClassDt){
     }
     d_rate <- median(geneCountLength$d_rate * 1000/geneCountLength$gene_len,
         na.rm = TRUE)
+     end.time <- proc.time()
+    if (verbose) message("Finished estimating degradation rate in ", 
+        round((end.time - start.time)[3] / 60, 1), " mins.")
     return(c(d_rate, nrow(geneCountLength)))
 }
 
@@ -248,17 +258,26 @@ removeUnObservedGenes <- function(readClassDt){
 #' eqClass from annotations
 #' @import data.table
 #' @noRd
-genEquiRCs <- function(readClass, annotations){
+genEquiRCs <- function(readClass, annotations, verbose){
+    start.time <- proc.time()
     ## aggregate rc's based on their alignment to full or partial transcripts
     distTable <- splitReadClass(readClass)
-    ## get total number of read count for each equi read class
+    end.time <- proc.time()
+    if (verbose) 
+        message("Finished aggragate read class to equivalence read class in ", 
+        round((end.time - start.time)[3] / 60, 1), " mins.")
+     ## get total number of read count for each equi read class
     eqClassTable <- getUniCountPerEquiRC(distTable)
     ## merge distTable with eqClassTable 
     equiRCTable <- unique(unique(distTable[, .(tx_id, GENEID, 
         read_class_id)], by = NULL)[eqClassTable, on = c("GENEID",
         "read_class_id"), allow.cartesian = TRUE], by = NULL)
+    start.time <- proc.time()
     equiRCTable_final <- addEmptyRC(annotations, equiRCTable)
     setnames(equiRCTable_final, "GENEID", "gene_id")
+    end.time <- proc.time()
+    if (verbose) message("Finished adding empty equivalence read class in ",
+        round((end.time - start.time)[3] / 60, 1), " mins.")
     return(equiRCTable_final)
 }
 
@@ -296,8 +315,11 @@ getUniCountPerEquiRC <- function(distTable){
     eqClassTable <- 
         unique(distTable[,.(read_class_id,readClassId, readCount, GENEID,
         firstExonWidth,totalWidth, equal)], by = NULL)
-    eqClassTable[, `:=`(rc_width = ifelse(all(!equal), max(totalWidth), 
-        max(firstExonWidth))), 
+    ## weighted rc_width: weighted by count. For MFSM equiRCs, each rc counted 
+    # same number of times, hence not affecting final results.
+    eqClassTable[, `:=`(rc_width = ifelse(all(!equal), 
+        sum(totalWidth*readCount)/sum(readCount), 
+        sum(firstExonWidth*readCount)/sum(readCount))), 
         by = list(read_class_id, GENEID)]
     eqClassTable <- unique(eqClassTable[, .(read_class_id,readClassId, 
         readCount, GENEID, rc_width)], by = NULL)
@@ -323,6 +345,7 @@ getUniCountPerEquiRC <- function(distTable){
 #' be more assigned to this smaller transcript. 
 #' From this angle of view, both the full and partial of the minimal eqRC should
 #' be added
+#' There are cases of multiple treanscripts share the same minEqClass
 #' @import data.table
 #' @noRd
 addEmptyRC <- function(annotations, equiRCTable){
@@ -334,17 +357,65 @@ addEmptyRC <- function(annotations, equiRCTable){
         tx_id = paste0(TXNAME, "Start")), by = TXNAME]
     rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"\\."),
         paste0(TXNAME, "Start\\."), read_class_id)), by = TXNAME]
+    rcAnno_partial[, tx_id := TXNAME]
     setnames(rcAnno_partial, "TXNAME", "tx_id")
-    rcAnnoDt <-
-        rbind(unique(rcAnno[, .(tx_id, GENEID, read_class_id)], by = NULL),
-        unique(rcAnno_partial[, .(tx_id, GENEID, read_class_id)], by = NULL))
-    rcAnnoDt <- createMultimappingBaseOnEmptyRC(rcAnnoDt)
+    rcAnnoDt <- rbind(unique(rcAnno[, .(tx_id, GENEID, read_class_id)]),
+        unique(rcAnno_partial[, .(tx_id, GENEID, read_class_id)]))
+    rcAnnoDt <- unique(merge(rcAnnoDt, equiRCTable[,.(read_class_id, rc_width)],
+        by = "read_class_id", all.y = FALSE, all.x = TRUE))
+    ## for those that can't be found in existing RCs but observed genes
+    # the rc_width should be either the full length or the difference between
+    # the full length of the transcript and the next partial alignment, 
+    # approximated by the average of the smallest transcript 
+    aveRCWidth <- approximateRCwidth(equiRCTable)
+    rcAnnoDt <- unique(imputeRCWidth(rcAnnoDt, aveRCWidth))
+    rcAnnoDt <- unique(createMultimappingBaseOnEmptyRC(rcAnnoDt))
     rcAnnoDt[, minEquiRC := 1] # this empty identifies read class observed only
-    equiRCTable_final <- merge(equiRCTable, rcAnnoDt, 
-        on = c("tx_id","GENEID","read_class_id"), all = TRUE)
-    ## for is.na(nobs) 
-    equiRCTable_final[is.na(nobs) ,`:=`(nobs = 0, rc_width = 0)]
+    equiRCTable_final <- unique(merge(equiRCTable, rcAnnoDt, 
+        on = c("tx_id","GENEID","read_class_id","rc_width"), all = TRUE))
+    ## for is.na(nobs)
+    equiRCTable_final[is.na(nobs) ,`:=`(nobs = 0)]
     return(equiRCTable_final)
+}
+
+#' Approximate the rc width for the minEqClass 
+#' @noRd
+approximateRCwidth <- function(equiRCTable){
+    aveRCWidth1 <- unique(equiRCTable[!grepl("Start",read_class_id), 
+        list(par_mean = sum(rc_width*nobs)/sum(nobs), nobs = sum(nobs)), 
+        by = list(tx_id,GENEID)])## approximated by partial
+    aveRCWidth2 <- unique(equiRCTable[, 
+        list(all_mean = sum(rc_width*nobs)/sum(nobs), nobs = sum(nobs)), 
+        by = list(tx_id = gsub("Start","",tx_id),GENEID)])## approximated by all 
+    aveRCWidth1[, par_mean2 := sum(par_mean*nobs)/sum(nobs), by = GENEID]
+    aveRCWidth2[, all_mean2 := sum(all_mean*nobs)/sum(nobs), by = GENEID]
+    aveRCWidth <- merge(aveRCWidth1, aveRCWidth2, by = c("tx_id","GENEID"), 
+        all = TRUE)
+    aveRCWidth[,`:=`(nobs.x = NULL, nobs.y = NULL)]
+    aveRCWidthFull <- aveRCWidth[, list(tx_id = paste0(tx_id,"Start")),
+        by = list(par_mean, par_mean2, all_mean, all_mean2, GENEID)]
+    aveRCWidth_final <- do.call("rbind",list(aveRCWidth, aveRCWidthFull))
+    return(aveRCWidth_final)
+}
+
+#' Imputate read class width follow an order of partial rc first, and then 
+#' all rc, and then by partial rc for each gene, all rc for each gene
+#' @noRd
+imputeRCWidth <- function(rcAnnoDt, aveRCWidth){
+    rcAnnoDt <- unique(merge(rcAnnoDt, 
+        unique(aveRCWidth[,.(tx_id, GENEID, par_mean, all_mean)]),
+        by = c("tx_id","GENEID"), all.x = TRUE))
+    rcAnnoDt[is.na(rc_width), rc_width := par_mean]
+    rcAnnoDt[is.na(rc_width), rc_width := all_mean]
+    rcAnnoDt <- unique(merge(rcAnnoDt, 
+        unique(aveRCWidth[which(!is.na(par_mean2)),.(GENEID,
+        par_mean2, all_mean2)]), by = c("GENEID"), all.x = TRUE))
+    rcAnnoDt[is.na(rc_width), rc_width := par_mean2]
+    rcAnnoDt[is.na(rc_width), rc_width := all_mean2]
+    rcAnnoDt[, `:=`(par_mean = NULL, par_mean2 = NULL,
+        all_mean = NULL, all_mean2 = NULL)]
+    rcAnnoDt[,rc_width := mean(unique(rc_width)), by = read_class_id]
+    return(rcAnnoDt)
 }
 
 #' This function changes the concatenating symbol
@@ -394,4 +465,3 @@ NULL
 .onUnload <- function(libpath) {
     library.dynam.unload("bambu", libpath)
 }
-
