@@ -41,9 +41,9 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
   arma::vec t_after = theta_trace.col(iter);
   arma::vec deltaVec(M);
   
-  // arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
-  // baseSum.replace(arma::datum::nan, 0);
-  arma::rowvec tau = arma::sum((X.t()*diagmat(theta)),0);
+  arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
+  baseSum.replace(arma::datum::nan, 0);
+  arma::rowvec tau = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
  
   
   while(deltaTheta > conv && iter < (maxiter-1)){
@@ -68,10 +68,10 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
     if(!deltaVec.is_empty()){
          deltaTheta = max(deltaVec);
     }
-    // baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
-    // baseSum.replace(arma::datum::nan, 0);
-    tau = arma::sum((X.t()*diagmat(theta)),0);
-    //tau = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
+    baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
+    baseSum.replace(arma::datum::nan, 0);
+    // tau = arma::sum((X.t()*diagmat(theta)),0);
+    tau = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
   }
   // returns
   List ret ;
@@ -108,16 +108,16 @@ List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last
   // post-process outputs
   arma::mat estMat(5,M);
   estMat.row(0) = theta;
-  // arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
-  // baseSum.replace(arma::datum::nan, 0);
-  estMat.row(1) = arma::sum((X.t()*diagmat(theta)),0)*K;
-  estMat.row(2) = arma::sum((A.slice(1).t()*diagmat(theta)),0)*K;
-  estMat.row(3) = arma::sum((A.slice(2).t()*diagmat(theta)),0)*K;
-  estMat.row(4) = arma::sum((A.slice(3).t()*diagmat(theta)),0)*K;
-  // estMat.row(1) = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  // estMat.row(2) = arma::sum(((A.slice(1).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  // estMat.row(3) = arma::sum(((A.slice(2).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  // estMat.row(4) = arma::sum(((A.slice(3).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
+  baseSum.replace(arma::datum::nan, 0);
+  // estMat.row(1) = arma::sum((X.t()*diagmat(theta)),0)*K;
+  // estMat.row(2) = arma::sum((A.slice(1).t()*diagmat(theta)),0)*K;
+  // estMat.row(3) = arma::sum((A.slice(2).t()*diagmat(theta)),0)*K;
+  // estMat.row(4) = arma::sum((A.slice(3).t()*diagmat(theta)),0)*K;
+  estMat.row(1) = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(2) = arma::sum(((A.slice(1).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(3) = arma::sum(((A.slice(2).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(4) = arma::sum(((A.slice(3).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
   // Rcout << "The value of K : " << K << "\n";
   // Rcout << "The value of estimate : " << sum(estMat.row(1)) << "\n";
   // returns
