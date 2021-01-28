@@ -48,47 +48,6 @@ calculateGeneProportion = function(resultOutput){
   return(resultOutput)
 }
 
-convertSEtoGRangesList = function(combinedOutputs){
-  
-  exonEndsShifted <- paste(rowData(combinedOutputs)$intronStarts, 
-    rowData(combinedOutputs)$end.rc + 1, sep = ',')
-  exonStartsShifted <- paste(rowData(combinedOutputs)$start.rc - 1, 
-    rowData(combinedOutputs)$intronEnds, sep = ',')
-  #deal with single exon RCs
-  singleExonIndex = which(is.na(rowData(combinedOutputs)$intronStarts))
-  exonEndsShifted[singleExonIndex] = 
-    rowData(combinedOutputs)$end.rc[singleExonIndex] + 1
-
-  exonStartsShifted[singleExonIndex] = 
-    rowData(combinedOutputs)$start.rc[singleExonIndex] - 1
-
-  readClassList= makeGRangesListFromFeatureFragments(
-    seqnames=rowData(combinedOutputs)$chr.rc,
-    fragmentStarts=as.character(exonStartsShifted),
-    fragmentEnds=as.character(exonEndsShifted),
-    strand=rowData(combinedOutputs)$strand.rc)
-
-   # correct junction to exon differences in coordinates
-  readClassList <- narrow(readClassList, start = 2, end = -2) 
-  
-  unlistData <- unlist(readClassList, use.names = FALSE)
-  partitioning <- PartitioningByEnd(cumsum(elementNROWS(readClassList)), 
-    names = NULL)
-  
-  exon_rank <- sapply(width((partitioning)), seq, from = 1)
-  exon_rank[which(rowData(combinedOutputs)$strand.rc == '-')] <- 
-  # * assumes positive for exon ranking
-  lapply(exon_rank[which(rowData(combinedOutputs)$strand.rc == '-')], rev)  
-  exon_endRank <- lapply(exon_rank, rev)
-  unlistData$exon_rank <- unlist(exon_rank)
-  unlistData$exon_endRank <- unlist(exon_endRank)
-  
-  readClassList <- relist(unlistData, partitioning)
-  names(readClassList) = 1:length(readClassList)
-  
-  return(readClassList)
-}
-
 getReadClassClassifications = function(query, subject, maxDist = 5){
 
     subjectExtend <- extendGrangesListElements(subject, by = maxDist)
