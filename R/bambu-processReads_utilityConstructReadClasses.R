@@ -23,29 +23,18 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         warning("read Id not sorted, can result in wrong assignments.
             Please report error")
     start.ptm <- proc.time()
-    constructSplicedReadClassesOutput <- constructSplicedReadClasses(
+    exonsByRC.spliced <- constructSplicedReadClasses(
         uniqueJunctions = uniqueJunctions,
         unlisted_junctions = unlisted_junctions,
         readGrgList = readGrgListME,
         stranded = stranded)
-    exonsByRC.spliced = constructSplicedReadClassesOutput$readClassList
-    indices = constructSplicedReadClassesOutput$indices
-    readIds = as.numeric(names(indices))
-    readClasses = as.data.frame(mcols(exonsByRC.spliced))
-    readMatrix=matrix(nrow=length(readGrgList),ncol=2)
-    readMatrix[readIds,]=cbind(readClasses$readClassId[indices],indices)
     end.ptm <- proc.time()
     if (verbose) 
     message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-
-    constructUnsplicedReadClassesOutput <- constructUnsplicedReadClasses(reads.singleExon, 
-        annotations, exonsByRC.spliced, readMatrix, stranded, verbose)
-    exonsByRC.unspliced = constructUnsplicedReadClassesOutput$exonsByReadClass
-    readMatrix = constructUnsplicedReadClassesOutput$readMatrix
+    exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
+        annotations, exonsByRC.spliced, stranded, verbose)
     exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
-    mcols(readGrgList)$readClass = readMatrix[,1]
-    mcols(readGrgList)$readClassIndex = readMatrix[,2]
     counts <- matrix(mcols(exonsByRC)$readCount,
         dimnames = list(names(exonsByRC), runName))
     startSD <- matrix(mcols(exonsByRC)$startSD,
@@ -60,7 +49,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     se <- SummarizedExperiment(assays = SimpleList(counts = counts, 
     startSD = startSD, endSD = endSD, strand_bias = posStrandCounts),
         rowRanges = exonsByRC, colData = colDataDf)
-    return(list(se=se, readGrgList=readGrgList))
+    return(se)
 }
 
 
@@ -97,10 +86,9 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         mcols(unlisted_junctions)$id))) > 0)
     readConfidence[lowConfidenceReads] <- "lowConfidenceJunctionReads"
 
-    createReadTableOutput <- createReadTable(unlisted_junctions, readGrgList,
+    readTable <- createReadTable(unlisted_junctions, readGrgList,
         readStrand, readConfidence)
-    readTable = createReadTableOutput$readTable
-    indices = createReadTableOutput$indices
+    # indices = createReadTableOutput$indices
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         start.rc = start, end.rc = end, startSD = startSD, endSD = endSD, 
@@ -109,7 +97,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
-    return(list(readClassList = exonsByReadClass, indices = indices))
+    return(exonsByReadClass)
 }
 
 #' this functions uses the uniqueJunction table which has reference junctions
@@ -186,9 +174,6 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         strand = readStrand, confidenceType = readConfidence,
         alignmentStrand = as.factor(getStrandFromGrList(readGrgList)),)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
-    indices=group_indices(readTable %>% group_by(chr, strand, 
-        intronEnds, intronStarts))
-    names(indices) = mcols(readGrgList)$id
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
         summarise(readCount = n(),
@@ -199,7 +184,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         #readCount.sameStrand = sum(sameStrand),
         .groups = 'drop') %>% #arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
-    return(list(readTable = readTable, indices = indices))
+    return(readTable)
 }
 
 #' @noRd
@@ -243,7 +228,7 @@ createExonsByReadClass <- function(readTable){
 #' @importFrom GenomicRanges granges unlist reduce 
 #' @noRd
 constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
-    readClassListSpliced, readMatrix, stranded, verbose){
+        readClassListSpliced, readMatrix, stranded, verbose = F){
     start.ptm <- proc.time()
     referenceExons <- unique(c(granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
@@ -256,12 +241,7 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    rcsUnsplAnno = rcUnsplicedAnnotation$exonsByReadClass
-    rcsUnsplAnno = rcsUnsplAnno[unique(names(rcsUnsplAnno))]
-    indices = rcUnsplicedAnnotation$indices
-    readIds = as.numeric(names(indices))
-    readMatrix[readIds,1] = names(unlist(rcsUnsplAnno))[indices]
-    readMatrix[readIds,2]= indices + length(readClassListSpliced)
+    readIds <- rcUnsplicedAnnotation$readIds
     reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
         readIds]
     referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
@@ -270,20 +250,12 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     rcUnsplicedReduced <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
-    rcsUnsplReduced = rcUnsplicedReduced$exonsByReadClass
-    rcsUnsplReduced = rcsUnsplReduced[unique(names(rcsUnsplReduced))]
-    indices = rcUnsplicedReduced$indices
-    indices2 = indices + length(readClassListSpliced) + length(rcsUnsplAnno)
-    readIds = as.numeric(names(indices))
-    readMatrix[readIds,1]=names(unlist(rcsUnsplReduced))[indices]
-    readMatrix[readIds,2]=indices2 
-    exonsByReadClass <- c(rcsUnsplAnno,
-        rcsUnsplReduced)
+    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass,
+        rcUnsplicedReduced$exonsByReadClass)
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-
-    return(list(exonsByReadClass = exonsByReadClass, readMatrix = readMatrix))
+    return(exonsByReadClass)
 }
 
 
@@ -307,18 +279,13 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     ## create single exon read class by using the minimum end
     ## and maximum start of all overlapping exons (identical to
     ## minimum equivalent class)
-    indices2=group_indices(hitsDF %>% group_by(queryHits, chr, strand))
-    names(indices2) = mcols(granges[hitsDF$queryHits])$id
     hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
         group_by(queryHits, chr, strand) %>%
         summarise(start = max(start), end = min(end), .groups = "drop") %>%
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".", 
             cur_group_id())) %>% ungroup()
-    indices=group_indices(hitsDF %>% group_by(readClassId))
-    names(indices) = mcols(granges[hitsDF$queryHits])$id
-    indices = indices[indices2]
-    names(indices) = names(indices2)
+    readIds <- mcols(granges[hitsDF$queryHits])$id
     hitsDF$alignmentStrand = as.factor(strand(granges))[hitsDF$queryHits]
     hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, 
         readClassId, queryHits, alignmentStrand) %>%
@@ -344,7 +311,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         start.rc = start, end.rc = end, intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, readCount.posStrand)
     mcols(exByReadClassUnspliced) <- hitsDF
-    return(list(exonsByReadClass = exByReadClassUnspliced, indices = indices))
+    return(list(exByReadClassUnspliced = exByReadClassUnspliced, readIds = readIds))
 }
 
 #' initiate the hits dataframe
