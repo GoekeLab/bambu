@@ -86,7 +86,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
-    se = txrange.filterReadClasses(se, genomeSequence, annotations)
+    se = txrange.scoreReadClasses(se, genomeSequence, annotations)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")

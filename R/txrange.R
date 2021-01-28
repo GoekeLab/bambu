@@ -3,7 +3,7 @@ library(BSgenome)
 library(glmnet)
 library(xgboost)
 
-txrange.filterReadClasses = function(se, genomeSequence, annotations, 
+txrange.scoreReadClasses = function(se, genomeSequence, annotations, 
   withAdapters = FALSE, min.readCount = 2){
     options(scipen = 999)
     se = addRowData(se, genomeSequence, annotations)
