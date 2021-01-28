@@ -21,10 +21,7 @@ addRowData = function(se, genomeSequence, annotations){
   exons = str_split(rowData(se)$intronStarts,",")
   rowData(se)$numExons = sapply(exons, FUN = length)+1
   rowData(se)$numExons[is.na(exons)] = 1
-  classifications = getReadClassClassifications(rowRanges(se), annotations)
-  rowData(se)$equal = classifications$equal
-  rowData(se)$compatible = classifications$compatible
-  rowData(se)$compatibleCount = classifications$compatibleCount
+  rowData(se)$equal = isReadClassEqual(rowRanges(se), annotations)
   rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
@@ -48,26 +45,15 @@ calculateGeneProportion = function(resultOutput){
   return(resultOutput)
 }
 
-getReadClassClassifications = function(query, subject, maxDist = 5){
-
+isReadClassEqual = function(query, subject, maxDist = 5){
     subjectExtend <- extendGrangesListElements(subject, by = maxDist)
     queryForOverlap <- dropGrangesListElementsByWidth(query,
         minWidth = maxDist, cutStartEnd = T)
-    olap = findOverlaps(queryForOverlap, subjectExtend, ignore.strand = F,
-        type = 'within')
-    compatible = rep(F, length(query))
-    compatible[queryHits(olap)] = T
-    compatibleCount = rep(0, length(query))
-    compatTable = table(queryHits(olap))
-    compatibleCount[as.numeric(names(compatTable))] = compatTable
-    
     olapEqual = findOverlaps(queryForOverlap, 
       cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal')
     equal = rep(F, length(query))
     equal[queryHits(olapEqual)] = T
-    
-    return(list(equal = equal, compatible = compatible, 
-      compatibleCount = compatibleCount))
+    return(equal)
 }
 
 countPolyATerminals = function(se, genomeSequence){
