@@ -82,12 +82,10 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
         annotations,genomeSequence, stranded = stranded, verbose = verbose)
     # create SE object with reconstructed readClasses
-    se <- 
-        isore.constructReadClasses(readGrgList, unlisted_junctions, 
+    se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
-    print(Sys.time()-start_time)
     se = txrange.filterReadClasses(se, genomeSequence, annotations)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),

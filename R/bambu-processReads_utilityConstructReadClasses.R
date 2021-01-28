@@ -18,15 +18,15 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     mcols(reads.singleExon)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
     #only keep multi exons reads in readGrgList    
-    readGrgListME <- readGrgList[elementNROWS(readGrgList) > 1]
-    if (!identical(mcols(readGrgListME)$id,unique(mcols(unlisted_junctions)$id))) 
+    readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
+    if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
         warning("read Id not sorted, can result in wrong assignments.
             Please report error")
     start.ptm <- proc.time()
     exonsByRC.spliced <- constructSplicedReadClasses(
         uniqueJunctions = uniqueJunctions,
         unlisted_junctions = unlisted_junctions,
-        readGrgList = readGrgListME,
+        readGrgList = readGrgList,
         stranded = stranded)
     end.ptm <- proc.time()
     if (verbose) 
@@ -88,13 +88,11 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
 
     readTable <- createReadTable(unlisted_junctions, readGrgList,
         readStrand, readConfidence)
-    # indices = createReadTableOutput$indices
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         start.rc = start, end.rc = end, startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount)
-    readTable$readClassId <- paste("rc", seq_len(nrow(readTable)), sep = ".")
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
     return(exonsByReadClass)
@@ -228,7 +226,7 @@ createExonsByReadClass <- function(readTable){
 #' @importFrom GenomicRanges granges unlist reduce 
 #' @noRd
 constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
-        readClassListSpliced, readMatrix, stranded, verbose = F){
+        readClassListSpliced, stranded, verbose = F){
     start.ptm <- proc.time()
     referenceExons <- unique(c(granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
@@ -241,20 +239,19 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    readIds <- rcUnsplicedAnnotation$readIds
     reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
-        readIds]
+        rcUnsplicedAnnotation$readIds]
     referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
     #(2) reads do not fall within a annotated exon/high confidence read class 
     # exon are summarised based on the union of overlapping unspliced reads
     rcUnsplicedReduced <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
-    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass,
-        rcUnsplicedReduced$exonsByReadClass)
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass,
+        rcUnsplicedReduced$exonsByReadClass)
     return(exonsByReadClass)
 }
 

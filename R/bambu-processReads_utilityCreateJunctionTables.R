@@ -17,6 +17,7 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
     end.ptm <- proc.time()
     if (verbose) message("Finished creating junction list with splice motif
         in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+
     uniqueAnnotatedIntrons <- unique(unlistIntrons(annotations, 
         use.ids = FALSE))
     # correct strand of junctions based on (inferred) strand of reads
@@ -80,10 +81,12 @@ createJunctionTable <- function(unlisted_junctions,
     minus_score <- countMatches(uniqueJunctions,
         unlisted_junctions[strand(unlisted_junctions) == '-'], 
         ignore.strand = TRUE)
+
     junctionSeqStart <- BSgenome::getSeq(genomeSequence,
         shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
     junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
         IRanges::shift(flank(uniqueJunctions,width = 2, start = FALSE), -2))
+    
     mcols(uniqueJunctions) <- DataFrame(tibble(
         chr = as.factor(seqnames(uniqueJunctions)), 
         start = start(uniqueJunctions),
