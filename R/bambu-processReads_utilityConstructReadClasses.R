@@ -308,7 +308,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         start.rc = start, end.rc = end, intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, readCount.posStrand)
     mcols(exByReadClassUnspliced) <- hitsDF
-    return(list(exByReadClassUnspliced = exByReadClassUnspliced, readIds = readIds))
+    return(list(exByReadClass = exByReadClassUnspliced, readIds = readIds))
 }
 
 #' initiate the hits dataframe
