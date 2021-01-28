@@ -368,6 +368,9 @@ assignGeneIdsByReference <- function(grl, annotations) {
   assignGeneIdsNoReference <- function(grl) {
     newTxIds <- 1:length(grl)
     newGeneByNewTxId <- rep(NA, length(newTxIds))
+    if(length(grl)==0){
+      return(newGeneByNewTxId)
+    }
     newTxIdsByExon <- rep(newTxIds, times=elementNROWS(grl))
     grSetReduced <- reduce(unlist(grl), with.revmap=T)
     newExonId <- 1:length(grSetReduced)
