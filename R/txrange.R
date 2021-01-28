@@ -3,13 +3,9 @@ library(BSgenome)
 library(glmnet)
 library(xgboost)
 
-txrange.filterReadClasses = function(se, readGrgList, genomeSequence,
-      annotations, withAdapters = FALSE, min.readCount = 2){
-
+txrange.filterReadClasses = function(se, genomeSequence, annotations, 
+  withAdapters = FALSE, min.readCount = 2){
     options(scipen = 999)
-    #alignData = createAlignData(readGrgList)
-    #alignData = annotateReadStartsAndEnds(alignData, se)
-    rm(readGrgList)
     se = combineSEs(list(se), annotations)
     se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowSums(assays(se)$counts)
