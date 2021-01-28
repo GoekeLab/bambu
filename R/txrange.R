@@ -6,7 +6,6 @@ library(xgboost)
 txrange.filterReadClasses = function(se, genomeSequence, annotations, 
   withAdapters = FALSE, min.readCount = 2){
     options(scipen = 999)
-    se = combineSEs(list(se), annotations)
     se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowSums(assays(se)$counts)
         >=min.readCount)
@@ -14,33 +13,19 @@ txrange.filterReadClasses = function(se, genomeSequence, annotations,
       method = "xgboost")
     rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, 
       method = "xgboost")
-    
-    return(se)
-}
 
-combineSEs = function(combinedOutputs, annotations){
-  combinedTxCandidates = NULL
-  for(i in 1:length(combinedOutputs)){
-    combinedTxCandidates <- 
-      isore.combineTranscriptCandidates(combinedOutputs[[i]], readClassSeRef =
-      combinedTxCandidates)
-  }
-  colnames(rowData(combinedTxCandidates)) = c(c("chr.rc", "start.rc",
-     "end.rc", "strand.rc"), 
-    colnames(rowData(combinedOutputs[[1]])[-1:-4]))
-  return(combinedTxCandidates)
+    return(se)
 }
 
 addRowData = function(se, genomeSequence, annotations){
   exons = str_split(rowData(se)$intronStarts,",")
   rowData(se)$numExons = sapply(exons, FUN = length)+1
   rowData(se)$numExons[is.na(exons)] = 1
-  readClassesList = convertSEtoGRangesList(se)
-  classifications = getReadClassClassifications(readClassesList, annotations)
+  classifications = getReadClassClassifications(rowRanges(se), annotations)
   rowData(se)$equal = classifications$equal
   rowData(se)$compatible = classifications$compatible
   rowData(se)$compatibleCount = classifications$compatibleCount
-  rowData(se)$GENEID = assignGeneIds(readClassesList, annotations)
+  rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
   se = calculateGeneProportion(se)
