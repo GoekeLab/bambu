@@ -250,8 +250,11 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass,
-        rcUnsplicedReduced$exonsByReadClass)
+    rcsUnsplAnno = rcUnsplicedAnnotation$exonsByReadClass
+    rcsUnsplAnno = rcsUnsplAnno[unique(names(rcsUnsplAnno))]
+    rcsUnsplReduced = rcUnsplicedReduced$exonsByReadClass 
+    rcsUnsplReduced = rcsUnsplReduced[unique(names(rcsUnsplReduced))]
+    exonsByReadClass <- c(rcsUnsplAnno, rcsUnsplReduced)
     return(exonsByReadClass)
 }
 
@@ -308,7 +311,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         start.rc = start, end.rc = end, intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, readCount.posStrand)
     mcols(exByReadClassUnspliced) <- hitsDF
-    return(list(exByReadClass = exByReadClassUnspliced, readIds = readIds))
+    return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
 }
 
 #' initiate the hits dataframe
