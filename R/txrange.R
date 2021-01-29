@@ -46,13 +46,9 @@ calculateGeneProportion = function(resultOutput){
 }
 
 isReadClassEqual = function(query, subject, maxDist = 5){
-    subjectExtend <- extendGrangesListElements(subject, by = maxDist)
-    queryForOverlap <- dropGrangesListElementsByWidth(query,
-        minWidth = maxDist, cutStartEnd = T)
-    olapEqual = findOverlaps(queryForOverlap, 
+    olapEqual = countOverlaps(cutStartEndFromGrangesList(query),
       cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal')
-    equal = rep(F, length(query))
-    equal[queryHits(olapEqual)] = T
+    equal = olapEqual>=1
     return(equal)
 }
 
