@@ -46,18 +46,23 @@ calculateGeneProportion = function(resultOutput){
 }
 
 isReadClassEqual = function(query, subject, maxDist = 5){
-    olapEqual = countOverlaps(cutStartEndFromGrangesList(query),
-      cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal')
-    equal = olapEqual>=1
+    olapEqual = findOverlaps(cutStartEndFromGrangesList(query),
+      cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal',
+      select= 'first')
+    equal = !is.na(olapEqual)
     return(equal)
 }
 
 countPolyATerminals = function(se, genomeSequence){
   #counts A/T's at 5' and 3' of RCs on genome
   #get all first/last exons
-  RCranges = makeGRangesFromDataFrame(rowData(se),start.field = "start.rc", 
-    end.field = "end.rc", seqnames.field = "chr.rc",
-    strand.field = "strand.rc")
+
+  start = min(start(rowRanges(se)))
+  end = max(end(rowRanges(se)))
+  strand = unlist(runValue(strand(rowRanges(se))))
+  seqname = unlist(runValue(seqnames(rowRanges(se))))
+  df = data.frame(start,end,strand,seqname)
+  RCranges = makeGRangesFromDataFrame(df)
   strand(RCranges)[which(as.character(strand(RCranges))=='*')]='+'
   genomeSequence = checkInputSequence(genomeSequence)
   
@@ -67,7 +72,6 @@ countPolyATerminals = function(se, genomeSequence){
   endSeqs = as.character(BSgenome::getSeq(genomeSequence,resize(RCranges,10,
     fix="end")[which(as.character(seqnames(RCranges)) 
     %in% names(genomeSequence))]))
-  
   #count number of A's in the first/last 10 bp
   index = which(as.character(seqnames(RCranges)) %in% names(genomeSequence))
   numAstart = rep(NA,nrow(se))  
