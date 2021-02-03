@@ -250,11 +250,8 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    rcsUnsplAnno = rcUnsplicedAnnotation$exonsByReadClass
-    rcsUnsplAnno = rcsUnsplAnno[unique(names(rcsUnsplAnno))]
-    rcsUnsplReduced = rcUnsplicedReduced$exonsByReadClass 
-    rcsUnsplReduced = rcsUnsplReduced[unique(names(rcsUnsplReduced))]
-    exonsByReadClass <- c(rcsUnsplAnno, rcsUnsplReduced)
+    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass, 
+        rcUnsplicedReduced$exonsByReadClass)
     return(exonsByReadClass)
 }
 
@@ -287,17 +284,16 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
             cur_group_id())) %>% ungroup()
     readIds <- mcols(granges[hitsDF$queryHits])$id
     hitsDF$alignmentStrand = as.factor(strand(granges))[hitsDF$queryHits]
+    #previously it took the first rows strand for a read class id which could be wrong
+    #coded in an alternative but its likely very slow....
     hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, 
-        readClassId, queryHits, alignmentStrand) %>%
-        group_by(readClassId) %>% mutate(readCount = n(),
+        readClassId, alignmentStrand) %>%
+        group_by(readClassId) %>% summarise(start = start[1], end = end[1], 
+        strand = names(which.max(table(strand))), chr = chr[1], readCount = n(),
         startSD = sd(start), endSD = sd(end), 
         readCount.posStrand = sum(alignmentStrand=='+')) %>% 
-        ungroup() %>% distinct() %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
-            intronEnds = NA) %>%
-        dplyr::select(chr, start, end, strand, intronStarts, intronEnds, 
-            confidenceType, readClassId, readCount, startSD,
-            endSD, readCount.posStrand, queryHits)
+            intronEnds = NA)
     exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
         ranges = IRanges(start = hitsDF$start, end = hitsDF$end),
