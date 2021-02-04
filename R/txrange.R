@@ -1,8 +1,3 @@
-suppressMessages(require(stringr))
-library(BSgenome)
-library(glmnet)
-library(xgboost)
-
 txrange.scoreReadClasses = function(se, genomeSequence, annotations, 
   withAdapters = FALSE, min.readCount = 2){
     options(scipen = 999)

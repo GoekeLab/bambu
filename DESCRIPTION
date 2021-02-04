@@ -82,6 +82,9 @@ Imports:
     glmnet,
     Rsamtools,
     methods,
-    Rcpp
+    Rcpp,
+    stringr,
+    BSgenome,
+    xgboost
 VignetteBuilder: 
     knitr
