@@ -43,7 +43,8 @@ Suggests:
     BSgenome,
     apeglm,
     utils,
-    DEXSeq
+    DEXSeq,
+    txrange
 Enhances: parallel
 SystemRequirements:
 biocViews: 

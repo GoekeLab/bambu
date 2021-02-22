@@ -91,16 +91,15 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
             model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
-            myResults <- fitBinomialModel(labels.train = 
-                as.integer(annotatedSplice)[mySet.all][mySet.training], 
-                data.train = modelmatrix[mySet.training,],
-                data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
+            myResults = fitXGBoostModel(labels.train = 
+            as.integer(annotatedSplice)[mySet.all][mySet.training], 
+            data.train = modelmatrix[mySet.training,],
+            data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
             predSplice.prime <- myResults[[2]]
             predictions <- myResults[[1]]
         } else {
-            predictions = glmnet:::predict.cv.glmnet(
-                junctionModel[[predSplice.primeName]],
-                newx = modelmatrix,s = 'lambda.min')
+            predictions = xgboost:::predict.xgb.Booster(
+                junctionModel[[predSplice.primeName]], modelmatrix)
         }
         predictionsSplice.prime <- rep(NA, nrow(data))
         names(predictionSplice.prime) <-
@@ -192,24 +191,29 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     return(list(annotatedJunctions, junctionModel))
 }
 
-#' Fit binomial model
-#' @importFrom glmnet cv.glmnet
+#' Fit xgboost model
+#' @importFrom xgboost xgboost
 #' @importFrom stats fisher.test
 #' @noRd
-fitBinomialModel <- function(labels.train, data.train, data.test, 
-    show.cv=TRUE, maxSize.cv=10000){
+fitXGBoostModel <- function(labels.train, data.train, data.test, 
+                            show.cv=TRUE, maxSize.cv=10000){
     if (show.cv) {
         mySample <- sample(seq_along(labels.train),
-            min(floor(length(labels.train)/2),maxSize.cv))
+                           min(floor(length(labels.train)/2),maxSize.cv))
         data.train.cv <- data.train[mySample,]
         labels.train.cv <- labels.train[mySample]
         data.train.cv.test <- data.train[-mySample,]
         labels.train.cv.test <- labels.train[-mySample]
-        cv.fit <- cv.glmnet(x = data.train.cv,
-            y = labels.train.cv, family = 'binomial')
-        predictions <-
-            glmnet:::predict.cv.glmnet(cv.fit, newx = data.train.cv.test,
-            s = 'lambda.min')
+
+        negative_labels = sum(labels.train == 0)
+        positive_labels = sum(labels.train == 1)
+        cv.fit <- xgboost(data = data.train.cv, 
+            label = labels.train, nthread=2, eta=1, max.depth=5, 
+            min_child_weight=5,lambda=0, alpha=10, gamma=0, subsample=0.7, 
+            colsample_bytree=0.7, nround= 300, objective = "binary:logistic", 
+            eval_metric='error',
+            scale_pos_weight=negative_labels/positive_labels, verbose = 0)
+        predictions <- predict(cv.fit, data.train.cv.test)
         message('prediction accuracy (CV) (higher for splice 
                 donor than splice acceptor)')
         testResults <- fisher.test(table(predictions > 0,labels.train.cv.test))
@@ -217,9 +221,16 @@ fitBinomialModel <- function(labels.train, data.train, data.test,
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
-    cv.fit <- cv.glmnet(x = data.train, y = labels.train,family = 'binomial')
-    predictions <-
-        glmnet:::predict.cv.glmnet(cv.fit, newx = data.test, s = 'lambda.min')
+    negative_labels = sum(labels.train == 0)
+    positive_labels = sum(labels.train == 1)
+    cv.fit <- xgboost(data = data.train, 
+            label = labels.train, nthread=2, eta=1, max.depth=5, 
+            min_child_weight=5,lambda=0, alpha=10, gamma=0, subsample=0.7,
+            colsample_bytree=0.7, nround= 300, objective = "binary:logistic", 
+            eval_metric='error',
+            scale_pos_weight=negative_labels/positive_labels, verbose = 0)
+    predictions <- predict(cv.fit, data.test)
+
     return(list(predictions,cv.fit))
 }
 
