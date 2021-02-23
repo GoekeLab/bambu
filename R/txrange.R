@@ -2,7 +2,7 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
   withAdapters = FALSE, min.readCount = 2){
     options(scipen = 999)
     se = addRowData(se, genomeSequence, annotations)
-    thresholdIndex = which(rowSums(assays(se)$counts)
+    thresholdIndex = which(rowSums(rowData(se)$counts)
         >=min.readCount)
     rowData(se)$geneScore = getGeneScore(se, thresholdIndex, 
       method = "xgboost")
@@ -27,16 +27,16 @@ addRowData = function(se, genomeSequence, annotations){
 }
 
 calculateGeneProportion = function(resultOutput){
-  countsTBL <- as_tibble(assays(resultOutput)$counts) %>%
+  countsTBL <- as_tibble(rowData(resultOutput)$counts) %>%
     mutate(geneId = rowData(resultOutput)$GENEID) %>%
     group_by(geneId) %>%
     mutate_at(vars(-geneId), .funs = sum) %>%
     ungroup() %>%
     dplyr::select(-geneId)
-  geneReadProp <- assays(resultOutput)$counts / countsTBL
-  assays(resultOutput, withDimnames = F)$geneReadProp = geneReadProp
+  geneReadProp <- rowData(resultOutput)$counts / countsTBL
+  rowData(resultOutput, withDimnames = F)$geneReadProp = geneReadProp
   rowData(resultOutput)$totalGeneReadProp = 
-    rowSums(assays(resultOutput)$counts / rowSums(countsTBL))
+    rowSums(rowData(resultOutput)$counts / rowSums(countsTBL))
   return(resultOutput)
 }
 
@@ -100,15 +100,15 @@ applyWeightedMean = function(x){
 }
 
 getAgnosticFeatures = function(input){
-  numReads = rowSums(assays(input)$counts)
+  numReads = rowSums(rowData(input)$counts)
   logNumReads = log(numReads, 2)
   geneReadProp=rowData(input)$totalGeneReadProp
   geneReadProp[is.na(geneReadProp)]=0
-  tx_strand_bias=(1-abs(0.5-(rowSums(assays(input)$strand_bias)/numReads)))
-  SD = apply(cbind(assays(input)$startSD, assays(input)$counts),MARGIN = 1, 
+  tx_strand_bias=(1-abs(0.5-(rowSums(rowData(input)$strand_bias)/numReads)))
+  SD = apply(cbind(rowData(input)$startSD, rowData(input)$counts),MARGIN = 1, 
     FUN = applyWeightedMean)*-1
   SD[which(is.na(SD))] = 1
-  SDend = apply(cbind(assays(input)$endSD, assays(input)$counts),1,
+  SDend = apply(cbind(rowData(input)$endSD, rowData(input)$counts),1,
     FUN = applyWeightedMean)*-1
   SDend[which(is.na(SDend))] = 1
   
@@ -135,14 +135,14 @@ getAgnosticFeatures = function(input){
 prepareGeneModelFeatures = function(se){
   #group read classes by gene
   #summerize the features
-  temp = by(assays(se)$counts, rowData(se)$GENEID, sum)
+  temp = by(rowData(se)$counts, rowData(se)$GENEID, sum)
   geneIDs = names(temp)
   labels = !grepl("gene.",geneIDs)
   numReads = as.numeric(temp)
   numReadsLog = log(numReads,2)
   numReadsLog[is.infinite(numReadsLog)]=0
 
-  strand_bias = 1-abs(0.5-(as.numeric(by(assays(se)$strand_bias, 
+  strand_bias = 1-abs(0.5-(as.numeric(by(rowData(se)$strand_bias, 
     rowData(se)$GENEID, sum))/numReads))
   strand_bias[is.na(strand_bias)]=0
   #how many read classes does a gene have

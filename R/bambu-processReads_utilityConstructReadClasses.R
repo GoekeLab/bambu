@@ -46,9 +46,12 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     colDataDf <- DataFrame(name = runName, row.names = runName)
     mcols(exonsByRC) <- mcols(exonsByRC)[, c("chr.rc", "strand.rc", 
         "start.rc", "end.rc","intronStarts", "intronEnds", "confidenceType")]
-    se <- SummarizedExperiment(assays = SimpleList(counts = counts, 
-    startSD = startSD, endSD = endSD, strand_bias = posStrandCounts),
-        rowRanges = exonsByRC, colData = colDataDf)
+    se <- SummarizedExperiment(rowRanges = exonsByRC, colData = colDataDf)
+    rowData(se)$counts = counts
+    rowData(se)$startSD = startSD
+    rowData(se)$endSD = endSD
+    rowData(se)$strand_bias = posStrandCounts
+
     return(se)
 }
 
