@@ -3,8 +3,7 @@
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
 txrange.scoreReadClasses = function(se, genomeSequence, annotations, 
-  withAdapters = FALSE, min.readCount = 2){
-    saveRDS(se, "se.rds")
+                                    min.readCount = 2){
     options(scipen = 999)
     se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowData(se)$readCount
@@ -35,7 +34,7 @@ calculateGeneProportion = function(resultOutput){
     ungroup() %>%
     dplyr::select(-geneId)
   geneReadProp <- rowData(resultOutput)$readCount / countsTBL
-  rowData(resultOutput)$geneReadProp = geneReadProp
+  rowData(resultOutput)$geneReadProp = unlist(geneReadProp)
   return(resultOutput)
 }
 
