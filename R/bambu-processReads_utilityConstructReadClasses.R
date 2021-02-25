@@ -35,22 +35,12 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
         annotations, exonsByRC.spliced, stranded, verbose)
     exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
+    colDataDf <- DataFrame(name = runName, row.names = runName)
+    #TODO later remove assays = SimpleList(counts = counts)
     counts <- matrix(mcols(exonsByRC)$readCount,
         dimnames = list(names(exonsByRC), runName))
-    startSD <- matrix(mcols(exonsByRC)$startSD,
-        dimnames = list(names(exonsByRC), runName))
-    endSD <- matrix(mcols(exonsByRC)$endSD,
-        dimnames = list(names(exonsByRC), runName))
-    posStrandCounts <- matrix(mcols(exonsByRC)$readCount.posStrand,
-        dimnames = list(names(exonsByRC), runName))
-    colDataDf <- DataFrame(name = runName, row.names = runName)
-    mcols(exonsByRC) <- mcols(exonsByRC)[, c("chr.rc", "strand.rc", 
-        "start.rc", "end.rc","intronStarts", "intronEnds", "confidenceType")]
-    se <- SummarizedExperiment(rowRanges = exonsByRC, colData = colDataDf)
-    rowData(se)$counts = counts
-    rowData(se)$startSD = startSD
-    rowData(se)$endSD = endSD
-    rowData(se)$strand_bias = posStrandCounts
+    se <- SummarizedExperiment(assays = SimpleList(counts = counts),
+        rowRanges = exonsByRC, colData = colDataDf)
 
     return(se)
 }
@@ -93,7 +83,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         readStrand, readConfidence)
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
-        start.rc = start, end.rc = end, startSD = startSD, endSD = endSD, 
+        startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount)
     mcols(exonsByReadClass) <- readTable
@@ -173,7 +163,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         start = pmin(start(readRanges), intronStartCoordinatesInt),
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
-        alignmentStrand = as.factor(getStrandFromGrList(readGrgList)),)
+        alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+')
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
@@ -181,7 +171,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
         end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
         startSD = sd(start), endSD = sd(end), 
-        readCount.posStrand = sum(alignmentStrand=='+', na.rm = T),
+        readCount.posStrand = sum(alignmentStrand, na.rm = T),
         #readCount.sameStrand = sum(sameStrand),
         .groups = 'drop') %>% #arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -284,9 +274,9 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         summarise(start = max(start), end = min(end), .groups = "drop") %>%
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".", 
-            cur_group_id())) %>% ungroup()
+            cur_group_id())) %>% ungroup() %>%
+        mutate(alignmentStrand = as.character(strand(granges))[queryHits] == "+")
     readIds <- mcols(granges[hitsDF$queryHits])$id
-    hitsDF$alignmentStrand = as.factor(strand(granges))[hitsDF$queryHits]
     #previously it took the first rows strand for a read class id which could be wrong
     #coded in an alternative but its likely very slow....
     hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, 
@@ -294,7 +284,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         group_by(readClassId) %>% summarise(start = start[1], end = end[1], 
         strand = names(which.max(table(strand))), chr = chr[1], readCount = n(),
         startSD = sd(start), endSD = sd(end), 
-        readCount.posStrand = sum(alignmentStrand=='+')) %>% 
+        readCount.posStrand = sum(alignmentStrand)) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     exByReadClassUnspliced <- GenomicRanges::GRanges(
@@ -307,7 +297,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     exByReadClassUnspliced <- relist(exByReadClassUnspliced, partitioning)
     names(exByReadClassUnspliced) <- hitsDF$readClassId
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
-        start.rc = start, end.rc = end, intronStarts, intronEnds,
+        intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, readCount.posStrand)
     mcols(exByReadClassUnspliced) <- hitsDF
     return(list(exonsByReadClass = exByReadClassUnspliced, readIds = readIds))
@@ -334,8 +324,22 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
     return(hitsDF)
 }
 
+#' Main function which calls other gene id assigner functions
+#' Returns a list of gene ids for each read class
+#' @param grl a GrangesList object with read classes
+#' @param annotations a GrangesList object with annotations
+  assignGeneIds <- function(grl, annotations) {
+    geneIds <- assignGeneIdsByReference(grl, annotations) 
+    newGeneSet <- which(is.na(geneIds))
+    newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
+    geneIds[newGeneSet] <- newGeneIds
+  return(geneIds)
+  }
 
-
+#' Return gene ids for read classes which overlap
+#' with known annotations
+#' @param grl a GrangesList object with read classes
+#' @param annotations a GrangesList object with annotations
 assignGeneIdsByReference <- function(grl, annotations) {
     # (1) assign gene Ids based on first intron match to annotations
     geneRanges <- reducedRangesByGenes(annotations)
@@ -364,9 +368,9 @@ assignGeneIdsByReference <- function(grl, annotations) {
     return(geneIds)
     }
   
-  #for test purpose
-  #grl <- IRangesList(IRanges(c(1,90),c(5,95)), IRanges(c(10,20),c(15,25)), IRanges(c(20,30,40), c(25,35,45)),IRanges(c(40,50),c(45,55)), IRanges(c(50,60),c(55,65)), IRanges(c(70,80),c(75,85)),IRanges(c(80,90),c(85,95)), IRanges(c(200,210),c(205,215)), IRanges(c(300),c(305)))
-  
+  #' Create new gene ids for groups of overlapping read classes which 
+  #' don't overlap with known annotations. 
+  #' @param grl a GrangesList object with read classes
   assignGeneIdsNoReference <- function(grl) {
     newTxIds <- 1:length(grl)
     newGeneByNewTxId <- rep(NA, length(newTxIds))
@@ -401,6 +405,7 @@ assignGeneIdsByReference <- function(grl, annotations) {
     return(newGeneByNewTxId)
   }
   
+  #' Interal function which groups read classes that overlap
   assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap, 
         exonGeneMap_filter1, newExonId){
     # (3.1) second iteration: non assigned genes
@@ -444,6 +449,7 @@ assignGeneIdsByReference <- function(grl, annotations) {
     return(refGeneTxMap)
   }
 
+  #' Small function to meet bioconductor formatting requirements
   getRefGeneExonList = function(exonTxMap, geneExonMap){
     refGeneExonList <- left_join(exonTxMap, 
         dplyr::rename(exonTxMap, newExonId.merge=newExonId), 
@@ -455,12 +461,5 @@ assignGeneIdsByReference <- function(grl, annotations) {
         dplyr::select(newGeneId, newExonId.merge) %>% distinct()
     return(refGeneExonList)
   }
-    
-  assignGeneIds <- function(grl, annotations) {
-    geneIds <- assignGeneIdsByReference(grl, annotations) 
-    newGeneSet <- which(is.na(geneIds))
-    newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
-    geneIds[newGeneSet] <- newGeneIds
-  return(geneIds)
-  }
+
 

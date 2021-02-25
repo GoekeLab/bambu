@@ -1,46 +1,46 @@
+#' Assigns each read class geneScore and txScore
+#' @param se summerized experiment object with read classes/ranges
+#' @param genomeSequence genomeSequence
+#' @param annotations GRangesList of annotations
 txrange.scoreReadClasses = function(se, genomeSequence, annotations, 
   withAdapters = FALSE, min.readCount = 2){
+    saveRDS(se, "se.rds")
     options(scipen = 999)
     se = addRowData(se, genomeSequence, annotations)
-    thresholdIndex = which(rowSums(rowData(se)$counts)
+    thresholdIndex = which(rowData(se)$readCount
         >=min.readCount)
-    rowData(se)$geneScore = getGeneScore(se, thresholdIndex, 
-      method = "xgboost")
-    rowData(se)$txScore = getTranscriptScore(se, thresholdIndex, 
-      method = "xgboost")
-
+    rowData(se)$geneScore = getGeneScore(se, thresholdIndex)
+    rowData(se)$txScore = getTranscriptScore(se, thresholdIndex)
     return(se)
 }
 
+#' calculates labels and features used in model generation
 addRowData = function(se, genomeSequence, annotations){
-  exons = str_split(rowData(se)$intronStarts,",")
-  rowData(se)$numExons = sapply(exons, FUN = length)+1
-  rowData(se)$numExons[is.na(exons)] = 1
+  rowData(se)$numExons <- elementNROWS(rowRanges(se))
   rowData(se)$equal = isReadClassEqual(rowRanges(se), annotations)
   rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
   se = calculateGeneProportion(se)
   se = countPolyATerminals(se, genomeSequence)
- 
   return(se)
 }
 
+#' % of a genes read counts assigned to each read class
 calculateGeneProportion = function(resultOutput){
-  countsTBL <- as_tibble(rowData(resultOutput)$counts) %>%
+  countsTBL <- as_tibble(rowData(resultOutput)$readCount) %>%
     mutate(geneId = rowData(resultOutput)$GENEID) %>%
     group_by(geneId) %>%
     mutate_at(vars(-geneId), .funs = sum) %>%
     ungroup() %>%
     dplyr::select(-geneId)
-  geneReadProp <- rowData(resultOutput)$counts / countsTBL
-  rowData(resultOutput, withDimnames = F)$geneReadProp = geneReadProp
-  rowData(resultOutput)$totalGeneReadProp = 
-    rowSums(rowData(resultOutput)$counts / rowSums(countsTBL))
+  geneReadProp <- rowData(resultOutput)$readCount / countsTBL
+  rowData(resultOutput)$geneReadProp = geneReadProp
   return(resultOutput)
 }
 
-isReadClassEqual = function(query, subject, maxDist = 5){
+#' checks to see if a read classes intron junctions fully matches an annotation
+isReadClassEqual = function(query, subject){
     olapEqual = findOverlaps(cutStartEndFromGrangesList(query),
       cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal',
       select= 'first')
@@ -48,36 +48,34 @@ isReadClassEqual = function(query, subject, maxDist = 5){
     return(equal)
 }
 
+#' counts A/T's at 5' and 3' of RCs on genome
 countPolyATerminals = function(se, genomeSequence){
-  #counts A/T's at 5' and 3' of RCs on genome
-  #get all first/last exons
-
   start = min(start(rowRanges(se)))
   end = max(end(rowRanges(se)))
-  strand = unlist(runValue(strand(rowRanges(se))))
-  seqname = unlist(runValue(seqnames(rowRanges(se))))
+  strand = getStrandFromGrList(rowRanges(se))
+  seqname = getChrFromGrList(rowRanges(se))
   df = data.frame(start,end,strand,seqname)
   RCranges = makeGRangesFromDataFrame(df)
   strand(RCranges)[which(as.character(strand(RCranges))=='*')]='+'
   genomeSequence = checkInputSequence(genomeSequence)
   
-  startSeqs = as.character(BSgenome::getSeq(genomeSequence,resize(RCranges,10,
+  startSeqs = BSgenome::getSeq(genomeSequence,resize(RCranges,10,
     fix="start")[which(as.character(seqnames(RCranges)) %in%
-    names(genomeSequence))]))
-  endSeqs = as.character(BSgenome::getSeq(genomeSequence,resize(RCranges,10,
+    names(genomeSequence))])
+  endSeqs = BSgenome::getSeq(genomeSequence,resize(RCranges,10,
     fix="end")[which(as.character(seqnames(RCranges)) 
-    %in% names(genomeSequence))]))
+    %in% names(genomeSequence))])
   #count number of A's in the first/last 10 bp
   index = which(as.character(seqnames(RCranges)) %in% names(genomeSequence))
-  numAstart = rep(NA,nrow(se))  
-  numAstart[index] = str_count(startSeqs, "A")
-  numAend = rep(NA,nrow(se)) 
-  numAend[index] = str_count(endSeqs, "A")
+  numAstart = rep(0,nrow(se))  
+  numAstart[index] = letterFrequency(startSeqs, "A")
+  numAend = rep(0,nrow(se)) 
+  numAend[index] = letterFrequency(endSeqs, "A")
   
-  numTstart = rep(NA,nrow(se))  
-  numTstart[index] = str_count(startSeqs, "T")
-  numTend = rep(NA,nrow(se)) 
-  numTend[index] = str_count(endSeqs, "T")
+  numTstart = rep(0,nrow(se))  
+  numTstart[index] = letterFrequency(startSeqs, "T")
+  numTend = rep(0,nrow(se)) 
+  numTend[index] = letterFrequency(endSeqs, "T")
   
   rowData(se)$numAstart = numAstart
   rowData(se)$numAend = numAend
@@ -86,77 +84,40 @@ countPolyATerminals = function(se, genomeSequence){
   return(se)
 }
 
-prepareTranscriptModelFeatures = function(input, withAdapters = F){
-
-  labels = rowData(input)$equal
-  
-  features = getAgnosticFeatures(input)
-  
-  return(list(features = features, labels = labels))
+#' calculates a score based on how likely the read class is associated with a 
+#' real gene
+getGeneScore = function(se, thresholdIndex){
+  geneFeatures = prepareGeneModelFeatures(se[thresholdIndex,])
+  if(checkFeatures(geneFeatures)){
+  if(sum(geneFeatures$labels)==length(geneFeatures$labels) | 
+    sum(geneFeatures$labels)==0){geneModel = NULL}
+  geneModel = fit_xgb(geneFeatures$features,geneFeatures$labels)$cvfit
+  geneScore = as.numeric(predict(geneModel, as.matrix(geneFeatures$features), 
+      s = "lambda.min",type="response"))
+  names(geneScore) = geneFeatures$names
+  geneScore = geneScore[rowData(se)$GENEID]
+  } else {
+    message("Gene Score not calculated")
+    geneScore = rep(1,nrow(se))
+  }
+  return(geneScore)  
 }
 
-applyWeightedMean = function(x){
-  weighted.mean(x[1:(length(x)/2)],x[((length(x)/2)+1):length(x)], na.rm = T)
-}
-
-getAgnosticFeatures = function(input){
-  numReads = rowSums(rowData(input)$counts)
-  logNumReads = log(numReads, 2)
-  geneReadProp=rowData(input)$totalGeneReadProp
-  geneReadProp[is.na(geneReadProp)]=0
-  tx_strand_bias=(1-abs(0.5-(rowSums(rowData(input)$strand_bias)/numReads)))
-  SD = apply(cbind(rowData(input)$startSD, rowData(input)$counts),MARGIN = 1, 
-    FUN = applyWeightedMean)*-1
-  SD[which(is.na(SD))] = 1
-  SDend = apply(cbind(rowData(input)$endSD, rowData(input)$counts),1,
-    FUN = applyWeightedMean)*-1
-  SDend[which(is.na(SDend))] = 1
-  
-  numAstart = rowData(input)$numAstart
-  numAstart[is.infinite(numAstart)]=0
-  numAend = rowData(input)$numAend
-  numAend[is.infinite(numAend)]=0
-  numTstart = rowData(input)$numTstart
-  numTstart[is.infinite(numTstart)]=0
-  numTend = rowData(input)$numTend
-  numTend[is.infinite(numTend)]=0
-  transcriptProp = as.numeric(rowData(input)$transcriptProp)
-  transcriptProp[is.na(transcriptProp)] = 0
-  transcriptPropMin = as.numeric(rowData(input)$transcriptPropMin)
-  transcriptPropMin[is.na(transcriptPropMin)] = 0
-
-  features = cbind(numReads, SD, SDend, geneReadProp, tx_strand_bias,
-    numAstart, numAend, numTstart, numTend, transcriptProp,
-    transcriptPropMin)
-  
-  return(features)
-}
-
+#' calculate and format features by gene for model
 prepareGeneModelFeatures = function(se){
-  #group read classes by gene
-  #summerize the features
-  temp = by(rowData(se)$counts, rowData(se)$GENEID, sum)
+  temp = by(rowData(se)$readCount, rowData(se)$GENEID, sum)
   geneIDs = names(temp)
   labels = !grepl("gene.",geneIDs)
   numReads = as.numeric(temp)
   numReadsLog = log(numReads,2)
   numReadsLog[is.infinite(numReadsLog)]=0
 
-  strand_bias = 1-abs(0.5-(as.numeric(by(rowData(se)$strand_bias, 
+  strand_bias = 1-abs(0.5-(as.numeric(by(rowData(se)$readCount.posStrand, 
     rowData(se)$GENEID, sum))/numReads))
   strand_bias[is.na(strand_bias)]=0
   #how many read classes does a gene have
   numRCs = table(rowData(se)$GENEID)
-  
-  #number of non-subset read classes
-  subset = (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),
-    length)>=2 | (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),
-    length)==1 & rowData(se)$resultOutput.equal == "NOVEL" & 
-    rowData(se)$resultOutput.compatible != "non_compatible_match"))
-  subsetRCs = table(rowData(se)$GENEID[subset])
-  temp = numRCs
-  temp[names(subsetRCs)] = temp[names(subsetRCs)]-subsetRCs
-  numNonSubsetRCs = temp
+
   #max number of exons of the read classes for each gene
   numExons = as.numeric(by(rowData(se)$numExons, rowData(se)$GENEID, max))
   
@@ -170,29 +131,13 @@ prepareGeneModelFeatures = function(se){
     })
   highConfidence = as.numeric(highConfidence)
 
-  features = cbind(numReadsLog,strand_bias, numRCs, numNonSubsetRCs,
+  features = cbind(numReadsLog,strand_bias, numRCs,
     numExons, isSpliced, highConfidence)
 
   return(list(features=features, labels = labels, names = geneIDs))
 }
 
-getGeneScore = function(se, thresholdIndex, method = "sgboost"){
-  geneFeatures = prepareGeneModelFeatures(se[thresholdIndex,])
-    if(checkFeatures(geneFeatures)){
-    geneModel = trainGeneModel(geneFeatures$features, 
-      geneFeatures$labels, geneFeatures$names, method)
-    geneScore = calculateGeneScore(geneFeatures$features, geneFeatures$labels, 
-      geneFeatures$names, model = geneModel, method = method)$score
-    rowData(se)$geneScore = geneScore[rowData(se)$GENEID]
-    # seSorted = seTrimmed[order(geneScore, decreasing = T),]  
-    # rowData(seSorted)$FDR = cumsum(!grepl("gene.",
-    #   rowData(seSorted)$GENEID))/(1:nrow(rowData(seSorted)))
-    } else {
-      message("Gene Score not calculated")
-      rowData(se)$geneScore = rep(1,nrow(se))
-    }
-}
-
+#' ensures that the data is trainable after filtering
 checkFeatures = function(features){
   labels = features$labels
   if(sum(labels)==length(labels) | sum(labels)==0){
@@ -206,29 +151,7 @@ checkFeatures = function(features){
   return(T)
 }
 
-trainGeneModel = function(features, labels, names, 
-  method = "sgboost"){
-  if(sum(labels)==length(labels) | sum(labels)==0){return(NULL)}
-  geneScore = calculateGeneScore(features, labels, names, method = method)
-  return(geneScore$model$cvfit)
-}
-
-calculateGeneScore = function(features, labels, names, model = NULL, 
-  method = "xgboost"){
-  if(!is.null(model)){
-    score = as.numeric(predict(model, as.matrix(features), 
-      s = "lambda.min",type="response"))
-  } else{
-    result = calculateScore(features,labels, method = method)
-    model = result
-    score = as.numeric(predict(result$cvfit, as.matrix(features), 
-      s = "lambda.min",type="response"))
-  }
-  names(score) = names
-  
-  return(list(score=score, model = model))
-}
-
+#' calculates a score based on how likely a read class is full length
 getTranscriptScore = function(se, thresholdIndex, 
   method = "xgboost"){
   txFeatures = prepareTranscriptModelFeatures(se,
@@ -236,36 +159,52 @@ getTranscriptScore = function(se, thresholdIndex,
   if(checkFeatures(txFeatures)){
     txIndex = thresholdIndex[thresholdIndex %in% 
       which(!rowData(se)$novel)]
-    #txIndex = thresholdIndex
-    transcriptModel = trainTranscriptModel(txFeatures$features[txIndex,], 
-      txFeatures$labels[txIndex], method = method)
-    transcriptScore = predict(transcriptModel, txFeatures$features,
+    transcriptModel = fit_xgb(txFeatures$features[txIndex,], 
+      txFeatures$labels[txIndex])$cvfit
+    transcriptScore = predict(transcriptModel, as.matrix(txFeatures$features),
       s = "lambda.min", type="response")
-    rowData(se)$transcriptScore = transcriptScore
-    # seSorted = seFrac[order(transcriptScore, decreasing = T),]
-    # rowData(seSorted)$FDR = cumsum(rowData(seSorted)$equal != "NOVEL")/
-    # (1:nrow(rowData(seSorted)))
   } else {
     message("Transcript Score not calculated")
-    rowData(se)$transcriptScore = rep(1,nrow(se))
+    transcriptScore = rep(1,nrow(se))
   }
+  return(transcriptScore)
 }
 
-trainTranscriptModel = function(features, labels, 
-  method = "xgboost"){
-  result=calculateScore(features, labels, method = method)
-  return(result$cvfit)
+#' calculate and format read class features for model training
+prepareTranscriptModelFeatures = function(input, withAdapters = F){
+  labels = rowData(input)$equal
+  
+  numReads = rowData(input)$readCount
+  logNumReads = log(numReads, 2)
+  geneReadProp=rowData(input)$geneReadProp
+  geneReadProp[is.na(geneReadProp)]=0
+  tx_strand_bias=(1-abs(0.5-(rowData(input)$readCount.posStrand/numReads)))
+  SD = apply(cbind(rowData(input)$startSD, rowData(input)$readCount),MARGIN = 1, 
+    FUN = applyWeightedMean)*-1
+  SD[which(is.na(SD))] = 1
+  SDend = apply(cbind(rowData(input)$endSD, rowData(input)$readCount),1,
+    FUN = applyWeightedMean)*-1
+  SDend[which(is.na(SDend))] = 1
+  numAstart = rowData(input)$numAstart
+  numAstart[is.infinite(numAstart)]=0
+  numAend = rowData(input)$numAend
+  numAend[is.infinite(numAend)]=0
+  numTstart = rowData(input)$numTstart
+  numTstart[is.infinite(numTstart)]=0
+  numTend = rowData(input)$numTend
+  numTend[is.infinite(numTend)]=0
+  
+  features = cbind(numReads, SD, SDend, geneReadProp, tx_strand_bias,
+    numAstart, numAend, numTstart, numTend)
+  return(list(features = features, labels = labels))
 }
 
-calculateScore = function(input, labels, model = NULL, log = F, 
-  method = "xgboost"){
-  if(method == "xgboost"){
-    return(fit_xgb(input, labels))
-  } else{
-    return(fit_glmnet(input,labels, log = log))
-  }
+#' helper function to get weightedMean
+applyWeightedMean = function(x){
+  weighted.mean(x[1:(length(x)/2)],x[((length(x)/2)+1):length(x)], na.rm = T)
 }
 
+#train a model using xgboost, using part of the features as training set
 fit_xgb = function(features, labels) {
 
   # Sample the data into train, val and test sets
@@ -292,57 +231,4 @@ fit_xgb = function(features, labels) {
     testLabels = val_labels, trainCount = nrow(train_data), 
     indicesTest = val_idx))
   
-}
-
-fit_glmnet = function(input, labels, model = NULL, log = F) {
-  input = cbind(input,labels)
-  finalFeatureIndex = ncol(input)-1
-  sampleSizeTraining=0
-  sampleSizeValidation=0
-  if(is.null(model)){     #split data for training
-    fractionTraining   <- 0.60
-    fractionValidation <- 0.20
-    fractionTest       <- 0.20
-    sampleSizeTraining   <- floor(fractionTraining   * nrow(input))
-    sampleSizeValidation <- floor(fractionValidation * nrow(input))
-    sampleSizeTest       <- floor(fractionTest       * nrow(input))
-    indicesTraining    <- sort(sample(seq_len(nrow(input)), 
-      size=sampleSizeTraining))
-    indicesNotTraining <- setdiff(seq_len(nrow(input)), indicesTraining)
-    indicesValidation  <- sort(sample(indicesNotTraining, 
-      size=sampleSizeValidation))
-    indicesTest        <- setdiff(indicesNotTraining, indicesValidation)
-    dfTraining   <- input[indicesTraining, ]
-    dfValidation <- input[indicesValidation, ]
-    dfTest       <- input[indicesTest, ]
-    if(!log){
-      cvfit = cv.glmnet(as.matrix(rbind(dfTraining[,1:finalFeatureIndex],
-        dfValidation[,1:finalFeatureIndex])), 
-        c(dfTraining[,finalFeatureIndex+1],dfValidation[,finalFeatureIndex+1]),
-        family = "binomial", type.measure = "class")
-    } else {
-      cvfit = glmnet(as.matrix(rbind(dfTraining[,1:finalFeatureIndex],
-        dfValidation[,1:finalFeatureIndex])), c(dfTraining[,finalFeatureIndex+1],
-        dfValidation[,finalFeatureIndex+1]),family = "binomial", 
-        type.measure = "class")
-      }
-    } else{
-    dfTest = input
-    cvfit = model
-  }
-  if(!log){
-    score = as.numeric(predict(cvfit, 
-      newx = as.matrix(dfTest[,1:finalFeatureIndex]), 
-      s="lambda.min",type="response"))
-  } else {
-    score = as.numeric(predict(cvfit, 
-      newx = as.matrix(dfTest[,1:finalFeatureIndex]),
-      s = 0.01, type="response"))
-  }
-  testLabels = dfTest[,finalFeatureIndex+1]
-  testData = dfTest[,1:finalFeatureIndex]
-  return(list(score=score, cvfit=cvfit, testData = testData, 
-    testLabels=testLabels, 
-    trainCount = sampleSizeTraining + sampleSizeValidation, 
-    indicesTest = indicesTest))
 }

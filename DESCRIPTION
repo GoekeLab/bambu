@@ -43,8 +43,7 @@ Suggests:
     BSgenome,
     apeglm,
     utils,
-    DEXSeq,
-    txrange
+    DEXSeq
 Enhances: parallel
 SystemRequirements:
 biocViews: 
@@ -80,11 +79,9 @@ Imports:
     GenomicFeatures,
     GenomicRanges,
     stats,
-    glmnet,
     Rsamtools,
     methods,
     Rcpp,
-    stringr,
     BSgenome,
     xgboost
 VignetteBuilder: 
