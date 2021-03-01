@@ -227,7 +227,7 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
     negative_labels = sum(labels.train == 0)
     positive_labels = sum(labels.train == 1)
     cv.fit <- xgboost(data = data.train, 
-            label = labels.train, nthread=2, eta=1, max.depth=5, 
+            label = labels.train, nthread=1, eta=1, max.depth=5, 
             min_child_weight=5,lambda=0, alpha=10, gamma=0, subsample=0.7,
             colsample_bytree=0.7, nround= 300, objective = "binary:logistic", 
             eval_metric='error',

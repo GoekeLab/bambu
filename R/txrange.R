@@ -284,7 +284,7 @@ fit_xgb = function(features, labels) {
   negative_labels = sum(train_labels == 0)
   positive_labels = sum(train_labels == 1)
   xgb_time = system.time({xgb_model = xgboost(data = x_mat_train, 
-  label = train_labels, nthread=2, max.depth = 3, nround= 100, 
+  label = train_labels, nthread=1, max.depth = 3, nround= 100, 
   objective = "binary:logistic", 
   scale_pos_weight=negative_labels/positive_labels, verbose = 0)})
   xgb_probs = predict(xgb_model, x_mat_val)
