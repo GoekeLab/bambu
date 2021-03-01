@@ -208,7 +208,7 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
         negative_labels = sum(labels.train == 0)
         positive_labels = sum(labels.train == 1)
         cv.fit <- xgboost(data = data.train.cv, 
-            label = labels.train, nthread=2, eta=1, max.depth=5, 
+            label = labels.train.cv, nthread=2, eta=1, max.depth=5, 
             min_child_weight=5,lambda=0, alpha=10, gamma=0, subsample=0.7, 
             colsample_bytree=0.7, nround= 300, objective = "binary:logistic", 
             eval_metric='error',
@@ -216,7 +216,10 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
         predictions <- predict(cv.fit, data.train.cv.test)
         message('prediction accuracy (CV) (higher for splice 
                 donor than splice acceptor)')
-        testResults <- fisher.test(table(predictions > 0,labels.train.cv.test))
+        # Predictions is thresholded on 0.5 instead of 0 now to produce a 
+        # proper confusion matrix and fix an error that occurred with the
+        # argument to fisher.test()
+        testResults <- fisher.test(table(predictions > 0.5,labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
