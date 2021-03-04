@@ -281,12 +281,9 @@ fit_xgb = function(features, labels) {
   x_mat_val = as.matrix(val_data)
 
   # Fit the xgb model
-  negative_labels = sum(train_labels == 0)
-  positive_labels = sum(train_labels == 1)
-  xgb_time = system.time({xgb_model = xgboost(data = x_mat_train, 
-  label = train_labels, nthread=1, max.depth = 3, nround= 100, 
-  objective = "binary:logistic", 
-  scale_pos_weight=negative_labels/positive_labels, verbose = 0)})
+  xgb_model = xgboost(data = x_mat_train, label = train_labels,
+  nthread=1, nround= 50, objective = "binary:logistic", 
+  eval_metric='error', verbose = 0)
   xgb_probs = predict(xgb_model, x_mat_val)
   return (list(score = xgb_probs, cvfit = xgb_model, testData = val_data, 
     testLabels = val_labels, trainCount = nrow(train_data), 

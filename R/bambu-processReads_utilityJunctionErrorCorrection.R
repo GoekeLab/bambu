@@ -205,14 +205,11 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
         data.train.cv.test <- data.train[-mySample,]
         labels.train.cv.test <- labels.train[-mySample]
 
-        negative_labels = sum(labels.train == 0)
-        positive_labels = sum(labels.train == 1)
         cv.fit <- xgboost(data = data.train.cv, 
-            label = labels.train.cv, nthread=2, eta=1, max.depth=5, 
-            min_child_weight=5,lambda=0, alpha=10, gamma=0, subsample=0.7, 
-            colsample_bytree=0.7, nround= 300, objective = "binary:logistic", 
+            label = labels.train.cv, nthread=1, nround= 50, 
+            objective = "binary:logistic", 
             eval_metric='error',
-            scale_pos_weight=negative_labels/positive_labels, verbose = 0)
+            verbose = 0)
         predictions <- predict(cv.fit, data.train.cv.test)
         message('prediction accuracy (CV) (higher for splice 
                 donor than splice acceptor)')
@@ -224,14 +221,12 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
-    negative_labels = sum(labels.train == 0)
-    positive_labels = sum(labels.train == 1)
+
     cv.fit <- xgboost(data = data.train, 
-            label = labels.train, nthread=1, eta=1, max.depth=5, 
-            min_child_weight=5,lambda=0, alpha=10, gamma=0, subsample=0.7,
-            colsample_bytree=0.7, nround= 300, objective = "binary:logistic", 
+            label = labels.train, nthread=1, nround= 50, 
+            objective = "binary:logistic", 
             eval_metric='error',
-            scale_pos_weight=negative_labels/positive_labels, verbose = 0)
+            verbose = 0)
     predictions <- predict(cv.fit, data.test)
 
     return(list(predictions,cv.fit))
