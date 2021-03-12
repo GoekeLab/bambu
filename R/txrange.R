@@ -17,6 +17,7 @@ addRowData = function(se, genomeSequence, annotations){
   rowData(se)$numExons = sapply(exons, FUN = length)+1
   rowData(se)$numExons[is.na(exons)] = 1
   rowData(se)$equal = isReadClassEqual(rowRanges(se), annotations)
+  rowData(se)$compatible = isReadClassCompatible(rowRanges(se), annotations)
   rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
@@ -46,6 +47,31 @@ isReadClassEqual = function(query, subject, maxDist = 5){
       select= 'first')
     equal = !is.na(olapEqual)
     return(equal)
+}
+
+
+isReadClassCompatible =  function(query, subject){
+  olap = findOverlaps(cutStartEndFromGrangesList(query),
+                      cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'within')
+
+  query <- query[queryHits(olap)]
+  subject <- subject[subjectHits(olap)]
+  splice <- myGaps(query)
+
+  qrng <- ranges(query)
+  srng <- ranges(subject)
+  sprng <- ranges(splice)
+  
+  #calculates if query is a subset of subject
+  bnds <- elementNROWS(GenomicRanges::setdiff(qrng, srng)) == 0L
+  splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
+  
+  #count number of compatible matches
+  compatible = rep(0, length(query))
+  counts = by(bnds & splc, queryHits(olap), sum)
+  compatible[as.numeric(names(counts))] = counts
+  
+  return(compatible)
 }
 
 countPolyATerminals = function(se, genomeSequence){
@@ -149,10 +175,9 @@ prepareGeneModelFeatures = function(se){
   numRCs = table(rowData(se)$GENEID)
   
   #number of non-subset read classes
-  subset = (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),
-    length)>=2 | (sapply(str_split(rowData(se)$resultOutput.compatible, ';'),
-    length)==1 & rowData(se)$resultOutput.equal == "NOVEL" & 
-    rowData(se)$resultOutput.compatible != "non_compatible_match"))
+  subset = rowData(se)$compatible >= 2 | 
+              (rowData(se)$compatible == 1 & 
+              !rowData(se)$equal)
   subsetRCs = table(rowData(se)$GENEID[subset])
   temp = numRCs
   temp[names(subsetRCs)] = temp[names(subsetRCs)]-subsetRCs
