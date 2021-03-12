@@ -17,6 +17,7 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
 addRowData = function(se, genomeSequence, annotations){
   rowData(se)$numExons <- elementNROWS(rowRanges(se))
   rowData(se)$equal = isReadClassEqual(rowRanges(se), annotations)
+  rowData(se)$compatible = isReadClassCompatible(rowRanges(se), annotations)
   rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
@@ -47,7 +48,31 @@ isReadClassEqual = function(query, subject){
     return(equal)
 }
 
-#' counts A/T's at 5' and 3' of RCs on genome
+
+isReadClassCompatible =  function(query, subject){
+  olap = findOverlaps(cutStartEndFromGrangesList(query),
+                      cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'within')
+
+  query <- query[queryHits(olap)]
+  subject <- subject[subjectHits(olap)]
+  splice <- myGaps(query)
+
+  qrng <- ranges(query)
+  srng <- ranges(subject)
+  sprng <- ranges(splice)
+  
+  #calculates if query is a subset of subject
+  bnds <- elementNROWS(GenomicRanges::setdiff(qrng, srng)) == 0L
+  splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
+  
+  #count number of compatible matches
+  compatible = rep(0, length(query))
+  counts = by(bnds & splc, queryHits(olap), sum)
+  compatible[as.numeric(names(counts))] = counts
+  
+  return(compatible)
+}
+
 countPolyATerminals = function(se, genomeSequence){
   start = min(start(rowRanges(se)))
   end = max(end(rowRanges(se)))
@@ -116,7 +141,15 @@ prepareGeneModelFeatures = function(se){
   strand_bias[is.na(strand_bias)]=0
   #how many read classes does a gene have
   numRCs = table(rowData(se)$GENEID)
-
+  
+  #number of non-subset read classes
+  subset = rowData(se)$compatible >= 2 | 
+              (rowData(se)$compatible == 1 & 
+              !rowData(se)$equal)
+  subsetRCs = table(rowData(se)$GENEID[subset])
+  temp = numRCs
+  temp[names(subsetRCs)] = temp[names(subsetRCs)]-subsetRCs
+  numNonSubsetRCs = temp
   #max number of exons of the read classes for each gene
   numExons = as.numeric(by(rowData(se)$numExons, rowData(se)$GENEID, max))
   
@@ -219,12 +252,9 @@ fit_xgb = function(features, labels) {
   x_mat_val = as.matrix(val_data)
 
   # Fit the xgb model
-  negative_labels = sum(train_labels == 0)
-  positive_labels = sum(train_labels == 1)
-  xgb_time = system.time({xgb_model = xgboost(data = x_mat_train, 
-  label = train_labels, nthread=2, max.depth = 3, nround= 100, 
-  objective = "binary:logistic", 
-  scale_pos_weight=negative_labels/positive_labels, verbose = 0)})
+  xgb_model = xgboost(data = x_mat_train, label = train_labels,
+  nthread=1, nround= 50, objective = "binary:logistic", 
+  eval_metric='error', verbose = 0)
   xgb_probs = predict(xgb_model, x_mat_val)
   return (list(score = xgb_probs, cvfit = xgb_model, testData = val_data, 
     testLabels = val_labels, trainCount = nrow(train_data), 
