@@ -48,8 +48,9 @@ isReadClassEqual = function(query, subject){
     return(equal)
 }
 
-
 isReadClassCompatible =  function(query, subject){
+  compatible = rep(0, length(query))
+  
   olap = findOverlaps(cutStartEndFromGrangesList(query),
                       cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'within')
 
@@ -66,7 +67,6 @@ isReadClassCompatible =  function(query, subject){
   splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
   
   #count number of compatible matches
-  compatible = rep(0, length(query))
   counts = by(bnds & splc, queryHits(olap), sum)
   compatible[as.numeric(names(counts))] = counts
   

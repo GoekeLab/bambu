@@ -41,7 +41,6 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         dimnames = list(names(exonsByRC), runName))
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
         rowRanges = exonsByRC, colData = colDataDf)
-
     return(se)
 }
 
@@ -275,15 +274,17 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".", 
             cur_group_id())) %>% ungroup() %>%
-        mutate(alignmentStrand = as.character(strand(granges))[queryHits] == "+")
+        mutate(alignmentStrand = as.character(strand(granges))[queryHits] == "+")  %>%
+        mutate(readStart = start(granges)[queryHits]) %>%
+        mutate(readEnd = end(granges)[queryHits])
     readIds <- mcols(granges[hitsDF$queryHits])$id
     #previously it took the first rows strand for a read class id which could be wrong
     #coded in an alternative but its likely very slow....
-    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, strand, 
+    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, readStart, readEnd, strand, 
         readClassId, alignmentStrand) %>%
         group_by(readClassId) %>% summarise(start = start[1], end = end[1], 
-        strand = names(which.max(table(strand))), chr = chr[1], readCount = n(),
-        startSD = sd(start), endSD = sd(end), 
+        strand = strand[1], chr = chr[1], readCount = n(),
+        startSD = sd(readStart), endSD = sd(readEnd), 
         readCount.posStrand = sum(alignmentStrand)) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
