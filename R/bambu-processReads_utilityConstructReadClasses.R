@@ -274,9 +274,9 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".", 
             cur_group_id())) %>% ungroup() %>%
-        mutate(alignmentStrand = as.character(strand(granges))[queryHits] == "+")  %>%
-        mutate(readStart = start(granges)[queryHits]) %>%
-        mutate(readEnd = end(granges)[queryHits])
+        mutate(alignmentStrand = as.character(strand(granges))[queryHits] == "+",
+              readStart = start(granges)[queryHits],
+              readEnd = end(granges)[queryHits])
     readIds <- mcols(granges[hitsDF$queryHits])$id
     #previously it took the first rows strand for a read class id which could be wrong
     #coded in an alternative but its likely very slow....
