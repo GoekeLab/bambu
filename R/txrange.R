@@ -48,6 +48,7 @@ isReadClassEqual = function(query, subject){
     return(equal)
 }
 
+#' returns number of ref anno each read class is a subset of
 isReadClassCompatible =  function(query, subject){
   compatible = rep(0, length(query))
   
@@ -73,6 +74,7 @@ isReadClassCompatible =  function(query, subject){
   return(compatible)
 }
 
+#' returns number of A/T's each read class aligned 5' and 3' end
 countPolyATerminals = function(se, genomeSequence){
   start = min(start(rowRanges(se)))
   end = max(end(rowRanges(se)))
