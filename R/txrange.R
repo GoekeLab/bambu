@@ -123,7 +123,7 @@ getGeneScore = function(se, thresholdIndex){
       s = "lambda.min",type="response"))
   names(geneScore) = geneFeatures$names
   
-  geneScore = geneScore[order(geneScore, decreasing = T),]  
+  geneScore = geneScore[order(geneScore, decreasing = T)]  
   geneFDR = cumsum(geneFeatures$labels)/(1:length(geneScore))
   geneFDR = rev(cummin(rev(geneFDR)))
   names(geneFDR) = names(geneScore)
