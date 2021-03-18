@@ -10,6 +10,16 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
         >=min.readCount)
     rowData(se)$geneScore = getGeneScore(se, thresholdIndex)
     rowData(se)$txScore = getTranscriptScore(se, thresholdIndex)
+
+    #calculates the FDR for filtering RCs based on wanted precision
+    se = se[order(rowData(se)$geneScore, decreasing = T),]  
+    rowData(se)$geneFDR = cumsum(rowData(se)$novel)/(1:nrow(rowData(se)))
+    rowData(se)$geneFDR = rev(cummin(rev(rowData(se)$geneFDR)))
+
+    se = se[order(rowData(se)$txScore, decreasing = T),]  
+    rowData(se)$txFDR = cumsum(!rowData(se)$equal)/(1:nrow(rowData(se)))
+    rowData(se)$txFDR = rev(cummin(rev(rowData(se)$txFDR)))
+    
     return(se)
 }
 
