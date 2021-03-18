@@ -8,8 +8,15 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
     se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowData(se)$readCount
         >=min.readCount)
-    se = getGeneScore(se, thresholdIndex)
-    se = getTranscriptScore(se, thresholdIndex)
+    geneScore = getGeneScore(se, thresholdIndex)
+    rowData(se)$geneScore = geneScore$geneScore
+    rowData(se)$geneFDR = geneScore$geneFDR
+    txScore = getTranscriptScore(se, thresholdIndex)
+    rowData(se)$txScore = txScore$txScore
+    rowData(se)$txFDR = txScore$txFDR
+    
+    se = se[order(unlist(unique(seqnames(rowRanges(se)))), 
+      min(start(rowRanges(se)))),]
     
     return(se)
 }
@@ -123,20 +130,21 @@ getGeneScore = function(se, thresholdIndex){
       s = "lambda.min",type="response"))
   names(geneScore) = geneFeatures$names
   
+  labels = geneFeatures$labels[order(geneScore, decreasing = T)]  
   geneScore = geneScore[order(geneScore, decreasing = T)]  
-  geneFDR = cumsum(geneFeatures$labels)/(1:length(geneScore))
+  geneFDR = cumsum(labels)/(1:length(geneScore))
   geneFDR = rev(cummin(rev(geneFDR)))
   names(geneFDR) = names(geneScore)
 
-  rowData(se)$geneScore = geneScore[rowData(se)$GENEID]
-  rowData(se)$geneFDR = geneFDR[rowData(se)$GENEID]
+  geneScore = geneScore[rowData(se)$GENEID]
+  geneFDR = geneFDR[rowData(se)$GENEID]
 
   } else {
     message("Gene Score not calculated")
-    rowData(se)$geneScore = rep(1,nrow(se))
-    rowData(se)$geneFDR = rep(1,nrow(se))
+    geneScore = rep(1,nrow(se))
+    geneFDR = rep(1,nrow(se))
   }
-  return(se)  
+  return(list(geneScore = geneScore, geneFDR = geneFDR))  
 }
 
 #' calculate and format features by gene for model
@@ -205,20 +213,20 @@ getTranscriptScore = function(se, thresholdIndex,
       which(!rowData(se)$novel)]
     transcriptModel = fit_xgb(txFeatures$features[txIndex,], 
       txFeatures$labels[txIndex])$cvfit
-    rowData(se)$txScore = predict(transcriptModel, as.matrix(txFeatures$features),
+    txScore = predict(transcriptModel, as.matrix(txFeatures$features),
       s = "lambda.min", type="response")
 
     #calculates the FDR for filtering RCs based on wanted precision
-    se = se[order(rowData(se)$txScore, decreasing = T),]  
-    rowData(se)$txFDR = cumsum(!rowData(se)$equal)/(1:nrow(rowData(se)))
-    rowData(se)$txFDR = rev(cummin(rev(rowData(se)$txFDR)))
+    se = se[order(txScore, decreasing = T),]  
+    txFDR = cumsum(!rowData(se)$equal)/(1:nrow(rowData(se)))
+    txFDR = rev(cummin(rev(txFDR)))
 
   } else {
     message("Transcript Score not calculated")
-    rowData(se)$txScore = rep(1,nrow(se))
-    rowData(se)$txFDR = rep(1,nrow(se))
+    txScore = rep(1,nrow(se))
+    txFDR = rep(1,nrow(se))
   }
-  return(se)
+  return(list(txScore = txScore, txFDR = txFDR))
 }
 
 #' calculate and format read class features for model training
