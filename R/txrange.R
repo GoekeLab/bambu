@@ -117,6 +117,9 @@ getGeneScore = function(se, thresholdIndex){
   geneFDR = cumsum(labels)/(1:length(geneScore))
   geneFDR = rev(cummin(rev(geneFDR)))
   names(geneFDR) = names(geneScore)
+  
+  geneFDR = calculateFDR(geneScore, geneFeatures$labels)
+  names(geneFDR) = names(geneScore)
 
   geneScore = geneScore[rowData(se)$GENEID]
   geneFDR = geneFDR[rowData(se)$GENEID]
@@ -127,6 +130,18 @@ getGeneScore = function(se, thresholdIndex){
     geneFDR = rep(1,nrow(se))
   }
   return(list(geneScore = geneScore, geneFDR = geneFDR))  
+}
+
+#' calculates the minimum FDR for each score 
+calculateFDR = function(score, labels){
+  scoreOrder = order(score, decreasing = T)
+  orderSave = (1:length(score))[scoreOrder]
+  labels = labels[scoreOrder]
+  score = score[scoreOrder]
+  FDR = cumsum(labels)/(1:length(score))
+  FDR = rev(cummin(rev(FDR)))
+  FDR = FDR[orderSave]
+  return(FDR)
 }
 
 #' calculate and format features by gene for model
@@ -187,8 +202,7 @@ checkFeatures = function(features){
 
 #' calculates a score based on how likely a read class is full length
 getTranscriptScore = function(se, thresholdIndex){
-  txFeatures = prepareTranscriptModelFeatures(se,
-    withAdapters = withAdapters)
+  txFeatures = prepareTranscriptModelFeatures(se)
   if(checkFeatures(txFeatures)){
     txIndex = thresholdIndex[thresholdIndex %in% 
       which(!rowData(se)$novel)]
@@ -198,9 +212,7 @@ getTranscriptScore = function(se, thresholdIndex){
       s = "lambda.min", type="response")
 
     #calculates the FDR for filtering RCs based on wanted precision
-    se = se[order(txScore, decreasing = T),]  
-    txFDR = cumsum(!rowData(se)$equal)/(1:nrow(rowData(se)))
-    txFDR = rev(cummin(rev(txFDR)))
+    txFDR = calculateFDR(txScore, !rowData(se)$equal)
 
   } else {
     message("Transcript Score not calculated")
