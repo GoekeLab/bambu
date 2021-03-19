@@ -118,9 +118,8 @@ getGeneScore = function(se, thresholdIndex){
   if(checkFeatures(geneFeatures)){
   if(sum(geneFeatures$labels)==length(geneFeatures$labels) | 
     sum(geneFeatures$labels)==0){geneModel = NULL}
-  geneModel = fit_xgb(geneFeatures$features,geneFeatures$labels)$cvfit
-  geneScore = as.numeric(predict(geneModel, as.matrix(geneFeatures$features), 
-      s = "lambda.min",type="response"))
+  geneModel = fit_xgb(geneFeatures$features,geneFeatures$labels)
+  geneScore = predict(geneModel, as.matrix(geneFeatures$features))
   names(geneScore) = geneFeatures$names
   
   geneScore = geneScore[order(geneScore, decreasing = T)]  
@@ -204,9 +203,8 @@ getTranscriptScore = function(se, thresholdIndex,
     txIndex = thresholdIndex[thresholdIndex %in% 
       which(!rowData(se)$novel)]
     transcriptModel = fit_xgb(txFeatures$features[txIndex,], 
-      txFeatures$labels[txIndex])$cvfit
-    rowData(se)$txScore = predict(transcriptModel, as.matrix(txFeatures$features),
-      s = "lambda.min", type="response")
+      txFeatures$labels[txIndex])
+    rowData(se)$txScore = predict(transcriptModel, as.matrix(txFeatures$features))
 
     #calculates the FDR for filtering RCs based on wanted precision
     se = se[order(rowData(se)$txScore, decreasing = T),]  
