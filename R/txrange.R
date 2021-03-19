@@ -60,13 +60,7 @@ isReadClassCompatible =  function(query, subject){
   subject <- subject[subjectHits(olap)]
   splice <- myGaps(query)
 
-  qrng <- ranges(query)
-  srng <- ranges(subject)
-  sprng <- ranges(splice)
-  
-  #calculates if query is a subset of subject
-  bnds <- elementNROWS(GenomicRanges::setdiff(qrng, srng)) == 0L
-  splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
+comp <- myCompatibleTranscription(query = query, subject = subject, splice = splice)
   
   #count number of compatible matches
   counts = by(bnds & splc, queryHits(olap), sum)
