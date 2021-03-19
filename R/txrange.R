@@ -30,7 +30,11 @@ addRowData = function(se, genomeSequence, annotations){
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
   se = calculateGeneProportion(se)
-  se = countPolyATerminals(se, genomeSequence)
+  polyATerminals = countPolyATerminals(rowRanges(se), genomeSequence)
+  rowData(se)$numAstart = polyATerminals$numAstart
+  rowData(se)$numAend = polyATerminals$numAend
+  rowData(se)$numTstart = polyATerminals$numTstart
+  rowData(se)$numTend = polyATerminals$numTend
   return(se)
 }
 
@@ -83,39 +87,17 @@ isReadClassCompatible =  function(query, subject){
 }
 
 #' returns number of A/T's each read class aligned 5' and 3' end
-countPolyATerminals = function(se, genomeSequence){
-  start = min(start(rowRanges(se)))
-  end = max(end(rowRanges(se)))
-  strand = getStrandFromGrList(rowRanges(se))
-  seqname = getChrFromGrList(rowRanges(se))
-  df = data.frame(start,end,strand,seqname)
-  RCranges = makeGRangesFromDataFrame(df)
-  strand(RCranges)[which(as.character(strand(RCranges))=='*')]='+'
-  genomeSequence = checkInputSequence(genomeSequence)
-  
-  startSeqs = BSgenome::getSeq(genomeSequence,resize(RCranges,10,
-    fix="start")[which(as.character(seqnames(RCranges)) %in%
-    names(genomeSequence))])
-  endSeqs = BSgenome::getSeq(genomeSequence,resize(RCranges,10,
-    fix="end")[which(as.character(seqnames(RCranges)) 
-    %in% names(genomeSequence))])
-  #count number of A's in the first/last 10 bp
-  index = which(as.character(seqnames(RCranges)) %in% names(genomeSequence))
-  numAstart = rep(0,nrow(se))  
-  numAstart[index] = letterFrequency(startSeqs, "A")
-  numAend = rep(0,nrow(se)) 
-  numAend[index] = letterFrequency(endSeqs, "A")
-  
-  numTstart = rep(0,nrow(se))  
-  numTstart[index] = letterFrequency(startSeqs, "T")
-  numTend = rep(0,nrow(se)) 
-  numTend[index] = letterFrequency(endSeqs, "T")
-  
-  rowData(se)$numAstart = numAstart
-  rowData(se)$numAend = numAend
-  rowData(se)$numTstart = numTstart
-  rowData(se)$numTend = numTend
-  return(se)
+countPolyATerminals = function(grl, genomeSequence){
+  start <- resize(granges(unlist(selectStartExonsFromGrangesList(grl, exonNumber = 1), use.names = F)), width = 10, fix = 'start', ignore.strand=F)
+  end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, exonNumber = 1), use.names = F)), width = 10, fix = 'end', ignore.strand=F)
+  startTemp = start
+  start[strand(grl) == '-'] = end[strand(grl) == '-']
+  end[strand(grl) == '-'] = startTemp[strand(grl) == '-']
+  startSeqs = BSgenome::getSeq(genomeSequence,start)
+  endSeqs = BSgenome::getSeq(genomeSequence,end)
+  numATstart = letterFrequency(startSeqs, c("A","T"))
+  numATend= letterFrequency(endSeqs, c("A","T"))
+  return(data.frame(numAstart=numATstart[,"A"], numAend= numATend[,"A"],  numTstart=numATstart[,"T"], numTend=numATend[,"T"]))
 }
 
 #' calculates a score based on how likely the read class is associated with a 
