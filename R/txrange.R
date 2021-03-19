@@ -91,8 +91,8 @@ countPolyATerminals = function(grl, genomeSequence){
   start <- resize(granges(unlist(selectStartExonsFromGrangesList(grl, exonNumber = 1), use.names = F)), width = 10, fix = 'start', ignore.strand=F)
   end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, exonNumber = 1), use.names = F)), width = 10, fix = 'end', ignore.strand=F)
   startTemp = start
-  start[strand(grl) == '-'] = end[strand(grl) == '-']
-  end[strand(grl) == '-'] = startTemp[strand(grl) == '-']
+  start[which(unlist(unique(strand(grl))) == '-')] = end[which(unlist(unique(strand(grl))) == '-')]
+  end[which(unlist(unique(strand(grl))) == '-')] = startTemp[which(unlist(unique(strand(grl))) == '-')]
   startSeqs = BSgenome::getSeq(genomeSequence,start)
   endSeqs = BSgenome::getSeq(genomeSequence,end)
   numATstart = letterFrequency(startSeqs, c("A","T"))
@@ -186,8 +186,7 @@ checkFeatures = function(features){
 }
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(se, thresholdIndex, 
-  method = "xgboost"){
+getTranscriptScore = function(se, thresholdIndex){
   txFeatures = prepareTranscriptModelFeatures(se,
     withAdapters = withAdapters)
   if(checkFeatures(txFeatures)){
@@ -212,7 +211,7 @@ getTranscriptScore = function(se, thresholdIndex,
 }
 
 #' calculate and format read class features for model training
-prepareTranscriptModelFeatures = function(input, withAdapters = F){
+prepareTranscriptModelFeatures = function(input){
   labels = rowData(input)$equal
   
   numReads = rowData(input)$readCount
@@ -265,6 +264,7 @@ fit_xgb = function(features, labels) {
   nthread=1, nround= 50, objective = "binary:logistic", 
   eval_metric='error', verbose = 0)
   xgb_probs = predict(xgb_model, x_mat_val)
+
   return (list(score = xgb_probs, cvfit = xgb_model, testData = val_data, 
     testLabels = val_labels, trainCount = nrow(train_data), 
     indicesTest = val_idx))
