@@ -197,9 +197,12 @@ createExonsByReadClass <- function(readTable){
     exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)
     names(exonsByReadClass) <- readTable$readClassId
     
-    # add exon rank and exon_endRank
+    # add exon rank and exon_endRank and removes microExons
     unlistData <- unlist(exonsByReadClass, use.names = FALSE)
-    partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
+    unlistData <- unlistData[which(width(unlistData)!=0)]
+    exonCount = elementNROWS(exonsByReadClass)
+    exonCount[any(width(exonsByReadClass) == 0)] = exonCount[any(width(exonsByReadClass) == 0)]-1
+    partitioning <- PartitioningByEnd(cumsum(exonCount),
         names = NULL)
     exon_rank <- lapply(width(partitioning), seq, from = 1)
     exon_rank[which(readTable$strand == "-")] <-
