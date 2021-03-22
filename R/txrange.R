@@ -25,7 +25,9 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
 addRowData = function(se, genomeSequence, annotations){
   rowData(se)$numExons <- elementNROWS(rowRanges(se))
   rowData(se)$equal = isReadClassEqual(rowRanges(se), annotations)
-  rowData(se)$compatible = isReadClassCompatible(rowRanges(se), annotations)
+  compTable <- isReadClassCompatible(rowRanges(se), annotations)
+  rowData(se)$equal = compTable$equal
+  rowData(se)$compatible = compTable$compatible
   rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
   rowData(se)$novel = grepl("gene.", 
       rowData(se)$GENEID)
@@ -51,39 +53,41 @@ calculateGeneProportion = function(resultOutput){
   return(resultOutput)
 }
 
-#' checks to see if a read classes intron junctions fully matches an annotation
-isReadClassEqual = function(query, subject){
-    olapEqual = findOverlaps(cutStartEndFromGrangesList(query),
-      cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'equal',
-      select= 'first')
-    equal = !is.na(olapEqual)
-    return(equal)
-}
-
 #' returns number of ref anno each read class is a subset of
 isReadClassCompatible =  function(query, subject){
-  compatible = rep(0, length(query))
+  outData <- data.frame(compatible=rep(0, length(query)), equal = rep(FALSE, length(query)))
+  query <- cutStartEndFromGrangesList(query)
+  subject <- cutStartEndFromGrangesList(subject)
   
-  olap = findOverlaps(cutStartEndFromGrangesList(query),
-                      cutStartEndFromGrangesList(subject), ignore.strand = F, type = 'within')
-
+  ## reduce memory and speed footprint by reducing number of queries
+  # based on all intron match prefilter
+  # unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, use.ids = FALSE)
+  # intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject, 
+  #                                                             use.names = FALSE, 
+  #                                                             use.ids = FALSE)
+  # 
+  # partitioningQuery <- PartitioningByEnd(cumsum(elementNROWS(query)-1), 
+  #                                        names = NULL)
+  # allIntronMatchQuery <- all(relist(intronMatchesQuery, query))
+  
+  # olap = findOverlaps(query[allIntronMatchQuery],subject, ignore.strand = F, type = 'within')
+  olap = findOverlaps(query, subject, ignore.strand = F, type = 'within')
+  #query <- query[allIntronMatchQuery][queryHits(olap)]
   query <- query[queryHits(olap)]
   subject <- subject[subjectHits(olap)]
   splice <- myGaps(query)
 
-  qrng <- ranges(query)
-  srng <- ranges(subject)
-  sprng <- ranges(splice)
+  comp <- myCompatibleTranscription(query = query, subject = subject, splice = splice)
+  equal <- elementNROWS(query)==elementNROWS(subject) & comp
+
+  counts <- countQueryHits(olap[comp])
   
-  #calculates if query is a subset of subject
-  bnds <- elementNROWS(GenomicRanges::setdiff(qrng, srng)) == 0L
-  splc <- elementNROWS(GenomicRanges::intersect(srng, sprng)) == 0L
+  #outData$compatible[allIntronMatchQuery] <- counts
+  #outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
+  outData$compatible <- counts
+  outData$equal <- countQueryHits(olap[equal])>0
   
-  #count number of compatible matches
-  counts = by(bnds & splc, queryHits(olap), sum)
-  compatible[as.numeric(names(counts))] = counts
-  
-  return(compatible)
+  return(outData)
 }
 
 #' returns number of A/T's each read class aligned 5' and 3' end
