@@ -5,9 +5,11 @@
 txrange.scoreReadClasses = function(se, genomeSequence, annotations, 
                                     min.readCount = 2){
     options(scipen = 999)
-    se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowData(se)$readCount
-        >=min.readCount)
+                         >=min.readCount)
+    newRowData = addRowData(se[thresholdIndex,] , genomeSequence, annotations)
+    rowData(se)[names(newRowData)] = NA
+    rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     geneScore = getGeneScore(se[thresholdIndex,])
     rowData(se)$geneScore = rep(0,nrow(se))
     rowData(se)$geneFDR = rep(0,nrow(se))
@@ -26,24 +28,25 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
 
 #' calculates labels and features used in model generation
 addRowData = function(se, genomeSequence, annotations){
-  rowData(se)$numExons <- elementNROWS(rowRanges(se))
-  rowData(se)$equal = isReadClassEqual(rowRanges(se), annotations)
   compTable <- isReadClassCompatible(rowRanges(se), annotations)
-  rowData(se)$equal = compTable$equal
-  rowData(se)$compatible = compTable$compatible
   rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-  rowData(se)$novel = grepl("gene.", 
-      rowData(se)$GENEID)
+  rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
   countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
-                          geneIds=mcols(se)$GENEID)
-  rowData(se)$geneReadProp = countsTBL$geneReadProp
-  rowData(se)$geneReadCount = countsTBL$geneReadCount
+                                      geneIds=mcols(se)$GENEID)
   polyATerminals = countPolyATerminals(rowRanges(se), genomeSequence)
-  rowData(se)$numAstart = polyATerminals$numAstart
-  rowData(se)$numAend = polyATerminals$numAend
-  rowData(se)$numTstart = polyATerminals$numTstart
-  rowData(se)$numTend = polyATerminals$numTend
-  return(se)
+
+  rowData = data.frame(numExons = elementNROWS(rowRanges(se)),
+                          equal = compTable$equal,
+                          compatible = compTable$compatible,
+                          GENEID = assignGeneIds(rowRanges(se), annotations),
+                          novel = grepl("gene.", rowData(se)$GENEID),
+                          geneReadProp = countsTBL$geneReadProp,
+                          geneReadCount = countsTBL$geneReadCount,
+                          numAstart = polyATerminals$numAstart,
+                          numAend = polyATerminals$numAend,
+                          numTstart = polyATerminals$numTstart,
+                          numTend = polyATerminals$numTend)
+  return(rowData)
 }
 
 #' % of a genes read counts assigned to each read class
@@ -79,8 +82,10 @@ isReadClassCompatible =  function(query, subject){
 
 #' returns number of A/T's each read class aligned 5' and 3' end
 countPolyATerminals = function(grl, genomeSequence){
-  start <- resize(granges(unlist(selectStartExonsFromGrangesList(grl, exonNumber = 1), use.names = F)), width = 10, fix = 'start', ignore.strand=F)
-  end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, exonNumber = 1), use.names = F)), width = 10, fix = 'end', ignore.strand=F)
+  start <- resize(granges(unlist(selectStartExonsFromGrangesList(grl, exonNumber = 1), 
+                                 use.names = F)), width = 10, fix = 'start', ignore.strand=F)
+  end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, exonNumber = 1), 
+                               use.names = F)), width = 10, fix = 'end', ignore.strand=F)
   startTemp = start
   start[which(unlist(unique(strand(grl))) == '-')] = end[which(unlist(unique(strand(grl))) == '-')]
   end[which(unlist(unique(strand(grl))) == '-')] = startTemp[which(unlist(unique(strand(grl))) == '-')]
