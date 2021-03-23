@@ -175,8 +175,7 @@ getTranscriptScore = function(se){
   if(checkFeatures(txFeatures)){
     transcriptModel = fit_xgb(features, 
       txFeatures$labels)
-    txScore = predict(transcriptModel, as.matrix(features),
-      s = "lambda.min", type="response")
+    txScore = predict(transcriptModel, as.matrix(features))
 
     #calculates the FDR for filtering RCs based on wanted precision
     txFDR = calculateFDR(txScore, !rowData(se)$equal)
@@ -206,24 +205,10 @@ applyWeightedMean = function(x){
 
 #train a model using xgboost, using part of the features as training set
 fit_xgb = function(features, labels) {
-
-  # Sample the data into train, val and test sets
-  train_idx = sample(nrow(features), floor(0.9*nrow(features)))
-  val_idx = setdiff(seq_len(nrow(features)),train_idx)
-  
-  train_data= features[train_idx,]
-  val_data = features[val_idx,]
-  train_labels = labels[train_idx]
-  val_labels = labels[val_idx]
-  
-  x_mat_train = as.matrix(train_data)
-  x_mat_val = as.matrix(val_data)
-
   # Fit the xgb model
-  xgb_model = xgboost(data = x_mat_train, label = train_labels,
+  xgb_model = xgboost(data = as.matrix(features), label = labels,
   nthread=1, nround= 50, objective = "binary:logistic", 
   eval_metric='error', verbose = 0)
-  xgb_probs = predict(xgb_model, x_mat_val)
 
   return(xgb_model)
   
