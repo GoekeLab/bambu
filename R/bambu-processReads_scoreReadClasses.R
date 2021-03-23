@@ -15,7 +15,7 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
     txIndex = which(rowData(se)$readCount
                     >=min.readCount & !rowData(se)$novel)
-    txScore = getTranscriptScore(se[thresholdIndex,])
+    txScore = getTranscriptScore(se[txIndex,])
     rowData(se)$txScore = rep(0,nrow(se))
     rowData(se)$txFDR = rep(0,nrow(se))
     rowData(se)$txScore[thresholdIndex] = txScore$txScore
@@ -162,11 +162,15 @@ checkFeatures = function(features){
 
 #' calculates a score based on how likely a read class is full length
 getTranscriptScore = function(se){
-  txFeatures = prepareTranscriptModelFeatures(se)
+  txFeatures = prepareTranscriptModelFeatures(rowData(se))
+  features = cbind(txFeatures$numReads,txFeatures$startSD, txFeatures$endSD, 
+                   txFeatures$geneReadProp, txFeatures$tx_strand_bias,
+                   txFeatures$numAstart, txFeatures$numAend, 
+                   txFeatures$numTstart, txFeatures$numTend)
   if(checkFeatures(txFeatures)){
-    transcriptModel = fit_xgb(txFeatures$features, 
+    transcriptModel = fit_xgb(features, 
       txFeatures$labels)
-    txScore = predict(transcriptModel, as.matrix(txFeatures$features),
+    txScore = predict(transcriptModel, as.matrix(features),
       s = "lambda.min", type="response")
 
     #calculates the FDR for filtering RCs based on wanted precision
@@ -181,32 +185,13 @@ getTranscriptScore = function(se){
 }
 
 #' calculate and format read class features for model training
-prepareTranscriptModelFeatures = function(input){
-  labels = rowData(input)$equal
-  
-  numReads = rowData(input)$readCount
-  logNumReads = log(numReads, 2)
-  geneReadProp=rowData(input)$geneReadProp
-  geneReadProp[is.na(geneReadProp)]=0
-  tx_strand_bias=(1-abs(0.5-(rowData(input)$readCount.posStrand/numReads)))
-  SD = apply(cbind(rowData(input)$startSD, rowData(input)$readCount),MARGIN = 1, 
-    FUN = applyWeightedMean)*-1
-  SD[which(is.na(SD))] = 1
-  SDend = apply(cbind(rowData(input)$endSD, rowData(input)$readCount),1,
-    FUN = applyWeightedMean)*-1
-  SDend[which(is.na(SDend))] = 1
-  numAstart = rowData(input)$numAstart
-  numAstart[is.infinite(numAstart)]=0
-  numAend = rowData(input)$numAend
-  numAend[is.infinite(numAend)]=0
-  numTstart = rowData(input)$numTstart
-  numTstart[is.infinite(numTstart)]=0
-  numTend = rowData(input)$numTend
-  numTend[is.infinite(numTend)]=0
-  
-  features = cbind(numReads, SD, SDend, geneReadProp, tx_strand_bias,
-    numAstart, numAend, numTstart, numTend)
-  return(list(features = features, labels = labels))
+prepareTranscriptModelFeatures = function(rowData){
+  outData <- as_tibble(rowData) %>%  
+    dplyr::select(numReads = readCount, geneReadProp, startSD, endSD, numAstart, numAend, 
+           numTstart,numTend, tx_strand_bias = readCount.posStrand, labels = equal) %>%
+    mutate(numReads = log2(pmax(1,numReads)), 
+           tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))))
+  return(outData)
 }
 
 #' helper function to get weightedMean
