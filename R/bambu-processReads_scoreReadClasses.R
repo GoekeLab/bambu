@@ -8,15 +8,18 @@ txrange.scoreReadClasses = function(se, genomeSequence, annotations,
     se = addRowData(se, genomeSequence, annotations)
     thresholdIndex = which(rowData(se)$readCount
         >=min.readCount)
-    geneScore = getGeneScore(se, thresholdIndex)
-    rowData(se)$geneScore = geneScore$geneScore
-    rowData(se)$geneFDR = geneScore$geneFDR
-    txScore = getTranscriptScore(se, thresholdIndex)
-    rowData(se)$txScore = txScore$txScore
-    rowData(se)$txFDR = txScore$txFDR
-    
-    se = se[order(unlist(unique(seqnames(rowRanges(se)))), 
-      min(start(rowRanges(se)))),]
+    geneScore = getGeneScore(se[thresholdIndex,])
+    rowData(se)$geneScore = rep(0,nrow(se))
+    rowData(se)$geneFDR = rep(0,nrow(se))
+    rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
+    rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
+    txIndex = which(rowData(se)$readCount
+                    >=min.readCount & !rowData(se)$novel)
+    txScore = getTranscriptScore(se[thresholdIndex,])
+    rowData(se)$txScore = rep(0,nrow(se))
+    rowData(se)$txFDR = rep(0,nrow(se))
+    rowData(se)$txScore[thresholdIndex] = txScore$txScore
+    rowData(se)$txFDR[thresholdIndex] = txScore$txFDR
     
     return(se)
 }
@@ -91,38 +94,27 @@ countPolyATerminals = function(grl, genomeSequence){
 
 #' calculates a score based on how likely the read class is associated with a 
 #' real gene
-getGeneScore = function(se, thresholdIndex){
-  geneFeatures = prepareGeneModelFeatures(rowData(se)[thresholdIndex,])
-  labels = geneFeatures$labels
+getGeneScore = function(se){
+  geneFeatures = prepareGeneModelFeatures(rowData(se))
   features = cbind(geneFeatures$numReads, geneFeatures$strand_bias, 
                    geneFeatures$numRCs, geneFeatures$numExons, 
                    geneFeatures$isSpliced , geneFeatures$highConfidence)
   if(checkFeatures(geneFeatures)){
-  if(sum(labels)==length(labels) | 
-    sum(labels)==0){geneModel = NULL}
-  geneModel = fit_xgb(features,labels)
-  geneScore = as.numeric(predict(geneModel, as.matrix(features), 
-      s = "lambda.min",type="response"))
-  names(geneScore) = geneFeatures$names
-  
-  labels = labels[order(geneScore, decreasing = T)]  
-  geneScore = geneScore[order(geneScore, decreasing = T)]  
-  geneFDR = cumsum(labels)/(1:length(geneScore))
-  geneFDR = rev(cummin(rev(geneFDR)))
-  names(geneFDR) = names(geneScore)
-  
-  geneFDR = calculateFDR(geneScore, labels)
-  names(geneFDR) = names(geneScore)
-
-  geneScore = geneScore[rowData(se)$GENEID]
-  geneFDR = geneFDR[rowData(se)$GENEID]
+    geneModel = fit_xgb(features,geneFeatures$labels)
+    geneScore = as.numeric(predict(geneModel, as.matrix(features), 
+                                   s = "lambda.min",type="response"))
+    
+    geneFDR = calculateFDR(geneScore, labels)
+    geneRCMap = match(rowData(se)$GENEID, geneFeatures$names)
+    geneScore = geneScore[geneRCMap]
+    geneFDR = geneFDR[geneRCMap]
 
   } else {
     message("Gene Score not calculated")
     geneScore = rep(1,nrow(se))
     geneFDR = rep(1,nrow(se))
   }
-  return(list(geneScore = geneScore, geneFDR = geneFDR))  
+  return(data.frame(geneScore = geneScore, geneFDR = geneFDR))   
 }
 
 #' calculates the minimum FDR for each score 
@@ -133,7 +125,7 @@ calculateFDR = function(score, labels){
   score = score[scoreOrder]
   FDR = cumsum(labels)/(1:length(score))
   FDR = rev(cummin(rev(FDR)))
-  FDR = FDR[orderSave]
+  FDR = FDR[order(orderSave)]
   return(FDR)
 }
 
@@ -169,13 +161,11 @@ checkFeatures = function(features){
 }
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(se, thresholdIndex){
+getTranscriptScore = function(se){
   txFeatures = prepareTranscriptModelFeatures(se)
   if(checkFeatures(txFeatures)){
-    txIndex = thresholdIndex[thresholdIndex %in% 
-      which(!rowData(se)$novel)]
-    transcriptModel = fit_xgb(txFeatures$features[txIndex,], 
-      txFeatures$labels[txIndex])
+    transcriptModel = fit_xgb(txFeatures$features, 
+      txFeatures$labels)
     txScore = predict(transcriptModel, as.matrix(txFeatures$features),
       s = "lambda.min", type="response")
 
@@ -187,7 +177,7 @@ getTranscriptScore = function(se, thresholdIndex){
     txScore = rep(1,nrow(se))
     txFDR = rep(1,nrow(se))
   }
-  return(list(txScore = txScore, txFDR = txFDR))
+  return(data.frame(txScore = txScore, txFDR = txFDR))
 }
 
 #' calculate and format read class features for model training
