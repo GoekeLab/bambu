@@ -79,46 +79,8 @@ isReadClassCompatible =  function(query, subject){
 
   counts <- countQueryHits(olap[comp])
   
-  #outData$compatible[allIntronMatchQuery] <- counts
-  #outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
   outData$compatible[allIntronMatchQuery] <- counts
   outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
-  
-  return(outData)
-}
-
-isReadClassCompatibleOld =  function(query, subject){
-  outData <- data.frame(compatible=rep(0, length(query)), equal = rep(FALSE, length(query)))
-  query <- cutStartEndFromGrangesList(query)
-  subject <- cutStartEndFromGrangesList(subject)
-  
-  ## reduce memory and speed footprint by reducing number of queries
-  # based on all intron match prefilter
-  # unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, use.ids = FALSE)
-  # intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject, 
-  #                                                             use.names = FALSE, 
-  #                                                             use.ids = FALSE)
-  # 
-  # partitioningQuery <- PartitioningByEnd(cumsum(elementNROWS(query)-1), 
-  #                                        names = NULL)
-  # allIntronMatchQuery <- all(relist(intronMatchesQuery, query))
-  
-  # olap = findOverlaps(query[allIntronMatchQuery],subject, ignore.strand = F, type = 'within')
-  olap = findOverlaps(query, subject, ignore.strand = F, type = 'within')
-  #query <- query[allIntronMatchQuery][queryHits(olap)]
-  query <- query[queryHits(olap)]
-  subject <- subject[subjectHits(olap)]
-  splice <- myGaps(query)
-  
-  comp <- myCompatibleTranscription(query = query, subject = subject, splice = splice)
-  equal <- elementNROWS(query)==elementNROWS(subject) & comp
-  
-  counts <- countQueryHits(olap[comp])
-  
-  #outData$compatible[allIntronMatchQuery] <- counts
-  #outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
-  outData$compatible <- counts
-  outData$equal <- countQueryHits(olap[equal])>0
   
   return(outData)
 }
