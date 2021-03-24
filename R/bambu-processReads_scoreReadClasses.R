@@ -71,10 +71,8 @@ isReadClassCompatible =  function(query, subject){
 
   comp <- myCompatibleTranscription(query = query, subject = subject, splice = splice)
   equal <- elementNROWS(query)==elementNROWS(subject) & comp
-
-  counts <- countQueryHits(olap[comp])
-
-  outData$compatible <- counts
+  
+  outData$compatible <- countQueryHits(olap[comp])
   outData$equal <- countQueryHits(olap[equal])>0
   
   return(outData)
