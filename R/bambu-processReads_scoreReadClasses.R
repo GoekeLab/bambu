@@ -15,14 +15,14 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     newRowData = addRowData(se[thresholdIndex,] , genomeSequence, annotations)
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
-    geneScore = getGeneScore(se[thresholdIndex,])
+    geneScore = getGeneScore(rowData(se)[thresholdIndex,])
     rowData(se)$geneScore = rep(0,nrow(se))
     rowData(se)$geneFDR = rep(0,nrow(se))
     rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
     rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
     txIndex = which(rowData(se)$readCount
                     >=min.readCount & !rowData(se)$novel)
-    txScore = getTranscriptScore(se[txIndex,])
+    txScore = getTranscriptScore(rowData(se)[txIndex,])
     rowData(se)$txScore = rep(0,nrow(se))
     rowData(se)$txFDR = rep(0,nrow(se))
     rowData(se)$txScore[thresholdIndex] = txScore$txScore
@@ -95,21 +95,21 @@ countPolyATerminals = function(grl, genomeSequence){
 
 #' calculates a score based on how likely the read class is associated with a 
 #' real gene
-getGeneScore = function(se){
-  geneFeatures = prepareGeneModelFeatures(rowData(se))
+getGeneScore = function(rowData){
+  geneFeatures = prepareGeneModelFeatures(rowData)
+  features = dplyr::select(geneFeatures,!c(labels, names))
   if(checkFeatures(geneFeatures)){
-    geneModel = fit_xgb(dplyr::select(geneFeatures,!c(labels, names)),geneFeatures$labels)
-    geneScore = as.numeric(predict(geneModel, as.matrix(features), 
-                                   s = "lambda.min",type="response"))
+    geneModel = fit_xgb(features, geneFeatures$labels)
+    geneScore = as.numeric(predict(geneModel, as.matrix(features)))
     geneFDR = calculateFDR(geneScore, geneFeatures$labels)
-    geneRCMap = match(rowData(se)$GENEID, geneFeatures$names)
+    geneRCMap = match(rowData$GENEID, geneFeatures$names)
     geneScore = geneScore[geneRCMap]
     geneFDR = geneFDR[geneRCMap]
 
   } else {
     message("Gene Score not calculated")
-    geneScore = rep(1,nrow(se))
-    geneFDR = rep(1,nrow(se))
+    geneScore = rep(1,nrow(rowData))
+    geneFDR = rep(1,nrow(rowData))
   }
   return(data.frame(geneScore = geneScore, geneFDR = geneFDR))   
 }
@@ -160,8 +160,8 @@ checkFeatures = function(features){
 }
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(se){
-  txFeatures = prepareTranscriptModelFeatures(rowData(se))
+getTranscriptScore = function(rowData){
+  txFeatures = prepareTranscriptModelFeatures(rowData)
   features = cbind(txFeatures$numReads,txFeatures$startSD, txFeatures$endSD, 
                    txFeatures$geneReadProp, txFeatures$tx_strand_bias,
                    txFeatures$numAstart, txFeatures$numAend, 
@@ -172,12 +172,12 @@ getTranscriptScore = function(se){
     txScore = predict(transcriptModel, as.matrix(features))
 
     #calculates the FDR for filtering RCs based on wanted precision
-    txFDR = calculateFDR(txScore, !rowData(se)$equal)
+    txFDR = calculateFDR(txScore, !rowData$equal)
 
   } else {
     message("Transcript Score not calculated")
-    txScore = rep(1,nrow(se))
-    txFDR = rep(1,nrow(se))
+    txScore = rep(1,nrow(rowData))
+    txFDR = rep(1,nrow(rowData))
   }
   return(data.frame(txScore = txScore, txFDR = txFDR))
 }
