@@ -2,7 +2,7 @@
 #' @param se summerized experiment object with read classes/ranges
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
-txrange.scoreReadClasses = function(se, genomeSequence, annotations, 
+scoreReadClasses = function(se, genomeSequence, annotations, 
                                     min.readCount = 2){
     options(scipen = 999)
     thresholdIndex = which(rowData(se)$readCount
