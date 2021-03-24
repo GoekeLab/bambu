@@ -52,8 +52,8 @@ addRowData = function(se, genomeSequence, annotations){
 #' % of a genes read counts assigned to each read class
 calculateGeneProportion = function(counts, geneIds){
   countsTBL <- tibble(counts, geneIds) %>%
-    group_by(geneIds) %>% mutate(geneReadProp = counts/sum(counts), 
-                                 geneReadCount = sum(counts))
+    group_by(geneIds) %>% mutate(geneReadCount = sum(counts),
+                                 geneReadProp = counts/geneReadCount)
   return(countsTBL)
 
 }
