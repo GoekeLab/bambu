@@ -101,7 +101,7 @@ getGeneScore = function(se){
     geneModel = fit_xgb(dplyr::select(geneFeatures,!labels),geneFeatures$labels)
     geneScore = as.numeric(predict(geneModel, as.matrix(features), 
                                    s = "lambda.min",type="response"))
-    geneFDR = calculateFDR(geneScore, labels)
+    geneFDR = calculateFDR(geneScore, geneFeatures$labels)
     geneRCMap = match(rowData(se)$GENEID, geneFeatures$names)
     geneScore = geneScore[geneRCMap]
     geneFDR = geneFDR[geneRCMap]
