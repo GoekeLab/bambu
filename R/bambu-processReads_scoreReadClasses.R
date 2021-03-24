@@ -97,9 +97,9 @@ countPolyATerminals = function(grl, genomeSequence){
 #' real gene
 getGeneScore = function(rowData){
   geneFeatures = prepareGeneModelFeatures(rowData)
-  features = dplyr::select(geneFeatures,!c(labels, names))
+  features = dplyr::select(geneFeatures,!c(labels, names, GENEID))
   if(checkFeatures(geneFeatures)){
-    geneModel = fit_xgb(features, geneFeatures$labels)
+    geneModel = fit_xgb(as.matrix(features), geneFeatures$labels)
     geneScore = as.numeric(predict(geneModel, as.matrix(features)))
     geneFDR = calculateFDR(geneScore, geneFeatures$labels)
     geneRCMap = match(rowData$GENEID, geneFeatures$names)
