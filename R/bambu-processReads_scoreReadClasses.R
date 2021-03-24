@@ -4,7 +4,7 @@
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, 
                                     min.readCount = 2){
-    options(scipen = 999)
+    options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     thresholdIndex = which(rowData(se)$readCount
                          >=min.readCount)
     newRowData = addRowData(se[thresholdIndex,] , genomeSequence, annotations)

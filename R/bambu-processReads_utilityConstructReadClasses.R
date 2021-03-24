@@ -59,6 +59,8 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         base::match(uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
             allToUniqueJunctionMatch], names(uniqueJunctions))
 
+    unlisted_junctions2 <- correctIntronRangesNew(unlisted_junctions, 
+                           uniqueJunctions, correctedJunctionMatches)
     unlisted_junctions <- correctIntronRanges(unlisted_junctions, 
         uniqueJunctions, correctedJunctionMatches)
     if (isFALSE(stranded)) {
@@ -78,9 +80,24 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         mcols(unlisted_junctions)$id))) > 0)
     readConfidence[lowConfidenceReads] <- "lowConfidenceJunctionReads"
 
+    readTable2 <- createReadTable(unlisted_junctions2, readGrgList,
+                                 readStrand, readConfidence)
+    exonsByReadClass2 <- createExonsByReadClass(readTable2)
+    
+    
     readTable <- createReadTable(unlisted_junctions, readGrgList,
         readStrand, readConfidence)
     exonsByReadClass <- createExonsByReadClass(readTable)
+    
+    
+    sum(elementNROWS(exonsByReadClass)-1)
+    length(unlistIntrons(exonsByReadClass, use.ids = FALSE))
+    length(unlistIntrons(createExonsByReadClassTemp(readTable)))
+    
+    sum(elementNROWS(exonsByReadClass2)-1)
+    length(unlistIntrons(exonsByReadClass2, use.ids = FALSE))
+    length(unlistIntrons(createExonsByReadClassTemp(readTable2)))
+    
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
@@ -116,6 +133,30 @@ correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
     strand(unlisted_junctions) <-
         uniqueJunctions$strand.mergedHighConfJunction[correctedJunctionMatches]
     return(unlisted_junctions)
+}
+
+correctIntronRangesNew <- function(unlisted_junctions, uniqueJunctions,
+                                correctedJunctionMatches){
+  intronStartTMP <-
+    start(uniqueJunctions)[correctedJunctionMatches]
+  
+  intronEndTMP <-
+    end(uniqueJunctions)[correctedJunctionMatches]
+  
+  exon_0size <- 
+    which((intronEndTMP[-length(intronEndTMP)] - intronStartTMP[-1]) <= 1 &
+            mcols(unlisted_junctions)$id[-1] == 
+            mcols(unlisted_junctions)$id[-length(unlisted_junctions)])
+  
+  if (length(exon_0size)) 
+    intronStartTMP[-1][exon_0size] <-
+    intronEndTMP[-length(intronEndTMP)][exon_0size] + 1
+  
+  start(unlisted_junctions) <- intronStartTMP
+  end(unlisted_junctions) <- intronEndTMP
+  strand(unlisted_junctions) <-
+    uniqueJunctions$strand.mergedHighConfJunction[correctedJunctionMatches]
+  return(unlisted_junctions)
 }
 
 #' This function returns the inferred strand based on the number of +(plus) and
@@ -197,12 +238,9 @@ createExonsByReadClass <- function(readTable){
     exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)
     names(exonsByReadClass) <- readTable$readClassId
     
-    # add exon rank and exon_endRank and removes microExons
+    # add exon rank and exon_endRank
     unlistData <- unlist(exonsByReadClass, use.names = FALSE)
-    unlistData <- unlistData[which(width(unlistData)!=0)]
-    exonCount = elementNROWS(exonsByReadClass)
-    exonCount[any(width(exonsByReadClass) == 0)] = exonCount[any(width(exonsByReadClass) == 0)]-1
-    partitioning <- PartitioningByEnd(cumsum(exonCount),
+    partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
         names = NULL)
     exon_rank <- lapply(width(partitioning), seq, from = 1)
     exon_rank[which(readTable$strand == "-")] <-
@@ -215,7 +253,35 @@ createExonsByReadClass <- function(readTable){
     return(exonsByReadClass)
 }
 
-
+createExonsByReadClassTemp <- function(readTable){
+  exonsByReadClass <- makeGRangesListFromFeatureFragments(
+    seqnames = readTable$chr,
+    fragmentStarts = 
+      paste(readTable$start - 1, readTable$intronEnds, sep = ","),
+    fragmentEnds = 
+      paste(readTable$intronStarts, readTable$end + 1, sep = ","),
+    strand = readTable$strand)
+  # correct junction to exon differences in coordinates
+  exonsByReadClass <- narrow(exonsByReadClass, start = 2, end = -2)
+  names(exonsByReadClass) <- readTable$readClassId
+  
+  # add exon rank and exon_endRank and removes microExons
+  unlistData <- unlist(exonsByReadClass, use.names = FALSE)
+  unlistData <- unlistData[which(width(unlistData)!=0)]
+  exonCount = elementNROWS(exonsByReadClass)
+  exonCount[any(width(exonsByReadClass) == 0)] = exonCount[any(width(exonsByReadClass) == 0)]-1
+  partitioning <- PartitioningByEnd(cumsum(exonCount),
+                                    names = NULL)
+  exon_rank <- lapply(width(partitioning), seq, from = 1)
+  exon_rank[which(readTable$strand == "-")] <-
+    lapply(exon_rank[which(readTable$strand == "-")], rev)
+  # * assumes positive for exon ranking
+  exon_endRank <- lapply(exon_rank, rev)
+  unlistData$exon_rank <- unlist(exon_rank)
+  unlistData$exon_endRank <- unlist(exon_endRank)
+  exonsByReadClass <- relist(unlistData, partitioning)
+  return(exonsByReadClass)
+}
 
 #' generate exonByReadClass
 #' @importFrom GenomicRanges granges unlist reduce 
