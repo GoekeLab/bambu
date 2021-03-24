@@ -5,6 +5,11 @@
 scoreReadClasses = function(se, genomeSequence, annotations, 
                                     min.readCount = 2){
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
+    rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
+    countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
+                                        geneIds=mcols(se)$GENEID)
+    rowData(se)$geneReadProp = countsTBL$geneReadProp
+    rowData(se)$geneReadCount = countsTBL$geneReadCount
     thresholdIndex = which(rowData(se)$readCount
                          >=min.readCount)
     newRowData = addRowData(se[thresholdIndex,] , genomeSequence, annotations)
@@ -29,19 +34,12 @@ scoreReadClasses = function(se, genomeSequence, annotations,
 #' calculates labels and features used in model generation
 addRowData = function(se, genomeSequence, annotations){
   compTable <- isReadClassCompatible(rowRanges(se), annotations)
-  rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-  rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
-  countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
-                                      geneIds=mcols(se)$GENEID)
   polyATerminals = countPolyATerminals(rowRanges(se), genomeSequence)
 
   rowData = data.frame(numExons = elementNROWS(rowRanges(se)),
                           equal = compTable$equal,
                           compatible = compTable$compatible,
-                          GENEID = assignGeneIds(rowRanges(se), annotations),
                           novel = grepl("gene.", rowData(se)$GENEID),
-                          geneReadProp = countsTBL$geneReadProp,
-                          geneReadCount = countsTBL$geneReadCount,
                           numAstart = polyATerminals$numAstart,
                           numAend = polyATerminals$numAend,
                           numTstart = polyATerminals$numTstart,
