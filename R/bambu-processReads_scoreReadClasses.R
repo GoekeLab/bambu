@@ -162,10 +162,7 @@ checkFeatures = function(features){
 #' calculates a score based on how likely a read class is full length
 getTranscriptScore = function(rowData){
   txFeatures = prepareTranscriptModelFeatures(rowData)
-  features = cbind(txFeatures$numReads,txFeatures$startSD, txFeatures$endSD, 
-                   txFeatures$geneReadProp, txFeatures$tx_strand_bias,
-                   txFeatures$numAstart, txFeatures$numAend, 
-                   txFeatures$numTstart, txFeatures$numTend)
+  features = dplyr::select(txFeatures,!c(labels))
   if(checkFeatures(txFeatures)){
     transcriptModel = fit_xgb(features, 
       txFeatures$labels)
