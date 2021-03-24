@@ -97,14 +97,10 @@ countPolyATerminals = function(grl, genomeSequence){
 #' real gene
 getGeneScore = function(se){
   geneFeatures = prepareGeneModelFeatures(rowData(se))
-  features = cbind(geneFeatures$numReads, geneFeatures$strand_bias, 
-                   geneFeatures$numRCs, geneFeatures$numExons, 
-                   geneFeatures$isSpliced , geneFeatures$highConfidence)
   if(checkFeatures(geneFeatures)){
-    geneModel = fit_xgb(features,geneFeatures$labels)
+    geneModel = fit_xgb(dplyr::select(geneFeatures,!labels),geneFeatures$labels)
     geneScore = as.numeric(predict(geneModel, as.matrix(features), 
                                    s = "lambda.min",type="response"))
-    
     geneFDR = calculateFDR(geneScore, labels)
     geneRCMap = match(rowData(se)$GENEID, geneFeatures$names)
     geneScore = geneScore[geneRCMap]
@@ -141,7 +137,9 @@ prepareGeneModelFeatures = function(rowData){
               numRCs=n(), 
               numExons = max(numExons, na.rm=T), 
               isSpliced = numExons>1, 
-              numNonSubsetRCs = numRCs - sum(compatible >= 2 |(compatible == 1 & equal)),
+              # subsets are compatible with 2 or more RCs
+              # or compat with only 1 but are not equal
+              numNonSubsetRCs = numRCs - sum(compatible >= 2 |(compatible == 1 & !equal)),
               highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
     mutate(numReads = log2(pmax(1,numReads)))
   return(outData)
