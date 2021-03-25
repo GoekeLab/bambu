@@ -62,16 +62,28 @@ isReadClassCompatible =  function(query, subject){
   query <- cutStartEndFromGrangesList(query)
   subject <- cutStartEndFromGrangesList(subject)
   
-  olap = findOverlaps(query, subject, ignore.strand = F, type = 'within')
-  query <- query[queryHits(olap)]
+  # reduce memory and speed footprint by reducing number of queries
+  # based on all intron match prefilter
+  unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, use.ids = FALSE)
+  intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
+                                                              use.names = FALSE,
+                                                              use.ids = FALSE)
+  
+  partitioningQuery <- PartitioningByEnd(cumsum(elementNROWS(query)-1),
+                                         names = NULL)
+  allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
+  
+  olap = findOverlaps(query[allIntronMatchQuery],subject, ignore.strand = F, type = 'within')
+  query <- query[allIntronMatchQuery][queryHits(olap)]
+  
   subject <- subject[subjectHits(olap)]
   splice <- myGaps(query)
-
+  
   comp <- myCompatibleTranscription(query = query, subject = subject, splice = splice)
   equal <- elementNROWS(query)==elementNROWS(subject) & comp
   
-  outData$compatible <- countQueryHits(olap[comp])
-  outData$equal <- countQueryHits(olap[equal])>0
+  outData$compatible[allIntronMatchQuery] <- countQueryHits(olap[comp])
+  outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
   
   return(outData)
 }
