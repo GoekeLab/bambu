@@ -38,8 +38,8 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     txScore = getTranscriptScore(rowData(se)[txIndex,])
     rowData(se)$txScore = rep(0,nrow(se))
     rowData(se)$txFDR = rep(0,nrow(se))
-    rowData(se)$txScore[thresholdIndex] = txScore$txScore
-    rowData(se)$txFDR[thresholdIndex] = txScore$txFDR
+    rowData(se)$txScore[txIndex] = txScore$txScore
+    rowData(se)$txFDR[txIndex] = txScore$txFDR
     
     return(se)
 }
