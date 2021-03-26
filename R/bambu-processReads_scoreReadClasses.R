@@ -10,11 +10,24 @@ scoreReadClasses = function(se, genomeSequence, annotations,
                                         geneIds=mcols(se)$GENEID)
     rowData(se)$geneReadProp = countsTBL$geneReadProp
     rowData(se)$geneReadCount = countsTBL$geneReadCount
+
     thresholdIndex = which(rowData(se)$readCount
                          >=min.readCount)
-    newRowData = addRowData(se[thresholdIndex,] , genomeSequence, annotations)
+    compTable <- isReadClassCompatible(rowRanges(se[thresholdIndex,]), 
+                                       annotations)
+    polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
+                                         genomeSequence)
+    newRowData = data.frame(numExons = elementNROWS(rowRanges(se[thresholdIndex,])),
+                         equal = compTable$equal,
+                         compatible = compTable$compatible,
+                         novel = grepl("gene.", rowData(se[thresholdIndex,])$GENEID),
+                         numAstart = polyATerminals$numAstart,
+                         numAend = polyATerminals$numAend,
+                         numTstart = polyATerminals$numTstart,
+                         numTend = polyATerminals$numTend)
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
+    
     geneScore = getGeneScore(rowData(se)[thresholdIndex,])
     rowData(se)$geneScore = rep(0,nrow(se))
     rowData(se)$geneFDR = rep(0,nrow(se))
@@ -29,22 +42,6 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)$txFDR[thresholdIndex] = txScore$txFDR
     
     return(se)
-}
-
-#' calculates labels and features used in model generation
-addRowData = function(se, genomeSequence, annotations){
-  compTable <- isReadClassCompatible(rowRanges(se), annotations)
-  polyATerminals = countPolyATerminals(rowRanges(se), genomeSequence)
-
-  rowData = data.frame(numExons = elementNROWS(rowRanges(se)),
-                          equal = compTable$equal,
-                          compatible = compTable$compatible,
-                          novel = grepl("gene.", rowData(se)$GENEID),
-                          numAstart = polyATerminals$numAstart,
-                          numAend = polyATerminals$numAend,
-                          numTstart = polyATerminals$numTstart,
-                          numTend = polyATerminals$numTend)
-  return(rowData)
 }
 
 #' % of a genes read counts assigned to each read class
