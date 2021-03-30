@@ -10,6 +10,8 @@ scoreReadClasses = function(se, genomeSequence, annotations,
                                         geneIds=mcols(se)$GENEID)
     rowData(se)$geneReadProp = countsTBL$geneReadProp
     rowData(se)$geneReadCount = countsTBL$geneReadCount
+    novel = grepl("gene.", rowData(se)$GENEID)
+    numExons = elementNROWS(rowRanges(se))
 
     thresholdIndex = which(rowData(se)$readCount
                          >=min.readCount)
@@ -17,10 +19,8 @@ scoreReadClasses = function(se, genomeSequence, annotations,
                                        annotations)
     polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
                                          genomeSequence)
-    newRowData = data.frame(numExons = elementNROWS(rowRanges(se[thresholdIndex,])),
-                         equal = compTable$equal,
+    newRowData = data.frame(equal = compTable$equal,
                          compatible = compTable$compatible,
-                         novel = grepl("gene.", rowData(se[thresholdIndex,])$GENEID),
                          numAstart = polyATerminals$numAstart,
                          numAend = polyATerminals$numAend,
                          numTstart = polyATerminals$numTstart,
