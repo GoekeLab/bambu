@@ -29,15 +29,15 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
     geneScore = getGeneScore(rowData(se)[thresholdIndex,])
-    rowData(se)$geneScore = rep(0,nrow(se))
-    rowData(se)$geneFDR = rep(0,nrow(se))
+    rowData(se)$geneScore = rep(NA,nrow(se))
+    rowData(se)$geneFDR = rep(NA,nrow(se))
     rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
     rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
     txIndex = which(rowData(se)$readCount
                     >=min.readCount & !rowData(se)$novel)
     txScore = getTranscriptScore(rowData(se)[txIndex,])
-    rowData(se)$txScore = rep(0,nrow(se))
-    rowData(se)$txFDR = rep(0,nrow(se))
+    rowData(se)$txScore = rep(NA,nrow(se))
+    rowData(se)$txFDR = rep(NA,nrow(se))
     rowData(se)$txScore[txIndex] = txScore$txScore
     rowData(se)$txFDR[txIndex] = txScore$txFDR
     
@@ -103,12 +103,12 @@ countPolyATerminals = function(grl, genomeSequence){
 #' real gene
 getGeneScore = function(rowData){
   geneFeatures = prepareGeneModelFeatures(rowData)
-  features = dplyr::select(geneFeatures,!c(labels, names, GENEID))
+  features = dplyr::select(geneFeatures,!c(labels, GENEID))
   if(checkFeatures(geneFeatures)){
     geneModel = fit_xgb(as.matrix(features), geneFeatures$labels)
     geneScore = as.numeric(predict(geneModel, as.matrix(features)))
     geneFDR = calculateFDR(geneScore, geneFeatures$labels)
-    geneRCMap = match(rowData$GENEID, geneFeatures$names)
+    geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
     geneScore = geneScore[geneRCMap]
     geneFDR = geneFDR[geneRCMap]
 
@@ -123,21 +123,16 @@ getGeneScore = function(rowData){
 #' calculates the minimum FDR for each score 
 calculateFDR = function(score, labels){
   scoreOrder = order(score, decreasing = T)
-  orderSave = (1:length(score))[scoreOrder]
   labels = labels[scoreOrder]
   score = score[scoreOrder]
-  FDR = cumsum(labels)/(1:length(score))
-  FDR = rev(cummin(rev(FDR)))
-  FDR = FDR[order(orderSave)]
-  return(FDR)
+  FDR = cumsum(!labels)/(1:length(score))
+  return(FDR[order(scoreOrder)])
 }
 
 #' calculate and format features by gene for model
 prepareGeneModelFeatures = function(rowData){
   outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
     summarise(numReads = geneReadCount[1],
-              #numReads = sum(readCount, na.rm=T), 
-              names = GENEID[1],
               labels = !novel[1], 
               strand_bias = 1-abs(0.5-(sum(readCount.posStrand, na.rm=T)/numReads)), 
               numRCs=n(), 
@@ -175,7 +170,7 @@ getTranscriptScore = function(rowData){
     txScore = predict(transcriptModel, as.matrix(features))
 
     #calculates the FDR for filtering RCs based on wanted precision
-    txFDR = calculateFDR(txScore, !rowData$equal)
+    txFDR = calculateFDR(txScore, txFeatures$labels)
 
   } else {
     message("Transcript Score not calculated")
