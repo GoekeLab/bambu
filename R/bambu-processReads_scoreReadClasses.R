@@ -190,11 +190,6 @@ prepareTranscriptModelFeatures = function(rowData){
   return(outData)
 }
 
-#' helper function to get weightedMean
-applyWeightedMean = function(x){
-  weighted.mean(x[1:(length(x)/2)],x[((length(x)/2)+1):length(x)], na.rm = T)
-}
-
 #train a model using xgboost, using part of the features as training set
 fit_xgb = function(features, labels) {
   # Fit the xgb model
