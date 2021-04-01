@@ -11,7 +11,7 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)$geneReadProp = countsTBL$geneReadProp
     rowData(se)$geneReadCount = countsTBL$geneReadCount
     rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
-    rowData(se)$numExons = elementNROWS(rowRanges(se))
+    rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
 
     thresholdIndex = which(rowData(se)$readCount
                          >=min.readCount)

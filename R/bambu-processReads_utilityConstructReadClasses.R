@@ -61,10 +61,11 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
 
     unlisted_junctions <- correctIntronRanges(unlisted_junctions, 
         uniqueJunctions, correctedJunctionMatches)
-    toRemove = which(mcols(unlisted_junctions)$remove)
-    unlisted_junctions = unlisted_junctions[-toRemove]
-    allToUniqueJunctionMatch = allToUniqueJunctionMatch[-toRemove]
-    
+    if(any(mcols(unlisted_junctions)$remove)){  # remove microexons
+      toRemove = which(mcols(unlisted_junctions)$remove)
+      unlisted_junctions = unlisted_junctions[-toRemove]
+      allToUniqueJunctionMatch = allToUniqueJunctionMatch[-toRemove]
+    }
     if (isFALSE(stranded)) {
         readStrand <- correctReadStrandById(
             as.factor(strand(unlisted_junctions)),
@@ -161,11 +162,11 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         mcols(unlisted_junctions)$id)) + 2)
     readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
         intronStarts = 
-            unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
-                mcols(unlisted_junctions)$id), sep = ","),
+            unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
+                mcols(unlisted_junctions)$id), sep = ",")),
         intronEnds = 
-            unstrsplit(splitAsList(as.character(end(unlisted_junctions)),
-                mcols(unlisted_junctions)$id), sep = ","),
+            unname(unstrsplit(splitAsList(as.character(end(unlisted_junctions)),
+                mcols(unlisted_junctions)$id), sep = ",")),
         start = pmin(start(readRanges), intronStartCoordinatesInt),
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
