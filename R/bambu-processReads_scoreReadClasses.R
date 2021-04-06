@@ -126,7 +126,6 @@ calculateFDR = function(score, labels){
   labels = labels[scoreOrder]
   score = score[scoreOrder]
   FDR = cumsum(!labels)/(1:length(score))
-  FDR = rev(cummin(rev(FDR)))
   return(FDR[order(scoreOrder)])
 }
 
