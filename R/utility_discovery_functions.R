@@ -256,8 +256,7 @@ createRefFromReadClassSE <- function(readClassSe){
     startSD = assays(readClassSe)$startSD
     endSD = assays(readClassSe)$endSD
     assaysList = SimpleList(counts=counts,
-            start=start, end=end, strand_bias=strand_bias,
-            startSD=startSD, endSD=endSD)
+            start=start, end=end)
     readClassSeRef <- SummarizedExperiment(
         assays = assaysList,
         rowData = rowData, colData = colData(readClassSe))
