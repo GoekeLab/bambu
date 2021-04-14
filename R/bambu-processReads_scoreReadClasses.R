@@ -55,28 +55,31 @@ calculateGeneProportion = function(counts, geneIds){
 
 #' returns number of ref anno each read class is a subset of
 isReadClassCompatible =  function(query, subject){
-  outData <- data.frame(compatible=rep(0, length(query)), equal = rep(FALSE, length(query)))
+  outData <- data.frame(compatible=rep(0, length(query)), 
+    equal = rep(FALSE, length(query)))
   query <- cutStartEndFromGrangesList(query)
   subject <- cutStartEndFromGrangesList(subject)
   
   # reduce memory and speed footprint by reducing number of queries
   # based on all intron match prefilter
-  unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, use.ids = FALSE)
+  unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, 
+    use.ids = FALSE)
   intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
-                                                              use.names = FALSE,
-                                                              use.ids = FALSE)
+                        use.names = FALSE, use.ids = FALSE)
   
   partitioningQuery <- PartitioningByEnd(cumsum(elementNROWS(query)-1),
                                          names = NULL)
   allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
   
-  olap = findOverlaps(query[allIntronMatchQuery],subject, ignore.strand = F, type = 'within')
+  olap = findOverlaps(query[allIntronMatchQuery],subject, 
+    ignore.strand = F, type = 'within')
   query <- query[allIntronMatchQuery][queryHits(olap)]
   
   subject <- subject[subjectHits(olap)]
   splice <- myGaps(query)
   
-  comp <- myCompatibleTranscription(query = query, subject = subject, splice = splice)
+  comp <- myCompatibleTranscription(query = query, subject = subject,
+    splice = splice)
   equal <- elementNROWS(query)==elementNROWS(subject) & comp
   
   outData$compatible[allIntronMatchQuery] <- countQueryHits(olap[comp])
@@ -87,10 +90,12 @@ isReadClassCompatible =  function(query, subject){
 
 #' returns number of A/T's each read class aligned 5' and 3' end
 countPolyATerminals = function(grl, genomeSequence){
-  start <- resize(granges(unlist(selectStartExonsFromGrangesList(grl, exonNumber = 1), 
-                                 use.names = F)), width = 10, fix = 'start', ignore.strand=F)
-  end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, exonNumber = 1), 
-                               use.names = F)), width = 10, fix = 'end', ignore.strand=F)
+  start <- resize(granges(unlist(selectStartExonsFromGrangesList(grl, 
+      exonNumber = 1),use.names = F)), 
+      width = 10, fix = 'start', ignore.strand=F)
+  end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, 
+      exonNumber = 1), use.names = F)), 
+      width = 10, fix = 'end', ignore.strand=F)
   startSeqs = BSgenome::getSeq(genomeSequence,start)
   endSeqs = BSgenome::getSeq(genomeSequence,end)
   numATstart = letterFrequency(startSeqs, c("A","T"))
@@ -134,15 +139,15 @@ calculateFDR = function(score, labels){
 prepareGeneModelFeatures = function(rowData){
   outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
     summarise(numReads = geneReadCount[1],
-              labels = !novel[1], 
-              strand_bias = 1-abs(0.5-(sum(readCount.posStrand, na.rm=T)/numReads)), 
-              numRCs=n(), 
-              numExons = max(numExons, na.rm=T), 
-              isSpliced = numExons>1, 
-              # subsets are compatible with 2 or more RCs
-              # or compat with only 1 but are not equal
-              numNonSubsetRCs = numRCs - sum(compatible >= 2 |(compatible == 1 & !equal)),
-              highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
+        labels = !novel[1], 
+        strand_bias = 1-abs(0.5-(sum(readCount.posStrand, na.rm=T)/numReads)),
+        numRCs=n(), 
+        numExons = max(numExons, na.rm=T), 
+        isSpliced = numExons>1, 
+        # subsets are compatible with 2 or more RCs
+        # or compat with only 1 but are not equal
+        numNonSubsetRCs = numRCs-sum(compatible>=2 | (compatible==1 & !equal)),
+        highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
     mutate(numReads = log2(pmax(1,numReads)))
   return(outData)
 }
@@ -184,8 +189,9 @@ getTranscriptScore = function(rowData){
 #' calculate and format read class features for model training
 prepareTranscriptModelFeatures = function(rowData){
   outData <- as_tibble(rowData) %>%  
-    dplyr::select(numReads = readCount, geneReadProp, startSD, endSD, numAstart, numAend, 
-           numTstart,numTend, tx_strand_bias = readCount.posStrand, labels = equal) %>%
+    dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
+      numAstart, numAend, numTstart,numTend, 
+      tx_strand_bias = readCount.posStrand, labels = equal) %>%
     mutate(numReads = log2(pmax(1,numReads)), 
            tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))))
   return(outData)

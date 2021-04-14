@@ -216,7 +216,8 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
         # Predictions is thresholded on 0.5 instead of 0 now to produce a 
         # proper confusion matrix and fix an error that occurred with the
         # argument to fisher.test()
-        testResults <- fisher.test(table(predictions > 0.5,labels.train.cv.test))
+        testResults <- fisher.test(table(predictions > 0.5,
+                                         labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
@@ -283,10 +284,11 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
                 highConfJunctions$spliceSitePredictionStart.end,
                 highConfJunctions$spliceSitePredictionEnd.start,
                 highConfJunctions$spliceSitePredictionEnd.end)
-    # NAs set to 1 to make more sense as spliceSitePredictionList holds probabilities
+    # NAs set to 1 to make more sense 
+    # as spliceSitePredictionList holds probabilities
     spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 1 # NA
     # xgboost returns probabilities so threshold is set to 0.5 instead of 1
-    setReferenceJunctions <- (apply(spliceSitePredictionList > 0.5,1,sum) == 4) | 
+    setReferenceJunctions <- (apply(spliceSitePredictionList > 0.5,1,sum) == 4)
         highConfJunctions$annotatedJunction
     candidateJunctions$highConfJunctionPrediction[highConfidentJunctionSet] <- 
         setReferenceJunctions

@@ -119,7 +119,7 @@ correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
     uniqueJunctions$strand.mergedHighConfJunction[correctedJunctionMatches]
   
   #remove micro exons and adjust respective junctions
-  start(unlisted_junctions)[exon_0size+1] = start(unlisted_junctions)[exon_0size]
+  start(unlisted_junctions)[exon_0size+1]=start(unlisted_junctions)[exon_0size]
   mcols(unlisted_junctions)$remove <- rep(FALSE, length(unlisted_junctions))
   mcols(unlisted_junctions)$remove[exon_0size] <- TRUE
   
@@ -162,7 +162,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         mcols(unlisted_junctions)$id)) + 2)
     readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
         intronStarts = 
-            unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
+          unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
                 mcols(unlisted_junctions)$id), sep = ",")),
         intronEnds = 
             unname(unstrsplit(splitAsList(as.character(end(unlisted_junctions)),
@@ -280,14 +280,14 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         group_by(chr, start, end, strand) %>%
         mutate(readClassId = paste0("rc", confidenceType, ".", 
             cur_group_id())) %>% ungroup() %>%
-        mutate(alignmentStrand = as.character(strand(granges))[queryHits] == "+",
+        mutate(alignmentStrand = as.character(strand(granges))[queryHits]=="+",
               readStart = start(granges)[queryHits],
               readEnd = end(granges)[queryHits])
     readIds <- mcols(granges[hitsDF$queryHits])$id
-    #previously it took the first rows strand for a read class id which could be wrong
-    #coded in an alternative but its likely very slow....
-    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, readStart, readEnd, strand, 
-        readClassId, alignmentStrand) %>%
+    #previously it took the first rows strand for a read class id
+    # which could be wrong, coded in an alternative but its likely very slow...
+    hitsDF <- hitsDF %>% dplyr::select(chr, start, end, readStart, readEnd, 
+                                strand, readClassId, alignmentStrand) %>%
         group_by(readClassId) %>% summarise(start = start[1], end = end[1], 
         strand = strand[1], chr = chr[1], readCount = n(),
         startSD = sd(readStart), endSD = sd(readEnd), 
