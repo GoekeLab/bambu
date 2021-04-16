@@ -178,7 +178,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
         end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
         startSD = sd(start), endSD = sd(end), 
-        readCount.posStrand = sum(alignmentStrand, na.rm = T),
+        readCount.posStrand = sum(alignmentStrand, na.rm = TRUE),
         #readCount.sameStrand = sum(sameStrand),
         .groups = 'drop') %>% arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -379,14 +379,14 @@ assignGeneIdsByReference <- function(grl, annotations) {
   #' don't overlap with known annotations. 
   #' @param grl a GrangesList object with read classes
   assignGeneIdsNoReference <- function(grl) {
-    newTxIds <- 1:length(grl)
+    newTxIds <- seq_len(length(grl))
     newGeneByNewTxId <- rep(NA, length(newTxIds))
     if(length(grl)==0){
       return(newGeneByNewTxId)
     }
     newTxIdsByExon <- rep(newTxIds, times=elementNROWS(grl))
-    grSetReduced <- reduce(unlist(grl), with.revmap=T)
-    newExonId <- 1:length(grSetReduced)
+    grSetReduced <- reduce(unlist(grl), with.revmap=TRUE)
+    newExonId <- seq_len(length(grSetReduced))
     revmap=mcols(grSetReduced)$revmap
     newExonIdByMergedExon <- rep(newExonId, times=elementNROWS(revmap))
     newTxIdsByMergedExon <- newTxIdsByExon[unlist(revmap)]
@@ -404,8 +404,8 @@ assignGeneIdsByReference <- function(grl, annotations) {
         paste0("gene.", exonGeneMap_filter1$newGeneId)
     
     if(any(is.na(newGeneByNewTxId))) {
-      refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, geneExonMap, 
-        exonGeneMap_filter1, newExonId)
+      refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, 
+          geneExonMap, exonGeneMap_filter1, newExonId)
       newGeneIds = paste0("gene.", refGeneTxMap$newGeneId)
       newGeneByNewTxId[refGeneTxMap$newTxId]<-newGeneIds
     }
