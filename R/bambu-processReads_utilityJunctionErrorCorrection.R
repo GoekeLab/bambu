@@ -288,7 +288,8 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
     # as spliceSitePredictionList holds probabilities
     spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 1 # NA
     # xgboost returns probabilities so threshold is set to 0.5 instead of 1
-    setReferenceJunctions <- (apply(spliceSitePredictionList > 0.5,1,sum) == 4)
+    setReferenceJunctions <- 
+        (apply(spliceSitePredictionList > 0.5,1,sum) == 4) |
         highConfJunctions$annotatedJunction
     candidateJunctions$highConfJunctionPrediction[highConfidentJunctionSet] <- 
         setReferenceJunctions
