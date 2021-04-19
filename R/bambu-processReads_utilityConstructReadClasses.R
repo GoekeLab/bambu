@@ -62,9 +62,9 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     unlisted_junctions <- correctIntronRanges(unlisted_junctions, 
         uniqueJunctions, correctedJunctionMatches)
     if(any(mcols(unlisted_junctions)$remove)){  # remove microexons
-      toRemove = which(mcols(unlisted_junctions)$remove)
-      unlisted_junctions = unlisted_junctions[-toRemove]
-      allToUniqueJunctionMatch = allToUniqueJunctionMatch[-toRemove]
+        toRemove = which(mcols(unlisted_junctions)$remove)
+        unlisted_junctions = unlisted_junctions[-toRemove]
+        allToUniqueJunctionMatch = allToUniqueJunctionMatch[-toRemove]
     }
     if (isFALSE(stranded)) {
         readStrand <- correctReadStrandById(
@@ -102,28 +102,28 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
 #' @noRd
 correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
                                 correctedJunctionMatches){
-  intronStartTMP <-
-    start(uniqueJunctions)[correctedJunctionMatches]
-  
-  intronEndTMP <-
+    intronStartTMP <-
+            start(uniqueJunctions)[correctedJunctionMatches]
+
+    intronEndTMP <-
     end(uniqueJunctions)[correctedJunctionMatches]
-  
-  exon_0size <- 
-    which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
+
+    exon_0size <- 
+            which(intronStartTMP[-1] <= intronEndTMP[-length(intronEndTMP)] &
             mcols(unlisted_junctions)$id[-1] == 
             mcols(unlisted_junctions)$id[-length(unlisted_junctions)])
-  
-  start(unlisted_junctions) <- intronStartTMP
-  end(unlisted_junctions) <- intronEndTMP
-  strand(unlisted_junctions) <-
+
+    start(unlisted_junctions) <- intronStartTMP
+    end(unlisted_junctions) <- intronEndTMP
+    strand(unlisted_junctions) <-
     uniqueJunctions$strand.mergedHighConfJunction[correctedJunctionMatches]
-  
-  #remove micro exons and adjust respective junctions
-  start(unlisted_junctions)[exon_0size+1]=start(unlisted_junctions)[exon_0size]
-  mcols(unlisted_junctions)$remove <- rep(FALSE, length(unlisted_junctions))
-  mcols(unlisted_junctions)$remove[exon_0size] <- TRUE
-  
-  return(unlisted_junctions)
+
+    #remove micro exons and adjust respective junctions
+    start(unlisted_junctions)[exon_0size+1]=start(unlisted_junctions)[exon_0size]
+    mcols(unlisted_junctions)$remove <- rep(FALSE, length(unlisted_junctions))
+    mcols(unlisted_junctions)$remove[exon_0size] <- TRUE
+
+    return(unlisted_junctions)
 }
 
 #' This function returns the inferred strand based on the number of +(plus) and
@@ -162,7 +162,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         mcols(unlisted_junctions)$id)) + 2)
     readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
         intronStarts = 
-          unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
+            unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
                 mcols(unlisted_junctions)$id), sep = ",")),
         intronEnds = 
             unname(unstrsplit(splitAsList(as.character(end(unlisted_junctions)),
@@ -224,7 +224,7 @@ createExonsByReadClass <- function(readTable){
 #' @importFrom GenomicRanges granges unlist reduce 
 #' @noRd
 constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
-        readClassListSpliced, stranded, verbose = F){
+        readClassListSpliced, stranded, verbose = FALSE){
     start.ptm <- proc.time()
     referenceExons <- unique(c(granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
@@ -281,8 +281,8 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         mutate(readClassId = paste0("rc", confidenceType, ".", 
             cur_group_id())) %>% ungroup() %>%
         mutate(alignmentStrand = as.character(strand(granges))[queryHits]=="+",
-              readStart = start(granges)[queryHits],
-              readEnd = end(granges)[queryHits])
+            readStart = start(granges)[queryHits],
+            readEnd = end(granges)[queryHits])
     readIds <- mcols(granges[hitsDF$queryHits])$id
     #previously it took the first rows strand for a read class id
     # which could be wrong, coded in an alternative but its likely very slow...

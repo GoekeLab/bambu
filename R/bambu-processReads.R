@@ -103,7 +103,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         se <- readClassFile
     }
     return(se)
-
 }
 
 #' Check seqlevels for reads and annotations

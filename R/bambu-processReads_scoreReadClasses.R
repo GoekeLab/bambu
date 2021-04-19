@@ -59,25 +59,25 @@ isReadClassCompatible =  function(query, subject){
         equal = rep(FALSE, length(query)))
     query <- cutStartEndFromGrangesList(query)
     subject <- cutStartEndFromGrangesList(subject)
-  
-  # reduce memory and speed footprint by reducing number of queries
-  # based on all intron match prefilter
+
+    # reduce memory and speed footprint by reducing number of queries
+    # based on all intron match prefilter
     unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, 
-      use.ids = FALSE)
+        use.ids = FALSE)
     intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
                         use.names = FALSE, use.ids = FALSE)
-  
+
     partitioningQuery <- PartitioningByEnd(cumsum(elementNROWS(query)-1),
                                         names = NULL)
     allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
-  
+
     olap = findOverlaps(query[allIntronMatchQuery],subject, 
     ignore.strand = FALSE, type = 'within')
     query <- query[allIntronMatchQuery][queryHits(olap)]
-  
+
     subject <- subject[subjectHits(olap)]
     splice <- myGaps(query)
-  
+
     comp <- myCompatibleTranscription(query = query, subject = subject,
     splice = splice)
     equal <- elementNROWS(query)==elementNROWS(subject) & comp
@@ -136,10 +136,11 @@ calculateFDR = function(score, labels){
 
 #' calculate and format features by gene for model
 prepareGeneModelFeatures = function(rowData){
+    geneReadCount = NA
     outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
     summarise(numReads = geneReadCount[1],
         labels = !novel[1], 
-        strand_bias = 1-abs(0.5-(sum(readCount.posStrand, na.rm=TRUE)/numReads)),
+        strand_bias=1-abs(0.5-(sum(readCount.posStrand, na.rm=TRUE)/numReads)),
         numRCs=n(), 
         numExons = max(numExons, na.rm=TRUE), 
         isSpliced = numExons>1, 
@@ -148,7 +149,7 @@ prepareGeneModelFeatures = function(rowData){
         numNonSubsetRCs = numRCs-sum(compatible>=2 | (compatible==1 & !equal)),
         highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
     mutate(numReads = log2(pmax(1,numReads)))
-  return(outData)
+    return(outData)
 }
 
 #' ensures that the data is trainable after filtering
@@ -159,8 +160,8 @@ checkFeatures = function(features){
     return(FALSE)
     }
     if(length(labels)<50){
-      message("Not enough data points")
-      return(FALSE)
+        message("Not enough data points")
+        return(FALSE)
     }
     return(TRUE)
 }
