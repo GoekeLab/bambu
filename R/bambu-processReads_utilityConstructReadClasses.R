@@ -119,7 +119,8 @@ correctIntronRanges <- function(unlisted_junctions, uniqueJunctions,
     uniqueJunctions$strand.mergedHighConfJunction[correctedJunctionMatches]
 
     #remove micro exons and adjust respective junctions
-    start(unlisted_junctions)[exon_0size+1]=start(unlisted_junctions)[exon_0size]
+    start(unlisted_junctions)[exon_0size+1]=
+        start(unlisted_junctions)[exon_0size]
     mcols(unlisted_junctions)$remove <- rep(FALSE, length(unlisted_junctions))
     mcols(unlisted_junctions)$remove[exon_0size] <- TRUE
 
@@ -162,8 +163,8 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         mcols(unlisted_junctions)$id)) + 2)
     readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
         intronStarts = 
-            unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
-                mcols(unlisted_junctions)$id), sep = ",")),
+        unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
+            mcols(unlisted_junctions)$id), sep = ",")),
         intronEnds = 
             unname(unstrsplit(splitAsList(as.character(end(unlisted_junctions)),
                 mcols(unlisted_junctions)$id), sep = ",")),
@@ -178,8 +179,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
         end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
         startSD = sd(start), endSD = sd(end), 
-        readCount.posStrand = sum(alignmentStrand, na.rm = TRUE),
-        #readCount.sameStrand = sum(sameStrand),
+        readCount.posStrand = sum(alignmentStrand),#, na.rm = TRUE),
         .groups = 'drop') %>% arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
     return(readTable)
@@ -335,13 +335,13 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' Returns a list of gene ids for each read class
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
-  assignGeneIds <- function(grl, annotations) {
+assignGeneIds <- function(grl, annotations) {
     geneIds <- assignGeneIdsByReference(grl, annotations) 
     newGeneSet <- which(is.na(geneIds))
     newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
     geneIds[newGeneSet] <- newGeneIds
-  return(geneIds)
-  }
+    return(geneIds)
+}
 
 #' Return gene ids for read classes which overlap
 #' with known annotations
@@ -374,15 +374,15 @@ assignGeneIdsByReference <- function(grl, annotations) {
     
     return(geneIds)
     }
-  
-  #' Create new gene ids for groups of overlapping read classes which 
-  #' don't overlap with known annotations. 
-  #' @param grl a GrangesList object with read classes
-  assignGeneIdsNoReference <- function(grl) {
+
+#' Create new gene ids for groups of overlapping read classes which 
+#' don't overlap with known annotations. 
+#' @param grl a GrangesList object with read classes
+assignGeneIdsNoReference <- function(grl) {
     newTxIds <- seq_len(length(grl))
     newGeneByNewTxId <- rep(NA, length(newTxIds))
     if(length(grl)==0){
-      return(newGeneByNewTxId)
+    return(newGeneByNewTxId)
     }
     newTxIdsByExon <- rep(newTxIds, times=elementNROWS(grl))
     grSetReduced <- reduce(unlist(grl), with.revmap=TRUE)
@@ -404,16 +404,16 @@ assignGeneIdsByReference <- function(grl, annotations) {
         paste0("gene.", exonGeneMap_filter1$newGeneId)
     
     if(any(is.na(newGeneByNewTxId))) {
-      refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, 
-          geneExonMap, exonGeneMap_filter1, newExonId)
-      newGeneIds = paste0("gene.", refGeneTxMap$newGeneId)
-      newGeneByNewTxId[refGeneTxMap$newTxId]<-newGeneIds
+        refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, 
+            geneExonMap, exonGeneMap_filter1, newExonId)
+        newGeneIds = paste0("gene.", refGeneTxMap$newGeneId)
+        newGeneByNewTxId[refGeneTxMap$newTxId]<-newGeneIds
     }
     return(newGeneByNewTxId)
-  }
-  
-  #' Interal function which groups read classes that overlap
-  assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap, 
+}
+
+#' Interal function which groups read classes that overlap
+assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap, 
         exonGeneMap_filter1, newExonId){
     # (3.1) second iteration: non assigned genes
     geneTxMap <- geneTxMap %>% 
@@ -454,10 +454,10 @@ assignGeneIdsByReference <- function(grl, annotations) {
         by=c('newGeneId.merge'='newGeneId')) %>% 
         dplyr::select(newGeneId, newTxId)) %>% distinct()
     return(refGeneTxMap)
-  }
+}
 
-  #' Small function to meet bioconductor formatting requirements
-  getRefGeneExonList = function(exonTxMap, geneExonMap){
+#' Small function to meet bioconductor formatting requirements
+getRefGeneExonList = function(exonTxMap, geneExonMap){
     refGeneExonList <- left_join(exonTxMap, 
         dplyr::rename(exonTxMap, newExonId.merge=newExonId), 
         by = "newTxId") %>% 
@@ -467,6 +467,6 @@ assignGeneIdsByReference <- function(grl, annotations) {
         distinct() %>% left_join(geneExonMap, by = "newExonId")  %>%  
         dplyr::select(newGeneId, newExonId.merge) %>% distinct()
     return(refGeneExonList)
-  }
+}
 
 
