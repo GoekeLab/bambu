@@ -179,7 +179,7 @@ createReadTable <- function(unlisted_junctions, readGrgList,
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
         end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
         startSD = sd(start), endSD = sd(end), 
-        readCount.posStrand = sum(alignmentStrand),#, na.rm = TRUE),
+        readCount.posStrand = sum(alignmentStrand, na.rm = TRUE),
         .groups = 'drop') %>% arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
     return(readTable)

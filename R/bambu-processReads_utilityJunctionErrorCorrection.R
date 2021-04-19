@@ -199,7 +199,7 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
                             show.cv=TRUE, maxSize.cv=10000){
     if (show.cv) {
         mySample <- sample(seq_along(labels.train),
-                           min(floor(length(labels.train)/2),maxSize.cv))
+                        min(floor(length(labels.train)/2),maxSize.cv))
         data.train.cv <- data.train[mySample,]
         labels.train.cv <- labels.train[mySample]
         data.train.cv.test <- data.train[-mySample,]
@@ -217,7 +217,7 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
         # proper confusion matrix and fix an error that occurred with the
         # argument to fisher.test()
         testResults <- fisher.test(table(predictions > 0.5,
-                                         labels.train.cv.test))
+                                        labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
