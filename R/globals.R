@@ -28,12 +28,12 @@ if (getRversion() >= "2.15.1") {
         "dObs", "endScore", "firstExonWidth", "fullTx", "junctionEndName",
         "junctionStartName", "minEquiRC", "multi_align", "par_status",
         "rc_width", "spliceMotif", "startScore", "theta", "totalWidth",
-        "txNumber", "txNumberExpected", "tx_id_new", "tx_len", "tx_ori","counts",
-        "intersectWidth", "newGeneId", "newTxId", "newGeneId.merge", "newTxId", 
-        "newGeneId","ntx","geneReadCount","startSD","endSD",
-        "readCount.posStrand","alignmentStrand","newExonId","newExonId.merge",
-        "newGeneId","readStart","readEnd","novel","numReads","numExons",
-        "numRCs","geneReadProp","numAstart", "numAend","numTstart","numTend",
-        "tx_strand_bias"
+        "txNumber", "txNumberExpected", "tx_id_new", "tx_len", "tx_ori",
+        "counts","intersectWidth", "newGeneId", "newTxId", 
+        "newGeneId.merge", "newTxId", "newGeneId","nTx","geneReadCount",
+        "startSD","endSD","readCount.posStrand","alignmentStrand","newExonId",
+        "newExonId.merge","newGeneId","readStart","readEnd","novel",
+        "numReads","numExons","numRCs","geneReadProp","numAstart", "numAend",
+        "numTstart","numTend","tx_strand_bias"
     ))
 }
