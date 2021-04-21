@@ -85,8 +85,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
-    seqlevels(se) <- refSeqLevels
-    
+    GenomeInfoDb::seqlevels(se) <- refSeqLevels
+    se = scoreReadClasses(se, genomeSequence, annotations)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
