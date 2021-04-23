@@ -57,7 +57,15 @@ se_list <- bambu.processReads(test.bam, bambuAnnotations,
 se <- se_list[[1]]
 se <- se[assays(se)$count!=1,]
 
-saveRDS(se, 'se_forCalculatingGeneAndTranscriptScore.rds')
+saveRDS(se, './inst/extdata/se_forCalculatingGeneAndTranscriptScore.rds')
+
+# Generates the vector of scores and labels for testing calculateFDR()
+set.seed(1)
+scores = runif(n=100000, min=0, max=1)
+labels = sample(x=c(0,1), size=100000, replace=T)
+
+writeLines(as.character(scores), './inst/extdata/calculateFDR_arg_scores.txt')
+writeLines(as.character(labels), './inst/extdata/calculateFDR_arg_labels.txt')
 
 data1 <- data.frame(
     tx_id = c( 1,"1Start", 2, "2Start"),
