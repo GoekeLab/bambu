@@ -284,10 +284,10 @@ if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% refSeqLevels)) {
     # reassign Ids after seqlevels are dropped
     mcols(readGrgList)$id <- seq_along(readGrgList) 
 }
-if (!all(GenomeInfoDb::seqlevels(annotations) %in% refSeqLevels)) {
+if (!all(GenomeInfoDb::seqlevels(gr) %in% refSeqLevels)) {
     message("not all chromosomes from annotations present in reference genome 
     sequence, annotations without reference chrosomomse sequence are dropped")
-    annotations <- GenomeInfoDb::keepSeqlevels(annotations,
+    annotations <- GenomeInfoDb::keepSeqlevels(gr,
         value = refSeqLevels,pruning.mode = "coarse")
 }
 unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
