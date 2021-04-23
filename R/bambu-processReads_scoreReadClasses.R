@@ -153,7 +153,7 @@ checkFeatures = function(features){
   if(sum(labels)==length(labels) | sum(labels)==0){
     message("Missing presence of both TRUE and FALSE labels.")
     return(F)
-  }
+  } 
   if(length(labels)<50){
     message("Not enough data points")
     return(F)
