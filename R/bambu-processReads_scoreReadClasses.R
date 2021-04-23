@@ -3,7 +3,7 @@
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, 
-                                    min.readCount = 2){
+                                    min.readCount = 2){ 
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
