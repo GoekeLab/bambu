@@ -1,5 +1,61 @@
 ## code to prepare `sysdata.rda` dataset goes here
 
+# Train matrix and labels for mock data used for fit_xgb() in test_xgboost.R 
+features <- matrix(seq(1:600000), nrow=100000)
+labels <- c(rep(1,50000), rep(0,50000))
+xgb_model <- fit_xgb(features, labels)
+xgb.dump(xgb_model, './inst/extdata/xgb_model_scoreReadClasses.txt', 
+         dump_format='json')
+writeLines(as.character(preds),
+           './inst/extdata/xgb_predictions_scoreReadClasses.txt')
+
+# Train and test matrix and labels for mock data used for
+# fitXGBoostModel() in test_xgboost.R 
+data_train <- matrix(seq(1:300000), nrow=100000)
+data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
+labels_train <- c(rep(1,50000), rep(0,50000))
+results <- fitXGBoostModel(labels_train, data_train, data_test, show.cv=TRUE)
+# Extract the predictions and results from the list
+xgb_predictions <- results[[1]]
+xgb_model <- results[[2]]
+xgb.dump(xgb_model, './inst/extdata/xgb_model_splice_junction_correction.txt',
+         dump_format='json')
+writeLines(as.character(xgb_predictions),
+           './inst/extdata/xgb_predictions_splice_junction_correction.txt')
+
+# Prepare SummarizedExperiment objects for getTranscriptScore() and
+# getGeneScore()
+library(SummarizedExperiment)
+library(devtools)
+library('BiocParallel')
+library('Rsamtools')
+library('GenomicAlignments')
+library('dplyr')
+library('ROCR')
+library('stringr')
+library('GenomicRanges')
+
+load_all('~/Downloads/FYP/bambu_new/bambu')
+
+test.bam <- system.file("extdata",
+                        "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
+                        package = "bambu")
+fa.file <- system.file("extdata",
+                       "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
+                       package = "bambu")
+gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+
+bambuAnnotations <- prepareAnnotations(gtf.file)
+
+bpParameters <- setBiocParallelParameters(test.bam, readClass.file = NULL,
+                                          1, F)
+se_list <- bambu.processReads(test.bam, bambuAnnotations,
+                              genomeSequence = fa.file,
+                              yieldSize = NULL,
+                              bpParameters = bpParameters, stranded = F, verbose =F)
+se <- se_list[[1]]
+
+saveRDS(se, 'se_forCalculatingGeneAndTranscriptScore.rds')
 
 data1 <- data.frame(
     tx_id = c( 1,"1Start", 2, "2Start"),
