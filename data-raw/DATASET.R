@@ -37,6 +37,7 @@ library('GenomicRanges')
 
 load_all('~/Downloads/FYP/bambu_new/bambu')
 
+# Generates the SE for getTranscriptScore, getGeneScore and prepareTranscriptModelFeatures
 test.bam <- system.file("extdata",
                         "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
                         package = "bambu")
@@ -54,6 +55,7 @@ se_list <- bambu.processReads(test.bam, bambuAnnotations,
                               yieldSize = NULL,
                               bpParameters = bpParameters, stranded = F, verbose =F)
 se <- se_list[[1]]
+se <- se[assays(se)$count!=1,]
 
 saveRDS(se, 'se_forCalculatingGeneAndTranscriptScore.rds')
 
