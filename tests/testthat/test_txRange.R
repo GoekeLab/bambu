@@ -88,19 +88,6 @@ test_that("assignGeneIds",{
   expect_equal(assignGeneIds(rowRanges(se), annotations),rowData(seExpected)$GENEID)
 })
 
-test_that("prepareGeneModelFeatures",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  geneFeatures = prepareGeneModelFeatures(se)
-  geneFeatures = as.data.frame(geneFeatures)
-  expect_is(features$numReadsLog, class = 'numeric')
-  expect_is(features$strand_bias, class = 'numeric')
-  expect_is(features$numRCs, class = 'numeric')
-  expect_is(features$numNonSubsetRCs, class = 'numeric')
-  expect_is(features$numExons, class = 'numeric')
-  expect_is(features$isSpliced, class = 'numeric')
-  expect_is(features$highConfidence, class = 'numeric')
-})
-
 test_that('Calculated FDR scores are as expected', {
   scores = as.numeric(readLines(system.file('extdata','calculateFDR_arg_scores.txt', package='bambu')))
   labels = as.numeric(readLines(system.file('extdata','calculateFDR_arg_labels.txt', package='bambu')))
