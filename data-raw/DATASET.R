@@ -360,12 +360,6 @@ test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_
 fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
 gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
-# se before discovery
-set.seed(1234)
-bpParameters <- setBiocParallelParameters(test.bam, readClass.file = NULL,1, F)
-seOutput = bambu.processReads(reads = test.bam, annotations = annotations, genome = fa.file, bpParameters = bpParameters)
-saveRDS(seOutput, file = "./inst/extdata/proto_seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-
 set.seed(1234)
 seOutput = bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(degradationBias = FALSE), discovery = FALSE)
 saveRDS(seOutput, file = "./inst/extdata/seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
@@ -398,4 +392,10 @@ saveRDS(seOutputCombined2, file = "./inst/extdata/seOutputCombined2_SGNex_A549_d
 
 # calculate results for test cases
 se <- system.file("extdata", "proto_seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
-write.table(file = "test_GENEIDs_seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.csv", x = rowData(se)$GENEID, row.names = FALSE, col.names = FALSE)
+se <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+genomeSequence <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+genomeSequence <- checkInputSequence(genomeSequence)
+se = scoreReadClasses(se, genomeSequence, gr)
+
+write.table(file = "./inst/extdata/rowData_seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.csv", x = rowData(se), row.names = FALSE)

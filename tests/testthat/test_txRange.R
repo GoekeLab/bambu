@@ -10,9 +10,18 @@ test_that("txRange generates a gene and transcript score",{
 })
 
 test_that("addRowData adds all the correct rowData features",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  genomeSequence <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_genomeSequence.rds")
-  annotations <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_annotations.rds")
+  se<- readRDS(system.file("extdata",
+                  "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
+                  package = "bambu"
+  ))
+  gr <- readRDS(system.file("extdata",
+                  "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
+                  package = "bambu"
+  ))
+  genomeSequence <- system.file("extdata",
+                  "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
+                  package = "bambu"
+  )
   se = addRowData(se, genomeSequence, annotations)
   expect_is(rowData(se)$numExons, class = 'numeric')
   expect_is(rowData(se)$equal, class = 'logical')
@@ -26,13 +35,14 @@ test_that("addRowData adds all the correct rowData features",{
 })
 
 test_that("calculateGeneProportion",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  annotations <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_annotations.rds")
-  seExpected = readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds")
-  rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-  se = calculateGeneProportion(se)
-  expect_equal(rowData(se)$totalGeneReadProp, rowData(seExpected)$totalGeneReadProp)
-  
+  se<- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+  gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+  rowData(se)$GENEID = assignGeneIds(rowRanges(se), gr)
+  countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
+                               geneIds=mcols(se)$GENEID)
+  expected = read.table(system.file("extdata", "rowData_seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.csv", package = "bambu"), header = TRUE)
+  expect_equal(countsTBL$geneReadProp, expected$geneReadProp)
+  expect_equal(countsTBL$geneReadCount, expected$geneReadCount)
 })
 
 test_that("isReadClassEqual",{
