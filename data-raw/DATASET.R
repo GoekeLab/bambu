@@ -23,42 +23,6 @@ xgb.dump(xgb_model, './inst/extdata/xgb_model_splice_junction_correction.txt',
 writeLines(as.character(xgb_predictions),
            './inst/extdata/xgb_predictions_splice_junction_correction.txt')
 
-# Prepare SummarizedExperiment objects for getTranscriptScore() and
-# getGeneScore()
-library(SummarizedExperiment)
-library(devtools)
-library('BiocParallel')
-library('Rsamtools')
-library('GenomicAlignments')
-library('dplyr')
-library('ROCR')
-library('stringr')
-library('GenomicRanges')
-
-load_all('~/Downloads/FYP/bambu_new/bambu')
-
-# Generates the SE for getTranscriptScore, getGeneScore and prepareTranscriptModelFeatures
-test.bam <- system.file("extdata",
-                        "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
-                        package = "bambu")
-fa.file <- system.file("extdata",
-                       "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
-                       package = "bambu")
-gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-
-bambuAnnotations <- prepareAnnotations(gtf.file)
-
-bpParameters <- setBiocParallelParameters(test.bam, readClass.file = NULL,
-                                          1, F)
-se_list <- bambu.processReads(test.bam, bambuAnnotations,
-                              genomeSequence = fa.file,
-                              yieldSize = NULL,
-                              bpParameters = bpParameters, stranded = F, verbose =F)
-se <- se_list[[1]]
-se <- se[assays(se)$count!=1,]
-
-saveRDS(se, './inst/extdata/se_forCalculatingGeneAndTranscriptScore.rds')
-
 # Generates the vector of scores and labels for testing calculateFDR()
 set.seed(1)
 scores = runif(n=100000, min=0, max=1)
