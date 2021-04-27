@@ -91,16 +91,15 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
             model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
-            myResults <- fitBinomialModel(labels.train = 
-                as.integer(annotatedSplice)[mySet.all][mySet.training], 
-                data.train = modelmatrix[mySet.training,],
-                data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
+            myResults = fitXGBoostModel(labels.train = 
+            as.integer(annotatedSplice)[mySet.all][mySet.training], 
+            data.train = modelmatrix[mySet.training,],
+            data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
             predSplice.prime <- myResults[[2]]
             predictions <- myResults[[1]]
         } else {
-            predictions = glmnet:::predict.cv.glmnet(
-                junctionModel[[predSplice.primeName]],
-                newx = modelmatrix,s = 'lambda.min')
+            predictions = xgboost:::predict.xgb.Booster(
+                junctionModel[[predSplice.primeName]], modelmatrix)
         }
         predictionsSplice.prime <- rep(NA, nrow(data))
         names(predictionSplice.prime) <-
@@ -192,34 +191,45 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     return(list(annotatedJunctions, junctionModel))
 }
 
-#' Fit binomial model
-#' @importFrom glmnet cv.glmnet
+#' Fit xgboost model
+#' @importFrom xgboost xgboost
 #' @importFrom stats fisher.test
 #' @noRd
-fitBinomialModel <- function(labels.train, data.train, data.test, 
-    show.cv=TRUE, maxSize.cv=10000){
+fitXGBoostModel <- function(labels.train, data.train, data.test, 
+                            show.cv=TRUE, maxSize.cv=10000){
     if (show.cv) {
         mySample <- sample(seq_along(labels.train),
-            min(floor(length(labels.train)/2),maxSize.cv))
+                        min(floor(length(labels.train)/2),maxSize.cv))
         data.train.cv <- data.train[mySample,]
         labels.train.cv <- labels.train[mySample]
         data.train.cv.test <- data.train[-mySample,]
         labels.train.cv.test <- labels.train[-mySample]
-        cv.fit <- cv.glmnet(x = data.train.cv,
-            y = labels.train.cv, family = 'binomial')
-        predictions <-
-            glmnet:::predict.cv.glmnet(cv.fit, newx = data.train.cv.test,
-            s = 'lambda.min')
+
+        cv.fit <- xgboost(data = data.train.cv, 
+            label = labels.train.cv, nthread=1, nround= 50, 
+            objective = "binary:logistic", 
+            eval_metric='error',
+            verbose = 0)
+        predictions <- predict(cv.fit, data.train.cv.test)
         message('prediction accuracy (CV) (higher for splice 
                 donor than splice acceptor)')
-        testResults <- fisher.test(table(predictions > 0,labels.train.cv.test))
+        # Predictions is thresholded on 0.5 instead of 0 now to produce a 
+        # proper confusion matrix and fix an error that occurred with the
+        # argument to fisher.test()
+        testResults <- fisher.test(table(predictions > 0.5,
+                                        labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
-    cv.fit <- cv.glmnet(x = data.train, y = labels.train,family = 'binomial')
-    predictions <-
-        glmnet:::predict.cv.glmnet(cv.fit, newx = data.test, s = 'lambda.min')
+
+    cv.fit <- xgboost(data = data.train, 
+            label = labels.train, nthread=1, nround= 50, 
+            objective = "binary:logistic", 
+            eval_metric='error',
+            verbose = 0)
+    predictions <- predict(cv.fit, data.test)
+
     return(list(predictions,cv.fit))
 }
 
@@ -274,8 +284,12 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
                 highConfJunctions$spliceSitePredictionStart.end,
                 highConfJunctions$spliceSitePredictionEnd.start,
                 highConfJunctions$spliceSitePredictionEnd.end)
-    spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 2 # NA
-    setReferenceJunctions <- (apply(spliceSitePredictionList > 0,1,sum) == 4) | 
+    # NAs set to 1 to make more sense 
+    # as spliceSitePredictionList holds probabilities
+    spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 1 # NA
+    # xgboost returns probabilities so threshold is set to 0.5 instead of 1
+    setReferenceJunctions <- 
+        (apply(spliceSitePredictionList > 0.5,1,sum) == 4) |
         highConfJunctions$annotatedJunction
     candidateJunctions$highConfJunctionPrediction[highConfidentJunctionSet] <- 
         setReferenceJunctions
@@ -309,12 +323,13 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
         message(sum(junctions$score[junctions$annotatedJunction]) /
                     sum(junctions$score))
     }
+    junctionStrand = as.character(strand(junctions))
     ##note: the output can be visualised (bed/bigbed track) 
     #calculation is based on distance and properties of next junctions
     candidateJunctionsPlus <-
-        junctions[which(strand(junctions) == '+' | strand(junctions) == '*')]
+        junctions[which(junctionStrand == '+' | junctionStrand == '*')]
     candidateJunctionsMinus <-
-        junctions[which(strand(junctions) == '-' | strand(junctions) == '*')]
+        junctions[which(junctionStrand == '-' | junctionStrand == '*')]
     highConfidentJunctionSetPlus <- candidateJunctionsPlus$score > 1 &
         candidateJunctionsPlus$spliceStrand == '+'
     highConfidentJunctionSetMinus <- candidateJunctionsMinus$score > 1 &

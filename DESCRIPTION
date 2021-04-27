@@ -79,9 +79,10 @@ Imports:
     GenomicFeatures,
     GenomicRanges,
     stats,
-    glmnet,
     Rsamtools,
     methods,
-    Rcpp
+    Rcpp,
+    BSgenome,
+    xgboost
 VignetteBuilder: 
     knitr

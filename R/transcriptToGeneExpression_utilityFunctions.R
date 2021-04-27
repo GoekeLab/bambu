@@ -27,15 +27,15 @@ rename_duplicatedNames <- function(runnames){
 #' @importFrom GenomicRanges reduce 
 #' @noRd
 reducedRangesByGenes <- function(annotations) {
-  annotations <- annotations[order(mcols(annotations)$GENEID)]
-  unlistData <- unlist(annotations)
-  geneIds <- mcols(annotations)$GENEID[match(names(unlistData), 
-      mcols(annotations)$TXNAME)]
-  partitioning <- PartitioningByEnd(cumsum(table(geneIds)),
+    annotations <- annotations[order(mcols(annotations)$GENEID)]
+    unlistData <- unlist(annotations)
+    geneIds <- mcols(annotations)$GENEID[match(names(unlistData), 
+        mcols(annotations)$TXNAME)]
+    partitioning <- PartitioningByEnd(cumsum(table(geneIds)),
                                     names = NULL)
-  exonsByGene <- relist(unlistData, partitioning)
-  exonsByGeneReduced <- reduce(exonsByGene)
-  return(exonsByGeneReduced)
+    exonsByGene <- relist(unlistData, partitioning)
+    exonsByGeneReduced <- reduce(exonsByGene)
+    return(exonsByGeneReduced)
 }
 
 # From tx ranges to gene ranges
