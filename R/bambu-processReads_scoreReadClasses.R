@@ -110,7 +110,8 @@ getGeneScore = function(rowData){
     geneFeatures = prepareGeneModelFeatures(rowData)
     features = dplyr::select(geneFeatures,!c(labels, GENEID))
     if(checkFeatures(geneFeatures)){
-        geneModel = fit_xgb(as.matrix(features), geneFeatures$labels)
+        geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
+        data.train=features, show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         geneFDR = calculateFDR(geneScore, geneFeatures$labels)
         geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
@@ -171,8 +172,8 @@ getTranscriptScore = function(rowData){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures)){
-    transcriptModel = fit_xgb(features, 
-        txFeatures$labels)
+    transcriptModel = fitXGBoostModel(labels.train=txFeatures$labels,
+        data.train=features, show.cv=FALSE)
     txScore = predict(transcriptModel, as.matrix(features))
 
     #calculates the FDR for filtering RCs based on wanted precision
@@ -195,13 +196,4 @@ prepareTranscriptModelFeatures = function(rowData){
     mutate(numReads = log2(pmax(1,numReads)), 
         tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))))
     return(outData)
-}
-
-#train a model using xgboost, using part of the features as training set
-fit_xgb = function(features, labels) {
-    # Fit the xgb model
-    xgb_model = xgboost(data = as.matrix(features), label = labels,
-    nthread=1, nround= 50, objective = "binary:logistic", 
-    eval_metric='error', verbose = 0)
-    return(xgb_model)
 }
