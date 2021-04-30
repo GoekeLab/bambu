@@ -156,15 +156,15 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
         if (splice == "Start") {
             annotatedJunctionsTmp <- 
             GRanges(seqnames = seqnames(annotatedJunctions),
-            ranges = IRanges(start = GRanges::start(annotatedJunctions),
-            end = GRanges::start(annotatedJunctions)), strand = '*')
+            ranges = IRanges(start = GenomicRanges::start(annotatedJunctions),
+            end = GenomicRanges::start(annotatedJunctions)), strand = '*')
             mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- unique(annotatedJunctionsTmp)
         } else {
             annotatedJunctionsTmp <- 
             GRanges(seqnames = seqnames(annotatedJunctions),
-            ranges = IRanges(start = GRanges::end(annotatedJunctions),
-            end = GRanges::end(annotatedJunctions)), strand = '*')
+            ranges = IRanges(start = GenomicRanges::end(annotatedJunctions),
+            end = GenomicRanges::end(annotatedJunctions)), strand = '*')
             mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- sort(unique(annotatedJunctionsTmp))
         }
