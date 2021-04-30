@@ -1,14 +1,5 @@
 ## code to prepare `sysdata.rda` dataset goes here
 
-# Train matrix and labels for mock data used for fit_xgb() in test_xgboost.R 
-features <- matrix(seq(1:600000), nrow=100000)
-labels <- c(rep(1,50000), rep(0,50000))
-xgb_model <- fit_xgb(features, labels)
-xgb.dump(xgb_model, './inst/extdata/xgb_model_scoreReadClasses.txt', 
-         dump_format='json')
-writeLines(as.character(preds),
-           './inst/extdata/xgb_predictions_scoreReadClasses.txt')
-
 # Train and test matrix and labels for mock data used for
 # fitXGBoostModel() in test_xgboost.R 
 data_train <- matrix(seq(1:300000), nrow=100000)
