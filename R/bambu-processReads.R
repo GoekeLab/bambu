@@ -135,6 +135,8 @@ checkInputSequence <- function(genomeSequence) {
                     "[[", 1))
                 names(genomeSequence) <- newlevels
             } else {
+                indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
+                if (!indexFileExists) indexFa(genomeSequence)
                 genomeSequence <- FaFile(genomeSequence)
             }
         } else {
