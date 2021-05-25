@@ -55,9 +55,9 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
         end = as.integer(round(sum(end/max.chromosomesize*readCount)/
         sum(readCount)*max.chromosomesize)), 
         # end taken as readcount weighted end
-        NSampleReadCount = sum(readCount > min.readCount), 
+        NSampleReadCount = sum(readCount >= min.readCount), 
         # number of samples passed read count criteria
-        NSampleReadProp = sum(geneReadProp > min.readFractionByGene)) %>% 
+        NSampleReadProp = sum(geneReadProp >= min.readFractionByGene)) %>% 
         # number of samples passed gene read prop criteria (transcript usage)
         ungroup() 
         ## remember to ungroup to avoid unnecessary wrong selection later
@@ -191,8 +191,8 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
     newUnsplicedTibble <- newUnsplicedTibble %>% 
         left_join(rowDataCombined, by =  "row_id") %>%
         group_by(chr, strand, start, end) %>% 
-        mutate(NSampleReadCount = sum(sum(readCount) > min.readCount), 
-            NSampleReadProp = sum(sum(geneReadProp) > 
+        mutate(NSampleReadCount = sum(sum(readCount) >= min.readCount), 
+            NSampleReadProp = sum(sum(geneReadProp) >= 
             min.readFractionByGene)) %>%
         ungroup()
     return(newUnsplicedTibble)
