@@ -9,7 +9,8 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     filterSet <- filterTranscriptsByRead(combinedTranscripts)
     if (any(filterSet)) {
         # filter by read count 
-        combinedTranscriptsFilteredByReadCount <- combinedTranscripts[filterSet]
+        combinedTranscriptsFilteredByReadCount <- 
+            combinedTranscripts[filterSet,]
         # create SE from transcript tibble
         se <- 
             makeSEFromTranscriptsTibble(combinedTranscriptsFilteredByReadCount)
