@@ -53,10 +53,57 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
 #' @noRd
 filterTranscriptsByRead <- function(combinedTranscripts){
   if (nrow(combinedTranscripts) > 0) 
-    filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
-      combinedTranscripts$NSampleReadProp >= min.sampleNumber) # filter based on read count and transcript usage
+    filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (combinedTranscripts$NSampleReadProp >= min.sampleNumber)
+  # filter based on read count and transcript usage
   return(filterSet)
 }
+
+#' calculate minimum equivalent classes for extended annotations
+#' @param seCombined seCombined
+#' @param annotationGrangesList annotationGrangesList
+#' @param exonRangesCombined exonRangesCombined
+#' @param prefix prefix
+#' @param min.readFractionByGene min.readFractionByGene
+#' @param min.sampleNumber min.sampleNumber
+#' @param remove.subsetTx remove.subsetTx
+#' @param verbose verbose
+#' @importFrom dplyr select as_tibble %>% mutate_at mutate group_by 
+#'     ungroup .funs .name_repair vars 
+#' @noRd
+filterTranscriptsByAnnotation <- function(seCombined, annotationGrangesList,
+    exonRangesCombined, prefix,  remove.subsetTx, verbose) {
+  start.ptm <- proc.time() # (1) based on transcript usage
+  if (remove.subsetTx) { # (1) based on compatiblity with annotations
+    notCompatibleIds <- which(!grepl("compatible",
+                               mcols(seCombined)$readClassType))
+    exonRangesCombined <- exonRangesCombined[notCompatibleIds]
+    seCombined <- seCombined[notCompatibleIds]
+  }# (2) remove transcripts with identical junctions to annotations
+  extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
+    seCombined, exonRangesCombined, 
+    annotationGrangesList, prefix)
+  end.ptm <- proc.time()
+  if (verbose) message("transcript filtering in ",
+                       round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+  start.ptm <- proc.time()
+  geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in%
+                               mcols(extendedAnnotationRanges)$GENEID[
+                                 which(mcols(extendedAnnotationRanges)$newTxClass != "annotation")])
+  minEqClasses <-
+    getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
+  end.ptm <- proc.time()
+  if (verbose) message("calculated minimum equivalent classes for
+        extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
+                       " mins.")
+  mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <-
+    minEqClasses$eqClass[match(names(extendedAnnotationRanges[
+      geneListWithNewTx]), minEqClasses$queryTxId)]
+  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
+      c("TXNAME", "GENEID", "eqClass", "newTxClass")]
+  return(extendedAnnotationRanges)
+}
+
+
 
 #' generate exon/intron ByReadClass objects
 #' @importFrom GenomicRanges makeGRangesListFromFeatureFragments
