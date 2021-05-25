@@ -48,6 +48,15 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     }
 }
 
+#' filter transcripts by read counts
+#' @noRd
+filterTranscriptsByRead <- function(combinedTranscripts){
+  if (nrow(combinedTranscripts) > 0) 
+    filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
+      combinedTranscripts$NSampleReadProp >= min.sampleNumber) # filter based on read count and transcript usage
+  return(filterSet)
+}
+
 #' generate exon/intron ByReadClass objects
 #' @importFrom GenomicRanges makeGRangesListFromFeatureFragments
 #' @importFrom GenomeInfoDb seqlevels seqlevels<-
