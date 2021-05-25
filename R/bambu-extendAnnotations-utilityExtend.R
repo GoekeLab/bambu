@@ -40,7 +40,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
         ## filter out transcripts
         extendedAnnotationRanges <- filterTranscriptsByAnnotation(
             seCombined, annotationGrangesList, exonRangesCombined, prefix,
-            min.readFractionByGene, min.sampleNumber, remove.subsetTx, verbose)
+            remove.subsetTx, verbose)
         return(extendedAnnotationRanges)
     } else {
         message("The current filtering criteria filters out all new read 
