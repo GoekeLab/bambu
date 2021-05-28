@@ -67,8 +67,9 @@ isReadClassCompatible =  function(query, subject){
     intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
                         use.names = FALSE, use.ids = FALSE)
 
-    partitioningQuery <- PartitioningByEnd(cumsum(elementNROWS(query)-1),
-                                        names = NULL)
+    partitioningQuery <- 
+        PartitioningByEnd(elementNROWS(gaps(ranges(query))),
+        names = NULL)
     allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
 
     olap = findOverlaps(query[allIntronMatchQuery],subject, 
