@@ -53,7 +53,8 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
 #' @noRd
 filterTranscriptsByRead <- function(combinedTranscripts){
   if (nrow(combinedTranscripts) > 0) 
-    filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (combinedTranscripts$NSampleReadProp >= min.sampleNumber)
+    filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
+        combinedTranscripts$NSampleReadProp >= min.sampleNumber)
   # filter based on read count and transcript usage
   return(filterSet)
 }
