@@ -68,7 +68,7 @@ isReadClassCompatible =  function(query, subject){
                         use.names = FALSE, use.ids = FALSE)
 
     partitioningQuery <- 
-        PartitioningByEnd(elementNROWS(gaps(ranges(query))),
+        PartitioningByEnd(cumsum(elementNROWS(gaps(ranges(query)))),
         names = NULL)
     allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
 
