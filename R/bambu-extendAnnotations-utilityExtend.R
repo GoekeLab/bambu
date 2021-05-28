@@ -6,7 +6,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     min.readFractionByGene = 0.05, min.sampleNumber = 1, min.exonDistance = 35, 
     min.exonOverlap = 10, min.primarySecondaryDist = 5,
     min.primarySecondaryDistStartEnd = 5, prefix = "", verbose = FALSE){
-    filterSet <- filterTranscriptsByRead(combinedTranscripts)
+    filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
     if (any(filterSet)) {
         # filter by read count 
         combinedTranscriptsFilteredByReadCount <- 
@@ -51,7 +51,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
 
 #' filter transcripts by read counts
 #' @noRd
-filterTranscriptsByRead <- function(combinedTranscripts){
+filterTranscriptsByRead <- function(combinedTranscripts, min.sampleNumber){
   if (nrow(combinedTranscripts) > 0) 
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
         combinedTranscripts$NSampleReadProp >= min.sampleNumber)
