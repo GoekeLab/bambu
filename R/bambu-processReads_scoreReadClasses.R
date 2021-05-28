@@ -4,6 +4,7 @@
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, 
                                     min.readCount = 2){
+    start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
@@ -40,7 +41,10 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)$txFDR = rep(NA,nrow(se))
     rowData(se)$txScore[txIndex] = txScore$txScore
     rowData(se)$txFDR[txIndex] = txScore$txFDR
-    
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Finished generating scores for read classes in ", 
+        round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     return(se)
 }
 
