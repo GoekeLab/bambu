@@ -3,6 +3,7 @@
 #' @param stranded stranded
 #' @param min.readCount minimum number of read counts per transcript
 #' @param min.readFractionByGene minimum fraction of transcript usage
+#' @param bpParameters biocParallel parameters
 #' @param verbose verbose
 #' @importFrom GenomicRanges GRanges
 #' @importFrom SummarizedExperiment rbind
@@ -13,6 +14,7 @@ isore.combineTranscriptCandidates <- function(readClassList,
     stranded, ## stranded used for unspliced reduce  
     min.readCount = isoreParameters[["min.readCount"]], 
     min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
+    bpParameters,
     verbose){
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 

@@ -3,12 +3,13 @@
 #' @inheritParams bambu
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations,
-    isoreParameters, stranded, verbose = FALSE) {
+    isoreParameters, stranded, bpParameters, verbose = FALSE) {
     start.ptm <- proc.time()
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClassList,
         stranded, ## stranded used for unspliced reduce  
         min.readCount = isoreParameters[["min.readCount"]], 
         min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
+        bpParameters,
         verbose)
     end.ptm <- proc.time()
     if (verbose) message("combining transcripts in ",
