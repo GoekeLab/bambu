@@ -136,7 +136,7 @@ combineUnsplicedTranscriptModels <-
     start.time <- proc.time()
     combinedUnsplicedTibble <- 
         makeUnsplicedTibble(combinedNewUnsplicedSe,newUnsplicedSeList,
-        min.readCount, min.readFractionByGene)
+        min.readCount, min.readFractionByGene, bpParameters)
     combinedUnsplicedTibble <- combinedUnsplicedTibble %>% 
         separate(row_id, c("sample","rcName"), sep = "\\-") %>%
         mutate(sample_id = as.integer(gsub("s","",sample))) %>%
@@ -219,6 +219,5 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         ungroup()
     return(newUnsplicedTibble)
 }
-
 
 
