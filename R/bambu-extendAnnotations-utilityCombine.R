@@ -206,7 +206,7 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
             newUnsplicedTibble$row_id)])
         rr <- as_tibble(rr) %>% select(intronStarts, intronEnds, confidenceType,
-            readCount, geneReadProp, txScore, txFDR) %>%
+            readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR) %>%
             mutate(row_id = rownames(rr))
         return(rr)
     } , BPPARAM = bpParameters))
