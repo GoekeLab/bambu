@@ -65,6 +65,9 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
         # number of samples passed read count criteria
         NSampleReadProp = sum(geneReadProp >= min.readFractionByGene),
         # number of samples passed gene read prop criteria (transcript usage)
+        NSampleGeneFDR = sum(geneFDR >= min.geneFDR),
+        NSampleTxFDR = sum(txFDR >= min.txFDR)) %>% 
+        # number of samples passed gene and tx score criteria
         ungroup() 
         ## remember to ungroup to avoid unnecessary wrong selection later
     }
