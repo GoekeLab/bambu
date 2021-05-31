@@ -55,7 +55,8 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     max.chromosomesize = 250000000 # to avoid integer flow
     for ( s in seq_along(featureTibbleList)[-1]){
         combinedFeatureTibble <- 
-        bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]])) %>% 
+        if_else(s==1, featureTibbleList[[s]],
+        bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]]))) %>% 
         group_by(intronStarts, intronEnds, chr, strand) %>% 
         mutate(start = as.integer(round(sum(start/max.chromosomesize*readCount)/
         sum(readCount)*max.chromosomesize)), 
