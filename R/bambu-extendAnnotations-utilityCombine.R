@@ -196,7 +196,8 @@ reduceUnsplicedRanges <- function(rangesList){
 #' @importFrom dplyr as_tibble rename mutate select %>% group_by left_join
 #'              ungroup
 makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
-                                min.readCount, min.readFractionByGene){
+                                min.readCount, min.readFractionByGene,
+                                bpParameters){
     newUnsplicedTibble <- as_tibble(combinedNewUnsplicedSe) %>%
         rename(chr = seqnames) %>%
         select(chr, start, end, strand, row_id) %>%
@@ -219,5 +220,4 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         ungroup()
     return(newUnsplicedTibble)
 }
-
 
