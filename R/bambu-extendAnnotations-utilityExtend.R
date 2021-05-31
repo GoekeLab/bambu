@@ -7,7 +7,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     min.exonOverlap = 10, min.primarySecondaryDist = 5,
     min.primarySecondaryDistStartEnd = 5, prefix = "", verbose = FALSE){
     filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
-    if (any(filterSet)) {
+    if (any(filterSet), na.rm=TRUE) {
         # filter by read count 
         combinedTranscriptsFilteredByReadCount <- 
             combinedTranscripts[filterSet,]
@@ -744,4 +744,3 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(readClassTable)
 }
-
