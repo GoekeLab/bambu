@@ -9,7 +9,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     min.geneFDR = 0.99, min.txFDR = 0.9,
     prefix = "", verbose = FALSE){
     filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
-    if (any(filterSet), na.rm=TRUE) {
+    if (any(filterSet), na.rm = TRUE) {
         # filter by read count 
         combinedTranscriptsFilteredByReadCount <- 
             combinedTranscripts[filterSet,]
@@ -84,16 +84,16 @@ filterTranscriptsByAnnotation <- function(seCombined, annotationGrangesList,
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     seCombined <- seCombined[notCompatibleIds]
   }# (2) remove transcripts with identical junctions to annotations
-  extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
-    seCombined, exonRangesCombined, 
-    annotationGrangesList, prefix)
-  end.ptm <- proc.time()
-  if (verbose) message("transcript filtering in ",
-                       round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
+        seCombined, exonRangesCombined, 
+        annotationGrangesList, prefix)
+        end.ptm <- proc.time()
+    if (verbose) message("transcript filtering in ",
+        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   start.ptm <- proc.time()
   geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in%
-                               mcols(extendedAnnotationRanges)$GENEID[
-                                 which(mcols(extendedAnnotationRanges)$newTxClass != "annotation")])
+        mcols(extendedAnnotationRanges)$GENEID[
+        which(mcols(extendedAnnotationRanges)$newTxClass != "annotation")])
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
   end.ptm <- proc.time()
