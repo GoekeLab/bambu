@@ -98,7 +98,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id){
     rowData$sample_name <- dimNames[[2]]
     featureTibble <- rowData %>% dplyr::select(chr = chr.rc, start, end,
         strand = strand.rc, intronStarts, intronEnds, confidenceType,
-        readCount, geneReadProp, txScore, txFDR,row_id, sample_name) %>%
+        readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR,
+        row_id, sample_name) %>%
         filter(readCount > 1, # only use readCount>1 and highconfidence reads
             confidenceType == "highConfidenceJunctionReads") %>%
         mutate(sample_id = sample_id)
