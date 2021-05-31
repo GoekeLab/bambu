@@ -37,6 +37,8 @@ isore.combineTranscriptCandidates <- function(readClassList,
 combineSplicedTranscriptModels <- function(readClassList, bpParameters, 
     min.readCount = isoreParameters[["min.readCount"]], 
     min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
+    min.geneFDR = isoreParameters[["min.geneFDR"]],
+    min.txFDR = isoreParameters[["min.txFDR"]],
     verbose){
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.time <- proc.time()
