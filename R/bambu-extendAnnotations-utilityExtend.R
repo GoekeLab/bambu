@@ -5,7 +5,9 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     remove.subsetTx = TRUE, min.readCount = 2, 
     min.readFractionByGene = 0.05, min.sampleNumber = 1, min.exonDistance = 35, 
     min.exonOverlap = 10, min.primarySecondaryDist = 5,
-    min.primarySecondaryDistStartEnd = 5, prefix = "", verbose = FALSE){
+    min.primarySecondaryDistStartEnd = 5, 
+    min.geneFDR = 0.99, min.txFDR = 0.9,
+    prefix = "", verbose = FALSE){
     filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
     if (any(filterSet), na.rm=TRUE) {
         # filter by read count 
