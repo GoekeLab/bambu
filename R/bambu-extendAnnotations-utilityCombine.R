@@ -18,14 +18,10 @@ isore.combineTranscriptCandidates <- function(readClassList,
     verbose){
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
-        min.readCount = isoreParameters[["min.readCount"]], 
-        min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
-        verbose)
+        min.readCount, min.readFractionByGene, verbose)
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList,  bpParameters, 
-        stranded, min.readCount = isoreParameters[["min.readCount"]], 
-        min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
-        verbose)
+        stranded, min.readCount, min.readFractionByGene, verbose)
     combinedTranscripts <- 
         bind_rows(combinedSplicedTranscripts, combinedUnsplicedTranscripts)
     return(combinedTranscripts)
@@ -52,18 +48,13 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## update combinedFeatureTibble by sample, as at each step 
     ## start and end are updated iteratively as the fead count weighted average
     start.time <- proc.time()
-    max.chromosomesize = 250000000 # to avoid integer flow
     for ( s in seq_along(featureTibbleList)[-1]){
         combinedFeatureTibble <- 
         if_else(s==1, featureTibbleList[[s]],
         bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]]))) %>% 
-        group_by(intronStarts, intronEnds, chr, strand) %>% 
-        mutate(start = as.integer(round(sum(start/max.chromosomesize*readCount)/
-        sum(readCount)*max.chromosomesize)), 
-        # start taken as readcount weighted start
-        end = as.integer(round(sum(end/max.chromosomesize*readCount)/
-        sum(readCount)*max.chromosomesize)), 
-        # end taken as readcount weighted end
+        group_by(intronStarts, intronEnds, chr, strand) %>%
+        mutate(start = median(rep(start, times = readCount)),
+            end = median(rep(end, times = readCount)), #weighted median is used 
         NSampleReadCount = sum(readCount >= min.readCount), 
         # number of samples passed read count criteria
         NSampleReadProp = sum(geneReadProp >= min.readFractionByGene),
