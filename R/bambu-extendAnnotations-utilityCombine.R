@@ -51,7 +51,6 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## start and end are updated iteratively as the fead count weighted average
     start.time <- proc.time()
     max.chromosomesize = 250000000 # to avoid integer flow
-    combinedFeatureTibble <- featureTibbleList[[1]]
     for ( s in seq_along(featureTibbleList)[-1]){
         combinedFeatureTibble <- 
         bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]])) %>% 
@@ -220,4 +219,3 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         ungroup()
     return(newUnsplicedTibble)
 }
-
