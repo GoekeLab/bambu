@@ -26,7 +26,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
             splicedCombinedTranscripts, annotationSeqLevels)
         # add new spliced ranges 
         seFilteredSpliced <- addNewSplicedReadClasses(combinedTranscriptRanges,
-            se[rowData(se)$confidenceType == "highConfidenceJunctionReads"], 
+            se[which(rowData(se)$confidenceType == "highConfidenceJunctionReads")], 
             annotationGrangesList, min.exonDistance, min.primarySecondaryDist,
             min.primarySecondaryDistStartEnd)
         # add new unspliced ranges
