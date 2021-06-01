@@ -9,7 +9,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     min.geneFDR = 0.99, min.txFDR = 0.9,
     prefix = "", verbose = FALSE){
     filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
-    if (any(filterSet), na.rm = TRUE) {
+    if (any(filterSet, na.rm = TRUE)) {
         # filter by read count 
         combinedTranscriptsFilteredByReadCount <- 
             combinedTranscripts[filterSet,]
