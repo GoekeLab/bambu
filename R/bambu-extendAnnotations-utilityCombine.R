@@ -45,9 +45,13 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## start and end are updated iteratively as the fead count weighted average
     start.ptm <- proc.time()
     for ( s in seq_along(featureTibbleList)){
-        combinedFeatureTibble <- 
-        if_else(s==1, featureTibbleList[[s]],
-        bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]]))) %>% 
+        if (s == 1){
+            featureTibbleBind <- featureTibbleList[[s]] 
+        }else{
+            featureTibbleBind <- 
+                bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]]))
+        }
+        combinedFeatureTibble <- featureTibbleBind %>% 
         group_by(intronStarts, intronEnds, chr, strand) %>%
         mutate(start = median(rep(start, times = readCount)),
             end = median(rep(end, times = readCount)), #weighted median is used 
