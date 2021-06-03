@@ -12,16 +12,15 @@
 #' @noRd
 isore.combineTranscriptCandidates <- function(readClassList,
     stranded, ## stranded used for unspliced reduce  
-    min.readCount = isoreParameters[["min.readCount"]], 
-    min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
-    bpParameters,
-    verbose){
+    min.readCount , min.readFractionByGene , min.geneFDR,
+    min.txFDR, bpParameters,verbose){
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
-        min.readCount, min.readFractionByGene, verbose)
+        min.readCount, min.readFractionByGene, min.geneFDR, min.txFDR, verbose)
     combinedUnsplicedTranscripts <- 
-        combineUnsplicedTranscriptModels(readClassList,  bpParameters, 
-        stranded, min.readCount, min.readFractionByGene, verbose)
+        combineUnsplicedTranscriptModels(readClassList, bpParameters, 
+        stranded, min.readCount, min.readFractionByGene, min.geneFDR, 
+        min.txFDR, verbose)
     combinedTranscripts <- 
         bind_rows(combinedSplicedTranscripts, combinedUnsplicedTranscripts)
     return(combinedTranscripts)
@@ -31,10 +30,7 @@ isore.combineTranscriptCandidates <- function(readClassList,
 #' combine spliced transcript models
 #' @noRd
 combineSplicedTranscriptModels <- function(readClassList, bpParameters, 
-    min.readCount = isoreParameters[["min.readCount"]], 
-    min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
-    min.geneFDR = isoreParameters[["min.geneFDR"]],
-    min.txFDR = isoreParameters[["min.txFDR"]],
+    min.readCount, min.readFractionByGene , min.geneFDR, min.txFDR,
     verbose){
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.time <- proc.time()
@@ -108,9 +104,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id){
 #' @importFrom biocParallel bplapply
 #' @noRd
 combineUnsplicedTranscriptModels <- 
-    function(readClassList,  bpParameters, unstranded,
-    min.readCount = isoreParameters[["min.readCount"]], 
-    min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
+    function(readClassList,  bpParameters, stranded, min.readCount, 
+    min.readFractionByGene, min.geneFDR, min.txFDR,
     verbose){
     start.time <- proc.time()
     newUnsplicedSeList <- bplapply(seq_along(readClassList), function(sample_id)
@@ -126,14 +121,15 @@ combineUnsplicedTranscriptModels <-
     }, BPPARAM = bpParameters)
     colDataNames <- unlist(lapply(newUnsplicedSeList, function(x) colnames(x)))
     start.time <- proc.time()
-    combinedNewUnsplicedSe <- reduceUnsplicedRanges(rangesList)
+    combinedNewUnsplicedSe <- reduceUnsplicedRanges(rangesList, stranded)
     end.time <- proc.time()
     if (verbose) message("reduce new unspliced ranges object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     start.time <- proc.time()
     combinedUnsplicedTibble <- 
         makeUnsplicedTibble(combinedNewUnsplicedSe,newUnsplicedSeList,
-        min.readCount, min.readFractionByGene, bpParameters)
+        min.readCount, min.readFractionByGene, min.geneFDR,
+        min.txFDR, bpParameters)
     combinedUnsplicedTibble <- combinedUnsplicedTibble %>% 
         separate(row_id, c("sample","rcName"), sep = "\\-") %>%
         mutate(sample_id = as.integer(gsub("s","",sample))) %>%
@@ -166,7 +162,7 @@ extractNewUnsplicedRanges <- function(readClassSe, sample_id){
 #' reduce unspliced ranges
 #' @importFrom dplyr as_tibble %>% mutate group_by summarise ungroup
 #' @noRd
-reduceUnsplicedRanges <- function(rangesList){
+reduceUnsplicedRanges <- function(rangesList, stranded){
     combinedNewUnsplicedSe <- rangesList[[1]]
     for ( s in seq_along(rangesList)[-1]){
         new_range <- rangesList[[s]]
@@ -194,6 +190,7 @@ reduceUnsplicedRanges <- function(rangesList){
 #'              ungroup
 makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                                 min.readCount, min.readFractionByGene,
+                                min.geneFDR, min.txFDR,
                                 bpParameters){
     newUnsplicedTibble <- as_tibble(combinedNewUnsplicedSe) %>%
         rename(chr = seqnames) %>%
@@ -213,7 +210,11 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         group_by(chr, strand, start, end) %>% 
         mutate(NSampleReadCount = sum(sum(readCount) >= min.readCount), 
             NSampleReadProp = sum(sum(geneReadProp) >= 
-            min.readFractionByGene)) %>%
+            min.readFractionByGene),
+            NSampleGeneFDR = sum(median(geneFDR, times = readCount) <= 
+            min.geneFDR),
+            NSampleTxFDR = sum(median(txFDR, times = readCount) <= 
+            min.txFDR)) %>%
         ungroup()
     return(newUnsplicedTibble)
 }
