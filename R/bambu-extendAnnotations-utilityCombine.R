@@ -44,10 +44,10 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## update combinedFeatureTibble by sample, as at each step 
     ## start and end are updated iteratively as the fead count weighted average
     start.ptm <- proc.time()
-    for ( s in seq_along(featureTibbleList)[-1]){
+    for ( s in seq_along(featureTibbleList)){
         combinedFeatureTibble <- 
         if_else(s==1, featureTibbleList[[s]],
-        bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]]))) %>% 
+        bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]])) %>% 
         group_by(intronStarts, intronEnds, chr, strand) %>%
         mutate(start = median(rep(start, times = readCount)),
             end = median(rep(end, times = readCount)), #weighted median is used 
@@ -58,7 +58,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
         NSampleGeneFDR = sum(geneFDR <= min.geneFDR),
         NSampleTxFDR = sum(txFDR <= min.txFDR)) %>% 
         # number of samples passed gene and tx score criteria
-        ungroup() 
+        ungroup())
         ## remember to ungroup to avoid unnecessary wrong selection later
     }
     combinedFeatureTibble <- combinedFeatureTibble %>% 
