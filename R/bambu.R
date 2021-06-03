@@ -44,6 +44,10 @@
 #'     of distance threshold, used for extending annotation
 #'     \item min.primarySecondaryDistStartEnd2 specifying the minimum number 
 #'     of distance threshold, used for estimating distance to annotation
+#'     \item min.geneFDR specifying the minimum FDR rate for gene level 
+#'     threshold
+#'     \item min.txFDR specifying the minimum FDR rate for transcript level 
+#'     threshold
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:

@@ -28,6 +28,8 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         isoreParameters[['min.primarySecondaryDist']], 
         min.primarySecondaryDistStartEnd = 
         isoreParameters[['min.primarySecondaryDistStartEnd1']],
+        min.geneFDR = isoreParameters[['min.geneFDR']],
+        min.txFDR = isoreParameters[['min.txFDR']],
         prefix = isoreParameters[["prefix"]],
         verbose = verbose)
     end.ptm <- proc.time()
