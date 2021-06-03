@@ -33,17 +33,17 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     min.readCount, min.readFractionByGene , min.geneFDR, min.txFDR,
     verbose){
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
-    start.time <- proc.time()
+    start.ptm <- proc.time()
     featureTibbleList <- 
         bplapply(seq_along(readClassList), function(sample_id){
         extractFeaturesFromReadClassSE(readClassSe = readClassList[[sample_id]],
         sample_id = sample_id)}, BPPARAM = bpParameters)
-    end.time <- proc.time()
+    end.ptm <- proc.time()
     if (verbose) message("creating spliced feature tibble objects for all 
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     ## update combinedFeatureTibble by sample, as at each step 
     ## start and end are updated iteratively as the fead count weighted average
-    start.time <- proc.time()
+    start.ptm <- proc.time()
     for ( s in seq_along(featureTibbleList)[-1]){
         combinedFeatureTibble <- 
         if_else(s==1, featureTibbleList[[s]],
@@ -64,7 +64,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     combinedFeatureTibble <- combinedFeatureTibble %>% 
         separate(row_id, c("sample","rcName"), sep = "\\-") %>%
         select(-sample)
-    end.time <- proc.time()
+    end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     return(combinedFeatureTibble)
@@ -107,11 +107,11 @@ combineUnsplicedTranscriptModels <-
     function(readClassList,  bpParameters, stranded, min.readCount, 
     min.readFractionByGene, min.geneFDR, min.txFDR,
     verbose){
-    start.time <- proc.time()
+    start.ptm <- proc.time()
     newUnsplicedSeList <- bplapply(seq_along(readClassList), function(sample_id)
         extractNewUnsplicedRanges(readClassSe = readClassList[[sample_id]],
         sample_id = sample_id), BPPARAM = bpParameters)
-    end.time <- proc.time()
+    end.ptm <- proc.time()
     if (verbose) message("extract new unspliced ranges object for all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     rangesList <- bplapply(newUnsplicedSeList, function(newUnsplicedSe){
@@ -120,12 +120,12 @@ combineUnsplicedTranscriptModels <-
         return(rr)
     }, BPPARAM = bpParameters)
     colDataNames <- unlist(lapply(newUnsplicedSeList, function(x) colnames(x)))
-    start.time <- proc.time()
+    start.ptm <- proc.time()
     combinedNewUnsplicedSe <- reduceUnsplicedRanges(rangesList, stranded)
-    end.time <- proc.time()
+    end.ptm <- proc.time()
     if (verbose) message("reduce new unspliced ranges object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    start.time <- proc.time()
+    start.ptm <- proc.time()
     combinedUnsplicedTibble <- 
         makeUnsplicedTibble(combinedNewUnsplicedSe,newUnsplicedSeList,
         min.readCount, min.readFractionByGene, min.geneFDR,
@@ -135,7 +135,7 @@ combineUnsplicedTranscriptModels <-
         mutate(sample_id = as.integer(gsub("s","",sample))) %>%
         mutate(sample_name = colDataNames[sample_id]) %>%
         select(-sample)
-    end.time <- proc.time()
+    end.ptm <- proc.time()
     if (verbose) message("combine new unspliced tibble object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     return(combinedUnsplicedTibble)
