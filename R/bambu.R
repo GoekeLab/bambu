@@ -111,7 +111,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     }
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
-            isoreParameters, bpParameters, verbose = verbose)
+            isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
     }
     if (!verbose) message("Start isoform quantification")
