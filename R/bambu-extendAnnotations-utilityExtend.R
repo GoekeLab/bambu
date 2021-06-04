@@ -25,12 +25,15 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
         combinedTranscriptRanges <- makeExonsIntronsSpliced(
             splicedCombinedTranscripts, annotationSeqLevels)
         # add new spliced ranges 
+        confidenceTypeVec <- rowData(se)$confidenceType
         seFilteredSpliced <- addNewSplicedReadClasses(combinedTranscriptRanges,
-            se[which(rowData(se)$confidenceType == "highConfidenceJunctionReads")], 
+            se[which(confidenceTypeVec == "highConfidenceJunctionReads")], 
             annotationGrangesList, min.exonDistance, min.primarySecondaryDist,
             min.primarySecondaryDistStartEnd)
         # add new unspliced ranges
-        SEnRng <- addNewUnsplicedReadClasses(se, seFilteredSpliced,
+        seFilteredUnspliced <-se[which(confidenceTypeVec == "unsplicedNew")]
+        SEnRng <- addNewUnsplicedReadClasses(seFilteredUnspliced, 
+            seFilteredSpliced,
             combinedTranscriptRanges$exons, 
             annotationGrangesList, min.exonOverlap, verbose)
         seCombined <- SEnRng$seCombined
@@ -268,20 +271,18 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
   intronMatchListRev <- lapply(intronMatchesList, rev)
   lastJunctionMatch <- unlist(lapply(intronMatchListRev,`[[`, 1))
   firstJunctionMatch <- unlist(lapply(intronMatchesList, `[[`, 1))
-  classificationTable$newLastJunction[which(rowData(
-    seFilteredSpliced)$strand == "+" & !lastJunctionMatch &
-      any(intronMatchesList) | (rowData(
-        seFilteredSpliced)$strand == "-" & (!firstJunctionMatch &
-                                              any(intronMatchesList))))] <- "newLastJunction"
-  classificationTable$newFirstJunction[which(rowData(
-    seFilteredSpliced)$strand == "+" & !firstJunctionMatch &
-      any(intronMatchesList) | (rowData(
-        seFilteredSpliced)$strand == "-" & (!lastJunctionMatch &
-                                              any(intronMatchesList))))] <- "newFirstJunction"
+  strandVec <- rowData(seFilteredSpliced)$strand
+  intronMatchAny <- any(intronMatchesList)
+  classificationTable$newLastJunction[which( strandVec == "+" & !lastJunctionMatch &
+        intronMatchAny | (strandVec == "-" & (!firstJunctionMatch &
+        intronMatchAny)))] <- "newLastJunction"
+  classificationTable$newFirstJunction[which(strandVec == "+" & !firstJunctionMatch &
+      intronMatchAny | (strandVec == "-" & (!lastJunctionMatch &
+      intronMatchAny)))] <- "newFirstJunction"
   classificationTable$newJunction[(
     sum(!intronMatchesList) > !firstJunctionMatch + !lastJunctionMatch) &
-      any(intronMatchesList)] <- "newJunction"
-  classificationTable$allNew[!any(intronMatchesList)] <- "allNew"
+      intronMatchAny] <- "newJunction"
+  classificationTable$allNew[!intronMatchAny] <- "allNew"
   ## assign gene ids based on the max # of matching introns/splice junctions
   overlapsNewIntronsAnnotatedIntrons <- findOverlaps(unlistedIntrons,
                                                      unlistedIntronsAnnotations, type = "equal",
@@ -470,17 +471,16 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<-
 #' @importFrom SummarizedExperiment rbind
 #' @noRd
-addNewUnsplicedReadClasses <- function(se, seFilteredSpliced, exonsByReadClass,
-    annotationGrangesList, min.exonOverlap, verbose) {
+addNewUnsplicedReadClasses <- function(seFilteredUnspliced, seFilteredSpliced, 
+    exonsByReadClass, annotationGrangesList, min.exonOverlap, verbose) {
     start.ptm <- proc.time()
-    if (any(rowData(se)$confidenceType == "unsplicedNew")) {
-        seFilteredUnspliced <-
-            se[rowData(se)$confidenceType == "unsplicedNew", ]
+    if (length(seFilteredUnspliced)>0) {
+        rowDataUnspliced <- rowData(seFilteredUnspliced)
         exonsByReadClassUnspliced <- GRanges(
-            seqnames = rowData(seFilteredUnspliced)$chr,
-            ranges = IRanges(start = rowData(seFilteredUnspliced)$start,
-            end = rowData(seFilteredUnspliced)$end),
-            strand = rowData(seFilteredUnspliced)$strand)
+            seqnames = rowDataUnspliced$chr,
+            ranges = IRanges(start = rowDataUnspliced$start,
+            end = rowDataUnspliced$end),
+            strand = rowDataUnspliced$strand)
         partitioning <- PartitioningByEnd(seq_along(exonsByReadClassUnspliced),
             names = NULL)
         exonsByReadClassUnspliced$exon_rank <-
