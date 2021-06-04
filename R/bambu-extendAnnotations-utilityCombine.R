@@ -44,26 +44,12 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## update combinedFeatureTibble by sample, as at each step 
     ## start and end are updated iteratively as the fead count weighted average
     start.ptm <- proc.time()
-    for ( s in seq_along(featureTibbleList)){
-        if (s == 1){
-            featureTibbleBind <- featureTibbleList[[s]] 
-        }else{
-            featureTibbleBind <- 
-                bind_rows(list(combinedFeatureTibble,featureTibbleList[[s]]))
+    combinedFeatureTibble <- combineFeatureTibble(featureTibbleList[[1]]) 
+    if(length(featureTibbleList)-1){
+        for (s in seq_along(featureTibbleList)[-1]){
+            combinedFeatureTibble <- combineFeatureTibble(bind_rows(list(
+                combinedFeatureTibble,featureTibbleList[[s]])))
         }
-        combinedFeatureTibble <- featureTibbleBind %>% 
-        group_by(intronStarts, intronEnds, chr, strand) %>%
-        mutate(start = median(rep(start, times = readCount)),
-            end = median(rep(end, times = readCount)), #weighted median is used 
-        NSampleReadCount = sum(readCount >= min.readCount), 
-        # number of samples passed read count criteria
-        NSampleReadProp = sum(geneReadProp >= min.readFractionByGene),
-        # number of samples passed gene read prop criteria (transcript usage)
-        NSampleGeneFDR = sum(geneFDR <= min.geneFDR),
-        NSampleTxFDR = sum(txFDR <= min.txFDR)) %>% 
-        # number of samples passed gene and tx score criteria
-        ungroup()
-        ## remember to ungroup to avoid unnecessary wrong selection later
     }
     combinedFeatureTibble <- combinedFeatureTibble %>% 
         separate(row_id, c("sample","rcName"), sep = "\\-") %>%
@@ -71,6 +57,25 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
+    return(combinedFeatureTibble)
+}
+
+#' Function to combine featureTibble and create the NSample variables 
+#' @noRd
+combineFeatureTibble <- function(featureTibbleBind){
+    combinedFeatureTibble <- featureTibbleBind %>% 
+        group_by(intronStarts, intronEnds, chr, strand) %>%
+        mutate(start = median(rep(start, times = readCount)),
+            end = median(rep(end, times = readCount)), #weighted median is used 
+            NSampleReadCount = sum(readCount >= min.readCount), 
+            # number of samples passed read count criteria
+            NSampleReadProp = sum(geneReadProp >= min.readFractionByGene),
+            # number of samples passed gene read prop criteria
+            NSampleGeneFDR = sum(geneFDR <= min.geneFDR),
+            NSampleTxFDR = sum(txFDR <= min.txFDR)) %>% 
+            # number of samples passed gene and tx score criteria
+            ungroup()
+    ## remember to ungroup to avoid unnecessary wrong selection later
     return(combinedFeatureTibble)
 }
 
