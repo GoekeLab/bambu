@@ -2,39 +2,34 @@
 #' @inheritParams bambu
 #' @noRd
 isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
-    remove.subsetTx = TRUE, min.readCount = 2, 
-    min.readFractionByGene = 0.05, min.sampleNumber = 1, min.exonDistance = 35, 
-    min.exonOverlap = 10, min.primarySecondaryDist = 5,
-    min.primarySecondaryDistStartEnd = 5, 
-    min.geneFDR = 0.99, min.txFDR = 0.9,
-    prefix = "", verbose = FALSE){
+    remove.subsetTx = TRUE, min.readCount = 2, min.readFractionByGene = 0.05,
+    min.sampleNumber = 1, min.exonDistance = 35, min.exonOverlap = 10,
+    min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
+    min.geneFDR = 0.99, min.txFDR = 0.9, prefix = "", verbose = FALSE){
     filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
     if (any(filterSet, na.rm = TRUE)) {
-        # filter by read count 
-        combinedTranscriptsFilteredByReadCount <- 
-            combinedTranscripts[filterSet,]
-        # create SE from transcript tibble
-        se <- 
-            makeSEFromTranscriptsTibble(combinedTranscriptsFilteredByReadCount)
-        ## for spliced 
-        # create exons and introns based on the transcript tables
+        transcriptsFiltered <- combinedTranscripts[filterSet,]
+        group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
+            "confidenceType")
+        seTibble <- select(transcriptsFiltered,all_of(group_var)) 
+        count_var<- c("readCount","NSampleReadCount","NSampleReadProp",
+            "NSampleGeneFDR","NSampleTxFDR")
+        countTibble <- 
+          select(transcriptsFiltered,!all_of(c(group_var, count_var)))
+        se <- makeSEFromTranscriptsTibble(seTibble, countTibble)
         annotationSeqLevels <- seqlevels(annotationGrangesList)
-        splicedCombinedTranscripts <- 
-            filter(combinedTranscriptsFilteredByReadCount,
+        splicedSeTibble <- filter(seTibble,
             confidenceType == "highConfidenceJunctionReads")
-        combinedTranscriptRanges <- makeExonsIntronsSpliced(
-            splicedCombinedTranscripts, annotationSeqLevels)
-        # add new spliced ranges 
+        transcriptRanges <- makeExonsIntronsSpliced(
+            splicedSeTibble, annotationSeqLevels)
         confidenceTypeVec <- rowData(se)$confidenceType
-        seFilteredSpliced <- addNewSplicedReadClasses(combinedTranscriptRanges,
+        seFilteredSpliced <- addNewSplicedReadClasses(transcriptRanges,
             se[which(confidenceTypeVec == "highConfidenceJunctionReads")], 
             annotationGrangesList, min.exonDistance, min.primarySecondaryDist,
             min.primarySecondaryDistStartEnd)
-        # add new unspliced ranges
         seFilteredUnspliced <-se[which(confidenceTypeVec == "unsplicedNew")]
         SEnRng <- addNewUnsplicedReadClasses(seFilteredUnspliced, 
-            seFilteredSpliced,
-            combinedTranscriptRanges$exons, 
+            seFilteredSpliced,transcriptRanges$exons, 
             annotationGrangesList, min.exonOverlap, verbose)
         seCombined <- SEnRng$seCombined
         exonRangesCombined <- SEnRng$exonRangesCombined
@@ -119,9 +114,6 @@ filterTranscriptsByAnnotation <- function(seCombined, annotationGrangesList,
 #' @importFrom dplyr select distinct 
 #' @noRd
 makeExonsIntronsSpliced <- function(transcriptsTibble,annotationSeqLevels){
-    transcriptsTibble <- select(transcriptsTibble, chr, start,
-        end, strand, intronStarts, intronEnds, confidenceType) %>%
-        distinct()
     intronsByReadClass <- makeGRangesListFromFeatureFragments(
         seqnames = transcriptsTibble$chr,
         fragmentStarts = transcriptsTibble$intronStarts,
@@ -177,29 +169,13 @@ createExonByReadClass <- function(transcriptsTibble, annotationSeqLevels) {
 }
 
 #' make Se object based on transcripts tibble
-#' @param transcriptsTibble the transcripts tibble from 
-#'     \code{isore.combineTranscriptModels}.
-#' @importFrom dplyr %>% group_by mutate select distinct ungroup
-#' @importFrom tidyr spread 
 #' @noRd
-makeSEFromTranscriptsTibble <- function(transcriptsTibble){
-    counts <- transcriptsTibble %>% group_by(chr, start, end, strand,
-        intronStarts, intronEnds, sample_name) %>%
-        ## this step is added because of unspliced case
-        mutate(readCount = sum(readCount, na.rm=TRUE)) %>% 
-        select(readCount, confidenceType) %>%
-        distinct() %>%
-        ungroup() %>%
-        spread(key = "sample_name", value = "readCount", fill = NA) %>%
-        select(!(chr:confidenceType))
-    rowData <- select(transcriptsTibble, chr, start,
-        end, strand, intronStarts, intronEnds, confidenceType) %>%
-        distinct()
-    colDataDf <- DataFrame(name = colnames(counts), 
-        row.names = colnames(counts))
+makeSEFromTranscriptsTibble <- function(seTibble, countTibble){
+    colDataDf <- DataFrame(name = colnames(countTibble), 
+        row.names = colnames(countTibble))
     se <- SummarizedExperiment(
-        assays = SimpleList(counts = as.matrix(counts)),
-        rowData = rowData, colData = colDataDf)
+        assays = SimpleList(counts = as.matrix(countTibble)),
+        rowData = seTibble, colData = colDataDf)
     return(se)
 }
 
@@ -208,6 +184,7 @@ makeSEFromTranscriptsTibble <- function(transcriptsTibble){
 addNewSplicedReadClasses <- function(combinedTranscriptRanges, 
     seFilteredSpliced, annotationGrangesList, min.exonDistance, 
     min.primarySecondaryDist, min.primarySecondaryDistStartEnd){
+    start.ptm <- proc.time()
     exonsByReadClass <- combinedTranscriptRanges$exons
     intronsByReadClass <- combinedTranscriptRanges$introns
     ovExon <- 
@@ -251,6 +228,9 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
             min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
     mcols(seFilteredSpliced)$readClassType <-
         apply(classificationTable, 1, paste, collapse = "")
+    end.ptm <- proc.time()
+    if (verbose) message("extended annotations for unspliced reads in ",
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(seFilteredSpliced)
 }
 
