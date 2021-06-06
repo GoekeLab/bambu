@@ -17,10 +17,12 @@ isore.combineTranscriptCandidates <- function(readClassList,
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
         min.readCount, min.readFractionByGene, min.geneFDR, min.txFDR, verbose)
+    combinedSplicedTranscripts$confidenceType <-  "highConfidenceJunctionReads"
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
         stranded, min.readCount, min.readFractionByGene, min.geneFDR, 
         min.txFDR, verbose)
+    combinedUnsplicedTranscripts$confidenceType <- "unsplicedNew"
     combinedTranscripts <- 
         bind_rows(combinedSplicedTranscripts, combinedUnsplicedTranscripts)
     return(combinedTranscripts)
@@ -44,16 +46,11 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## update combinedFeatureTibble by sample, as at each step 
     ## start and end are updated iteratively as the fead count weighted average
     start.ptm <- proc.time()
-    combinedFeatureTibble <- combineFeatureTibble(featureTibbleList[[1]]) 
-    if(length(featureTibbleList)-1){
-        for (s in seq_along(featureTibbleList)[-1]){
-            combinedFeatureTibble <- combineFeatureTibble(bind_rows(list(
-                combinedFeatureTibble,featureTibbleList[[s]])))
-        }
+    combinedFeatureTibble <- NULL
+    for (s in seq_along(featureTibbleList)){
+        combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
+            featureTibbleList[[s]])
     }
-    combinedFeatureTibble <- combinedFeatureTibble %>% 
-        separate(row_id, c("sample","rcName"), sep = "\\-") %>%
-        select(-sample)
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
@@ -62,22 +59,42 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
 
 #' Function to combine featureTibble and create the NSample variables 
 #' @noRd
-combineFeatureTibble <- function(featureTibbleBind){
-    combinedFeatureTibble <- featureTibbleBind %>% 
-        group_by(intronStarts, intronEnds, chr, strand) %>%
-        mutate(start = median(rep(start, times = readCount)),
-            end = median(rep(end, times = readCount)), #weighted median is used 
-            NSampleReadCount = sum(readCount >= min.readCount), 
+combineFeatureTibble <- function(combinedFeatureTibble, newSampleTibble){
+    # step 1: summarise within each sample
+    sampleName <- unique(newSampleTibble$sample_name)
+    group_var <- c("intronStarts", "intronEnds", "chr", "strand")
+    sum_var <- c("readCount","start","end","NSampleReadCount",
+                 "NSampleReadProp","NSampleGeneFDR","NSampleTxFDR",
+                 sampleName)
+    featureTibbleSummarised <- newSampleTibble %>% 
+        mutate(NSampleReadCount = (readCount >= min.readCount), 
             # number of samples passed read count criteria
-            NSampleReadProp = sum(geneReadProp >= min.readFractionByGene),
+            NSampleReadProp = (geneReadProp >= min.readFractionByGene),
             # number of samples passed gene read prop criteria
-            NSampleGeneFDR = sum(geneFDR <= min.geneFDR),
-            NSampleTxFDR = sum(txFDR <= min.txFDR)) %>% 
-            # number of samples passed gene and tx score criteria
-            ungroup()
+            NSampleGeneFDR = (geneFDR <= min.geneFDR),
+            NSampleTxFDR = (txFDR <= min.txFDR),
+            {{sampleName}} := readCount) %>%
+        select(all_of(c(group_var, sum_var)))
+    # step2: combine with previous results 
+    combinedFeatureTibble <- bind_rows(list(combinedFeatureTibble,
+                                           featureTibbleSummarised))
+    countVars <- setdiff(colnames(combinedFeatureTibble), c(group_var,
+            "start","end"))
+    combinedFeatureTibble <- combinedFeatureTibble %>% 
+        mutate(readCount_tmp = readCount) %>%
+        group_by(intronStarts, intronEnds, chr, strand) %>%
+        mutate(start = median(rep(start, times = readCount_tmp)),
+            end = median(rep(end, times = readCount_tmp))) %>% 
+        group_by(intronStarts, intronEnds, chr, strand, start, end) %>%
+        summarise_at(countVars, sum, na.rm = TRUE) %>%
+        ungroup()
     ## remember to ungroup to avoid unnecessary wrong selection later
     return(combinedFeatureTibble)
 }
+
+
+
+#' Left join with each sample to get the readCount
 
 #' extract important features from readClassSe object for each sample
 #' @noRd
@@ -93,15 +110,13 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id){
     rowData <- as_tibble(rowData(readClassSe))
     rowData$start <- rowMins(start)
     rowData$end <- rowMaxs(end)
-    rowData$row_id <- paste("s",sample_id,"-",dimNames[[1]],sep="")
     rowData$sample_name <- dimNames[[2]]
     featureTibble <- rowData %>% dplyr::select(chr = chr.rc, start, end,
         strand = strand.rc, intronStarts, intronEnds, confidenceType,
-        readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR,
-        row_id, sample_name) %>%
+        readCount, geneReadProp, txFDR,geneFDR,
+        sample_name) %>%
         filter(readCount > 1, # only use readCount>1 and highconfidence reads
-            confidenceType == "highConfidenceJunctionReads") %>%
-        mutate(sample_id = sample_id)
+            confidenceType == "highConfidenceJunctionReads") 
     return(featureTibble)
 }
 
@@ -114,41 +129,36 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id){
 #' @noRd
 combineUnsplicedTranscriptModels <- 
     function(readClassList,  bpParameters, stranded, min.readCount, 
-    min.readFractionByGene, min.geneFDR, min.txFDR,
-    verbose){
-    start.ptm <- proc.time()
-    newUnsplicedSeList <- bplapply(seq_along(readClassList), function(sample_id)
-        extractNewUnsplicedRanges(readClassSe = readClassList[[sample_id]],
-        sample_id = sample_id), BPPARAM = bpParameters)
-    end.ptm <- proc.time()
-    if (verbose) message("extract new unspliced ranges object for all
+             min.readFractionByGene, min.geneFDR, min.txFDR,
+             verbose){
+        start.ptm <- proc.time()
+        newUnsplicedSeList <- bplapply(seq_along(readClassList), function(sample_id)
+            extractNewUnsplicedRanges(readClassSe = readClassList[[sample_id]],
+            sample_id = sample_id), BPPARAM = bpParameters)
+        end.ptm <- proc.time()
+        if (verbose) message("extract new unspliced ranges object for all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    rangesList <- bplapply(newUnsplicedSeList, function(newUnsplicedSe){
-        rr <- unlist(rowRanges(newUnsplicedSe))
-        rr$row_id <- names(rr)
-        return(rr)
-    }, BPPARAM = bpParameters)
-    colDataNames <- unlist(lapply(newUnsplicedSeList, function(x) colnames(x)))
-    start.ptm <- proc.time()
-    combinedNewUnsplicedSe <- reduceUnsplicedRanges(rangesList, stranded)
-    end.ptm <- proc.time()
-    if (verbose) message("reduce new unspliced ranges object across all
+        rangesList <- bplapply(newUnsplicedSeList, function(newUnsplicedSe){
+            rr <- unlist(rowRanges(newUnsplicedSe))
+            rr$row_id <- names(rr)
+            return(rr)
+        }, BPPARAM = bpParameters)
+        colDataNames <- unlist(lapply(newUnsplicedSeList, function(x) colnames(x)))
+        start.ptm <- proc.time()
+        combinedNewUnsplicedSe <- reduceUnsplicedRanges(rangesList, stranded)
+        end.ptm <- proc.time()
+        if (verbose) message("reduce new unspliced ranges object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    start.ptm <- proc.time()
-    combinedUnsplicedTibble <- 
-        makeUnsplicedTibble(combinedNewUnsplicedSe,newUnsplicedSeList,
-        min.readCount, min.readFractionByGene, min.geneFDR,
-        min.txFDR, bpParameters)
-    combinedUnsplicedTibble <- combinedUnsplicedTibble %>% 
-        separate(row_id, c("sample","rcName"), sep = "\\-") %>%
-        mutate(sample_id = as.integer(gsub("s","",sample))) %>%
-        mutate(sample_name = colDataNames[sample_id]) %>%
-        select(-sample)
-    end.ptm <- proc.time()
-    if (verbose) message("combine new unspliced tibble object across all
+        start.ptm <- proc.time()
+        combinedUnsplicedTibble <- 
+            makeUnsplicedTibble(combinedNewUnsplicedSe,newUnsplicedSeList, 
+            colDataNames, min.readCount, min.readFractionByGene, min.geneFDR,
+            min.txFDR, bpParameters)
+        end.ptm <- proc.time()
+        if (verbose) message("combine new unspliced tibble object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    return(combinedUnsplicedTibble)
-}
+        return(combinedUnsplicedTibble)
+    }
 
 
 #' extract new unspliced ranges from readClassSe object for each sample
@@ -163,7 +173,7 @@ extractNewUnsplicedRanges <- function(readClassSe, sample_id){
     rownames(readClassSe) <- paste0("s",sample_id,"-",pre_names)
     newUnsplicedSe <- 
         readClassSe[which(rowData$confidenceType == "unsplicedNew" & 
-        rowData$readCount > 1)]
+                              rowData$readCount > 1)]
     return(newUnsplicedSe)
 }
 
@@ -194,36 +204,46 @@ reduceUnsplicedRanges <- function(rangesList, stranded){
 }
 
 #' make unspliced tibble 
-#' @importFrom tidyr separate_rows
+#' @importFrom tidyr separate_rows pivot_wider
 #' @importFrom dplyr as_tibble rename mutate select %>% group_by left_join
 #'              ungroup
 makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
-                                min.readCount, min.readFractionByGene,
-                                min.geneFDR, min.txFDR,
-                                bpParameters){
+        colDataNames,min.readCount, min.readFractionByGene,
+        min.geneFDR, min.txFDR,bpParameters){
     newUnsplicedTibble <- as_tibble(combinedNewUnsplicedSe) %>%
         rename(chr = seqnames) %>%
         select(chr, start, end, strand, row_id) %>%
         separate_rows(row_id, sep = "\\+") 
     rowDataCombined <-
         do.call("rbind",bplapply(newUnsplicedSeList, function(newUnsplicedSe) {
-        rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
-            newUnsplicedTibble$row_id)])
-        rr <- as_tibble(rr) %>% select(intronStarts, intronEnds, confidenceType,
-            readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR) %>%
-            mutate(row_id = rownames(rr))
-        return(rr)
-    } , BPPARAM = bpParameters))
+            rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
+                                                   newUnsplicedTibble$row_id)])
+            rr <- as_tibble(rr) %>% select(confidenceType,
+                                           readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR) %>%
+                mutate(row_id = rownames(rr))
+            return(rr)
+        } , BPPARAM = bpParameters))
     newUnsplicedTibble <- newUnsplicedTibble %>% 
         left_join(rowDataCombined, by =  "row_id") %>%
+        separate(row_id, c("sample","rcName"), sep = "\\-") %>%
+        mutate(sample_id = as.integer(gsub("s","",sample))) %>%
+        mutate(sample_name = colDataNames[sample_id]) %>%
+        select(-sample, -sample_id) %>%
+        mutate(readCount_tmp = readCount) %>%
+        group_by(chr,strand, start, end, sample_name) %>%
+        summarise(readCount = sum(readCount),
+                  geneReadProp = sum(geneReadProp),
+                  geneFDR = median(geneFDR, times = readCount_tmp),
+                  txFDR = median(txFDR, times = readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
-        mutate(NSampleReadCount = sum(sum(readCount) >= min.readCount), 
-            NSampleReadProp = sum(sum(geneReadProp) >= 
-            min.readFractionByGene),
-            NSampleGeneFDR = sum(median(geneFDR, times = readCount) <= 
-            min.geneFDR),
-            NSampleTxFDR = sum(median(txFDR, times = readCount) <= 
-            min.txFDR)) %>%
-        ungroup()
+        mutate(NSampleReadCount = sum(readCount >= min.readCount), 
+               NSampleReadProp = sum(geneReadProp >= 
+                                         min.readFractionByGene),
+               NSampleGeneFDR = sum(geneFDR<= 
+                                        min.geneFDR),
+               NSampleTxFDR = sum(txFDR <= 
+                                      min.txFDR)) %>%
+        select(-geneReadProp, -geneFDR, -txFDR)  %>%
+        pivot_wider(names_from = sample_name, values_from = readCount)
     return(newUnsplicedTibble)
 }
