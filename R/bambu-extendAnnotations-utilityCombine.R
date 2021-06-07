@@ -49,7 +49,8 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     combinedFeatureTibble <- NULL
     for (s in seq_along(featureTibbleList)){
         combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
-            featureTibbleList[[s]])
+            featureTibbleList[[s]], min.readCount, min.readFractionByGene , 
+            min.geneFDR, min.txFDR)
     }
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
@@ -59,7 +60,8 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
 
 #' Function to combine featureTibble and create the NSample variables 
 #' @noRd
-combineFeatureTibble <- function(combinedFeatureTibble, newSampleTibble){
+combineFeatureTibble <- function(combinedFeatureTibble, newSampleTibble,
+    min.readCount, min.readFractionByGene, min.geneFDR, min.txFDR){
     # step 1: summarise within each sample
     sampleName <- unique(newSampleTibble$sample_name)
     group_var <- c("intronStarts", "intronEnds", "chr", "strand")
