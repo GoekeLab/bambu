@@ -26,7 +26,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
         seFilteredSpliced <- addNewSplicedReadClasses(transcriptRanges,
             se[which(confidenceTypeVec == "highConfidenceJunctionReads")], 
             annotationGrangesList, min.exonDistance, min.primarySecondaryDist,
-            min.primarySecondaryDistStartEnd)
+            min.primarySecondaryDistStartEnd, verbose)
         seFilteredUnspliced <-se[which(confidenceTypeVec == "unsplicedNew")]
         SEnRng <- addNewUnsplicedReadClasses(seFilteredUnspliced, 
             seFilteredSpliced,transcriptRanges$exons, 
@@ -183,7 +183,7 @@ makeSEFromTranscriptsTibble <- function(seTibble, countTibble){
 #' @noRd
 addNewSplicedReadClasses <- function(combinedTranscriptRanges, 
     seFilteredSpliced, annotationGrangesList, min.exonDistance, 
-    min.primarySecondaryDist, min.primarySecondaryDistStartEnd){
+    min.primarySecondaryDist, min.primarySecondaryDistStartEnd, verbose){
     start.ptm <- proc.time()
     exonsByReadClass <- combinedTranscriptRanges$exons
     intronsByReadClass <- combinedTranscriptRanges$introns
