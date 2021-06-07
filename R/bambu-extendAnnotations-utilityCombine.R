@@ -13,18 +13,19 @@
 isore.combineTranscriptCandidates <- function(readClassList,
     stranded, ## stranded used for unspliced reduce  
     min.readCount , min.readFractionByGene , min.geneFDR,
-    min.txFDR, bpParameters,verbose){
+    min.txFDR, bpParameters ,verbose){
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
-        min.readCount, min.readFractionByGene, min.geneFDR, min.txFDR, verbose)
-    combinedSplicedTranscripts$confidenceType <-  "highConfidenceJunctionReads"
+        min.readCount, min.readFractionByGene, min.geneFDR, 
+        min.txFDR, verbose) %>% data.table()
+    combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
         stranded, min.readCount, min.readFractionByGene, min.geneFDR, 
-        min.txFDR, verbose)
-    combinedUnsplicedTranscripts$confidenceType <- "unsplicedNew"
-    combinedTranscripts <- 
-        bind_rows(combinedSplicedTranscripts, combinedUnsplicedTranscripts)
+        min.txFDR, verbose) %>% data.table
+    combinedUnsplicedTranscripts[, confidenceType := "unsplicedNew"]
+    combinedTranscripts <- as_tibble(rbindlist(list(combinedSplicedTranscripts,
+        combinedUnsplicedTranscripts), fill = TRUE))
     return(combinedTranscripts)
 }
 
@@ -36,10 +37,14 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     verbose){
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.ptm <- proc.time()
-    featureTibbleList <- 
+    featureDTList <- 
         bplapply(seq_along(readClassList), function(sample_id){
         extractFeaturesFromReadClassSE(readClassSe = readClassList[[sample_id]],
-        sample_id = sample_id)}, BPPARAM = bpParameters)
+        sample_id = sample_id, 
+        min.readCount = min.readCount, 
+        min.readFractionByGene = min.readFractionByGene, 
+        min.geneFDR = min.geneFDR, 
+        min.txFDR = min.txFDR)}, BPPARAM = bpParameters)
     end.ptm <- proc.time()
     if (verbose) message("creating spliced feature tibble objects for all 
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
@@ -47,10 +52,9 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## start and end are updated iteratively as the fead count weighted average
     start.ptm <- proc.time()
     combinedFeatureTibble <- NULL
-    for (s in seq_along(featureTibbleList)){
+    for (s in seq_along(featureDTList)){
         combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
-            featureTibbleList[[s]], min.readCount, min.readFractionByGene , 
-            min.geneFDR, min.txFDR)
+            featureDTList[[s]])
     }
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
@@ -60,26 +64,11 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
 
 #' Function to combine featureTibble and create the NSample variables 
 #' @noRd
-combineFeatureTibble <- function(combinedFeatureTibble, newSampleTibble,
-    min.readCount, min.readFractionByGene, min.geneFDR, min.txFDR){
-    # step 1: summarise within each sample
-    sampleName <- unique(newSampleTibble$sample_name)
+combineFeatureTibble <- function(combinedFeatureTibble, 
+    featureTibbleSummarised){
+    combinedFeatureTibble <- as_tibble(rbindlist(list(combinedFeatureTibble, 
+        featureTibbleSummarised), fill = TRUE))
     group_var <- c("intronStarts", "intronEnds", "chr", "strand")
-    sum_var <- c("readCount","start","end","NSampleReadCount",
-                 "NSampleReadProp","NSampleGeneFDR","NSampleTxFDR",
-                 sampleName)
-    featureTibbleSummarised <- newSampleTibble %>% 
-        mutate(NSampleReadCount = (readCount >= min.readCount), 
-            # number of samples passed read count criteria
-            NSampleReadProp = (geneReadProp >= min.readFractionByGene),
-            # number of samples passed gene read prop criteria
-            NSampleGeneFDR = (geneFDR <= min.geneFDR),
-            NSampleTxFDR = (txFDR <= min.txFDR),
-            {{sampleName}} := readCount) %>%
-        select(all_of(c(group_var, sum_var)))
-    # step2: combine with previous results 
-    combinedFeatureTibble <- bind_rows(list(combinedFeatureTibble,
-                                           featureTibbleSummarised))
     countVars <- setdiff(colnames(combinedFeatureTibble), c(group_var,
             "start","end"))
     combinedFeatureTibble <- combinedFeatureTibble %>% 
@@ -96,11 +85,10 @@ combineFeatureTibble <- function(combinedFeatureTibble, newSampleTibble,
 
 
 
-#' Left join with each sample to get the readCount
-
 #' extract important features from readClassSe object for each sample
 #' @noRd
-extractFeaturesFromReadClassSE <- function(readClassSe, sample_id){
+extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
+    min.readCount, min.readFractionByGene, min.geneFDR, min.txFDR){
     if (is.character(readClassSe)) 
         readClassSe <- readRDS(file = readClassSe)
     dimNames <- list(rownames(readClassSe), colnames(readClassSe))
@@ -112,14 +100,26 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id){
     rowData <- as_tibble(rowData(readClassSe))
     rowData$start <- rowMins(start)
     rowData$end <- rowMaxs(end)
-    rowData$sample_name <- dimNames[[2]]
-    featureTibble <- rowData %>% dplyr::select(chr = chr.rc, start, end,
+    sampleName <-  dimNames[[2]]
+    group_var <- c("intronStarts", "intronEnds", "chr", "strand")
+    sum_var <- c("readCount","start","end","NSampleReadCount",
+                 "NSampleReadProp","NSampleGeneFDR","NSampleTxFDR",
+                 sampleName)
+    featureDT <- rowData %>% dplyr::select(chr = chr.rc, start, end,
         strand = strand.rc, intronStarts, intronEnds, confidenceType,
-        readCount, geneReadProp, txFDR,geneFDR,
-        sample_name) %>%
+        readCount, geneReadProp, txFDR,geneFDR) %>%
         filter(readCount > 1, # only use readCount>1 and highconfidence reads
-            confidenceType == "highConfidenceJunctionReads") 
-    return(featureTibble)
+            confidenceType == "highConfidenceJunctionReads") %>% 
+        mutate(NSampleReadCount = (readCount >= min.readCount), 
+               # number of samples passed read count criteria
+               NSampleReadProp = (geneReadProp >= min.readFractionByGene),
+               # number of samples passed gene read prop criteria
+               NSampleGeneFDR = (geneFDR <= min.geneFDR),
+               NSampleTxFDR = (txFDR <= min.txFDR),
+               {{sampleName}} := readCount) %>%
+        select(all_of(c(group_var, sum_var))) %>%
+        data.table()
+    return(featureDT)
 }
 
 
