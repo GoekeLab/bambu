@@ -56,6 +56,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
         combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
             featureDTList[[s]])
     }
+    combinedFeatureTibble <- select(combinedFeatureTibble, -readCount) 
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
@@ -102,9 +103,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     rowData$end <- rowMaxs(end)
     sampleName <-  dimNames[[2]]
     group_var <- c("intronStarts", "intronEnds", "chr", "strand")
-    sum_var <- c("readCount","start","end","NSampleReadCount",
-                 "NSampleReadProp","NSampleGeneFDR","NSampleTxFDR",
-                 sampleName)
+    sum_var <- c("start","end","NSampleReadCount",
+                 "readCount","NSampleReadProp","NSampleGeneFDR","NSampleTxFDR")
     featureDT <- rowData %>% dplyr::select(chr = chr.rc, start, end,
         strand = strand.rc, intronStarts, intronEnds, confidenceType,
         readCount, geneReadProp, txFDR,geneFDR) %>%
@@ -115,8 +115,7 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
                NSampleReadProp = (geneReadProp >= min.readFractionByGene),
                # number of samples passed gene read prop criteria
                NSampleGeneFDR = (geneFDR <= min.geneFDR),
-               NSampleTxFDR = (txFDR <= min.txFDR),
-               {{sampleName}} := readCount) %>%
+               NSampleTxFDR = (txFDR <= min.txFDR)) %>%
         select(all_of(c(group_var, sum_var))) %>%
         data.table()
     return(featureDT)
@@ -233,14 +232,12 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                   geneFDR = median(geneFDR, times = readCount_tmp),
                   txFDR = median(txFDR, times = readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
-        mutate(NSampleReadCount = sum(readCount >= min.readCount), 
+        summarise(NSampleReadCount = sum(readCount >= min.readCount), 
                NSampleReadProp = sum(geneReadProp >= 
                                          min.readFractionByGene),
                NSampleGeneFDR = sum(geneFDR<= 
                                         min.geneFDR),
                NSampleTxFDR = sum(txFDR <= 
-                                      min.txFDR)) %>%
-        select(-geneReadProp, -geneFDR, -txFDR)  %>%
-        pivot_wider(names_from = sample_name, values_from = readCount)
+                                      min.txFDR)) 
     return(newUnsplicedTibble)
 }
