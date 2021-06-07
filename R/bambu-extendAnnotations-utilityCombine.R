@@ -132,7 +132,8 @@ combineUnsplicedTranscriptModels <-
              min.readFractionByGene, min.geneFDR, min.txFDR,
              verbose){
         start.ptm <- proc.time()
-        newUnsplicedSeList <- bplapply(seq_along(readClassList), function(sample_id)
+        newUnsplicedSeList <- 
+            bplapply(seq_along(readClassList), function(sample_id)
             extractNewUnsplicedRanges(readClassSe = readClassList[[sample_id]],
             sample_id = sample_id), BPPARAM = bpParameters)
         end.ptm <- proc.time()
@@ -182,24 +183,18 @@ extractNewUnsplicedRanges <- function(readClassSe, sample_id){
 #' @importFrom dplyr as_tibble %>% mutate group_by summarise ungroup
 #' @noRd
 reduceUnsplicedRanges <- function(rangesList, stranded){
-    combinedNewUnsplicedSe <- rangesList[[1]]
-    for ( s in seq_along(rangesList)[-1]){
-        new_range <- rangesList[[s]]
-        new_range$exon_rank <- new_range$exon_endRank <- 
-            names(new_range) <- NULL
-        unlistedSe <- c(combinedNewUnsplicedSe, new_range)
-        combinedNewUnsplicedSe <- 
+    unlistedSe <- do.call("c",rangesList)
+    combinedNewUnsplicedSe <- 
             reduce(unlistedSe, with.revmap=TRUE,ignore.strand = !stranded)
-        ## map it back to find the corresponding sample and id, update name
-        rcNames <- as_tibble(as.data.frame(combinedNewUnsplicedSe$revmap)) %>%
+    ## map it back to find the corresponding sample and id, update name
+    rcNames <- as_tibble(as.data.frame(combinedNewUnsplicedSe$revmap)) %>%
             mutate(row_id = unlistedSe$row_id[value]) %>%
             group_by(group) %>%
             summarise(combinedName = paste(row_id, collapse = "+")) %>%
             ungroup()
         ## at each iteration update the new combined name of unspliced se 
-        combinedNewUnsplicedSe$row_id <- rcNames$combinedName
-        combinedNewUnsplicedSe$revmap <- NULL
-    }
+    combinedNewUnsplicedSe$row_id <- rcNames$combinedName
+    combinedNewUnsplicedSe$revmap <- NULL
     return(combinedNewUnsplicedSe)
 }
 
@@ -219,7 +214,7 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
             rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
                                                    newUnsplicedTibble$row_id)])
             rr <- as_tibble(rr) %>% select(confidenceType,
-                                           readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR) %>%
+                readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR) %>%
                 mutate(row_id = rownames(rr))
             return(rr)
         } , BPPARAM = bpParameters))
