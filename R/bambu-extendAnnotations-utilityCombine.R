@@ -22,7 +22,7 @@ isore.combineTranscriptCandidates <- function(readClassList,
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
         stranded, min.readCount, min.readFractionByGene, min.geneFDR, 
-        min.txFDR, verbose) %>% data.table
+        min.txFDR, verbose) %>% data.table()
     combinedUnsplicedTranscripts[, confidenceType := "unsplicedNew"]
     combinedTranscripts <- as_tibble(rbindlist(list(combinedSplicedTranscripts,
         combinedUnsplicedTranscripts), fill = TRUE))
@@ -69,16 +69,16 @@ combineFeatureTibble <- function(combinedFeatureTibble,
     featureTibbleSummarised){
     combinedFeatureTibble <- as_tibble(rbindlist(list(combinedFeatureTibble, 
         featureTibbleSummarised), fill = TRUE))
-    group_var <- c("intronStarts", "intronEnds", "chr", "strand")
-    countVars <- setdiff(colnames(combinedFeatureTibble), c(group_var,
-            "start","end"))
     combinedFeatureTibble <- combinedFeatureTibble %>% 
         mutate(readCount_tmp = readCount) %>%
         group_by(intronStarts, intronEnds, chr, strand) %>%
-        mutate(start = median(rep(start, times = readCount_tmp)),
-            end = median(rep(end, times = readCount_tmp))) %>% 
-        group_by(intronStarts, intronEnds, chr, strand, start, end) %>%
-        summarise_at(countVars, sum, na.rm = TRUE) %>%
+        summarise(start = median(rep(start, times = readCount_tmp)),
+               end = median(rep(end, times = readCount_tmp)),
+               readCount = sum(readCount, na.rm = TRUE),
+               NSampleReadCount = sum(NSampleReadCount, na.rm = TRUE),
+               NSampleReadProp = sum(NSampleReadProp, na.rm = TRUE),
+               NSampleGeneFDR = sum(NSampleGeneFDR, na.rm = TRUE),
+               NSampleTxFDR = sum(NSampleTxFDR, na.rm = TRUE)) %>%
         ungroup()
     ## remember to ungroup to avoid unnecessary wrong selection later
     return(combinedFeatureTibble)
@@ -101,7 +101,6 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     rowData <- as_tibble(rowData(readClassSe))
     rowData$start <- rowMins(start)
     rowData$end <- rowMaxs(end)
-    sampleName <-  dimNames[[2]]
     group_var <- c("intronStarts", "intronEnds", "chr", "strand")
     sum_var <- c("start","end","NSampleReadCount",
                  "readCount","NSampleReadProp","NSampleGeneFDR","NSampleTxFDR")
@@ -235,9 +234,7 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         summarise(NSampleReadCount = sum(readCount >= min.readCount), 
                NSampleReadProp = sum(geneReadProp >= 
                                          min.readFractionByGene),
-               NSampleGeneFDR = sum(geneFDR<= 
-                                        min.geneFDR),
-               NSampleTxFDR = sum(txFDR <= 
-                                      min.txFDR)) 
+               NSampleGeneFDR = sum(geneFDR <= min.geneFDR),
+               NSampleTxFDR = sum(txFDR <= min.txFDR)) 
     return(newUnsplicedTibble)
 }
