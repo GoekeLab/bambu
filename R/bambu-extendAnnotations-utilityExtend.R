@@ -435,7 +435,7 @@ addNewUnsplicedReadClasses <- function(rowDataFilteredUnspliced, rowDataFiltered
     rowDataCombined <- rowDataFilteredSpliced
     exonRangesCombined <- exonsByReadClass
     names(exonRangesCombined) <- seq_along(exonRangesCombined)
-    if (nrow(rowDataFilteredUnspliced)>0) {
+    if (nrow(rowDataFilteredUnspliced)) {
         exonsByReadClassUnspliced <- GRanges(
             seqnames = rowDataFilteredUnspliced$chr,
             ranges = IRanges(start = rowDataFilteredUnspliced$start,
@@ -460,7 +460,7 @@ addNewUnsplicedReadClasses <- function(rowDataFilteredUnspliced, rowDataFiltered
             annotationGrangesList, minoverlap = min.exonOverlap,
             select = "first")
         naOverlapUnspliced <- which(is.na(overlapUnspliced))
-        if(length(naOverlapUnspliced) > 0) {
+        if(length(naOverlapUnspliced)) {
             rowDataFilteredUnspliced <- 
                 rowDataFilteredUnspliced[naOverlapUnspliced,]
             exonsByReadClassUnspliced <-
