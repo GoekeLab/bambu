@@ -21,8 +21,6 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         combinedTranscripts = combinedTxCandidates,
         annotationGrangesList = annotations,
         remove.subsetTx = isoreParameters[["remove.subsetTx"]],
-        min.readCount = isoreParameters[["min.readCount"]],
-        min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
         min.exonDistance = isoreParameters[["min.exonDistance"]],
         min.exonOverlap = isoreParameters[["min.exonOverlap"]],
@@ -30,8 +28,6 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         isoreParameters[['min.primarySecondaryDist']], 
         min.primarySecondaryDistStartEnd = 
         isoreParameters[['min.primarySecondaryDistStartEnd1']],
-        min.geneFDR = isoreParameters[['min.geneFDR']],
-        min.txFDR = isoreParameters[['min.txFDR']],
         prefix = isoreParameters[["prefix"]],
         verbose = verbose)
     end.ptm <- proc.time()
