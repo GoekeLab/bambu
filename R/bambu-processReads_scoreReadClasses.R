@@ -197,8 +197,10 @@ prepareTranscriptModelFeatures = function(rowData){
     dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
         numAstart, numAend, numTstart,numTend, 
         tx_strand_bias = readCount.posStrand, labels = equal) %>%
-    mutate(numReads = log2(pmax(1,numReads)), 
-        tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))))
+    mutate(
+        tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
+        numReads = log2(pmax(1,numReads))
+        )
     return(outData)
 }
 
