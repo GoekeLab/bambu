@@ -86,7 +86,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
-    se = scoreReadClasses(se, genomeSequence, annotations)
+    se = scoreReadClasses(se, genomeSequence, annotations, verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
@@ -135,6 +135,8 @@ checkInputSequence <- function(genomeSequence) {
                     "[[", 1))
                 names(genomeSequence) <- newlevels
             } else {
+                indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
+                if (!indexFileExists) indexFa(genomeSequence)
                 genomeSequence <- FaFile(genomeSequence)
             }
         } else {

@@ -3,7 +3,8 @@
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, 
-                                    min.readCount = 2){ 
+                                    min.readCount = 2, verbose = FALSE){
+    start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
@@ -40,7 +41,10 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)$txFDR = rep(NA,nrow(se))
     rowData(se)$txScore[txIndex] = txScore$txScore
     rowData(se)$txFDR[txIndex] = txScore$txFDR
-    
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Finished generating scores for read classes in ", 
+        round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     return(se)
 }
 
@@ -67,8 +71,9 @@ isReadClassCompatible =  function(query, subject){
     intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
                         use.names = FALSE, use.ids = FALSE)
 
-    partitioningQuery <- PartitioningByEnd(cumsum(elementNROWS(query)-1),
-                                        names = NULL)
+    partitioningQuery <- 
+        PartitioningByEnd(cumsum(elementNROWS(gaps(ranges(query)))),
+        names = NULL)
     allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
 
     olap = findOverlaps(query[allIntronMatchQuery],subject, 

@@ -74,6 +74,7 @@ Imports:
     BiocParallel,
     data.table,
     dplyr,
+    tidyr,
     GenomeInfoDb,
     GenomicAlignments,
     GenomicFeatures,
