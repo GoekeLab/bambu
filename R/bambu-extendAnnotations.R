@@ -4,7 +4,7 @@
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations,
     isoreParameters, stranded, bpParameters, verbose = FALSE) {
-    start.ptm <- proc.time()
+    start.ptm_all <- proc.time()
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClassList,
         stranded, ## stranded used for unspliced reduce  
         min.readCount = isoreParameters[["min.readCount"]], 
@@ -13,10 +13,10 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         min.txFDR = isoreParameters[["min.txFDR"]],
         bpParameters,
         verbose)
-    end.ptm <- proc.time()
+    end.ptm_all <- proc.time()
     if (verbose) message("combining transcripts in ",
-        round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    start.ptm <- proc.time()
+        round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
+    start.ptm_all <- proc.time()
     annotations <- isore.extendAnnotations(
         combinedTranscripts = combinedTxCandidates,
         annotationGrangesList = annotations,
@@ -30,8 +30,8 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         isoreParameters[['min.primarySecondaryDistStartEnd1']],
         prefix = isoreParameters[["prefix"]],
         verbose = verbose)
-    end.ptm <- proc.time()
+    end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",
-                         round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
+                         round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
     return(annotations)
 }
