@@ -34,13 +34,11 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)$geneFDR = rep(NA,nrow(se))
     rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
     rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
-    txIndex = which(rowData(se)$readCount
-                    >=min.readCount & !rowData(se)$novel)
-    txScore = getTranscriptScore(rowData(se)[txIndex,])
+    txScore = getTranscriptScore(rowData(se)[thresholdIndex,])
     rowData(se)$txScore = rep(NA,nrow(se))
     rowData(se)$txFDR = rep(NA,nrow(se))
-    rowData(se)$txScore[txIndex] = txScore$txScore
-    rowData(se)$txFDR[txIndex] = txScore$txFDR
+    rowData(se)$txScore[thresholdIndex] = txScore$txScore
+    rowData(se)$txFDR[thresholdIndex] = txScore$txFDR
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
@@ -176,12 +174,13 @@ getTranscriptScore = function(rowData){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures)){
-    transcriptModel = fit_xgb(features, 
-        txFeatures$labels)
-    txScore = predict(transcriptModel, as.matrix(features))
+        modelFeatures = features[which(!rowData$novel),]
+        transcriptModel = fit_xgb(modelFeatures, 
+            txFeatures$labels[which(!rowData$novel)])
+        txScore = predict(transcriptModel, as.matrix(features))
 
-    #calculates the FDR for filtering RCs based on wanted precision
-    txFDR = calculateFDR(txScore, txFeatures$labels)
+        #calculates the FDR for filtering RCs based on wanted precision
+        txFDR = calculateFDR(txScore, txFeatures$labels)
 
     } else {
     message("Transcript Score not calculated")
