@@ -207,7 +207,7 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     rowDataFilteredSpliced$readClassType <-
         apply(classificationTable, 1, paste, collapse = "")
     end.ptm <- proc.time()
-    if (verbose) message("extended annotations for unspliced reads in ",
+    if (verbose) message("extended annotations for spliced reads in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(rowDataFilteredSpliced)
 }
