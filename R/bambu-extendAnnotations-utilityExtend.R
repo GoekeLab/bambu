@@ -17,12 +17,12 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
             confidenceType == "highConfidenceJunctionReads")
         transcriptRanges <- makeExonsIntronsSpliced(
           rowDataSplicedTibble, annotationSeqLevels)
-        confidenceTypeVec <- rowDataSplicedTibble$confidenceType
+        confidenceTypeVec <- rowDataTibble$confidenceType
         rowDataFilteredSpliced <- addNewSplicedReadClasses(transcriptRanges,
-            filter(rowDataSplicedTibble, confidenceTypeVec == "highConfidenceJunctionReads"), 
+            rowDataSplicedTibble, 
             annotationGrangesList, min.exonDistance, min.primarySecondaryDist,
             min.primarySecondaryDistStartEnd, verbose)
-        rowDataFilteredUnspliced <-rowDataSplicedTibble[which(confidenceTypeVec == "unsplicedNew"),]
+        rowDataFilteredUnspliced <-rowDataTibble[which(confidenceTypeVec == "unsplicedNew"),]
         SEnRng <- addNewUnsplicedReadClasses(rowDataFilteredUnspliced, 
             rowDataFilteredSpliced,transcriptRanges$exons, 
             annotationGrangesList, min.exonOverlap, verbose)
@@ -207,7 +207,7 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     rowDataFilteredSpliced$readClassType <-
         apply(classificationTable, 1, paste, collapse = "")
     end.ptm <- proc.time()
-    if (verbose) message("extended annotations for unspliced reads in ",
+    if (verbose) message("extended annotations for spliced reads in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(rowDataFilteredSpliced)
 }
