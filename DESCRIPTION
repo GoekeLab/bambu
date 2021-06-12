@@ -42,6 +42,7 @@ Suggests:
     NanoporeRNASeq,
     BSgenome,
     apeglm,
+    spatstat,
     utils,
     DEXSeq
 Enhances: parallel
