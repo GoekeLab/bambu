@@ -37,7 +37,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     verbose){
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.ptm <- proc.time()
-    featureDTList <- 
+    featureTibbleList <- 
         bplapply(seq_along(readClassList), function(sample_id){
         extractFeaturesFromReadClassSE(readClassSe = readClassList[[sample_id]],
         sample_id = sample_id, 
@@ -51,41 +51,106 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## update combinedFeatureTibble by sample, as at each step 
     ## start and end are updated iteratively as the fead count weighted average
     start.ptm <- proc.time()
-    combinedFeatureTibble <- NULL
-    for (s in seq_along(featureDTList)){
-        combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
-            featureDTList[[s]])
-    }
-    combinedFeatureTibble <- select(combinedFeatureTibble, -readCount) 
+    listIDs <- seq_along(featureTibbleList)
+    my_group_size <- 10
+    indexList <- as_tibble(listIDs) %>% 
+        group_by( (value-1) %/% my_group_size) %>%
+        nest %>% pull(data)
+    combinedFeatureTibbleList <- bplapply(seq_along(indexList), function(g){
+        indexVec <- indexList[[g]]$value
+        return(sequentialCombineFeatureTibble(featureTibbleList[indexVec],
+           indexVec, intraGroup = TRUE))
+    }, BPPARAM = bpParameters)
+    combinedFeatureTibble <- 
+        sequentialCombineFeatureTibble(combinedFeatureTibbleList, 
+            indexList = NULL, intraGroup = FALSE) 
+    combinedFeatureTibble <- updateStartEndReadCount(combinedFeatureTibble)
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     return(combinedFeatureTibble)
 }
 
-#' Function to combine featureTibble and create the NSample variables 
-#' @noRd
-combineFeatureTibble <- function(combinedFeatureTibble, 
-    featureTibbleSummarised){
-    combinedFeatureTibble <- as_tibble(rbindlist(list(combinedFeatureTibble, 
-        featureTibbleSummarised), fill = TRUE))
+
+
+#' @noRd 
+updateStartEndReadCount <- function(combinedFeatureTibble){
+    # try first to change to long and then wide again
+    combinedFeatureTibble <- combinedFeatureTibble %>% mutate(rowID = row_number())
+    
+    startEndCountTibble <- combinedFeatureTibble %>% 
+        select(rowID, starts_with("start"),starts_with("end"),starts_with("readCount")) %>%
+        tidyr::pivot_longer(c(starts_with("start"),starts_with("end"),starts_with("readCount")),
+                 names_to = c(".value","set"),
+                 names_pattern = "(.*)\\.(.)") %>%
+        group_by(rowID) %>%
+        summarise(start = spatstat.geom::weighted.median(start, readCount),
+                  end = spatstat.geom::weighted.median(end, readCount),
+                  readCount = sum(readCount,na.rm = TRUE))
     combinedFeatureTibble <- combinedFeatureTibble %>% 
-        mutate(readCount_tmp = readCount) %>%
-        group_by(intronStarts, intronEnds, chr, strand) %>%
-        summarise(start = median(rep(start, times = readCount_tmp)),
-               end = median(rep(end, times = readCount_tmp)),
-               readCount = sum(readCount, na.rm = TRUE),
-               NSampleReadCount = sum(NSampleReadCount, na.rm = TRUE),
-               NSampleReadProp = sum(NSampleReadProp, na.rm = TRUE),
-               NSampleGeneFDR = sum(NSampleGeneFDR, na.rm = TRUE),
-               NSampleTxFDR = sum(NSampleTxFDR, na.rm = TRUE)) %>%
-        ungroup()
-    ## remember to ungroup to avoid unnecessary wrong selection later
+        dplyr::select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
+               NSampleReadProp, NSampleGeneFDR, NSampleTxFDR, rowID) %>%
+        full_join(startEndCountTibble, by = "rowID") %>%
+        select(-rowID)
     return(combinedFeatureTibble)
 }
 
+#' Sequentially combine feature tibbles 
+#' @noRd
+sequentialCombineFeatureTibble <- function(combinedList,
+    indexList,intraGroup){
+    combinedFeatureTibble <- NULL
+    for (s in seq_along(combinedList)){
+        combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
+            combinedList[[s]], index = indexList[s], intraGroup)
+    }
+    return(combinedFeatureTibble)
+}
 
-
+#' Function to combine featureTibble and create the NSample variables 
+#' @noRd
+combineFeatureTibble <- function(combinedFeatureTibble,
+    featureTibbleSummarised, index=1, intraGroup = TRUE){ 
+    if (is.null(combinedFeatureTibble)) { 
+        combinedTable <- featureTibbleSummarised %>% 
+        select(intronStarts, intronEnds, chr, strand,NSampleReadCount,
+        NSampleReadProp,NSampleGeneFDR,NSampleTxFDR, starts_with('start'),
+        starts_with('end'), starts_with('readCount'))
+    } else { 
+        combinedTable = full_join(combinedFeatureTibble, 
+            featureTibbleSummarised, by = c('intronStarts',
+            'intronEnds', 'chr', 'strand'),
+            suffix=c('.combined','.new')) %>% 
+            mutate(NSampleReadCount=pmax0NA(NSampleReadCount.combined) + 
+            pmax0NA(NSampleReadCount.new), 
+            NSampleReadProp = pmax0NA(NSampleReadProp.combined) + 
+                pmax0NA(NSampleReadProp.new), 
+            NSampleGeneFDR = pmax0NA(NSampleGeneFDR.combined) + 
+                pmax0NA(NSampleGeneFDR.new), 
+            NSampleTxFDR = pmax0NA(NSampleTxFDR.combined) + 
+                pmax0NA(NSampleTxFDR.new)) %>% 
+        select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
+            NSampleReadProp, NSampleGeneFDR, NSampleTxFDR, starts_with('start'),
+            starts_with('end'), starts_with('readCount')) 
+    } 
+    if(intraGroup) 
+    combinedTable <- 
+        rename_with(combinedTable, ~gsub('^(end|start|readCount)$',
+        paste0('\\1\\.',index), .x)) 
+    return(combinedTable) 
+}
+#' pmax replace NAs with 0
+#' @noRd
+pmax0NA <- function(vec){
+    vec[is.na(vec)] <- 0
+    return(pmax(vec))
+}
+#' pmin replace NAs with 0
+#' @noRd
+pmin0NA <- function(vec){
+    vec[is.na(vec)] <- 0
+    return(pmin(vec))
+}
 #' extract important features from readClassSe object for each sample
 #' @noRd
 extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
@@ -94,17 +159,15 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
         readClassSe <- readRDS(file = readClassSe)
     dimNames <- list(rownames(readClassSe), colnames(readClassSe))
     rowRangesSe <- rowRanges(readClassSe)
-    start <- matrix(min(start(rowRangesSe)),
-        dimnames = dimNames)
-    end <- matrix(max(end(rowRangesSe)),
-        dimnames = dimNames) 
-    rowData <- as_tibble(rowData(readClassSe))
-    rowData$start <- rowMins(start)
-    rowData$end <- rowMaxs(end)
+    rowData <- as_tibble(rowData(readClassSe)) %>% 
+        mutate(start = min(start(rowRangesSe)), 
+            end= max(end(rowRangesSe)))
     group_var <- c("intronStarts", "intronEnds", "chr", "strand")
     sum_var <- c("start","end","NSampleReadCount",
                  "readCount","NSampleReadProp","NSampleGeneFDR","NSampleTxFDR")
-    featureDT <- rowData %>% dplyr::select(chr = chr.rc, start, end,
+    featureTibble <- rowData %>% 
+        filter(!equal) %>% # filter not compatible ones, i.e., overlapping with annotations?? if we are going to include subset tx, then can we still do the filtering?? maybe not equal but can be compatible 
+        dplyr::select(chr = chr.rc, start, end,
         strand = strand.rc, intronStarts, intronEnds, confidenceType,
         readCount, geneReadProp, txFDR,geneFDR) %>%
         filter(readCount > 1, # only use readCount>1 and highconfidence reads
@@ -115,9 +178,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
                # number of samples passed gene read prop criteria
                NSampleGeneFDR = (geneFDR <= min.geneFDR),
                NSampleTxFDR = (txFDR <= min.txFDR)) %>%
-        select(all_of(c(group_var, sum_var))) %>%
-        data.table()
-    return(featureDT)
+        select(all_of(c(group_var, sum_var))) 
+    return(featureTibble)
 }
 
 
