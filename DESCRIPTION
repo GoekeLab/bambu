@@ -43,6 +43,7 @@ Suggests:
     BSgenome,
     apeglm,
     spatstat,
+    gtools,
     utils,
     DEXSeq
 Enhances: parallel
