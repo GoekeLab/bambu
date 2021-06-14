@@ -140,6 +140,7 @@ calculateFDR = function(score, labels){
 #' calculate and format features by gene for model
 prepareGeneModelFeatures = function(rowData){
     geneReadCount = NA
+    scalingFactor = sum(rowData$readCount)/1000000
     outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
     summarise(numReads = geneReadCount[1],
         labels = !novel[1], 
@@ -151,7 +152,7 @@ prepareGeneModelFeatures = function(rowData){
         # or compat with only 1 but are not equal
         numNonSubsetRCs = numRCs-sum(compatible>=2 | (compatible==1 & !equal)),
         highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
-    mutate(numReads = log2(pmax(1,numReads)))
+    mutate(numReads = log2(pmax(1,1+(numReads/scalingFactor))))
     return(outData)
 }
 
