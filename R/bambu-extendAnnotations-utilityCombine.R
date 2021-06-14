@@ -81,16 +81,23 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
     startEndCountTibble <- combinedFeatureTibble %>% 
         select(rowID, starts_with("start"),starts_with("end"),starts_with("readCount")) %>%
         tidyr::pivot_longer(c(starts_with("start"),starts_with("end"),starts_with("readCount")),
-                 names_to = c(".value","set"),
-                 names_pattern = "(.*)\\.(.)") %>%
-        group_by(rowID) %>%
-        summarise(start = spatstat.geom::weighted.median(start, readCount),
-                  end = spatstat.geom::weighted.median(end, readCount),
-                  readCount = sum(readCount,na.rm = TRUE))
+                            names_to = c(".value","set"),
+                            names_pattern = "(.*)\\.(.)") %>%
+        group_by(rowID) %>% 
+        mutate(sumReadCount = sum(readCount,na.rm = TRUE))
+    
+    startTibble <- select(startEndCountTibble, rowID, start, readCount, sumReadCount) %>% 
+        arrange(start) %>%
+        filter(cumsum(readCount)/sumReadCount>=0.5) %>% 
+    filter(row_number()==1)
+    endTibble <- select(startEndCountTibble, rowID, end, readCount, sumReadCount) %>% 
+        arrange(end) %>% 
+        filter(cumsum(readCount)/sumReadCount>=0.5) %>% 
+        filter(row_number()==1)
+    
     combinedFeatureTibble <- combinedFeatureTibble %>% 
         dplyr::select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
-               NSampleReadProp, NSampleGeneFDR, NSampleTxFDR, rowID) %>%
-        full_join(startEndCountTibble, by = "rowID") %>%
+                      NSampleReadProp, NSampleGeneFDR, NSampleTxFDR, rowID) %>% full_join(select(startTibble, rowID, start), by = "rowID") %>% full_join(select(endTibble, rowID, end, readCount=sumReadCount), by = "rowID") %>%
         select(-rowID)
     return(combinedFeatureTibble)
 }
