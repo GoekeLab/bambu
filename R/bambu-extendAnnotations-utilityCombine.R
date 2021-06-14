@@ -51,7 +51,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     ## update combinedFeatureTibble by sample, as at each step 
     ## start and end are updated iteratively as the fead count weighted average
     start.ptm <- proc.time()
-    listIDs <- gtools::permute(seq_along(featureTibbleList))
+    listIDs <-sample(seq_along(featureTibbleList))
     my_group_size <- 10
     indexList <- as_tibble(listIDs) %>% 
         group_by( (row_number()-1) %/% my_group_size) %>%
