@@ -38,7 +38,8 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.ptm <- proc.time()
     n_sample <- length(readClassList)
-    nGroups = min(BiocParallel::bpworkers(bpParameters), round(n_sample/2))
+    nGroups = max(ceiling(n_sample/10),min(bpworkers(bpParameters), 
+        round(n_sample/2)))
     indexList <- sample(rep(seq_len(nGroups), length.out=n_sample))
     indexList <- splitAsList(seq_len(n_sample), indexList)
     combinedFeatureTibbleList <- bplapply(seq_along(indexList), function(g){
