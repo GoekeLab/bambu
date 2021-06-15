@@ -39,7 +39,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     start.ptm <- proc.time()
     n_sample <- length(readClassList)
     nGroups = max(ceiling(n_sample/10),min(bpworkers(bpParameters), 
-        round(n_sample/2)))
+                                           round(n_sample/2)))
     indexList <- sample(rep(seq_len(nGroups), length.out=n_sample))
     indexList <- splitAsList(seq_len(n_sample), indexList)
     combinedFeatureTibbleList <- bplapply(seq_along(indexList), function(g){
@@ -246,7 +246,8 @@ extractNewUnsplicedRanges <- function(readClassSe, sample_id){
     rownames(readClassSe) <- paste0("s",sample_id,"-",pre_names)
     newUnsplicedSe <- 
         readClassSe[which(rowData$confidenceType == "unsplicedNew" & 
-                              rowData$readCount > 1)]
+                              rowData$readCount > 1 &
+                              (!rowData$equal))]
     return(newUnsplicedSe)
 }
 
