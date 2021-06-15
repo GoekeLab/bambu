@@ -7,12 +7,13 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
+    rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
+    rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
+    
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
     rowData(se)$geneReadProp = countsTBL$geneReadProp
     rowData(se)$geneReadCount = countsTBL$geneReadCount
-    rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
-    rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
 
     thresholdIndex = which(rowData(se)$readCount
                         >=min.readCount)
@@ -175,14 +176,23 @@ getTranscriptScore = function(rowData){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures)){
-        modelFeatures = features[which(!rowData$novel),]
-        transcriptModel = fit_xgb(modelFeatures, 
-            txFeatures$labels[which(!rowData$novel)])
-        txScore = predict(transcriptModel, as.matrix(features))
+        ## Multi-Exon
+        indexME = which(!rowData$novel & rowData$numExons>1)
+        transcriptModelME = fit_xgb(features[indexME,],
+                                  txFeatures$labels[indexME])
+        txScoreME = predict(transcriptModelME, as.matrix(features))
 
-        #calculates the FDR for filtering RCs based on wanted precision
+        ## Single-Exon
+        indexSE = which(!rowData$novel & rowData$numExons==1)
+        transcriptModelSE = fit_xgb(features[indexSE,],
+                                  txFeatures$labels[indexSE])
+        txScoreSE = predict(transcriptModelSE, as.matrix(features))
+
+        txScore = txScoreME
+        txScore[which(rowData$numExons==1)] =
+            txScoreSE[which(rowData$numExons==1)]
         txFDR = calculateFDR(txScore, txFeatures$labels)
-
+        
     } else {
     message("Transcript Score not calculated")
     txScore = rep(1,nrow(rowData))
