@@ -301,8 +301,8 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         group_by(chr,strand, start, end, sample_name) %>%
         summarise(readCount = sum(readCount),
                   geneReadProp = sum(geneReadProp),
-                  geneFDR = median(rep(geneFDR, times = readCount_tmp)),
-                  txFDR = median(rep(txFDR, times = readCount_tmp))) %>%
+                  geneFDR = weighted.mean(geneFDR, readCount_tmp),
+                  txFDR = weighted.mean(txFDR, readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
         summarise(readCount = sum(readCount),
                   NSampleReadCount = sum(readCount >= min.readCount), 
