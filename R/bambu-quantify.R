@@ -65,24 +65,28 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     readClassDt <- 
         simplifyNames(readClassDt,txVec, geneVec,ori_txvec, readclassVec)
     d_mode <- emParameters[["degradationBias"]]
+    start.ptm <- proc.time()
     if (d_mode) {
         d_rateOut <- calculateDegradationRate(readClassDt)
     }else{
         d_rateOut <- rep(NA,2)
     }
+    end.ptm <- proc.time()
+    if (verbose) message("Finished estimate degradation bias in ",
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
         d_rateOut[1], d_mode = d_mode)
     removeList <- removeUnObservedGenes(readClassDt)
     readClassDt <- removeList[[1]] # keep only observed genes for estimation
     outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
-    start.time <- proc.time()
+    start.ptm <- proc.time()
     outListEst <- abundance_quantification(readClassDt,
         ncore = ncore,
         maxiter = emParameters[["maxiter"]],
         conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
-    end.time <- proc.time()
+    end.ptm <- proc.time()
     if (verbose) message("Finished EM estimation in ",
-        round((end.time - start.time)[3] / 60, 1), " mins.")
+        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     theta_est <- formatOutput(rbind(outList,outListEst),ori_txvec,geneVec)
     theta_est <- removeDuplicates(theta_est)
     return(list(theta_est, d_rateOut[1], d_rateOut[2]))
