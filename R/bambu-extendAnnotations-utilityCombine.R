@@ -216,7 +216,7 @@ combineUnsplicedTranscriptModels <-
             rr$row_id <- names(rr)
             return(rr)
         }, BPPARAM = bpParameters)
-        colDataNames <- unlist(lapply(newUnsplicedSeList, function(x) colnames(x)))
+        colDataNames <-unlist(lapply(newUnsplicedSeList, colnames))
         start.ptm <- proc.time()
         combinedNewUnsplicedSe <- reduceUnsplicedRanges(rangesList, stranded)
         end.ptm <- proc.time()
