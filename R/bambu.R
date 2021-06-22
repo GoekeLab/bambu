@@ -105,7 +105,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         readClassList <- bambu.processReads(reads, annotations, 
             genomeSequence = genome, 
             readClass.outputDir = rcOutDir, yieldSize, 
-            bpParameters, stranded, verbose)
+            bpParameters, stranded, verbose,
+            min.readCount = isoreParameters[["min.readCount"]])
     } else {
         readClassList <- rcFile
     }

@@ -15,7 +15,7 @@
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
-    stranded=FALSE, verbose=FALSE) {
+    stranded=FALSE, verbose=FALSE, min.readCount = 2) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
@@ -44,7 +44,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         bambu.processReadsByFile(bam.file = reads[bamFileName],
         readClass.outputDir = readClass.outputDir,
         genomeSequence = genomeSequence,annotations = annotations,
-        stranded = stranded,verbose = verbose)},
+        stranded = stranded,verbose = verbose, min.readCount = min.readCount)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")
@@ -56,7 +56,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE) {
+    readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE, 
+    min.readCount = 2) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
@@ -87,7 +88,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         annotations, stranded, verbose)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     se = scoreReadClasses(se, genomeSequence, annotations, 
-        min.readCount = isoreParameters[["min.readCount"]], verbose = verbose)
+        min.readCount = min.readCount, verbose = verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
