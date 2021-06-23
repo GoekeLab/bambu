@@ -114,7 +114,8 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
     geneFeatures = prepareGeneModelFeatures(rowData)
     features = dplyr::select(geneFeatures,!c(labels, GENEID))
     if(checkFeatures(geneFeatures) & fit){
-        geneModel = fit_xgb(as.matrix(features), geneFeatures$labels)
+        geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
+        data.train=as.matrix(features), show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         geneFDR = calculateFDR(geneScore, geneFeatures$labels)
         geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
@@ -179,14 +180,14 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
         indexME = which(!rowData$novel & rowData$numExons>1)
-        transcriptModelME = fit_xgb(features[indexME,],
-                                  txFeatures$labels[indexME])
+        transcriptModelME = fitXGBoostModel(data.train=features[indexME,],
+                    labels.train=txFeatures$labels[indexME], show.cv=FALSE)
         txScoreME = predict(transcriptModelME, as.matrix(features))
 
         ## Single-Exon
         indexSE = which(!rowData$novel & rowData$numExons==1)
-        transcriptModelSE = fit_xgb(features[indexSE,],
-                                  txFeatures$labels[indexSE])
+        transcriptModelSE = fitXGBoostModel(data.train=features[indexSE,],
+                    labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
         txScore = txScoreME
         txScore[which(rowData$numExons==1)] =
@@ -216,13 +217,4 @@ prepareTranscriptModelFeatures = function(rowData){
         numReads = log2(pmax(1,1+(numReads/scalingFactor)))
         )
     return(outData)
-}
-
-#train a model using xgboost, using part of the features as training set
-fit_xgb = function(features, labels) {
-    # Fit the xgb model
-    xgb_model = xgboost(data = as.matrix(features), label = labels,
-    nthread=1, nround= 50, objective = "binary:logistic", 
-    eval_metric='error', verbose = 0)
-    return(xgb_model)
 }
