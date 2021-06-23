@@ -175,10 +175,9 @@ createReadTable <- function(unlisted_junctions, readGrgList,
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
-        summarise(readCount = n(),
+        summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
-        end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end),
-        startSD = sd(start), endSD = sd(end), 
+        end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
         readCount.posStrand = sum(alignmentStrand, na.rm = TRUE),
         .groups = 'drop') %>% arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -336,7 +335,8 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
 assignGeneIds <- function(grl, annotations) {
-    geneIds <- assignGeneIdsByReference(grl, annotations) 
+    if(length(annotations)==0) geneIds =rep(NA, length(grl))
+    else geneIds <- assignGeneIdsByReference(grl, annotations) 
     newGeneSet <- which(is.na(geneIds))
     newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
     geneIds[newGeneSet] <- newGeneIds

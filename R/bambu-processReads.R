@@ -38,7 +38,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         reads <- BamFileList(reads, yieldSize = yieldSize)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     }
-    genomeSequence <- checkInputSequence(genomeSequence)
     if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
@@ -86,7 +85,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
-    se = scoreReadClasses(se, genomeSequence, annotations)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
@@ -111,7 +109,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 seqlevelCheckReadsAnnotation <- function(reads, annotations){
     if (length(intersect(seqlevels(reads),
         seqlevels(annotations))) == 0)
-        stop("Error: please provide annotation with matched seqlevel styles.")
+        warning("Warning: no annotations with matching seqlevel styles, 
+        all missing chromosomes will use de-novo annotations")
     if (!all(seqlevels(reads) %in% 
         seqlevels(annotations))) 
         message("not all chromosomes present in reference annotations,
@@ -135,6 +134,8 @@ checkInputSequence <- function(genomeSequence) {
                     "[[", 1))
                 names(genomeSequence) <- newlevels
             } else {
+                indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
+                if (!indexFileExists) indexFa(genomeSequence)
                 genomeSequence <- FaFile(genomeSequence)
             }
         } else {

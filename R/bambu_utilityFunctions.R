@@ -28,6 +28,9 @@ setIsoreParameters <- function(isoreParameters){
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
         min.exonOverlap = 10,
+        min.geneFDR = 0.99,
+        min.txFDR = 0.9,
+        fitModel = TRUE,
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)

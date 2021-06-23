@@ -325,3 +325,59 @@ set.seed(1234)
 seOutputCombined2 <- bambu(rcFile = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
 saveRDS(seOutputCombined2, file = "./inst/extdata/seOutputCombined2_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
+#generate the default models for scoreReadClass()
+#gene model
+sample =  system.file("extdata", "readClassList_GIS_H9_directcDNA_Rep1_Run1.rds", package = "bambu")
+se = readRDS(sample)
+seFiltered = se[which(rowData(se)$chr.rc != "chrIS" & rowData(se)$chr.rc != "SIRVomeERCCome")]
+seFiltered = seFiltered[which(assays(seFiltered)$counts >= 2),]
+geneFeatures = prepareGeneModelFeatures(rowData(seFiltered))
+features = dplyr::select(geneFeatures,!c(labels, GENEID))
+geneModel.default=fit_xgb(as.matrix(features), geneFeatures$labels)
+
+# test model
+# library(ROCit)
+# geneScore = as.numeric(predict(geneModel.default, as.matrix(features)))
+# x = rocit(score = geneScore, class = geneFeatures$labels)
+# base::plot(x,  main="Model on Real Data ROC", type ='l',
+#            xlab = "False Positive Rate", ylab = "True Positive Rate")
+
+#tx models
+createTxModel = function(sample){
+    sample =  system.file("extdata", sample, package = "bambu")
+    se = readRDS(sample)
+    seFiltered = se[which(rowData(se)$chr.rc != "chrIS" & rowData(se)$chr.rc != "SIRVomeERCCome")]
+    seFiltered = seFiltered[which(assays(seFiltered)$counts >= 2),]
+    seFiltered = seFiltered[which(!rowData(seFiltered)$novel),]
+    txFeatures = prepareTranscriptModelFeatures(rowData(seFiltered))
+    features = dplyr::select(txFeatures,!c(labels))
+    indexME = which(!rowData(seFiltered)$novel & rowData(seFiltered)$numExons>1)
+    transcriptModelME = fit_xgb(features[indexME,],
+                                txFeatures$labels[indexME])
+    indexSE = which(!rowData(seFiltered)$novel & rowData(seFiltered)$numExons==1)
+    transcriptModelSE = fit_xgb(features[indexSE,],
+                                txFeatures$labels[indexSE])
+    
+    # test model
+    # library(ROCit)
+    # txScoreSE = as.numeric(predict(transcriptModelSE, as.matrix(features[indexSE,])))
+    # x = rocit(score = txScoreSE, class = txFeatures$labels[indexSE])
+    # base::plot(x,  main="Model on Real Data ROC", type ='l',
+    #            xlab = "False Positive Rate", ylab = "True Positive Rate")
+    # txScoreME = as.numeric(predict(transcriptModelME, as.matrix(features[indexME,])))
+    # x = rocit(score = txScoreME, class = txFeatures$labels[indexME])
+    # base::plot(x,  main="Model on Real Data ROC", type ='l',
+    #            xlab = "False Positive Rate", ylab = "True Positive Rate")
+    
+    return(list(modelME = transcriptModelME, modelSE = transcriptModelSE))
+}
+defaultModel.dRNA = createTxModel("readClassList_GIS_H9_directRNA_Rep1_Run1.rds")
+defaultModel.dcDNA = createTxModel("readClassList_GIS_H9_directcDNA_Rep1_Run1.rds")
+defaultModel.PCRcDNA = createTxModel("readClassList_GIS_H9_cDNA_Rep1_Run1.rds")
+
+defaultModels = list(geneModel = geneModel.default, 
+                     txModel.dRNA.SE = defaultModel.dRNA$modelSE, txModel.dRNA.ME = defaultModel.dRNA$modelME,
+                     txModel.dcDNA.SE = defaultModel.dcDNA$modelSE, txModel.dcDNA.ME = defaultModel.dcDNA$modelME,
+                     txModel.cDNA.SE = defaultModel.PCRcDNA$modelSE, txModel.cDNA.ME = defaultModel.PCRcDNA$modelME)
+saveRDS(defaultModels, file = "./inst/extdata/defaultModels.rds")
+
