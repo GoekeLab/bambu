@@ -30,6 +30,7 @@ setIsoreParameters <- function(isoreParameters){
         min.exonOverlap = 10,
         min.geneFDR = 0.99,
         min.txFDR = 0.9,
+        fitModel = TRUE,
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)

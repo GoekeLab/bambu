@@ -180,7 +180,7 @@ checkFeatures = function(features){
 getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(checkFeatures(txFeatures)){
+    if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
         indexME = which(!rowData$novel & rowData$numExons>1)
         transcriptModelME = fit_xgb(features[indexME,],
