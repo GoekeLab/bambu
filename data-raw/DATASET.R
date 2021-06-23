@@ -333,7 +333,7 @@ seFiltered = se[which(rowData(se)$chr.rc != "chrIS" & rowData(se)$chr.rc != "SIR
 seFiltered = seFiltered[which(assays(seFiltered)$counts >= 2),]
 geneFeatures = prepareGeneModelFeatures(rowData(seFiltered))
 features = dplyr::select(geneFeatures,!c(labels, GENEID))
-geneModel.default=fit_xgb(as.matrix(features), geneFeatures$labels)
+geneModel.default=fitXGBoostModel(data.train=as.matrix(features), labels.train=geneFeatures$labels, show.cv=FALSE)
 
 # test model
 # library(ROCit)
@@ -352,11 +352,11 @@ createTxModel = function(sample){
     txFeatures = prepareTranscriptModelFeatures(rowData(seFiltered))
     features = dplyr::select(txFeatures,!c(labels))
     indexME = which(!rowData(seFiltered)$novel & rowData(seFiltered)$numExons>1)
-    transcriptModelME = fit_xgb(features[indexME,],
-                                txFeatures$labels[indexME])
+    transcriptModelME = fit_xgb(data.train=features[indexME,],
+                                labels.train=txFeatures$labels[indexME], show.cv=FALSE)
     indexSE = which(!rowData(seFiltered)$novel & rowData(seFiltered)$numExons==1)
-    transcriptModelSE = fit_xgb(features[indexSE,],
-                                txFeatures$labels[indexSE])
+    transcriptModelSE = fit_xgb(data.train=features[indexSE,],
+                                labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
     
     # test model
     # library(ROCit)
