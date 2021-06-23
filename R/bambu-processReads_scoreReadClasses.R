@@ -118,15 +118,15 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
         data.train=as.matrix(features), show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         geneFDR = calculateFDR(geneScore, geneFeatures$labels)
-        geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
-        geneScore = geneScore[geneRCMap]
-        geneFDR = geneFDR[geneRCMap]
     } else {
         message("Gene Model not trained. Using prior models")
         geneScore = as.numeric(predict(defaultModels$geneModel, 
                                        as.matrix(features)))
         geneFDR = 1-geneScore
     }
+    geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
+    geneScore = geneScore[geneRCMap]
+    geneFDR = geneFDR[geneRCMap]
     return(data.frame(geneScore = geneScore, geneFDR = geneFDR))   
 }
 
