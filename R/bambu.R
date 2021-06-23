@@ -116,9 +116,11 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         readClassList <- rcFile
     }
     if (!quantOnly) {
+        defaultModels = readRDS(system.file("extdata", "defaultModels.rds", package = "bambu"))
         readClassList <- bplapply(seq_along(readClassList), function(i) {
             scoreReadClasses(readClassList[[i]],genomeSequence, 
                              annotations, 
+                             defaultModels = defaultModels,
                              min.readCount = isoreParameters[["min.readCount"]], 
                              verbose = verbose)},
             BPPARAM = bpParameters)

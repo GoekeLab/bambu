@@ -2,8 +2,8 @@
 #' @param se summerized experiment object with read classes/ranges
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
-scoreReadClasses = function(se, genomeSequence, annotations, 
-                                    min.readCount = 2, verbose = FALSE){
+scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
+                            fit = TRUE, min.readCount = 2, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
@@ -30,12 +30,13 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
 
-    geneScore = getGeneScore(rowData(se)[thresholdIndex,])
+    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, fit)
     rowData(se)$geneScore = rep(NA,nrow(se))
     rowData(se)$geneFDR = rep(NA,nrow(se))
     rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
     rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
-    txScore = getTranscriptScore(rowData(se)[thresholdIndex,])
+    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
+                                 defaultModels, fit)
     rowData(se)$txScore = rep(NA,nrow(se))
     rowData(se)$txFDR = rep(NA,nrow(se))
     rowData(se)$txScore[thresholdIndex] = txScore$txScore
@@ -110,10 +111,10 @@ countPolyATerminals = function(grl, genomeSequence){
 
 #' calculates a score based on how likely the read class is associated with a 
 #' real gene
-getGeneScore = function(rowData){
+getGeneScore = function(rowData, defaultModels, fit = TRUE){
     geneFeatures = prepareGeneModelFeatures(rowData)
     features = dplyr::select(geneFeatures,!c(labels, GENEID))
-    if(checkFeatures(geneFeatures)){
+    if(checkFeatures(geneFeatures) & fit){
         geneModel = fit_xgb(as.matrix(features), geneFeatures$labels)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         geneFDR = calculateFDR(geneScore, geneFeatures$labels)
@@ -121,10 +122,14 @@ getGeneScore = function(rowData){
         geneScore = geneScore[geneRCMap]
         geneFDR = geneFDR[geneRCMap]
     } else {
-    message("Gene Score not calculated")
-    geneScore = rep(1,nrow(rowData))
-    geneFDR = rep(1,nrow(rowData))
+        message("Gene Model not trained. Using prior models")
+        geneScore = as.numeric(predict(defaultModels$geneModel, 
+                                       as.matrix(features)))
     }
+    geneFDR = calculateFDR(geneScore, geneFeatures$labels)
+    geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
+    geneScore = geneScore[geneRCMap]
+    geneFDR = geneFDR[geneRCMap]
     return(data.frame(geneScore = geneScore, geneFDR = geneFDR))   
 }
 
@@ -164,7 +169,7 @@ checkFeatures = function(features){
     message("Missing presence of both TRUE and FALSE labels.")
     return(FALSE)
     }
-    if(length(labels)<50){
+    if(length(labels)<1000){
         message("Not enough data points")
         return(FALSE)
     }
@@ -172,7 +177,7 @@ checkFeatures = function(features){
 }
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData){
+getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures)){
@@ -187,17 +192,15 @@ getTranscriptScore = function(rowData){
         transcriptModelSE = fit_xgb(features[indexSE,],
                                   txFeatures$labels[indexSE])
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
-
-        txScore = txScoreME
-        txScore[which(rowData$numExons==1)] =
-            txScoreSE[which(rowData$numExons==1)]
-        txFDR = calculateFDR(txScore, txFeatures$labels)
-        
     } else {
-    message("Transcript Score not calculated")
-    txScore = rep(1,nrow(rowData))
-    txFDR = rep(1,nrow(rowData))
+        message("Transcript model not trained. Using prior models")
+        txScoreME = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
+        txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
     }
+    txScore = txScoreME
+    txScore[which(rowData$numExons==1)] =
+        txScoreSE[which(rowData$numExons==1)]
+    txFDR = calculateFDR(txScore, txFeatures$labels)
     return(data.frame(txScore = txScore, txFDR = txFDR))
 }
 
