@@ -109,7 +109,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 seqlevelCheckReadsAnnotation <- function(reads, annotations){
     if (length(intersect(seqlevels(reads),
         seqlevels(annotations))) == 0)
-        stop("Error: please provide annotation with matched seqlevel styles.")
+        warning("Warning: no annotations with matching seqlevel styles, 
+        all missing chromosomes will use de-novo annotations")
     if (!all(seqlevels(reads) %in% 
         seqlevels(annotations))) 
         message("not all chromosomes present in reference annotations,

@@ -91,7 +91,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
  Rerun with either 1 or both parameters as FALSE"))
         break
     }
-    annotations <- checkInputs(annotations, reads, readClass.file = rcFile, 
+    if(is.null(annotations)) annotations = GRangesList()
+    else annotations <- checkInputs(annotations, reads, readClass.file = rcFile, 
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
@@ -116,7 +117,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         readClassList <- rcFile
     }
     if (!quantOnly) {
-        defaultModels = readRDS(system.file("extdata", "defaultModels.rds", package = "bambu"))
+        defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
+                                            package = "bambu"))
         readClassList <- bplapply(seq_along(readClassList), function(i) {
             scoreReadClasses(readClassList[[i]],genomeSequence, 
                              annotations, 
@@ -133,6 +135,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     }
     if (!discoveryOnly) {
         if (!verbose) message("Start isoform quantification")
+        if(length(annotations)==0) stop("No valid annotations, if running
+                                de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList,
             bambu.quantify,annotations = annotations,
             min.exonDistance = isoreParameters[["min.exonDistance"]],
