@@ -7,12 +7,13 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
+    rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
+    rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
+    
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
     rowData(se)$geneReadProp = countsTBL$geneReadProp
     rowData(se)$geneReadCount = countsTBL$geneReadCount
-    rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
-    rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
 
     thresholdIndex = which(rowData(se)$readCount
                         >=min.readCount)
@@ -140,6 +141,7 @@ calculateFDR = function(score, labels){
 #' calculate and format features by gene for model
 prepareGeneModelFeatures = function(rowData){
     geneReadCount = NA
+    scalingFactor = sum(rowData$readCount)/1000000
     outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
     summarise(numReads = geneReadCount[1],
         labels = !novel[1], 
@@ -151,7 +153,7 @@ prepareGeneModelFeatures = function(rowData){
         # or compat with only 1 but are not equal
         numNonSubsetRCs = numRCs-sum(compatible>=2 | (compatible==1 & !equal)),
         highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
-    mutate(numReads = log2(pmax(1,numReads)))
+    mutate(numReads = log2(pmax(1,1+(numReads/scalingFactor))))
     return(outData)
 }
 
@@ -174,14 +176,23 @@ getTranscriptScore = function(rowData){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures)){
-        modelFeatures = features[which(!rowData$novel),]
-        transcriptModel = fit_xgb(modelFeatures, 
-            txFeatures$labels[which(!rowData$novel)])
-        txScore = predict(transcriptModel, as.matrix(features))
+        ## Multi-Exon
+        indexME = which(!rowData$novel & rowData$numExons>1)
+        transcriptModelME = fit_xgb(features[indexME,],
+                                  txFeatures$labels[indexME])
+        txScoreME = predict(transcriptModelME, as.matrix(features))
 
-        #calculates the FDR for filtering RCs based on wanted precision
+        ## Single-Exon
+        indexSE = which(!rowData$novel & rowData$numExons==1)
+        transcriptModelSE = fit_xgb(features[indexSE,],
+                                  txFeatures$labels[indexSE])
+        txScoreSE = predict(transcriptModelSE, as.matrix(features))
+
+        txScore = txScoreME
+        txScore[which(rowData$numExons==1)] =
+            txScoreSE[which(rowData$numExons==1)]
         txFDR = calculateFDR(txScore, txFeatures$labels)
-
+        
     } else {
     message("Transcript Score not calculated")
     txScore = rep(1,nrow(rowData))
@@ -192,13 +203,14 @@ getTranscriptScore = function(rowData){
 
 #' calculate and format read class features for model training
 prepareTranscriptModelFeatures = function(rowData){
+    scalingFactor = sum(rowData$readCount)/1000000
     outData <- as_tibble(rowData) %>%  
     dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
         numAstart, numAend, numTstart,numTend, 
         tx_strand_bias = readCount.posStrand, labels = equal) %>%
     mutate(
         tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
-        numReads = log2(pmax(1,numReads))
+        numReads = log2(pmax(1,1+(numReads/scalingFactor)))
         )
     return(outData)
 }
