@@ -335,8 +335,8 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
 assignGeneIds <- function(grl, annotations) {
-    if(length(annotations)==0) return(rep(NA, length(grl)))
-    geneIds <- assignGeneIdsByReference(grl, annotations) 
+    if(length(annotations)==0) geneIds =rep(NA, length(grl))
+    else geneIds <- assignGeneIdsByReference(grl, annotations) 
     newGeneSet <- which(is.na(geneIds))
     newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
     geneIds[newGeneSet] <- newGeneIds

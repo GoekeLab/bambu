@@ -9,7 +9,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
     rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
-    
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
     rowData(se)$geneReadProp = countsTBL$geneReadProp
@@ -125,11 +124,8 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
         message("Gene Model not trained. Using prior models")
         geneScore = as.numeric(predict(defaultModels$geneModel, 
                                        as.matrix(features)))
+        geneFDR = 1-geneScore
     }
-    geneFDR = calculateFDR(geneScore, geneFeatures$labels)
-    geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
-    geneScore = geneScore[geneRCMap]
-    geneFDR = geneFDR[geneRCMap]
     return(data.frame(geneScore = geneScore, geneFDR = geneFDR))   
 }
 
@@ -192,15 +188,19 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
         transcriptModelSE = fit_xgb(features[indexSE,],
                                   txFeatures$labels[indexSE])
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
+        txScore = txScoreME
+        txScore[which(rowData$numExons==1)] =
+            txScoreSE[which(rowData$numExons==1)]
+        txFDR = calculateFDR(txScore, txFeatures$labels)
     } else {
         message("Transcript model not trained. Using prior models")
         txScoreME = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
+        txScore = txScoreME
+        txScore[which(rowData$numExons==1)] =
+            txScoreSE[which(rowData$numExons==1)]
+        txFDR = 1-txScore
     }
-    txScore = txScoreME
-    txScore[which(rowData$numExons==1)] =
-        txScoreSE[which(rowData$numExons==1)]
-    txFDR = calculateFDR(txScore, txFeatures$labels)
     return(data.frame(txScore = txScore, txFDR = txFDR))
 }
 
