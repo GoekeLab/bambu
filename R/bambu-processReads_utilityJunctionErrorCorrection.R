@@ -153,14 +153,19 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     spliceVec <- c("Start","End")
     ## if needed this can be a single function
     metadataList <- lapply(spliceVec, function(splice){
-        annotatedJunctionsTmp <- 
-            GRanges(seqnames = seqnames(annotatedJunctions),
-            ranges = IRanges(start = get(tolower(splice))(annotatedJunctions),
-            end = get(tolower(splice))(annotatedJunctions)), strand = '*')
-        mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
         if (splice == "Start") {
+            annotatedJunctionsTmp <- 
+            GRanges(seqnames = seqnames(annotatedJunctions),
+            ranges = IRanges(start = GenomicRanges::start(annotatedJunctions),
+            end = GenomicRanges::start(annotatedJunctions)), strand = '*')
+            mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- unique(annotatedJunctionsTmp)
-        }else{
+        } else {
+            annotatedJunctionsTmp <- 
+            GRanges(seqnames = seqnames(annotatedJunctions),
+            ranges = IRanges(start = GenomicRanges::end(annotatedJunctions),
+            end = GenomicRanges::end(annotatedJunctions)), strand = '*')
+            mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- sort(unique(annotatedJunctionsTmp))
         }
         return(createSpliceMetadata(annotatedJunctionsTmp, splice))})
