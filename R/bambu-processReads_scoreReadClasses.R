@@ -180,13 +180,15 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
         indexME = which(!rowData$novel & rowData$numExons>1)
-        transcriptModelME = fitXGBoostModel(data.train=features[indexME,],
+        transcriptModelME = fitXGBoostModel(
+                    data.train=as.matrix(features[indexME,]),
                     labels.train=txFeatures$labels[indexME], show.cv=FALSE)
         txScoreME = predict(transcriptModelME, as.matrix(features))
 
         ## Single-Exon
         indexSE = which(!rowData$novel & rowData$numExons==1)
-        transcriptModelSE = fitXGBoostModel(data.train=features[indexSE,],
+        transcriptModelSE = fitXGBoostModel(
+                    data.train=as.matrix(features[indexSE,]),
                     labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
         txScore = txScoreME
