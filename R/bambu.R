@@ -87,9 +87,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
     discoveryOnly = FALSE, quantOnly = FALSE, verbose = FALSE) {
     if (discoveryOnly & quantOnly) {
-        warning(paste0("At least 1 of discoveryOnly and quantOnly must be FALSE. 
+        stop(paste0("At least 1 of discoveryOnly and quantOnly must be FALSE. 
  Rerun with either 1 or both parameters as FALSE"))
-        break
     }
     if(is.null(annotations)) annotations = GRangesList()
     else annotations <- checkInputs(annotations, reads, readClass.file = rcFile, 
