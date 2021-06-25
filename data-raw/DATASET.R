@@ -96,6 +96,11 @@ seCombinedGeneExpected <- transcriptToGeneExpression(seCombined)
 seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 
+## prior models to use for scoreReadClass()
+
+defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
+                                    package = "bambu"))
+
 usethis::use_data(data1, data2, data3, data4, data5,
     estOutput_woBC,
     estOutput_wBC,
@@ -103,6 +108,7 @@ usethis::use_data(data1, data2, data3, data4, data5,
     seWithDistExpected,
     seGeneExpected, seExtendedGeneExpected,
     seCombinedGeneExpected, seCombinedExtendedGeneExpected,
+    defaultModels,
     internal = TRUE, overwrite = TRUE
 )
 
