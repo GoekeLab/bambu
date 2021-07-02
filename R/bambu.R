@@ -111,19 +111,13 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         readClassList <- bambu.processReads(reads, annotations, 
             genomeSequence = genomeSequence, 
             readClass.outputDir = rcOutDir, yieldSize, 
-            bpParameters, stranded, verbose)
+            bpParameters, stranded, verbose,
+            min.readCount = isoreParameters[["min.readCount"]],
+            fitReadClassModel = isoreParameters[["fitReadClassModel"]])
     } else {
         readClassList <- rcFile
     }
     if (!quantOnly) {
-        readClassList <- bplapply(seq_along(readClassList), function(i) {
-            scoreReadClasses(readClassList[[i]],genomeSequence, 
-                             annotations, 
-                             defaultModels = defaultModels,
-                             min.readCount = isoreParameters[["min.readCount"]], 
-                             verbose = verbose,
-                             fit = isoreParameters[["fitReadClassModel"]])},
-            BPPARAM = bpParameters)
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
