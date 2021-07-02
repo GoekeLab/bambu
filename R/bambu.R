@@ -122,7 +122,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
                              defaultModels = defaultModels,
                              min.readCount = isoreParameters[["min.readCount"]], 
                              verbose = verbose,
-                             fit = isoreParameters[["fitModel"]])},
+                             fit = isoreParameters[["fitReadClassModel"]])},
             BPPARAM = bpParameters)
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
