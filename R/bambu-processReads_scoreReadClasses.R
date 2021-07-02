@@ -121,7 +121,7 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         geneFDR = calculateFDR(geneScore, geneFeatures$labels)
     } else {
-        message("Gene Model not trained. Using prior models")
+        warning("Gene Model not trained. Using pre-trained models")
         geneScore = as.numeric(predict(defaultModels$geneModel, 
                                        as.matrix(features)))
         geneFDR = 1-geneScore
@@ -164,15 +164,20 @@ prepareGeneModelFeatures = function(rowData){
 #' ensures that the data is trainable after filtering
 checkFeatures = function(features){
     labels = features$labels
+    trainable = TRUE
     if(sum(labels)==length(labels) | sum(labels)==0){
-    message("Missing presence of both TRUE and FALSE labels.")
-    return(FALSE)
+        message("Missing presence of both TRUE and FALSE labels.")
+        trainable = FALSE
     }
     if(length(labels)<1000){
         message("Not enough data points")
-        return(FALSE)
+        trainable = FALSE
     }
-    return(TRUE)
+    if(sum(labels)<50 | sum(!labels)<50){
+        message("Not enough TRUE/FALSE labels")
+        trainable = FALSE
+    }
+    return(trainable)
 }
 
 #' calculates a score based on how likely a read class is full length
@@ -198,7 +203,7 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
             txScoreSE[which(rowData$numExons==1)]
         txFDR = calculateFDR(txScore, txFeatures$labels)
     } else {
-        message("Transcript model not trained. Using prior models")
+        warning("Transcript model not trained. Using pre-trained models")
         txScoreME = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
         txScore = txScoreME
