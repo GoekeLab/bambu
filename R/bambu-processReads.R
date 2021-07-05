@@ -57,11 +57,13 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE,
-    min.readCount = 2, fitReadClassModel = T) {
-    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
+    min.readCount = 2, fitReadClassModel = TRUE, trackReads = FALSE) {
+    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
+    if(trackReads) readNames = names(readGrgList)
+    unname(readGrgList)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
@@ -86,6 +88,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
+    if(trackReads) metadata(se)$readNames = readNames
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     se <- scoreReadClasses(se,genomeSequence, 
                              annotations, 
