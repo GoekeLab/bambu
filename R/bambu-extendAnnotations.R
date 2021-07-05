@@ -18,7 +18,7 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
     start.ptm_all <- proc.time()
     annotations <- isore.extendAnnotations(
-        combinedTranscripts = combinedTxCandidates,
+        combinedTranscripts = combinedTxCandidates$combinedTranscripts,
         annotationGrangesList = annotations,
         remove.subsetTx = isoreParameters[["remove.subsetTx"]],
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
