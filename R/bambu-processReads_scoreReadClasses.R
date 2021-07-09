@@ -6,8 +6,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                             fit = TRUE, min.readCount = 2, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
-    if (is.character(se)) 
-        se <- readRDS(file = se)
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
     rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
