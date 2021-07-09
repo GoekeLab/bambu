@@ -119,7 +119,7 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         geneFDR = calculateFDR(geneScore, geneFeatures$labels)
     } else {
-        warning("Gene Model not trained. Using pre-trained models")
+        warning("Gene Model not trained. Using pre-trained models, the FDR might not be adjusted correctly")
         geneScore = as.numeric(predict(defaultModels$geneModel, 
                                        as.matrix(features)))
         geneFDR = 1-geneScore
