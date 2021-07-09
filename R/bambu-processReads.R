@@ -41,10 +41,10 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
-        readClass.outputDir = readClass.outputDir,
         genomeSequence = genomeSequence,annotations = annotations,
-        stranded = stranded,verbose = verbose,
-        min.readCount = min.readCount, fitReadClassModel = fitReadClassModel)},
+        readClass.outputDir = readClass.outputDir,
+        stranded = stranded, min.readCount = min.readCount, 
+        fitReadClassModel = fitReadClassModel, verbose = verbose)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")
@@ -56,8 +56,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE,
-    min.readCount = 2, fitReadClassModel = T) {
+    readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
+    fitReadClassModel = TRUE,  verbose = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
