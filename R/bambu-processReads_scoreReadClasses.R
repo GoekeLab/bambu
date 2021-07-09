@@ -146,7 +146,7 @@ prepareGeneModelFeatures = function(rowData){
     scalingFactor = sum(rowData$readCount)/1000000
     outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
     summarise(numReads = geneReadCount[1],
-        labels = !novel[1], 
+        labels = !novelGene[1], 
         strand_bias=1-abs(0.5-(sum(readCount.posStrand, na.rm=TRUE)/numReads)),
         numRCs=n(), 
         numExons = max(numExons, na.rm=TRUE), 

@@ -92,7 +92,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              defaultModels = defaultModels,
                              fit = fitReadClassModel,
                              min.readCount = min.readCount,
-                             verbose = verbose,)
+                             verbose = verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
