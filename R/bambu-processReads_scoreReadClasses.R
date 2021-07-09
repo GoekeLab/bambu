@@ -7,7 +7,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-    rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
+    rowData(se)$novelGene = grepl("gene.", rowData(se)$GENEID)
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
@@ -184,14 +184,14 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
-        indexME = which(!rowData$novel & rowData$numExons>1)
+        indexME = which(!rowData$novelGene & rowData$numExons>1)
         transcriptModelME = fitXGBoostModel(
                     data.train=as.matrix(features[indexME,]),
                     labels.train=txFeatures$labels[indexME], show.cv=FALSE)
         txScoreME = predict(transcriptModelME, as.matrix(features))
 
         ## Single-Exon
-        indexSE = which(!rowData$novel & rowData$numExons==1)
+        indexSE = which(!rowData$novelGene & rowData$numExons==1)
         transcriptModelSE = fitXGBoostModel(
                     data.train=as.matrix(features[indexSE,]),
                     labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
