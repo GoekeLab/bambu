@@ -29,7 +29,8 @@ setIsoreParameters <- function(isoreParameters){
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
         min.exonOverlap = 10,
         max.geneFDR = 0.01,
-        max.txFDR = 0.1,
+        max.txFDR.multiExon = 0.1,
+        max.txFDR.singleExon = NULL,
         fitReadClassModel = TRUE,
         prefix = "") 
     isoreParameters <- 

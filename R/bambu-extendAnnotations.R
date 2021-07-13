@@ -10,7 +10,8 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         min.readCount = isoreParameters[["min.readCount"]], 
         min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
         max.geneFDR = isoreParameters[["max.geneFDR"]],
-        max.txFDR = isoreParameters[["max.txFDR"]],
+        max.txFDR.multiExon = isoreParameters[["max.txFDR.multiExon"]],
+        max.txFDR.singleExon = isoreParameters[["max.txFDR.singleExon"]],
         bpParameters,
         verbose)
     end.ptm_all <- proc.time()

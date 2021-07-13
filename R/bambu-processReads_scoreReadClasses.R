@@ -200,6 +200,11 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
         txScore[which(rowData$numExons==1)] =
             txScoreSE[which(rowData$numExons==1)]
         txFDR = calculateFDR(txScore, txFeatures$labels)
+        txFDR.ME = calculateFDR(txScore[which(rowData$numExons>=2)], txFeatures$labels[which(rowData$numExons>=2)])
+        txFDR.SE = calculateFDR(txScore[which(rowData$numExons==1)], txFeatures$labels[which(rowData$numExons==1)])
+        txFDR[which(rowData$numExons>=2)] = txFDR.ME
+        txFDR[which(rowData$numExons==1)] = txFDR.SE
+
     } else {
         warning("Transcript model not trained. Using pre-trained models")
         txScoreME = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
