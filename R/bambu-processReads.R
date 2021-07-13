@@ -15,7 +15,8 @@
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
-    stranded=FALSE, verbose=FALSE, min.readCount = 2, fitReadClassModel = T) {
+    stranded=FALSE, verbose=FALSE, min.readCount = 2, fitReadClassModel = T,
+    trackReads = FALSE) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
@@ -44,7 +45,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         readClass.outputDir = readClass.outputDir,
         genomeSequence = genomeSequence,annotations = annotations,
         stranded = stranded,verbose = verbose,
-        min.readCount = min.readCount, fitReadClassModel = fitReadClassModel)},
+        min.readCount = min.readCount, fitReadClassModel = fitReadClassModel,
+        trackReads = trackReads)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")

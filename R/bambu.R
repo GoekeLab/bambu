@@ -84,7 +84,7 @@
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
-    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
+    yieldSize = NULL, opt.discovery = NULL, trackReads = FALSE, opt.em = NULL,
     discoveryOnly = FALSE, quantOnly = FALSE, verbose = FALSE) {
     if (discoveryOnly & quantOnly) {
         stop(paste0("At least 1 of discoveryOnly and quantOnly must be FALSE. 
@@ -113,16 +113,26 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             min.readCount = isoreParameters[["min.readCount"]],
-            fitReadClassModel = isoreParameters[["fitReadClassModel"]])
+            fitReadClassModel = isoreParameters[["fitReadClassModel"]],
+            trackReads = trackReads)
     } else {
         readClassList <- rcFile
     }
     if (!quantOnly) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
+        readModelMap = NULL
+        if(trackReads){
+            metadata(annotations)$readIndex[is.na(metadata(annotations)$readIndex)]="*"
+            metadata(annotations)$readIndex=mcols(annotations)$TXNAME[match(metadata(annotations)$readIndex, mcols(annotations)$tempID)]
+            readNames = lapply(readClassList, FUN = function(x) metadata(x)$readNames)
+            readNames = do.call(c,readNames)
+            readModelMap = cbind(readNames, metadata(annotations)$readIndex)
+            colnames(readModelMap) = c("read_id", "transcript_id")
+        }
         if (!verbose) message("Finished extending annotations.")
         if (discoveryOnly){
-            return(annotations)
+            return(list(annotations=annotations, readModelMap = readModelMap))
         }
     }
     if (!discoveryOnly) {
