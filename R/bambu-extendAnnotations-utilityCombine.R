@@ -192,7 +192,7 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
                # number of samples passed gene read prop criteria
                NSampleGeneFDR = (geneFDR <= max.geneFDR),
                NSampleTxFDR = ( (txFDR <= max.txFDR.multiExon & numExons >= 2) |
-                (txFDR <= ifelse(max.txFDR.singleExon,max.txFDR.singleExon,max.txFDR.multiExon) 
+                (txFDR <= ifelse(!is.null(max.txFDR.singleExon),max.txFDR.singleExon,max.txFDR.multiExon) 
                 & numExons == 1))) %>%
         select(all_of(c(group_var, sum_var))) 
     return(featureTibble)
@@ -317,7 +317,7 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                                             min.readFractionByGene),
                   NSampleGeneFDR = sum(geneFDR <= max.geneFDR),
                     NSampleTxFDR = sum(( (txFDR <= max.txFDR.multiExon & numExons >= 2) |
-                    (txFDR <= ifelse(max.txFDR.singleExon,max.txFDR.singleExon,max.txFDR.multiExon) 
+                    (txFDR <= ifelse(!is.null(max.txFDR.singleExon),max.txFDR.singleExon,max.txFDR.multiExon) 
                     & numExons == 1))))
     return(newUnsplicedTibble)
 }
