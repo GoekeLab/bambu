@@ -35,6 +35,8 @@ setIsoreParameters <- function(isoreParameters){
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
+    if(is.null(isoreParameters$max.txFDR.singleExon)){
+        isoreParameters$max.txFDR.singleExon = isoreParameters$max.txFDR.multiExon}
     return(isoreParameters)
 }
 
