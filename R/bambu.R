@@ -49,7 +49,7 @@
 #'     \item max.txFDR.multiExon specifying the maximum FDR rate for transcript level 
 #'     threshold for multi-exon transcripts 
 #'     \item max.txFDR.singleExon specifying the maximum FDR rate for transcript level 
-#'     threshold for multi-exon transcripts (defaults to max.txFDR.multiExon)
+#'     threshold for single-exon transcripts (defaults to max.txFDR.multiExon)
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
