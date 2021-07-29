@@ -188,7 +188,7 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
         transcriptModelME = fitXGBoostModel(
                     data.train=as.matrix(features[indexME,]),
                     labels.train=txFeatures$labels[indexME], show.cv=FALSE)
-        txScoreME = predict(transcriptModelME, as.matrix(features))
+        txScore = predict(transcriptModelME, as.matrix(features))
 
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
@@ -196,7 +196,6 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
                     data.train=as.matrix(features[indexSE,]),
                     labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
-        txScore = txScoreME
         txScore[which(rowData$numExons==1)] =
             txScoreSE[which(rowData$numExons==1)]
         txFDR = calculateFDR(txScore, txFeatures$labels)
@@ -207,9 +206,8 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
 
     } else {
         warning("Transcript model not trained. Using pre-trained models")
-        txScoreME = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
+        txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
-        txScore = txScoreME
         txScore[which(rowData$numExons==1)] =
             txScoreSE[which(rowData$numExons==1)]
         txFDR = 1-txScore
