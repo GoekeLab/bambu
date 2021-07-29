@@ -2,17 +2,17 @@
 #' @param se summerized experiment object with read classes/ranges
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
-scoreReadClasses = function(se, genomeSequence, annotations, 
-                                    min.readCount = 2, verbose = FALSE){
+scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
+                            fit = TRUE, min.readCount = 2, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
+    rowData(se)$novelGene = grepl("gene.", rowData(se)$GENEID)
+    rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
     rowData(se)$geneReadProp = countsTBL$geneReadProp
     rowData(se)$geneReadCount = countsTBL$geneReadCount
-    rowData(se)$novel = grepl("gene.", rowData(se)$GENEID)
-    rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
 
     thresholdIndex = which(rowData(se)$readCount
                         >=min.readCount)
@@ -29,12 +29,13 @@ scoreReadClasses = function(se, genomeSequence, annotations,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
 
-    geneScore = getGeneScore(rowData(se)[thresholdIndex,])
+    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, fit)
     rowData(se)$geneScore = rep(NA,nrow(se))
     rowData(se)$geneFDR = rep(NA,nrow(se))
     rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
     rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
-    txScore = getTranscriptScore(rowData(se)[thresholdIndex,])
+    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
+                                 defaultModels, fit)
     rowData(se)$txScore = rep(NA,nrow(se))
     rowData(se)$txFDR = rep(NA,nrow(se))
     rowData(se)$txScore[thresholdIndex] = txScore$txScore
@@ -109,21 +110,23 @@ countPolyATerminals = function(grl, genomeSequence){
 
 #' calculates a score based on how likely the read class is associated with a 
 #' real gene
-getGeneScore = function(rowData){
+getGeneScore = function(rowData, defaultModels, fit = TRUE){
     geneFeatures = prepareGeneModelFeatures(rowData)
     features = dplyr::select(geneFeatures,!c(labels, GENEID))
-    if(checkFeatures(geneFeatures)){
-        geneModel = fit_xgb(as.matrix(features), geneFeatures$labels)
+    if(checkFeatures(geneFeatures) & fit){
+        geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
+        data.train=as.matrix(features), show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         geneFDR = calculateFDR(geneScore, geneFeatures$labels)
-        geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
-        geneScore = geneScore[geneRCMap]
-        geneFDR = geneFDR[geneRCMap]
     } else {
-    message("Gene Score not calculated")
-    geneScore = rep(1,nrow(rowData))
-    geneFDR = rep(1,nrow(rowData))
+        warning("Gene Model not trained. Using pre-trained models, the FDR might not be adjusted correctly")
+        geneScore = as.numeric(predict(defaultModels$geneModel, 
+                                       as.matrix(features)))
+        geneFDR = 1-geneScore
     }
+    geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
+    geneScore = geneScore[geneRCMap]
+    geneFDR = geneFDR[geneRCMap]
     return(data.frame(geneScore = geneScore, geneFDR = geneFDR))   
 }
 
@@ -140,9 +143,10 @@ calculateFDR = function(score, labels){
 #' calculate and format features by gene for model
 prepareGeneModelFeatures = function(rowData){
     geneReadCount = NA
+    scalingFactor = sum(rowData$readCount)/1000000
     outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
     summarise(numReads = geneReadCount[1],
-        labels = !novel[1], 
+        labels = !novelGene[1], 
         strand_bias=1-abs(0.5-(sum(readCount.posStrand, na.rm=TRUE)/numReads)),
         numRCs=n(), 
         numExons = max(numExons, na.rm=TRUE), 
@@ -151,63 +155,76 @@ prepareGeneModelFeatures = function(rowData){
         # or compat with only 1 but are not equal
         numNonSubsetRCs = numRCs-sum(compatible>=2 | (compatible==1 & !equal)),
         highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
-    mutate(numReads = log2(pmax(1,numReads)))
+    mutate(numReads = log2(pmax(1,1+(numReads/scalingFactor))))
     return(outData)
 }
 
 #' ensures that the data is trainable after filtering
 checkFeatures = function(features){
     labels = features$labels
+    trainable = TRUE
     if(sum(labels)==length(labels) | sum(labels)==0){
-    message("Missing presence of both TRUE and FALSE labels.")
-    return(FALSE)
+        message("Missing presence of both TRUE and FALSE labels.")
+        trainable = FALSE
     }
-    if(length(labels)<50){
+    if(length(labels)<1000){
         message("Not enough data points")
-        return(FALSE)
+        trainable = FALSE
     }
-    return(TRUE)
+    if(sum(labels)<50 | sum(!labels)<50){
+        message("Not enough TRUE/FALSE labels")
+        trainable = FALSE
+    }
+    return(trainable)
 }
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData){
+getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(checkFeatures(txFeatures)){
-        modelFeatures = features[which(!rowData$novel),]
-        transcriptModel = fit_xgb(modelFeatures, 
-            txFeatures$labels[which(!rowData$novel)])
-        txScore = predict(transcriptModel, as.matrix(features))
+    if(checkFeatures(txFeatures) & fit){
+        ## Multi-Exon
+        indexME = which(!rowData$novelGene & rowData$numExons>1)
+        transcriptModelME = fitXGBoostModel(
+                    data.train=as.matrix(features[indexME,]),
+                    labels.train=txFeatures$labels[indexME], show.cv=FALSE)
+        txScore = predict(transcriptModelME, as.matrix(features))
 
-        #calculates the FDR for filtering RCs based on wanted precision
+        ## Single-Exon
+        indexSE = which(!rowData$novelGene & rowData$numExons==1)
+        transcriptModelSE = fitXGBoostModel(
+                    data.train=as.matrix(features[indexSE,]),
+                    labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
+        txScoreSE = predict(transcriptModelSE, as.matrix(features))
+        txScore[which(rowData$numExons==1)] =
+            txScoreSE[which(rowData$numExons==1)]
         txFDR = calculateFDR(txScore, txFeatures$labels)
+        txFDR.ME = calculateFDR(txScore[which(rowData$numExons>=2)], txFeatures$labels[which(rowData$numExons>=2)])
+        txFDR.SE = calculateFDR(txScore[which(rowData$numExons==1)], txFeatures$labels[which(rowData$numExons==1)])
+        txFDR[which(rowData$numExons>=2)] = txFDR.ME
+        txFDR[which(rowData$numExons==1)] = txFDR.SE
 
     } else {
-    message("Transcript Score not calculated")
-    txScore = rep(1,nrow(rowData))
-    txFDR = rep(1,nrow(rowData))
+        warning("Transcript model not trained. Using pre-trained models")
+        txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
+        txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
+        txScore[which(rowData$numExons==1)] =
+            txScoreSE[which(rowData$numExons==1)]
+        txFDR = 1-txScore
     }
     return(data.frame(txScore = txScore, txFDR = txFDR))
 }
 
 #' calculate and format read class features for model training
 prepareTranscriptModelFeatures = function(rowData){
+    scalingFactor = sum(rowData$readCount)/1000000
     outData <- as_tibble(rowData) %>%  
     dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
         numAstart, numAend, numTstart,numTend, 
         tx_strand_bias = readCount.posStrand, labels = equal) %>%
     mutate(
         tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
-        numReads = log2(pmax(1,numReads))
+        numReads = log2(pmax(1,1+(numReads/scalingFactor)))
         )
     return(outData)
-}
-
-#train a model using xgboost, using part of the features as training set
-fit_xgb = function(features, labels) {
-    # Fit the xgb model
-    xgb_model = xgboost(data = as.matrix(features), label = labels,
-    nthread=1, nround= 50, objective = "binary:logistic", 
-    eval_metric='error', verbose = 0)
-    return(xgb_model)
 }

@@ -91,12 +91,13 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
             model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
-            myResults = fitXGBoostModel(labels.train = 
+            model = fitXGBoostModel(labels.train = 
             as.integer(annotatedSplice)[mySet.all][mySet.training], 
             data.train = modelmatrix[mySet.training,],
-            data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
-            predSplice.prime <- myResults[[2]]
-            predictions <- myResults[[1]]
+            show.cv = verbose, maxSize.cv = 10000)
+            
+            predSplice.prime <- model
+            predictions <- predict(model, modelmatrix)
         } else {
             predictions = xgboost:::predict.xgb.Booster(
                 junctionModel[[predSplice.primeName]], modelmatrix)
@@ -200,7 +201,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
 #' @importFrom xgboost xgboost
 #' @importFrom stats fisher.test
 #' @noRd
-fitXGBoostModel <- function(labels.train, data.train, data.test, 
+fitXGBoostModel <- function(labels.train, data.train, 
                             show.cv=TRUE, maxSize.cv=10000){
     if (show.cv) {
         mySample <- sample(seq_along(labels.train),
@@ -233,9 +234,8 @@ fitXGBoostModel <- function(labels.train, data.train, data.test,
             objective = "binary:logistic", 
             eval_metric='error',
             verbose = 0)
-    predictions <- predict(cv.fit, data.test)
 
-    return(list(predictions,cv.fit))
+    return(cv.fit)
 }
 
 #' if conflict (very rare) use reference junction with higher read count/score

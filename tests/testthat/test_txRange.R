@@ -17,7 +17,7 @@ test_that("addRowData adds all the correct rowData features",{
   expect_is(rowData(se)$numExons, class = 'numeric')
   expect_is(rowData(se)$equal, class = 'logical')
   expect_is(rowData(se)$GENEID, class = 'character')
-  expect_is(rowData(se)$novel, class = 'logical')
+  expect_is(rowData(se)$novelGene, class = 'logical')
   expect_is(rowData(se)$totalGeneReadProp, class = 'numeric')
   expect_is(rowData(se)$numAstart, class = 'integer')
   expect_is(rowData(se)$numAend, class = 'integer')

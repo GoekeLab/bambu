@@ -15,7 +15,7 @@
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
-    stranded=FALSE, verbose=FALSE, min.readCount = 2) {
+    stranded=FALSE, verbose=FALSE, min.readCount = 2, fitReadClassModel = T) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
@@ -38,13 +38,13 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         reads <- BamFileList(reads, yieldSize = yieldSize)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     }
-    genomeSequence <- checkInputSequence(genomeSequence)
     if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
-        readClass.outputDir = readClass.outputDir,
         genomeSequence = genomeSequence,annotations = annotations,
-        stranded = stranded,verbose = verbose, min.readCount = min.readCount)},
+        readClass.outputDir = readClass.outputDir,
+        stranded = stranded, min.readCount = min.readCount, 
+        fitReadClassModel = fitReadClassModel, verbose = verbose)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")
@@ -56,8 +56,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE, 
-    min.readCount = 2) {
+    readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
+    fitReadClassModel = TRUE,  verbose = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
@@ -87,8 +87,12 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         uniqueJunctions, runName = names(bam.file)[1],
         annotations, stranded, verbose)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
-    se = scoreReadClasses(se, genomeSequence, annotations, 
-        min.readCount = min.readCount, verbose = verbose)
+    se <- scoreReadClasses(se,genomeSequence, 
+                             annotations, 
+                             defaultModels = defaultModels,
+                             fit = fitReadClassModel,
+                             min.readCount = min.readCount,
+                             verbose = verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
@@ -113,37 +117,11 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 seqlevelCheckReadsAnnotation <- function(reads, annotations){
     if (length(intersect(seqlevels(reads),
         seqlevels(annotations))) == 0)
-        stop("Error: please provide annotation with matched seqlevel styles.")
+        warning("Warning: no annotations with matching seqlevel styles, 
+        all missing chromosomes will use de-novo annotations")
     if (!all(seqlevels(reads) %in% 
         seqlevels(annotations))) 
         message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
-}
-
-#' Function to create a object that can be queried by getSeq
-#' Either from fa file, or BSGenome object
-#' @importFrom methods is
-#' @importFrom Rsamtools FaFile
-#' @noRd
-checkInputSequence <- function(genomeSequence) {
-    if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
-        please provide fasta file or BSgenome name, see available.genomes()")
-    if (is(genomeSequence, "character")) {
-        if (grepl(".fa", genomeSequence)) {
-            if (.Platform$OS.type == "windows") {
-                genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-                newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                    "[[", 1))
-                names(genomeSequence) <- newlevels
-            } else {
-                indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
-                if (!indexFileExists) indexFa(genomeSequence)
-                genomeSequence <- FaFile(genomeSequence)
-            }
-        } else {
-            genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-        }
-    }
-    return(genomeSequence)
 }

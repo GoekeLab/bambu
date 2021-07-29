@@ -96,6 +96,11 @@ seCombinedGeneExpected <- transcriptToGeneExpression(seCombined)
 seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 
+## prior models to use for scoreReadClass()
+
+defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
+                                    package = "bambu"))
+
 usethis::use_data(data1, data2, data3, data4, data5,
     estOutput_woBC,
     estOutput_wBC,
@@ -103,6 +108,7 @@ usethis::use_data(data1, data2, data3, data4, data5,
     seWithDistExpected,
     seGeneExpected, seExtendedGeneExpected,
     seCombinedGeneExpected, seCombinedExtendedGeneExpected,
+    defaultModels,
     internal = TRUE, overwrite = TRUE
 )
 
@@ -324,4 +330,3 @@ saveRDS(seOutputExtended, file = "./inst/extdata/seOutputExtended_SGNex_A549_dir
 set.seed(1234)
 seOutputCombined2 <- bambu(rcFile = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
 saveRDS(seOutputCombined2, file = "./inst/extdata/seOutputCombined2_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-
