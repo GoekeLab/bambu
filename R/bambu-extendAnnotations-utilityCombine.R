@@ -110,7 +110,7 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
         filter(row_number()==1)
     
     combinedFeatureTibble <- combinedFeatureTibble %>% 
-        dplyr::select(intronStarts, intronEnds, chr, strand, equal, NSampleReadCount, 
+        dplyr::select(intronStarts, intronEnds, chr, strand, equal, maxTxScore, NSampleReadCount, 
                       NSampleReadProp, NSampleGeneScore, NSampleTxScore, rowID) %>%
         full_join(select(startTibble, rowID, start), by = "rowID") %>% 
         full_join(select(endTibble, rowID, end, readCount=sumReadCount), by = "rowID") %>%
@@ -125,11 +125,16 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
 combineFeatureTibble <- function(combinedFeatureTibble,
                                  featureTibbleSummarised, index=1, intraGroup = TRUE){ 
     if (is.null(combinedFeatureTibble)) { 
+        print(featureTibbleSummarised)
         combinedTable <- featureTibbleSummarised %>% 
-            select(intronStarts, intronEnds, chr, strand, equal, NSampleReadCount,
+            select(intronStarts, intronEnds, chr, strand, equal, maxTxScore, NSampleReadCount,
                    NSampleReadProp,NSampleGeneScore,NSampleTxScore, starts_with('start'),
                    starts_with('end'), starts_with('readCount'))
     } else { 
+        print(full_join(combinedFeatureTibble, 
+                                  featureTibbleSummarised, by = c('intronStarts',
+                                                                  'intronEnds', 'chr', 'strand'),
+                                  suffix=c('.combined','.new')))
         combinedTable = full_join(combinedFeatureTibble, 
                                   featureTibbleSummarised, by = c('intronStarts',
                                                                   'intronEnds', 'chr', 'strand'),
@@ -141,9 +146,11 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                    NSampleGeneScore = pmax0NA(NSampleGeneScore.combined) + 
                        pmax0NA(NSampleGeneScore.new), 
                    NSampleTxScore = pmax0NA(NSampleTxScore.combined) + 
-                       pmax0NA(NSampleTxScore.new)) %>% 
+                       pmax0NA(NSampleTxScore.new),
+                    maxTxScore = pmax(maxTxScore.combined, 
+                        maxTxScore.new, na.rm = TRUE)) %>% 
             select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
-                   NSampleReadProp, NSampleGeneScore, NSampleTxScore, starts_with('start'),
+                   NSampleReadProp, NSampleGeneScore, NSampleTxScore, maxTxScore, starts_with('start'),
                    starts_with('end'), starts_with('readCount'), starts_with('equal')) 
     } 
     if(intraGroup) 
@@ -179,7 +186,7 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
         mutate(start = unname(min(start(rowRangesSe))), 
                end= unname(max(end(rowRangesSe))))
     group_var <- c("intronStarts", "intronEnds", "chr", "strand", "equal")
-    sum_var <- c("start","end","NSampleReadCount",
+    sum_var <- c("start","end","NSampleReadCount", "maxTxScore",
                  "readCount","NSampleReadProp","NSampleGeneScore","NSampleTxScore")
     featureTibble <- rowData %>% 
         #filter(!equal) %>% # filter not compatible ones, i.e., overlapping with annotations?? if we are going to include subset tx, then can we still do the filtering?? maybe not equal but can be compatible 
@@ -194,7 +201,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
                # number of samples passed gene read prop criteria
                NSampleGeneScore = (geneScore >= min.geneScore),
                NSampleTxScore = ((txScore >= min.txScore.multiExon & numExons >= 2) |
-                (txScore >= min.txScore.singleExon & numExons == 1))) %>%
+                (txScore >= min.txScore.singleExon & numExons == 1)), 
+                maxTxScore = txScore) %>%
         select(all_of(c(group_var, sum_var))) 
     return(featureTibble)
 }
