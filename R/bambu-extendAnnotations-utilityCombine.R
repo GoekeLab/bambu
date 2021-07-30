@@ -125,16 +125,11 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
 combineFeatureTibble <- function(combinedFeatureTibble,
                                  featureTibbleSummarised, index=1, intraGroup = TRUE){ 
     if (is.null(combinedFeatureTibble)) { 
-        print(featureTibbleSummarised)
         combinedTable <- featureTibbleSummarised %>% 
             select(intronStarts, intronEnds, chr, strand, equal, maxTxScore, NSampleReadCount,
                    NSampleReadProp,NSampleGeneScore,NSampleTxScore, starts_with('start'),
                    starts_with('end'), starts_with('readCount'))
     } else { 
-        print(full_join(combinedFeatureTibble, 
-                                  featureTibbleSummarised, by = c('intronStarts',
-                                                                  'intronEnds', 'chr', 'strand'),
-                                  suffix=c('.combined','.new')))
         combinedTable = full_join(combinedFeatureTibble, 
                                   featureTibbleSummarised, by = c('intronStarts',
                                                                   'intronEnds', 'chr', 'strand'),
