@@ -44,8 +44,11 @@
 #'     of distance threshold, used for extending annotation
 #'     \item min.primarySecondaryDistStartEnd2 specifying the minimum number 
 #'     of distance threshold, used for estimating distance to annotation
-#'     \item max.geneFDR specifying the maximum FDR rate for gene level 
-#'     threshold
+#'     \item min.geneScore specifying the minimum score for gene detection
+#'     \item min.txScore.multiExon specifying the minimum transcript level 
+#'     threshold for multi-exon transcripts during sample combining
+#'     \item min.txScore.singleExon specifying the minimum transcript level 
+#'     threshold for single-exon transcripts during sample combining
 #'     \item max.txFDR.multiExon specifying the maximum FDR rate for transcript level 
 #'     threshold for multi-exon transcripts 
 #'     \item max.txFDR.singleExon specifying the maximum FDR rate for transcript level 

@@ -28,15 +28,17 @@ setIsoreParameters <- function(isoreParameters){
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
         min.exonOverlap = 10,
-        max.geneFDR = 0.01,
+        min.geneScore = 0.5,
+        min.txScore.multiExon = 0.5,
+        min.txScore.singleExon = NULL,
         max.txFDR.multiExon = 0.1,
         max.txFDR.singleExon = NULL,
         fitReadClassModel = TRUE,
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
-    if(is.null(isoreParameters$max.txFDR.singleExon)){
-        isoreParameters$max.txFDR.singleExon = isoreParameters$max.txFDR.multiExon}
+    if(is.null(isoreParameters$min.txScore.singleExon)){
+        isoreParameters$min.txScore.singleExon = isoreParameters$min.txScore.multiExon}
     return(isoreParameters)
 }
 
