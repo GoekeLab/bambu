@@ -353,31 +353,33 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                             primarySecondaryDist, DistCalculated = FALSE)
   # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
   setTMP <- unique(txToAnTableFiltered$queryHits)
-  spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
-                                                  exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
-                                                  dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
-                                                  ignore.strand = ignore.strand)
-  txToAnTableRest <-
-    genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
-                       exByTx = exByTx, setTMP = setTMP, DistCalculated = FALSE)
-  # (3) find overlaps for remaining reads 
-  setTMPRest <- unique(c(txToAnTableRest$queryHits, setTMP))
-  txToAnTableRestStartEnd <- NULL
-  if (length(exByTx[-setTMPRest])) {
-    spliceOverlaps_restStartEnd <-
-      findSpliceOverlapsByDist(exByTx[-setTMPRest], exByTxRef,
-                               maxDist = 0, type = "any", firstLastSeparate = TRUE,
-                               dropRangesByMinLength = FALSE,
-                               cutStartEnd = FALSE, ignore.strand = ignore.strand)
-    if (length(spliceOverlaps_restStartEnd)) {
-      txToAnTableRestStartEnd <-
-        genFilteredAnTable(spliceOverlaps_restStartEnd,
-                           primarySecondaryDist, exByTx = exByTx,
-                           setTMP = setTMPRest, DistCalculated = TRUE)
+  if(length(exByTx[-setTMP])>0){
+    spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
+                                                    exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
+                                                    dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
+                                                    ignore.strand = ignore.strand)
+    txToAnTableRest <-
+      genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
+                        exByTx = exByTx, setTMP = setTMP, DistCalculated = FALSE)
+    # (3) find overlaps for remaining reads 
+    setTMPRest <- unique(c(txToAnTableRest$queryHits, setTMP))
+    txToAnTableRestStartEnd <- NULL
+    if (length(exByTx[-setTMPRest])) {
+      spliceOverlaps_restStartEnd <-
+        findSpliceOverlapsByDist(exByTx[-setTMPRest], exByTxRef,
+                                maxDist = 0, type = "any", firstLastSeparate = TRUE,
+                                dropRangesByMinLength = FALSE,
+                                cutStartEnd = FALSE, ignore.strand = ignore.strand)
+      if (length(spliceOverlaps_restStartEnd)) {
+        txToAnTableRestStartEnd <-
+          genFilteredAnTable(spliceOverlaps_restStartEnd,
+                            primarySecondaryDist, exByTx = exByTx,
+                            setTMP = setTMPRest, DistCalculated = TRUE)
+      }
     }
-  }
-  txToAnTableFiltered <- rbind( txToAnTableFiltered,
-                                txToAnTableRest, txToAnTableRestStartEnd ) %>% ungroup()
+    txToAnTableFiltered <- rbind( txToAnTableFiltered,
+                                  txToAnTableRest, txToAnTableRestStartEnd ) %>% ungroup()
+  } else txToAnTableFiltered %>% ungroup()
   txToAnTableFiltered$readClassId <-
     names(exByTx)[txToAnTableFiltered$queryHits]
   txToAnTableFiltered$annotationTxId <-
