@@ -31,8 +31,7 @@ setIsoreParameters <- function(isoreParameters){
         min.geneScore = 0.5,
         min.txScore.multiExon = 0.5,
         min.txScore.singleExon = NULL,
-        max.txFDR.multiExon = 0.1,
-        max.txFDR.singleExon = NULL,
+        max.txFDR = 0.1,
         fitReadClassModel = TRUE,
         prefix = "") 
     isoreParameters <- 

@@ -3,10 +3,11 @@
 #' @noRd
 isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     remove.subsetTx = TRUE,
-                                    min.sampleNumber = 1, min.exonDistance = 35, min.exonOverlap = 10,
+                                    min.sampleNumber = 1, max.txFDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     prefix = "", verbose = FALSE){
   filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
+  filterSet <- filterTranscriptsByFDR(combinedTranscripts, filterSet, max.txFDR)
   if (any(filterSet, na.rm = TRUE)) {
     transcriptsFiltered <- combinedTranscripts[filterSet,]
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -53,7 +54,28 @@ filterTranscriptsByRead <- function(combinedTranscripts, min.sampleNumber){
       combinedTranscripts$NSampleReadProp >= min.sampleNumber) & (
         combinedTranscripts$NSampleGeneScore >= min.sampleNumber) & (
           combinedTranscripts$NSampleTxScore >= min.sampleNumber)
-  # filter based on read count and transcript usage
+  return(filterSet)
+}
+
+#' filter transcripts by FDR
+#' @noRd
+filterTranscriptsByFDR <- function(combinedTranscripts, filterSet, max.txFDR){
+  if (any(filterSet, na.rm = TRUE)) {
+    combinedTranscripts <- combinedTranscripts[filterSet,]
+  } else return(filterset)
+
+  # calculate and filter by FDR
+  combinedTranscripts$equal[is.na(combinedTranscripts$equal)] = FALSE
+  if(sum(combinedTranscripts$equal, na.rm = TRUE)<50 | 
+      sum(!combinedTranscripts$equal, na.rm = TRUE)<50){
+        txFDR = 1 - combinedTranscripts$maxTxScore
+        warning("Less than 50 TRUE or FALSE read classes for precision stabilization. 
+        Filtering by prediction score instead")
+  } else txFDR = calculateFDR(combinedTranscripts$maxTxScore, combinedTranscripts$equal)
+  index = which(filterSet)
+  filterSet[index] = filterSet[index] & (txFDR <= max.txFDR)
+  # remove equals to prevent duplicates when merging with anno
+  filterSet[index] = filterSet[index] & (!combinedTranscripts$equal)
   return(filterSet)
 }
 

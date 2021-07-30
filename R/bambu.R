@@ -49,10 +49,8 @@
 #'     threshold for multi-exon transcripts during sample combining
 #'     \item min.txScore.singleExon specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining
-#'     \item max.txFDR.multiExon specifying the maximum FDR rate for transcript level 
-#'     threshold for multi-exon transcripts 
-#'     \item max.txFDR.singleExon specifying the maximum FDR rate for transcript level 
-#'     threshold for single-exon transcripts (defaults to max.txFDR.multiExon)
+#'     \item max.txFDR. specifying the maximum FDR rate to novel transcript 
+#'     output from detected read classes
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
