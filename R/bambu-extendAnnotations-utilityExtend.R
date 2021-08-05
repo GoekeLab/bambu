@@ -353,11 +353,12 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                             primarySecondaryDist, DistCalculated = FALSE)
   # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
   setTMP <- unique(txToAnTableFiltered$queryHits)
-  if(length(exByTx[-setTMP])>0){
-    spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
+
+  spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
                                                     exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                                     dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
                                                     ignore.strand = ignore.strand)
+  if(length(spliceOverlaps_rest) > 0){
     txToAnTableRest <-
       genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
                         exByTx = exByTx, setTMP = setTMP, DistCalculated = FALSE)
