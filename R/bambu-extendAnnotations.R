@@ -23,7 +23,7 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         annotationGrangesList = annotations,
         remove.subsetTx = isoreParameters[["remove.subsetTx"]],
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
-        max.txFDR = isoreParameters[["max.txFDR"]],
+        max.txNDR = isoreParameters[["max.txNDR"]],
         min.exonDistance = isoreParameters[["min.exonDistance"]],
         min.exonOverlap = isoreParameters[["min.exonOverlap"]],
         min.primarySecondaryDist = 
