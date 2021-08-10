@@ -117,6 +117,7 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
         geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
         data.train=as.matrix(features), show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
+        #redundant function call since NDR is now calculated in extendAnno
         geneNDR = calculateNDR(geneScore, geneFeatures$labels)
     } else {
         warning("Gene Model not trained. Using pre-trained models, the NDR might not be adjusted correctly")
@@ -198,6 +199,7 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
         txScore[which(rowData$numExons==1)] =
             txScoreSE[which(rowData$numExons==1)]
+        #redundant function calls since NDR is now calculated in extendAnno
         txNDR = calculateNDR(txScore, txFeatures$labels)
         txNDR.ME = calculateNDR(txScore[which(rowData$numExons>=2)], txFeatures$labels[which(rowData$numExons>=2)])
         txNDR.SE = calculateNDR(txScore[which(rowData$numExons==1)], txFeatures$labels[which(rowData$numExons==1)])
