@@ -6,7 +6,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                             fit = TRUE, min.readCount = 2, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
-    rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
+    rowData(se)$GENEID = assignGeneIds(rowRanges(se), GRangesList())
     rowData(se)$novelGene = grepl("gene.", rowData(se)$GENEID)
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
@@ -29,7 +29,9 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
 
-    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, fit)
+    confirmedGenes = unique(rowData(se)$GENEID[which(rowData(se)$compatible >= 1)])
+    rowData(se)$novelGene = !rowData(se)$GENEID %in% confirmedGenes
+    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, nround = 5, fit)
     rowData(se)$geneScore = rep(NA,nrow(se))
     rowData(se)$geneNDR = rep(NA,nrow(se))
     rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
@@ -110,12 +112,12 @@ countPolyATerminals = function(grl, genomeSequence){
 
 #' calculates a score based on how likely the read class is associated with a 
 #' real gene
-getGeneScore = function(rowData, defaultModels, fit = TRUE){
+getGeneScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
     geneFeatures = prepareGeneModelFeatures(rowData)
     features = dplyr::select(geneFeatures,!c(labels, GENEID))
     if(checkFeatures(geneFeatures) & fit){
         geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
-        data.train=as.matrix(features), show.cv=FALSE)
+        data.train=as.matrix(features), nround = nround, show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
         #redundant function call since NDR is now calculated in extendAnno
         geneNDR = calculateNDR(geneScore, geneFeatures$labels)
@@ -180,7 +182,7 @@ checkFeatures = function(features){
 }
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
+getTranscriptScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures) & fit){
@@ -188,14 +190,16 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
         indexME = which(!rowData$novelGene & rowData$numExons>1)
         transcriptModelME = fitXGBoostModel(
                     data.train=as.matrix(features[indexME,]),
-                    labels.train=txFeatures$labels[indexME], show.cv=FALSE)
+                    labels.train=txFeatures$labels[indexME], 
+                    nround = nround, show.cv=FALSE)
         txScore = predict(transcriptModelME, as.matrix(features))
 
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
         transcriptModelSE = fitXGBoostModel(
                     data.train=as.matrix(features[indexSE,]),
-                    labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
+                    labels.train=txFeatures$labels[indexSE], 
+                    nround = nround, show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
         txScore[which(rowData$numExons==1)] =
             txScoreSE[which(rowData$numExons==1)]

@@ -28,7 +28,7 @@ setIsoreParameters <- function(isoreParameters){
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
         min.exonOverlap = 10,
-        min.geneScore = 0,
+        min.geneScore = 0.2,
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
         max.txNDR = 0.1,
