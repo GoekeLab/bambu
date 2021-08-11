@@ -540,73 +540,15 @@ assignGeneIDexonMatch <- function(rowDataCombined, exonRangesCombined,
     geneIdByExon[isNaGeneIdBefore]
   isNaGeneIdAfter <- is.na(rowDataCombined$GENEID)
   if (any(isNaGeneIdAfter)) {
-    newGeneIds <- 
-      assignNewGeneIds(exonRangesCombined[isNaGeneIdAfter],
-                       prefix = prefix, minoverlap = 5, ignore.strand = FALSE)
-    rowDataCombined$GENEID[as.integer(newGeneIds$readClassId)] <- 
-      newGeneIds$geneId
+    newGeneIds <- assignGeneIdsNoReference(exonRangesCombined[isNaGeneIdAfter])
+    rowDataCombined$GENEID[isNaGeneIdAfter] <- 
+      newGeneIds 
   }
   end.ptm <- proc.time()
   if (verbose) message("assigned read classes to annotated and
         new gene IDs in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   return(rowDataCombined)
 }
-
-
-#' Assign New Gene with Gene Ids
-#' @param exByTx exByTx
-#' @param prefix prefix, defaults to empty
-#' @param minoverlap defaults to 5
-#' @param ignore.strand defaults to FALSE
-#' @importFrom dplyr as_tibble %>% filter select ungroup inner_join mutate
-#'     distinct if_else arrange tibble
-#' @noRd
-assignNewGeneIds <- function(exByTx, prefix = "", minoverlap = 5,
-                             ignore.strand = FALSE) {
-  if (is.null(names(exByTx))) names(exByTx) <- seq_along(exByTx)
-  exonSelfOverlaps <- findOverlaps(exByTx, exByTx, select = "all",
-                                   minoverlap = minoverlap, ignore.strand = ignore.strand)
-  hitObject <- as_tibble(exonSelfOverlaps) %>% arrange(queryHits, subjectHits)
-  candidateList <- hitObject %>% group_by(queryHits) %>%
-    filter(queryHits <= min(subjectHits), queryHits != subjectHits) %>%
-    ungroup()
-  filteredOverlapList <- hitObject %>% filter(queryHits < subjectHits)
-  length_tmp <- 1
-  # loop to include overlapping read classes which are not in order
-  while (nrow(candidateList) > length_tmp) {
-    length_tmp <- nrow(candidateList)
-    temp <- includeOverlapReadClass(candidateList, filteredOverlapList)
-    candidateList <- rbind(temp, candidateList)
-    while (nrow(temp)) { ## annotate transcripts by new gene id
-      temp <- includeOverlapReadClass(candidateList, filteredOverlapList)
-      candidateList <- rbind(temp, candidateList)} ## second loop
-    tst <- candidateList %>% group_by(subjectHits) %>%
-      mutate(subjectCount = n()) %>% group_by(queryHits) %>%
-      filter(max(subjectCount) > 1) %>% ungroup()
-    temp2 <- inner_join(tst, tst, by = c("subjectHits" = "subjectHits")) %>%
-      filter(queryHits.x != queryHits.y) %>%
-      mutate(queryHits = if_else(queryHits.x > queryHits.y,
-                                 queryHits.y, queryHits.x),
-             subjectHits = if_else(queryHits.x > queryHits.y,
-                                   queryHits.x, queryHits.y)) %>%
-      dplyr::select(queryHits, subjectHits) %>%
-      distinct()
-    candidateList <- distinct(rbind(temp2, candidateList))
-  }
-  candidateList <- candidateList %>% filter(!queryHits %in% subjectHits) %>%
-    arrange(queryHits, subjectHits)
-  idToAdd <-
-    (which(!(seq_along(exByTx) %in% unique(candidateList$subjectHits))))
-  candidateList <- rbind(candidateList, tibble(
-    queryHits = idToAdd, subjectHits = idToAdd
-  )) %>% arrange(queryHits, subjectHits) %>%
-    mutate(geneId = paste("gene", prefix, ".", queryHits, sep = "")) %>%
-    dplyr::select(subjectHits, geneId)
-  candidateList$readClassId <- names(exByTx)[candidateList$subjectHits]
-  candidateList <- dplyr::select(candidateList, readClassId, geneId)
-  return(candidateList)
-}
-
 
 #' calculate distance between first and last exon matches
 #' @param candidateList candidateList
@@ -625,8 +567,6 @@ includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
     rename(subjectHits = subjectHits.y)
   return(temp)
 }
-
-
 
 #' remove transcripts with identical junctions to annotations
 #' @noRd
@@ -723,9 +663,11 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
     dplyr::select(readClassId, geneId = GENEID) %>% ungroup()
   newGeneCandidates <- (!readClassTable$readClassId %in%
                           readClassToGeneIdTable$readClassId)
-  readClassToGeneIdTableNew <-
-    assignNewGeneIds(rowRanges(seReadClass)[newGeneCandidates],
-                     prefix = ".unassigned", minoverlap = 5, ignore.strand = FALSE)
+  readClassToGeneIdTableNew <- 
+      assignGeneIdsNoReference(rowRanges(seReadClass)[newGeneCandidates])
+  readClassToGeneIdTableNew <- tibble(which(newGeneCandidates), 
+      readClassToGeneIdTableNew)
+  colnames(readClassToGeneIdTableNew) <- c('readClassId', 'geneId')
   readClassGeneTable <- rbind(readClassToGeneIdTable, 
                               readClassToGeneIdTableNew)
   readClassTable <- left_join(readClassTable, readClassGeneTable,
