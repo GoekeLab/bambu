@@ -31,13 +31,13 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
 
     confirmedGenes = unique(rowData(se)$GENEID[which(rowData(se)$compatible >= 1)])
     rowData(se)$novelGene = !rowData(se)$GENEID %in% confirmedGenes
-    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, nround = 5, fit)
+    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, nround = 5, fit=fit)
     rowData(se)$geneScore = rep(NA,nrow(se))
     rowData(se)$geneNDR = rep(NA,nrow(se))
     rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
     rowData(se)$geneNDR[thresholdIndex] = geneScore$geneNDR
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
-                                 defaultModels, fit)
+                                 defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
     rowData(se)$txNDR = rep(NA,nrow(se))
     rowData(se)$txScore[thresholdIndex] = txScore$txScore
