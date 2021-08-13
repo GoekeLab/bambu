@@ -665,7 +665,7 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
                           readClassToGeneIdTable$readClassId)
   readClassToGeneIdTableNew <- 
       assignGeneIdsNoReference(rowRanges(seReadClass)[newGeneCandidates])
-  readClassToGeneIdTableNew <- tibble(which(newGeneCandidates), 
+  readClassToGeneIdTableNew <- tibble(names(seReadClass)[newGeneCandidates], 
       readClassToGeneIdTableNew)
   colnames(readClassToGeneIdTableNew) <- c('readClassId', 'geneId')
   readClassGeneTable <- rbind(readClassToGeneIdTable, 
