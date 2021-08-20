@@ -31,15 +31,11 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
 
     geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, fit)
     rowData(se)$geneScore = rep(NA,nrow(se))
-    rowData(se)$geneNDR = rep(NA,nrow(se))
-    rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
-    rowData(se)$geneNDR[thresholdIndex] = geneScore$geneNDR
+    rowData(se)$geneScore[thresholdIndex] = geneScore
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                  defaultModels, fit)
     rowData(se)$txScore = rep(NA,nrow(se))
-    rowData(se)$txNDR = rep(NA,nrow(se))
-    rowData(se)$txScore[thresholdIndex] = txScore$txScore
-    rowData(se)$txNDR[thresholdIndex] = txScore$txNDR
+    rowData(se)$txScore[thresholdIndex] = txScore
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
@@ -117,28 +113,14 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
         geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
         data.train=as.matrix(features), show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
-        #redundant function call since NDR is now calculated in extendAnno
-        geneNDR = calculateNDR(geneScore, geneFeatures$labels)
     } else {
-        warning("Gene Model not trained. Using pre-trained models, the NDR might not be adjusted correctly")
+        warning("Gene Model not trained. Using pre-trained models")
         geneScore = as.numeric(predict(defaultModels$geneModel, 
                                        as.matrix(features)))
-        geneNDR = 1-geneScore
     }
     geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
     geneScore = geneScore[geneRCMap]
-    geneNDR = geneNDR[geneRCMap]
-    return(data.frame(geneScore = geneScore, geneNDR = geneNDR))   
-}
-
-#' calculates the minimum NDR for each score 
-calculateNDR = function(score, labels){
-    scoreOrder = order(score, decreasing = TRUE)
-    labels = labels[scoreOrder]
-    score = score[scoreOrder]
-    NDR = cumsum(!labels)/(seq_len(length(score)))
-    NDR = rev(cummin(rev(NDR)))
-    return(NDR[order(scoreOrder)])
+    return(geneScore)
 }
 
 #' calculate and format features by gene for model
@@ -199,12 +181,6 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
         txScore[which(rowData$numExons==1)] =
             txScoreSE[which(rowData$numExons==1)]
-        #redundant function calls since NDR is now calculated in extendAnno
-        txNDR = calculateNDR(txScore, txFeatures$labels)
-        txNDR.ME = calculateNDR(txScore[which(rowData$numExons>=2)], txFeatures$labels[which(rowData$numExons>=2)])
-        txNDR.SE = calculateNDR(txScore[which(rowData$numExons==1)], txFeatures$labels[which(rowData$numExons==1)])
-        txNDR[which(rowData$numExons>=2)] = txNDR.ME
-        txNDR[which(rowData$numExons==1)] = txNDR.SE
 
     } else {
         warning("Transcript model not trained. Using pre-trained models")
@@ -212,9 +188,8 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
         txScore[which(rowData$numExons==1)] =
             txScoreSE[which(rowData$numExons==1)]
-        txNDR = 1-txScore
     }
-    return(data.frame(txScore = txScore, txNDR = txNDR))
+    return(txScore)
 }
 
 #' calculate and format read class features for model training

@@ -69,6 +69,17 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber, max.txNDR){
   }  
 }
 
+#' calculates the minimum NDR for each score 
+#' @noRd
+calculateNDR = function(score, labels){
+    scoreOrder = order(score, decreasing = TRUE)
+    labels = labels[scoreOrder]
+    score = score[scoreOrder]
+    NDR = cumsum(!labels)/(seq_len(length(score)))
+    NDR = rev(cummin(rev(NDR)))
+    return(NDR[order(scoreOrder)])
+}
+
 
 #' calculate minimum equivalent classes for extended annotations
 #' @importFrom dplyr select as_tibble %>% mutate_at mutate group_by 
