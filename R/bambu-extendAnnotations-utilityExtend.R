@@ -52,8 +52,7 @@ filterTranscriptsByRead <- function(combinedTranscripts, min.sampleNumber){
   if (nrow(combinedTranscripts) > 0) 
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
       combinedTranscripts$NSampleReadProp >= min.sampleNumber) & (
-        combinedTranscripts$NSampleGeneScore >= min.sampleNumber) & (
-          combinedTranscripts$NSampleTxScore >= min.sampleNumber)
+        combinedTranscripts$NSampleTxScore >= min.sampleNumber)
   return(filterSet)
 }
 

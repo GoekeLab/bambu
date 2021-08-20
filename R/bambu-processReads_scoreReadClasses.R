@@ -29,11 +29,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
 
-    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, nround = 5, fit=fit)
-    rowData(se)$geneScore = rep(NA,nrow(se))
-    rowData(se)$geneNDR = rep(NA,nrow(se))
-    rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
-    rowData(se)$geneNDR[thresholdIndex] = geneScore$geneNDR
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                  defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
@@ -108,29 +103,6 @@ countPolyATerminals = function(grl, genomeSequence){
                     numTstart=numATstart[,"T"], numTend=numATend[,"T"]))
 }
 
-#' calculates a score based on how likely the read class is associated with a 
-#' real gene
-getGeneScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
-    geneFeatures = prepareGeneModelFeatures(rowData)
-    features = dplyr::select(geneFeatures,!c(labels, GENEID))
-    if(checkFeatures(geneFeatures) & fit){
-        geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
-        data.train=as.matrix(features), nround = nround, show.cv=FALSE)
-        geneScore = as.numeric(predict(geneModel, as.matrix(features)))
-        #redundant function call since NDR is now calculated in extendAnno
-        geneNDR = calculateNDR(geneScore, geneFeatures$labels)
-    } else {
-        warning("Gene Model not trained. Using pre-trained models, the NDR might not be adjusted correctly")
-        geneScore = as.numeric(predict(defaultModels$geneModel, 
-                                       as.matrix(features)))
-        geneNDR = 1-geneScore
-    }
-    geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
-    geneScore = geneScore[geneRCMap]
-    geneNDR = geneNDR[geneRCMap]
-    return(data.frame(geneScore = geneScore, geneNDR = geneNDR))   
-}
-
 #' calculates the minimum NDR for each score 
 calculateNDR = function(score, labels){
     scoreOrder = order(score, decreasing = TRUE)
@@ -139,44 +111,6 @@ calculateNDR = function(score, labels){
     NDR = cumsum(!labels)/(seq_len(length(score)))
     NDR = rev(cummin(rev(NDR)))
     return(NDR[order(scoreOrder)])
-}
-
-#' calculate and format features by gene for model
-prepareGeneModelFeatures = function(rowData){
-    geneReadCount = NA
-    scalingFactor = sum(rowData$readCount)/1000000
-    outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
-    summarise(numReads = geneReadCount[1],
-        labels = !novelGene[1], 
-        strand_bias=1-abs(0.5-(sum(readCount.posStrand, na.rm=TRUE)/numReads)),
-        numRCs=n(), 
-        numExons = max(numExons, na.rm=TRUE), 
-        isSpliced = numExons>1, 
-        # subsets are compatible with 2 or more RCs
-        # or compat with only 1 but are not equal
-        numNonSubsetRCs = numRCs-sum(compatible>=2 | (compatible==1 & !equal)),
-        highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
-    mutate(numReads = log2(pmax(1,1+(numReads/scalingFactor))))
-    return(outData)
-}
-
-#' ensures that the data is trainable after filtering
-checkFeatures = function(features){
-    labels = features$labels
-    trainable = TRUE
-    if(sum(labels)==length(labels) | sum(labels)==0){
-        message("Missing presence of both TRUE and FALSE labels.")
-        trainable = FALSE
-    }
-    if(length(labels)<1000){
-        message("Not enough data points")
-        trainable = FALSE
-    }
-    if(sum(labels)<50 | sum(!labels)<50){
-        message("Not enough TRUE/FALSE labels")
-        trainable = FALSE
-    }
-    return(trainable)
 }
 
 #' calculates a score based on how likely a read class is full length
@@ -231,4 +165,23 @@ prepareTranscriptModelFeatures = function(rowData){
         numReads = log2(pmax(1,1+(numReads/scalingFactor)))
         )
     return(outData)
+}
+
+#' ensures that the data is trainable after filtering
+checkFeatures = function(features){
+    labels = features$labels
+    trainable = TRUE
+    if(sum(labels)==length(labels) | sum(labels)==0){
+        message("Missing presence of both TRUE and FALSE labels.")
+        trainable = FALSE
+    }
+    if(length(labels)<1000){
+        message("Not enough data points")
+        trainable = FALSE
+    }
+    if(sum(labels)<50 | sum(!labels)<50){
+        message("Not enough TRUE/FALSE labels")
+        trainable = FALSE
+    }
+    return(trainable)
 }
