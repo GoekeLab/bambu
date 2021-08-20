@@ -146,14 +146,12 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                         maxTxScore.new, na.rm = TRUE)) %>% 
             select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
                    NSampleReadProp, NSampleGeneScore, NSampleTxScore, maxTxScore, starts_with('start'),
-                   starts_with('end'), starts_with('readCount'), starts_with('equal')) 
+                   starts_with('end'), starts_with('readCount'), equal=equal.combined) 
     } 
     if(intraGroup) 
         combinedTable <- 
             rename_with(combinedTable, ~gsub('^(end|start|readCount)$',
                                              paste0('\\1\\.',index), .x)) 
-        combinedTable <- 
-            rename_with(combinedTable, ~gsub('equal.combined', "equal", .x)) 
     return(combinedTable) 
 }
 #' pmax replace NAs with 0

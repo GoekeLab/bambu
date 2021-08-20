@@ -6,8 +6,10 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, max.txNDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     prefix = "", verbose = FALSE){
+  print(combinedTranscripts)
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber, max.txNDR)
-  if (nrow(combinedTranscripts > 0)) {
+  print(combinedTranscripts)
+  if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
                    "confidenceType","readCount")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
@@ -54,7 +56,6 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber, max.txNDR){
             combinedTranscripts$NSampleGeneScore >= min.sampleNumber) & (
               combinedTranscripts$NSampleTxScore >= min.sampleNumber)
     combinedTranscripts = combinedTranscripts[filterSet,]
-
     # calculate and filter by NDR
     combinedTranscripts$equal[is.na(combinedTranscripts$equal)] = FALSE
     if(sum(combinedTranscripts$equal, na.rm = TRUE)<50 | 
@@ -64,9 +65,10 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber, max.txNDR){
           Filtering by prediction score instead")
     } else txNDR = calculateNDR(combinedTranscripts$maxTxScore, combinedTranscripts$equal)
     # remove equals to prevent duplicates when merging with anno
-    filterSet = txNDR <= max.txNDR & !combinedTranscripts$equal
+    filterSet = (txNDR <= max.txNDR) & !combinedTranscripts$equal
     combinedTranscripts = combinedTranscripts[filterSet,]
   }  
+  return(combinedTranscripts)
 }
 
 #' calculates the minimum NDR for each score 
