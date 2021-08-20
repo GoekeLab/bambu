@@ -6,13 +6,11 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, max.txNDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     prefix = "", verbose = FALSE){
-  filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
-  filterSet <- filterTranscriptsByNDR(combinedTranscripts, filterSet, max.txNDR)
-  if (any(filterSet, na.rm = TRUE)) {
-    transcriptsFiltered <- combinedTranscripts[filterSet,]
+  combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber, max.txNDR)
+  if (nrow(combinedTranscripts > 0)) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
                    "confidenceType","readCount")
-    rowDataTibble <- select(transcriptsFiltered,all_of(group_var))
+    rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
                                    confidenceType == "highConfidenceJunctionReads")
@@ -46,38 +44,31 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   }
 }
 
-#' filter transcripts by read counts
+#' filter transcripts by read counts and NDR
 #' @noRd
-filterTranscriptsByRead <- function(combinedTranscripts, min.sampleNumber){
-  if (nrow(combinedTranscripts) > 0) 
+filterTranscripts <- function(combinedTranscripts, min.sampleNumber, max.txNDR){
+  if (nrow(combinedTranscripts) > 0){
+    #filter by read counts
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
-      combinedTranscripts$NSampleReadProp >= min.sampleNumber) & (
-        combinedTranscripts$NSampleGeneScore >= min.sampleNumber) & (
-          combinedTranscripts$NSampleTxScore >= min.sampleNumber)
-  return(filterSet)
+          combinedTranscripts$NSampleReadProp >= min.sampleNumber) & (
+            combinedTranscripts$NSampleGeneScore >= min.sampleNumber) & (
+              combinedTranscripts$NSampleTxScore >= min.sampleNumber)
+    combinedTranscripts = combinedTranscripts[filterSet,]
+
+    # calculate and filter by NDR
+    combinedTranscripts$equal[is.na(combinedTranscripts$equal)] = FALSE
+    if(sum(combinedTranscripts$equal, na.rm = TRUE)<50 | 
+        sum(!combinedTranscripts$equal, na.rm = TRUE)<50){
+          txNDR = 1 - combinedTranscripts$maxTxScore
+          warning("Less than 50 TRUE or FALSE read classes for precision stabilization. 
+          Filtering by prediction score instead")
+    } else txNDR = calculateNDR(combinedTranscripts$maxTxScore, combinedTranscripts$equal)
+    # remove equals to prevent duplicates when merging with anno
+    filterSet = txNDR <= max.txNDR & !combinedTranscripts$equal
+    combinedTranscripts = combinedTranscripts[filterSet,]
+  }  
 }
 
-#' filter transcripts by NDR
-#' @noRd
-filterTranscriptsByNDR <- function(combinedTranscripts, filterSet, max.txNDR){
-  if (any(filterSet, na.rm = TRUE)) {
-    combinedTranscripts <- combinedTranscripts[filterSet,]
-  } else return(filterset)
-
-  # calculate and filter by NDR
-  combinedTranscripts$equal[is.na(combinedTranscripts$equal)] = FALSE
-  if(sum(combinedTranscripts$equal, na.rm = TRUE)<50 | 
-      sum(!combinedTranscripts$equal, na.rm = TRUE)<50){
-        txNDR = 1 - combinedTranscripts$maxTxScore
-        warning("Less than 50 TRUE or FALSE read classes for precision stabilization. 
-        Filtering by prediction score instead")
-  } else txNDR = calculateNDR(combinedTranscripts$maxTxScore, combinedTranscripts$equal)
-  index = which(filterSet)
-  filterSet[index] = filterSet[index] & (txNDR <= max.txNDR)
-  # remove equals to prevent duplicates when merging with anno
-  filterSet[index] = filterSet[index] & (!combinedTranscripts$equal)
-  return(filterSet)
-}
 
 #' calculate minimum equivalent classes for extended annotations
 #' @importFrom dplyr select as_tibble %>% mutate_at mutate group_by 
