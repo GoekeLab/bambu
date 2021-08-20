@@ -144,9 +144,9 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                        pmax0NA(NSampleTxScore.new),
                     maxTxScore = pmax(maxTxScore.combined, 
                         maxTxScore.new, na.rm = TRUE)) %>% 
-            select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
-                   NSampleReadProp, NSampleGeneScore, NSampleTxScore, maxTxScore, starts_with('start'),
-                   starts_with('end'), starts_with('readCount'), equal=equal.combined) 
+            select(intronStarts, intronEnds, chr, strand, , equal=equal.combined,
+            NSampleReadCount, NSampleReadProp, NSampleGeneScore, NSampleTxScore, maxTxScore, 
+            starts_with('start'), starts_with('end'), starts_with('readCount')) 
     } 
     if(intraGroup) 
         combinedTable <- 

@@ -6,9 +6,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, max.txNDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     prefix = "", verbose = FALSE){
-  print(combinedTranscripts)
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber, max.txNDR)
-  print(combinedTranscripts)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
                    "confidenceType","readCount")
