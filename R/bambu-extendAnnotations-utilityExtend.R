@@ -327,15 +327,19 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                              maxDist = maxDist, firstLastSeparate = TRUE,
                                              dropRangesByMinLength = TRUE, cutStartEnd = TRUE,
                                              ignore.strand = ignore.strand)
-  txToAnTableFiltered <- genFilteredAnTable(spliceOverlaps,
-                                            primarySecondaryDist, DistCalculated = FALSE)
+  if(length(spliceOverlaps)==0) txToAnTableFiltered <- NULL
+  else txToAnTableFiltered <- genFilteredAnTable(spliceOverlaps,
+                                                 primarySecondaryDist, DistCalculated = FALSE)
   # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
   setTMP <- unique(txToAnTableFiltered$queryHits)
-  spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
+  if(length(setTMP)==0) exByTx_rest <- exByTx
+  else exByTx_rest <- exByTx[-setTMP]
+  spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx_rest,
                                                   exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                                   dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
                                                   ignore.strand = ignore.strand)
-  txToAnTableRest <-
+  if(length(spliceOverlaps_rest)==0) txToAnTableRest <- NULL
+  else txToAnTableRest <-
     genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
                        exByTx = exByTx, setTMP = setTMP, DistCalculated = FALSE)
   # (3) find overlaps for remaining reads 
@@ -389,8 +393,9 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
   }
   ## change query hits for step 2 and 3
   if (!is.null(exByTx)) {
-    txToAnTable$queryHits <-
-      (seq_along(exByTx))[-setTMP][txToAnTable$queryHits]
+    if(is.null(setTMP)) txToAnTable$queryHits <- txToAnTable$queryHits <-
+        (seq_along(exByTx))[txToAnTable$queryHits]
+    else (seq_along(exByTx))[-setTMP][txToAnTable$queryHits]
   }
   ## todo: check filters, what happens to reads with only start and end match?
   if (isFALSE(DistCalculated)) {
