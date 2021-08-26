@@ -100,7 +100,7 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
     strandStep <- TRUE
     while (strandStep) { # iterate twice to improve strand prediction w.t.
         # mean junction counts, annotate junction strand with read strand
-        if (stranded) { # update junction strand score
+        if (!stranded) { # update junction strand score
             uniqueJunctionsUpdate <- 
                 updateStrandScoreByRead(unlisted_junction_granges,
                     uniqueJunctionsUpdate, uniqueJunctions, stranded, 
