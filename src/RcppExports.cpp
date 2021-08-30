@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // em_theta
 List em_theta(const arma::mat X, const arma::rowvec Y, const double lambda, const arma::rowvec b, const bool d, const int maxiter, const double conv);
 RcppExport SEXP _bambu_em_theta(SEXP XSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP bSEXP, SEXP dSEXP, SEXP maxiterSEXP, SEXP convSEXP) {
