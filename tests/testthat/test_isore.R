@@ -143,6 +143,5 @@ test_that("isore.estimateDistanceToAnnotations completes successfully", {
         annotationGrangesList = extendedAnnotations,
         min.exonDistance = 35
     )
-    names(seWithDist@metadata$distTable$readCount) <- NULL
     expect_equal(seWithDist, seWithDistExpected)
 })
