@@ -179,16 +179,14 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
                     data.train=as.matrix(features[indexSE,]),
                     labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
-        txScore[which(rowData$numExons==1)] =
-            txScoreSE[which(rowData$numExons==1)]
 
     } else {
         warning("Transcript model not trained. Using pre-trained models")
         txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
-        txScore[which(rowData$numExons==1)] =
-            txScoreSE[which(rowData$numExons==1)]
     }
+    txScore[which(rowData$numExons==1)] =
+        txScoreSE[which(rowData$numExons==1)]
     return(txScore)
 }
 

@@ -381,8 +381,9 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
       }
     }
     txToAnTableFiltered <- rbind( txToAnTableFiltered,
-                                  txToAnTableRest, txToAnTableRestStartEnd ) %>% ungroup()
-  } else txToAnTableFiltered <- txToAnTableFiltered %>% ungroup()
+                                  txToAnTableRest, txToAnTableRestStartEnd )
+  } 
+  txToAnTableFiltered <- txToAnTableFiltered %>% ungroup()
   txToAnTableFiltered$readClassId <-
     names(exByTx)[txToAnTableFiltered$queryHits]
   txToAnTableFiltered$annotationTxId <-
