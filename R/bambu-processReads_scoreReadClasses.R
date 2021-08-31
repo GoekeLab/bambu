@@ -168,17 +168,21 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
-        transcriptModelME = fitXGBoostModel(
-                    data.train=as.matrix(features[indexME,]),
-                    labels.train=txFeatures$labels[indexME], show.cv=FALSE)
-        txScore = predict(transcriptModelME, as.matrix(features))
+        if(length(indexME)>0){
+            transcriptModelME = fitXGBoostModel(
+                        data.train=as.matrix(features[indexME,]),
+                        labels.train=txFeatures$labels[indexME], show.cv=FALSE)
+            txScore = predict(transcriptModelME, as.matrix(features))
+        } else txScore = NULL
 
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
-        transcriptModelSE = fitXGBoostModel(
-                    data.train=as.matrix(features[indexSE,]),
-                    labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
-        txScoreSE = predict(transcriptModelSE, as.matrix(features))
+        if(length(indexSE)>0){
+            transcriptModelSE = fitXGBoostModel(
+                        data.train=as.matrix(features[indexSE,]),
+                        labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
+            txScoreSE = predict(transcriptModelSE, as.matrix(features))
+        } else txScoreSE = NULL
 
     } else {
         warning("Transcript model not trained. Using pre-trained models")
