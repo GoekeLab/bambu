@@ -74,8 +74,7 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber, max.txNDR){
 calculateNDR = function(score, labels){
     scoreOrder = order(score, decreasing = TRUE)
     labels = labels[scoreOrder]
-    score = score[scoreOrder]
-    NDR = cumsum(!labels)/(seq_len(length(score)))
+    NDR = cumsum(!labels)/(seq_len(length(labels)))
     NDR = rev(cummin(rev(NDR)))
     return(NDR[order(scoreOrder)])
 }
