@@ -9,7 +9,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "maxTxScore", "equal")
+                   "confidenceType","readCount", "maxTxScore")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -103,15 +103,16 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 
 filterTranscriptsByNDR <- function(combinedTranscripts, max.txNDR){
       # calculate and filter by NDR
-    combinedTranscripts$equal[is.na(combinedTranscripts$equal)] = FALSE
-    if(sum(combinedTranscripts$equal, na.rm = TRUE)<50 | 
-        sum(!combinedTranscripts$equal, na.rm = TRUE)<50){
+    equal = combinedTranscripts$readClassType == "equalcompatible"
+    equal[is.na(equal)] = FALSE
+    if(sum(equal, na.rm = TRUE)<50 | 
+        sum(!equal, na.rm = TRUE)<50){
           combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
           warning("Less than 50 TRUE or FALSE read classes for precision stabilization. 
           Filtering by prediction score instead")
-    } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, combinedTranscripts$equal)
+    } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     # remove equals to prevent duplicates when merging with anno
-    filterSet = (combinedTranscripts$txNDR <= max.txNDR) & !combinedTranscripts$equal
+    filterSet = (combinedTranscripts$txNDR <= max.txNDR) & !equal
     #combinedTranscripts = combinedTranscripts[filterSet,]
     return(list(txNDR = combinedTranscripts$txNDR, filterSet = filterSet))
 }
