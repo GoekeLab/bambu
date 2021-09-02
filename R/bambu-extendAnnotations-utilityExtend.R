@@ -66,8 +66,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
                                           exonRangesCombined, prefix,  remove.subsetTx, max.txNDR, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatiblity with annotations
-    notCompatibleIds <- which(!grepl("compatible",
-                                     rowDataCombined$readClassType))
+    notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
+        rowDataCombined$readClassType == "equalcompatible") #keep equal for FDR calculation, filtered away in filterTranscriptsByNDR()
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
