@@ -31,15 +31,11 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
 
     geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, fit)
     rowData(se)$geneScore = rep(NA,nrow(se))
-    rowData(se)$geneFDR = rep(NA,nrow(se))
-    rowData(se)$geneScore[thresholdIndex] = geneScore$geneScore
-    rowData(se)$geneFDR[thresholdIndex] = geneScore$geneFDR
+    rowData(se)$geneScore[thresholdIndex] = geneScore
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                  defaultModels, fit)
     rowData(se)$txScore = rep(NA,nrow(se))
-    rowData(se)$txFDR = rep(NA,nrow(se))
-    rowData(se)$txScore[thresholdIndex] = txScore$txScore
-    rowData(se)$txFDR[thresholdIndex] = txScore$txFDR
+    rowData(se)$txScore[thresholdIndex] = txScore
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
@@ -117,27 +113,14 @@ getGeneScore = function(rowData, defaultModels, fit = TRUE){
         geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
         data.train=as.matrix(features), show.cv=FALSE)
         geneScore = as.numeric(predict(geneModel, as.matrix(features)))
-        geneFDR = calculateFDR(geneScore, geneFeatures$labels)
     } else {
-        warning("Gene Model not trained. Using pre-trained models, the FDR might not be adjusted correctly")
+        warning("Gene Model not trained. Using pre-trained models")
         geneScore = as.numeric(predict(defaultModels$geneModel, 
                                        as.matrix(features)))
-        geneFDR = 1-geneScore
     }
     geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
     geneScore = geneScore[geneRCMap]
-    geneFDR = geneFDR[geneRCMap]
-    return(data.frame(geneScore = geneScore, geneFDR = geneFDR))   
-}
-
-#' calculates the minimum FDR for each score 
-calculateFDR = function(score, labels){
-    scoreOrder = order(score, decreasing = TRUE)
-    labels = labels[scoreOrder]
-    score = score[scoreOrder]
-    FDR = cumsum(!labels)/(seq_len(length(score)))
-    FDR = rev(cummin(rev(FDR)))
-    return(FDR[order(scoreOrder)])
+    return(geneScore)
 }
 
 #' calculate and format features by gene for model
@@ -185,34 +168,30 @@ getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
     if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
-        transcriptModelME = fitXGBoostModel(
-                    data.train=as.matrix(features[indexME,]),
-                    labels.train=txFeatures$labels[indexME], show.cv=FALSE)
-        txScore = predict(transcriptModelME, as.matrix(features))
+        if(length(indexME)>0){
+            transcriptModelME = fitXGBoostModel(
+                        data.train=as.matrix(features[indexME,]),
+                        labels.train=txFeatures$labels[indexME], show.cv=FALSE)
+            txScore = predict(transcriptModelME, as.matrix(features))
+        } else txScore = NULL
 
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
-        transcriptModelSE = fitXGBoostModel(
-                    data.train=as.matrix(features[indexSE,]),
-                    labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
-        txScoreSE = predict(transcriptModelSE, as.matrix(features))
-        txScore[which(rowData$numExons==1)] =
-            txScoreSE[which(rowData$numExons==1)]
-        txFDR = calculateFDR(txScore, txFeatures$labels)
-        txFDR.ME = calculateFDR(txScore[which(rowData$numExons>=2)], txFeatures$labels[which(rowData$numExons>=2)])
-        txFDR.SE = calculateFDR(txScore[which(rowData$numExons==1)], txFeatures$labels[which(rowData$numExons==1)])
-        txFDR[which(rowData$numExons>=2)] = txFDR.ME
-        txFDR[which(rowData$numExons==1)] = txFDR.SE
+        if(length(indexSE)>0){
+            transcriptModelSE = fitXGBoostModel(
+                        data.train=as.matrix(features[indexSE,]),
+                        labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
+            txScoreSE = predict(transcriptModelSE, as.matrix(features))
+        } else txScoreSE = NULL
 
     } else {
         warning("Transcript model not trained. Using pre-trained models")
         txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
-        txScore[which(rowData$numExons==1)] =
-            txScoreSE[which(rowData$numExons==1)]
-        txFDR = 1-txScore
     }
-    return(data.frame(txScore = txScore, txFDR = txFDR))
+    txScore[which(rowData$numExons==1)] =
+        txScoreSE[which(rowData$numExons==1)]
+    return(txScore)
 }
 
 #' calculate and format read class features for model training
