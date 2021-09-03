@@ -108,7 +108,7 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
         filter(row_number()==1)
     
     combinedFeatureTibble <- combinedFeatureTibble %>% 
-        dplyr::select(intronStarts, intronEnds, chr, strand, equal, maxTxScore, NSampleReadCount, 
+        dplyr::select(intronStarts, intronEnds, chr, strand, maxTxScore, NSampleReadCount, 
                       NSampleReadProp, NSampleTxScore, rowID) %>%
         full_join(select(startTibble, rowID, start), by = "rowID") %>% 
         full_join(select(endTibble, rowID, end, readCount=sumReadCount), by = "rowID") %>%
@@ -124,7 +124,7 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                                  featureTibbleSummarised, index=1, intraGroup = TRUE){ 
     if (is.null(combinedFeatureTibble)) { 
         combinedTable <- featureTibbleSummarised %>% 
-            select(intronStarts, intronEnds, chr, strand, equal, maxTxScore, NSampleReadCount,
+            select(intronStarts, intronEnds, chr, strand, maxTxScore, NSampleReadCount,
                    NSampleReadProp,NSampleTxScore, starts_with('start'),
                    starts_with('end'), starts_with('readCount'))
     } else { 
@@ -140,16 +140,14 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                        pmax0NA(NSampleTxScore.new),
                     maxTxScore = pmax(maxTxScore.combined, 
                         maxTxScore.new, na.rm = TRUE)) %>% 
-            select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
-                   NSampleReadProp, NSampleTxScore, maxTxScore, starts_with('start'),
-                   starts_with('end'), starts_with('readCount'), starts_with('equal')) 
+            select(intronStarts, intronEnds, chr, strand,
+            NSampleReadCount, NSampleReadProp, NSampleTxScore, maxTxScore, 
+            starts_with('start'), starts_with('end'), starts_with('readCount')) 
     } 
     if(intraGroup) 
         combinedTable <- 
             rename_with(combinedTable, ~gsub('^(end|start|readCount)$',
                                              paste0('\\1\\.',index), .x)) 
-        combinedTable <- 
-            rename_with(combinedTable, ~gsub('equal.combined', "equal", .x)) 
     return(combinedTable) 
 }
 #' pmax replace NAs with 0
@@ -176,7 +174,7 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     rowData <- as_tibble(rowData(readClassSe)) %>% 
         mutate(start = unname(min(start(rowRangesSe))), 
                end= unname(max(end(rowRangesSe))))
-    group_var <- c("intronStarts", "intronEnds", "chr", "strand", "equal")
+    group_var <- c("intronStarts", "intronEnds", "chr", "strand")
     sum_var <- c("start","end","NSampleReadCount", "maxTxScore",
                  "readCount","NSampleReadProp","NSampleTxScore")
     featureTibble <- rowData %>% 

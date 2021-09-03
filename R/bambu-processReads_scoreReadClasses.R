@@ -32,9 +32,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                  defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
-    rowData(se)$txNDR = rep(NA,nrow(se))
-    rowData(se)$txScore[thresholdIndex] = txScore$txScore
-    rowData(se)$txNDR[thresholdIndex] = txScore$txNDR
+    rowData(se)$txScore[thresholdIndex] = txScore
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
@@ -103,15 +101,6 @@ countPolyATerminals = function(grl, genomeSequence){
                     numTstart=numATstart[,"T"], numTend=numATend[,"T"]))
 }
 
-#' calculates the minimum NDR for each score 
-calculateNDR = function(score, labels){
-    scoreOrder = order(score, decreasing = TRUE)
-    labels = labels[scoreOrder]
-    score = score[scoreOrder]
-    NDR = cumsum(!labels)/(seq_len(length(score)))
-    NDR = rev(cummin(rev(NDR)))
-    return(NDR[order(scoreOrder)])
-}
 
 #' calculates a score based on how likely a read class is full length
 getTranscriptScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
@@ -120,37 +109,32 @@ getTranscriptScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
     if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
+        if(length(indexME)>0){
         transcriptModelME = fitXGBoostModel(
                     data.train=as.matrix(features[indexME,]),
                     labels.train=txFeatures$labels[indexME], 
                     nround = nround, show.cv=FALSE)
         txScore = predict(transcriptModelME, as.matrix(features))
+        } else txScore = NULL
 
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
+        if(length(indexSE)>0){
         transcriptModelSE = fitXGBoostModel(
                     data.train=as.matrix(features[indexSE,]),
                     labels.train=txFeatures$labels[indexSE], 
                     nround = nround, show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
-        txScore[which(rowData$numExons==1)] =
-            txScoreSE[which(rowData$numExons==1)]
-        #redundant function calls since NDR is now calculated in extendAnno
-        txNDR = calculateNDR(txScore, txFeatures$labels)
-        txNDR.ME = calculateNDR(txScore[which(rowData$numExons>=2)], txFeatures$labels[which(rowData$numExons>=2)])
-        txNDR.SE = calculateNDR(txScore[which(rowData$numExons==1)], txFeatures$labels[which(rowData$numExons==1)])
-        txNDR[which(rowData$numExons>=2)] = txNDR.ME
-        txNDR[which(rowData$numExons==1)] = txNDR.SE
+        } else txScoreSE = NULL
 
     } else {
         warning("Transcript model not trained. Using pre-trained models")
         txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
-        txScore[which(rowData$numExons==1)] =
-            txScoreSE[which(rowData$numExons==1)]
-        txNDR = 1-txScore
     }
-    return(data.frame(txScore = txScore, txNDR = txNDR))
+    txScore[which(rowData$numExons==1)] =
+        txScoreSE[which(rowData$numExons==1)]
+    return(txScore)
 }
 
 #' calculate and format read class features for model training

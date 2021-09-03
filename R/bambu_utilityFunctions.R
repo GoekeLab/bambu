@@ -35,8 +35,6 @@ setIsoreParameters <- function(isoreParameters){
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
-    if(is.null(isoreParameters$min.txScore.singleExon)){
-        isoreParameters$min.txScore.singleExon = isoreParameters$min.txScore.multiExon}
     return(isoreParameters)
 }
 
