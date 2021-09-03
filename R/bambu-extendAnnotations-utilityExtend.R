@@ -76,7 +76,6 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   filterSet = (rowDataCombined$txNDR <= max.txNDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
-  print(nrow(rowDataCombined))
   # (3) remove transcripts with identical junctions to annotations
   extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
     rowDataCombined, exonRangesCombined, 
