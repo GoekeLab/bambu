@@ -50,10 +50,10 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
   if (nrow(combinedTranscripts) > 0){
     #filter by read counts
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
-    combinedTranscripts = combinedTranscripts[filterSet,]
-              combinedTranscripts$NSampleTxScore >= min.sampleNumber)
-          combinedTranscripts$NSampleReadProp >= min.sampleNumber) & (
+        combinedTranscripts$NSampleTxScore >= min.sampleNumber) & (
+        combinedTranscripts$NSampleReadProp >= min.sampleNumber)
   }  
+  combinedTranscripts = combinedTranscripts[filterSet,]
   return(combinedTranscripts)
 }
 
@@ -76,6 +76,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   filterSet = (rowDataCombined$txNDR <= max.txNDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
+  print(nrow(rowDataCombined))
   # (3) remove transcripts with identical junctions to annotations
   extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
     rowDataCombined, exonRangesCombined, 
