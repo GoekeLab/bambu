@@ -72,10 +72,11 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
   #(2) remove transcripts below NDR threshold
-  NDRfilter = filterTranscriptsByNDR(rowDataCombined, max.txNDR)
-  rowDataCombined$txNDR = NDRfilter$txNDR
-  exonRangesCombined <- exonRangesCombined[NDRfilter$filterSet]
-  rowDataCombined <- rowDataCombined[NDRfilter$filterSet,]
+  rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
+  # remove equals to prevent duplicates when merging with anno
+  filterSet = (rowDataCombined$txNDR <= max.txNDR) & !rowDataCombined$readClassType == "equalcompatible"
+  exonRangesCombined <- exonRangesCombined[filterSet]
+  rowDataCombined <- rowDataCombined[filterSet,]
   # (3) remove transcripts with identical junctions to annotations
   extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
     rowDataCombined, exonRangesCombined, 
@@ -101,7 +102,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   return(extendedAnnotationRanges)
 }
 
-filterTranscriptsByNDR <- function(combinedTranscripts, max.txNDR){
+calculateNDROnTranscripts <- function(combinedTranscripts){
       # calculate and filter by NDR
     equal = combinedTranscripts$readClassType == "equalcompatible"
     equal[is.na(equal)] = FALSE
@@ -111,10 +112,7 @@ filterTranscriptsByNDR <- function(combinedTranscripts, max.txNDR){
           warning("Less than 50 TRUE or FALSE read classes for precision stabilization. 
           Filtering by prediction score instead")
     } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
-    # remove equals to prevent duplicates when merging with anno
-    filterSet = (combinedTranscripts$txNDR <= max.txNDR) & !equal
-    #combinedTranscripts = combinedTranscripts[filterSet,]
-    return(list(txNDR = combinedTranscripts$txNDR, filterSet = filterSet))
+    return(combinedTranscripts)
 }
 
 #' calculates the minimum NDR for each score 
