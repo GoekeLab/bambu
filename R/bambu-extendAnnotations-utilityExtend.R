@@ -548,7 +548,8 @@ assignGeneIDexonMatch <- function(rowDataCombined, exonRangesCombined,
     geneIdByExon[isNaGeneIdBefore]
   isNaGeneIdAfter <- is.na(rowDataCombined$GENEID)
   if (any(isNaGeneIdAfter)) {
-    newGeneIds <- assignGeneIdsNoReference(exonRangesCombined[isNaGeneIdAfter])
+    newGeneIds <- assignGeneIdsNoReference(exonRangesCombined[isNaGeneIdAfter],
+      prefix = prefix)
     rowDataCombined$GENEID[isNaGeneIdAfter] <- 
       newGeneIds 
   }
@@ -672,7 +673,8 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
   newGeneCandidates <- (!readClassTable$readClassId %in%
                           readClassToGeneIdTable$readClassId)
   readClassToGeneIdTableNew <- 
-      assignGeneIdsNoReference(rowRanges(seReadClass)[newGeneCandidates])
+      assignGeneIdsNoReference(rowRanges(seReadClass)[newGeneCandidates], 
+      prefix = "unassigned")
   readClassToGeneIdTableNew <- tibble(names(seReadClass)[newGeneCandidates], 
       readClassToGeneIdTableNew)
   colnames(readClassToGeneIdTableNew) <- c('readClassId', 'geneId')
