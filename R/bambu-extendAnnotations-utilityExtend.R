@@ -47,6 +47,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
 #' filter transcripts by read counts
 #' @noRd
 filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
+  filterSet = NULL
   if (nrow(combinedTranscripts) > 0){
     #filter by read counts
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
@@ -66,7 +67,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatiblity with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
-        rowDataCombined$readClassType == "equalcompatible") #keep equal for FDR calculation, filtered away in filterTranscriptsByNDR()
+        rowDataCombined$readClassType == "equalcompatible") #keep equal for FDR calculation
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
