@@ -29,11 +29,8 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
 
-    geneScore = getGeneScore(rowData(se)[thresholdIndex,], defaultModels, fit)
-    rowData(se)$geneScore = rep(NA,nrow(se))
-    rowData(se)$geneScore[thresholdIndex] = geneScore
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
-                                 defaultModels, fit)
+                                 defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
     rowData(se)$txScore[thresholdIndex] = txScore
     end.ptm <- proc.time()
@@ -104,84 +101,30 @@ countPolyATerminals = function(grl, genomeSequence){
                     numTstart=numATstart[,"T"], numTend=numATend[,"T"]))
 }
 
-#' calculates a score based on how likely the read class is associated with a 
-#' real gene
-getGeneScore = function(rowData, defaultModels, fit = TRUE){
-    geneFeatures = prepareGeneModelFeatures(rowData)
-    features = dplyr::select(geneFeatures,!c(labels, GENEID))
-    if(checkFeatures(geneFeatures) & fit){
-        geneModel = fitXGBoostModel(labels.train=geneFeatures$labels,
-        data.train=as.matrix(features), show.cv=FALSE)
-        geneScore = as.numeric(predict(geneModel, as.matrix(features)))
-    } else {
-        warning("Gene Model not trained. Using pre-trained models")
-        geneScore = as.numeric(predict(defaultModels$geneModel, 
-                                       as.matrix(features)))
-    }
-    geneRCMap = match(rowData$GENEID, geneFeatures$GENEID)
-    geneScore = geneScore[geneRCMap]
-    return(geneScore)
-}
-
-#' calculate and format features by gene for model
-prepareGeneModelFeatures = function(rowData){
-    geneReadCount = NA
-    scalingFactor = sum(rowData$readCount)/1000000
-    outData <- as_tibble(rowData) %>% group_by(GENEID) %>% 
-    summarise(numReads = geneReadCount[1],
-        labels = !novelGene[1], 
-        strand_bias=1-abs(0.5-(sum(readCount.posStrand, na.rm=TRUE)/numReads)),
-        numRCs=n(), 
-        numExons = max(numExons, na.rm=TRUE), 
-        isSpliced = numExons>1, 
-        # subsets are compatible with 2 or more RCs
-        # or compat with only 1 but are not equal
-        numNonSubsetRCs = numRCs-sum(compatible>=2 | (compatible==1 & !equal)),
-        highConfidence=any(confidenceType=='highConfidenceJunctionReads')) %>%
-    mutate(numReads = log2(pmax(1,1+(numReads/scalingFactor))))
-    return(outData)
-}
-
-#' ensures that the data is trainable after filtering
-checkFeatures = function(features){
-    labels = features$labels
-    trainable = TRUE
-    if(sum(labels)==length(labels) | sum(labels)==0){
-        message("Missing presence of both TRUE and FALSE labels.")
-        trainable = FALSE
-    }
-    if(length(labels)<1000){
-        message("Not enough data points")
-        trainable = FALSE
-    }
-    if(sum(labels)<50 | sum(!labels)<50){
-        message("Not enough TRUE/FALSE labels")
-        trainable = FALSE
-    }
-    return(trainable)
-}
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData, defaultModels, fit = TRUE){
+getTranscriptScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures) & fit){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
         if(length(indexME)>0){
-            transcriptModelME = fitXGBoostModel(
-                        data.train=as.matrix(features[indexME,]),
-                        labels.train=txFeatures$labels[indexME], show.cv=FALSE)
-            txScore = predict(transcriptModelME, as.matrix(features))
+        transcriptModelME = fitXGBoostModel(
+                    data.train=as.matrix(features[indexME,]),
+                    labels.train=txFeatures$labels[indexME], 
+                    nround = nround, show.cv=FALSE)
+        txScore = predict(transcriptModelME, as.matrix(features))
         } else txScore = NULL
 
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
         if(length(indexSE)>0){
-            transcriptModelSE = fitXGBoostModel(
-                        data.train=as.matrix(features[indexSE,]),
-                        labels.train=txFeatures$labels[indexSE], show.cv=FALSE)
-            txScoreSE = predict(transcriptModelSE, as.matrix(features))
+        transcriptModelSE = fitXGBoostModel(
+                    data.train=as.matrix(features[indexSE,]),
+                    labels.train=txFeatures$labels[indexSE], 
+                    nround = nround, show.cv=FALSE)
+        txScoreSE = predict(transcriptModelSE, as.matrix(features))
         } else txScoreSE = NULL
 
     } else {
@@ -206,4 +149,23 @@ prepareTranscriptModelFeatures = function(rowData){
         numReads = log2(pmax(1,1+(numReads/scalingFactor)))
         )
     return(outData)
+}
+
+#' ensures that the data is trainable after filtering
+checkFeatures = function(features){
+    labels = features$labels
+    trainable = TRUE
+    if(sum(labels)==length(labels) | sum(labels)==0){
+        message("Missing presence of both TRUE and FALSE labels.")
+        trainable = FALSE
+    }
+    if(length(labels)<1000){
+        message("Not enough data points")
+        trainable = FALSE
+    }
+    if(sum(labels)<50 | sum(!labels)<50){
+        message("Not enough TRUE/FALSE labels")
+        trainable = FALSE
+    }
+    return(trainable)
 }
