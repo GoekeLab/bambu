@@ -154,14 +154,19 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     spliceVec <- c("Start","End")
     ## if needed this can be a single function
     metadataList <- lapply(spliceVec, function(splice){
-        annotatedJunctionsTmp <- 
-            GRanges(seqnames = seqnames(annotatedJunctions),
-            ranges = IRanges(start = get(tolower(splice))(annotatedJunctions),
-            end = get(tolower(splice))(annotatedJunctions)), strand = '*')
-        mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
         if (splice == "Start") {
+            annotatedJunctionsTmp <- 
+            GRanges(seqnames = seqnames(annotatedJunctions),
+            ranges = IRanges(start = GenomicRanges::start(annotatedJunctions),
+            end = GenomicRanges::start(annotatedJunctions)), strand = '*')
+            mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- unique(annotatedJunctionsTmp)
-        }else{
+        } else {
+            annotatedJunctionsTmp <- 
+            GRanges(seqnames = seqnames(annotatedJunctions),
+            ranges = IRanges(start = GenomicRanges::end(annotatedJunctions),
+            end = GenomicRanges::end(annotatedJunctions)), strand = '*')
+            mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- sort(unique(annotatedJunctionsTmp))
         }
         return(createSpliceMetadata(annotatedJunctionsTmp, splice))})
@@ -196,7 +201,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
 #' @importFrom xgboost xgboost
 #' @importFrom stats fisher.test
 #' @noRd
-fitXGBoostModel <- function(labels.train, data.train, 
+fitXGBoostModel <- function(labels.train, data.train, nround = 50, 
                             show.cv=TRUE, maxSize.cv=10000){
     if (show.cv) {
         mySample <- sample(seq_along(labels.train),
@@ -207,7 +212,7 @@ fitXGBoostModel <- function(labels.train, data.train,
         labels.train.cv.test <- labels.train[-mySample]
 
         cv.fit <- xgboost(data = data.train.cv, 
-            label = labels.train.cv, nthread=1, nround= 50, 
+            label = labels.train.cv, nthread=1, nround=nround, 
             objective = "binary:logistic", 
             eval_metric='error',
             verbose = 0)
@@ -225,7 +230,7 @@ fitXGBoostModel <- function(labels.train, data.train,
     }
 
     cv.fit <- xgboost(data = data.train, 
-            label = labels.train, nthread=1, nround= 50, 
+            label = labels.train, nthread=1, nround=nround, 
             objective = "binary:logistic", 
             eval_metric='error',
             verbose = 0)

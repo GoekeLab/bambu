@@ -42,10 +42,10 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
-        readClass.outputDir = readClass.outputDir,
         genomeSequence = genomeSequence,annotations = annotations,
-        stranded = stranded,verbose = verbose,
-        min.readCount = min.readCount, fitReadClassModel = fitReadClassModel,
+        readClass.outputDir = readClass.outputDir,
+        stranded = stranded, min.readCount = min.readCount, 
+        fitReadClassModel = fitReadClassModel, verbose = verbose), 
         trackReads = trackReads)},
         BPPARAM = bpParameters)
     if (!verbose)
@@ -58,8 +58,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, stranded = FALSE, verbose = FALSE,
-    min.readCount = 2, fitReadClassModel = TRUE, trackReads = FALSE) {
+    readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
+    fitReadClassModel = TRUE,  verbose = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
@@ -95,9 +95,9 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     se <- scoreReadClasses(se,genomeSequence, 
                              annotations, 
                              defaultModels = defaultModels,
-                             verbose = verbose,
+                             fit = fitReadClassModel,
                              min.readCount = min.readCount,
-                             fit = fitReadClassModel)
+                             verbose = verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
@@ -129,31 +129,4 @@ seqlevelCheckReadsAnnotation <- function(reads, annotations){
         message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
-}
-
-#' Function to create a object that can be queried by getSeq
-#' Either from fa file, or BSGenome object
-#' @importFrom methods is
-#' @importFrom Rsamtools FaFile
-#' @noRd
-checkInputSequence <- function(genomeSequence) {
-    if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
-        please provide fasta file or BSgenome name, see available.genomes()")
-    if (is(genomeSequence, "character")) {
-        if (grepl(".fa", genomeSequence)) {
-            if (.Platform$OS.type == "windows") {
-                genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-                newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                    "[[", 1))
-                names(genomeSequence) <- newlevels
-            } else {
-                indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
-                if (!indexFileExists) indexFa(genomeSequence)
-                genomeSequence <- FaFile(genomeSequence)
-            }
-        } else {
-            genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-        }
-    }
-    return(genomeSequence)
 }

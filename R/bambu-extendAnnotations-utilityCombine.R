@@ -12,19 +12,19 @@
 #' @noRd
 isore.combineTranscriptCandidates <- function(readClassList,
                                               stranded, ## stranded used for unspliced reduce  
-                                              min.readCount , min.readFractionByGene , max.geneFDR,
-                                              max.txFDR, bpParameters ,verbose){
+                                              min.readCount , min.readFractionByGene,
+                                              min.txScore.multiExon, min.txScore.singleExon, bpParameters ,verbose){
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
-                                       min.readCount, min.readFractionByGene, max.geneFDR, 
-                                       max.txFDR, verbose) 
+                                       min.readCount, min.readFractionByGene, 
+                                       min.txScore.multiExon, min.txScore.singleExon, verbose)
     readIndex = combinedSplicedTranscripts$readIndex
     combinedSplicedTranscripts <- combinedSplicedTranscripts$featureTibble %>% data.table()
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
-                                         stranded, min.readCount, min.readFractionByGene, max.geneFDR, 
-                                         max.txFDR, verbose)
+                                         stranded, min.readCount, min.readFractionByGene, 
+                                         min.txScore.multiExon, min.txScore.singleExon, verbose) 
     output = list()
     output$readIndex = pmin(readIndex,
                      combinedUnsplicedTranscripts$readIndex+nrow(combinedSplicedTranscripts), na.rm = T)
@@ -39,7 +39,8 @@ isore.combineTranscriptCandidates <- function(readClassList,
 #' combine spliced transcript models
 #' @noRd
 combineSplicedTranscriptModels <- function(readClassList, bpParameters, 
-                                           min.readCount, min.readFractionByGene , max.geneFDR, max.txFDR,
+                                           min.readCount, min.readFractionByGene, 
+                                           min.txScore.multiExon, min.txScore.singleExon,
                                            verbose){
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.ptm <- proc.time()
@@ -54,8 +55,8 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
                                               indexVec, intraGroup = TRUE, 
                                               min.readCount = min.readCount, 
                                               min.readFractionByGene = min.readFractionByGene, 
-                                              max.geneFDR = max.geneFDR, 
-                                              max.txFDR = max.txFDR))
+                                              min.txScore.multiExon = min.txScore.multiExon,
+                                              min.txScore.singleExon = min.txScore.singleExon))
     }, BPPARAM = bpParameters)
     combinedFeatureTibble <- 
         sequentialCombineFeatureTibble(combinedFeatureTibbleList, 
@@ -70,8 +71,8 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
 #' Sequentially combine feature tibbles 
 #' @noRd
 sequentialCombineFeatureTibble <- function(readClassList,
-                                           indexList,intraGroup,min.readCount,min.readFractionByGene, max.geneFDR,
-                                           max.txFDR){                                          
+                                           indexList,intraGroup,min.readCount,min.readFractionByGene,
+                                           min.txScore.multiExon, min.txScore.singleExon){
     combinedFeatureTibble <- NULL
     for (s in seq_along(readClassList)){
         combinedListNew <- readClassList[[s]]
@@ -80,9 +81,9 @@ sequentialCombineFeatureTibble <- function(readClassList,
                 extractFeaturesFromReadClassSE(readClassSe = combinedListNew,
                                                sample_id = indexList[s], min.readCount = min.readCount,
                                                min.readFractionByGene = min.readFractionByGene,
-                                               max.geneFDR = max.geneFDR,
-                                               max.txFDR = max.txFDR)
-        }  
+                                               min.txScore.multiExon = min.txScore.multiExon,
+                                               min.txScore.singleExon = min.txScore.singleExon)
+        }
         combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
                                                       combinedListNew, index = indexList[s], intraGroup)
     }
@@ -113,8 +114,8 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
         filter(row_number()==1)
     
     combinedFeatureTibble <- combinedFeatureTibble %>% 
-        dplyr::select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
-                      NSampleReadProp, NSampleGeneFDR, NSampleTxFDR, rowID) %>%
+        dplyr::select(intronStarts, intronEnds, chr, strand, maxTxScore, NSampleReadCount, 
+                      NSampleReadProp, NSampleTxScore, rowID) %>%
         full_join(select(startTibble, rowID, start), by = "rowID") %>% 
         full_join(select(endTibble, rowID, end, readCount=sumReadCount), by = "rowID") %>%
         select(-rowID)
@@ -132,8 +133,8 @@ combineFeatureTibble <- function(combinedFeatureTibble,
     output = list()
     if (is.null(combinedFeatureTibble)) { 
         output$featureTibble <- featureTibbleSummarised %>% 
-            select(intronStarts, intronEnds, chr, strand,NSampleReadCount,
-                   NSampleReadProp,NSampleGeneFDR,NSampleTxFDR, starts_with('start'),
+            select(intronStarts, intronEnds, chr, strand, maxTxScore, NSampleReadCount,
+                   NSampleReadProp,NSampleTxScore, starts_with('start'),
                    starts_with('end'), starts_with('readCount'))
         output$readIndex = readIndex
     } else { 
@@ -149,18 +150,17 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                        pmax0NA(NSampleReadCount.new), 
                    NSampleReadProp = pmax0NA(NSampleReadProp.combined) + 
                        pmax0NA(NSampleReadProp.new), 
-                   NSampleGeneFDR = pmax0NA(NSampleGeneFDR.combined) + 
-                       pmax0NA(NSampleGeneFDR.new), 
-                   NSampleTxFDR = pmax0NA(NSampleTxFDR.combined) + 
-                       pmax0NA(NSampleTxFDR.new),
-                    id = row_number()) %>% 
-            select(intronStarts, intronEnds, chr, strand, NSampleReadCount, 
-                   NSampleReadProp, NSampleGeneFDR, NSampleTxFDR, id, id1, id2, starts_with('start'),
-                   starts_with('end'), starts_with('readCount')) 
+                   NSampleTxScore = pmax0NA(NSampleTxScore.combined) + 
+                       pmax0NA(NSampleTxScore.new),
+                    maxTxScore = pmax(maxTxScore.combined, 
+                        maxTxScore.new, na.rm = TRUE),
+                        id = row_number()) %>% 
+            select(intronStarts, intronEnds, chr, strand,
+                NSampleReadCount, NSampleReadProp, NSampleTxScore, maxTxScore, id, id1, id2,
+                starts_with('start'), starts_with('end'), starts_with('readCount')) 
         readIndexCombined = output$featureTibble$id[order(output$featureTibble$id1)][readIndexCombined]
         readIndex = output$featureTibble$id[order(output$featureTibble$id2)][readIndex]
         output$readIndex = c(readIndexCombined, readIndex)
-        
     } 
     if(intraGroup) 
         output$featureTibble <- 
@@ -183,7 +183,8 @@ pmin0NA <- function(vec){
 #' extract important features from readClassSe object for each sample
 #' @noRd
 extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
-                                           min.readCount, min.readFractionByGene, max.geneFDR, max.txFDR){
+                                           min.readCount, min.readFractionByGene, 
+                                        min.txScore.multiExon, min.txScore.singleExon){
     if (is.character(readClassSe)) 
         readClassSe <- readRDS(file = readClassSe)
     dimNames <- list(rownames(readClassSe), colnames(readClassSe))
@@ -191,25 +192,25 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     rowData <- as_tibble(rowData(readClassSe)) %>% 
         mutate(start = unname(min(start(rowRangesSe))), 
                end= unname(max(end(rowRangesSe))),
-               rowID = row_number())
+               rowID = row_number()))
     group_var <- c("intronStarts", "intronEnds", "chr", "strand", "rowID", "rowID2")
-    sum_var <- c("start","end","NSampleReadCount",
-                 "readCount","NSampleReadProp","NSampleGeneFDR","NSampleTxFDR")
+    sum_var <- c("start","end","NSampleReadCount", "maxTxScore",
+                 "readCount","NSampleReadProp","NSampleTxScore")
     output=list()
     output$featureTibble <- rowData %>% 
-        filter(!equal) %>% # filter not compatible ones, i.e., overlapping with annotations?? if we are going to include subset tx, then can we still do the filtering?? maybe not equal but can be compatible 
-        dplyr::select(chr = chr.rc, start, end,
+        #filter(!equal) %>% # filter not compatible ones, i.e., overlapping with annotations?? if we are going to include subset tx, then can we still do the filtering?? maybe not equal but can be compatible 
+        dplyr::select(chr = chr.rc, start, end, equal,
                       strand = strand.rc, intronStarts, intronEnds, confidenceType,
-                      readCount, geneReadProp, txFDR,geneFDR, rowID) %>%
+                      readCount, geneReadProp, txScore, numExons, rowID) %>%
         filter(readCount > 1, # only use readCount>1 and highconfidence reads
                confidenceType == "highConfidenceJunctionReads") %>% 
         mutate(NSampleReadCount = (readCount >= min.readCount), 
                # number of samples passed read count criteria
                NSampleReadProp = (geneReadProp >= min.readFractionByGene),
-               # number of samples passed gene read prop criteria
-               NSampleGeneFDR = (geneFDR <= max.geneFDR),
-               NSampleTxFDR = (txFDR <= max.txFDR),
-               rowID2 = row_number()) %>%
+               NSampleTxScore = ((txScore >= min.txScore.multiExon & numExons >= 2) |
+                (txScore >= min.txScore.singleExon & numExons == 1)), 
+                maxTxScore = txScore,
+                rowID2 = row_number()) %>%
         select(all_of(c(group_var, sum_var))) 
     output$readIndex = metadata(readClassSe)$readIndex
     output$readIndex[!(metadata(readClassSe)$readIndex %in% output$featureTibble$rowID)] = NA
@@ -229,8 +230,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
 #' @noRd
 combineUnsplicedTranscriptModels <- 
     function(readClassList,  bpParameters, stranded, min.readCount, 
-             min.readFractionByGene, max.geneFDR, max.txFDR,
-             verbose){
+             min.readFractionByGene, min.txScore.multiExon,
+             min.txScore.singleExon, verbose){
         start.ptm <- proc.time()
         newUnsplicedSeList <- 
             bplapply(seq_along(readClassList), function(sample_id)
@@ -268,8 +269,8 @@ combineUnsplicedTranscriptModels <-
         start.ptm <- proc.time()
         output$combinedUnsplicedTibble <- 
             makeUnsplicedTibble(combinedNewUnsplicedSe,newUnsplicedSeList, 
-                                colDataNames, min.readCount, min.readFractionByGene, max.geneFDR,
-                                max.txFDR, bpParameters)
+                                colDataNames, min.readCount, min.readFractionByGene,
+                                min.txScore.multiExon, min.txScore.singleExon, bpParameters)
         end.ptm <- proc.time()
         if (verbose) message("combine new unspliced tibble object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
@@ -321,7 +322,8 @@ reduceUnsplicedRanges <- function(rangesList, stranded){
 #'              ungroup
 makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                                 colDataNames,min.readCount, min.readFractionByGene,
-                                max.geneFDR, max.txFDR,bpParameters){
+                                min.txScore.multiExon, min.txScore.singleExon, 
+                                bpParameters){
     newUnsplicedTibble <- as_tibble(combinedNewUnsplicedSe) %>%
         rename(chr = seqnames) %>%
         select(chr, start, end, strand, row_id) %>%
@@ -331,7 +333,7 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
             rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
                                                    newUnsplicedTibble$row_id)])
             rr <- as_tibble(rr) %>% select(confidenceType,
-                                           readCount, geneReadProp, txScore, txFDR, geneScore, geneFDR) %>%
+                                           readCount, geneReadProp, txScore) %>%
                 mutate(row_id = rownames(rr))
             return(rr)
         } , BPPARAM = bpParameters))
@@ -345,14 +347,12 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         group_by(chr,strand, start, end, sample_name) %>%
         summarise(readCount = sum(readCount),
                   geneReadProp = sum(geneReadProp),
-                  geneFDR = weighted.mean(geneFDR, readCount_tmp),
-                  txFDR = weighted.mean(txFDR, readCount_tmp)) %>%
+                  txScore = weighted.mean(txScore, readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
         summarise(readCount = sum(readCount),
-                  NSampleReadCount = sum(readCount >= min.readCount), 
-                  NSampleReadProp = sum(geneReadProp >= 
+                    NSampleReadCount = sum(readCount >= min.readCount), 
+                    NSampleReadProp = sum(geneReadProp >= 
                                             min.readFractionByGene),
-                  NSampleGeneFDR = sum(geneFDR <= max.geneFDR),
-                  NSampleTxFDR = sum(txFDR <= max.txFDR)) 
+                    NSampleTxScore = sum(txScore >= min.txScore.singleExon))
     return(newUnsplicedTibble)
 }
