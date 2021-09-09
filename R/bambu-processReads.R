@@ -45,7 +45,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
-        fitReadClassModel = fitReadClassModel, verbose = verbose), 
+        fitReadClassModel = fitReadClassModel, verbose = verbose, 
         trackReads = trackReads)},
         BPPARAM = bpParameters)
     if (!verbose)
@@ -59,7 +59,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
-    fitReadClassModel = TRUE,  verbose = FALSE) {
+    fitReadClassModel = TRUE,  verbose = FALSE, trackReads = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence

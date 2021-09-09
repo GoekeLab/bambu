@@ -121,10 +121,10 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     } else {
         readClassList <- rcFile
     }
+    readModelMap = NULL
     if (!quantOnly) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
-        readModelMap = NULL
         if(trackReads){
             metadata(annotations)$readIndex[is.na(metadata(annotations)$readIndex)]="*"
             metadata(annotations)$readIndex=mcols(annotations)$TXNAME[match(metadata(annotations)$readIndex, mcols(annotations)$tempID)]
@@ -155,6 +155,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         rowRanges(countsSe) <- annotations
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))#Clean temp directory
+        metadata(countsSe) = readModelMap
         return(countsSe)
     }
 }

@@ -192,7 +192,7 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     rowData <- as_tibble(rowData(readClassSe)) %>% 
         mutate(start = unname(min(start(rowRangesSe))), 
                end= unname(max(end(rowRangesSe))),
-               rowID = row_number()))
+               rowID = row_number())
     group_var <- c("intronStarts", "intronEnds", "chr", "strand", "rowID", "rowID2")
     sum_var <- c("start","end","NSampleReadCount", "maxTxScore",
                  "readCount","NSampleReadProp","NSampleTxScore")

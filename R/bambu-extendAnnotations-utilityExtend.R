@@ -9,12 +9,11 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   readIndex = combinedTranscripts$readIndex
   combinedTranscripts = combinedTranscripts$combinedTranscripts     
   combinedTranscripts$tempID = seq_len(nrow(combinedTranscripts))
-  filterSet <- filterTranscriptsByRead(combinedTranscripts, min.sampleNumber)
-  if (any(filterSet, na.rm = TRUE)) {
-    transcriptsFiltered <- combinedTranscripts[filterSet,]
+  combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
+  if (nrow(combinedTranscripts > 0)) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
                    "confidenceType","readCount", "tempID")
-    rowDataTibble <- select(transcriptsFiltered,all_of(group_var))
+    rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
                                    confidenceType == "highConfidenceJunctionReads")
