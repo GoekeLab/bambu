@@ -96,10 +96,10 @@ bambu.quantDT <- function(readClassDt = readClassDt,
 generateReadModelMap <- function(readClassList){
     read_id = metadata(readClassList)$readNames
     readClass_id = rownames(readClassList)[metadata(readClassList)$readIndex]
-    tx.id = metadata(readClassList)$distTable
-    tx.id = tx.id[which(tx.id$equal),]
-    tx_id = tx.id$annotationTxId[match(readClass_id, tx.id$readClassId)]
-    readModelMap = cbind(read_id, tx_id)
+    transcript_id = metadata(readClassList)$distTable
+    transcript_id = transcript_id[which(transcript_id$equal),]
+    transcript_id = transcript_id$annotationTxId[match(readClass_id, transcript_id$readClassId)]
+    readModelMap = cbind(read_id, transcript_id)
     readModelMap = na.omit(readModelMap)
     return(readModelMap)
 }
