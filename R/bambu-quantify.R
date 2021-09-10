@@ -37,6 +37,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
             ncol = 1, dimnames = list(NULL, colNameRC)),
             theta = matrix(counts$theta, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
+    metadata(seOutput)$distTable = metadata(readClass)$distTable
     return(seOutput)
 }
 
@@ -92,4 +93,13 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     return(list(theta_est, d_rateOut[1], d_rateOut[2]))
 }
 
-
+generateReadModelMap <- function(readClassList){
+    read_id = metadata(readClassList)$readNames
+    readClass_id = rownames(readClassList)[metadata(readClassList)$readIndex]
+    tx.id = metadata(readClassList)$distTable
+    tx.id = tx.id[which(tx.id$equal),]
+    tx_id = tx.id$annotationTxId[match(readClass_id, tx.id$readClassId)]
+    readModelMap = cbind(read_id, tx_id)
+    readModelMap = na.omit(readModelMap)
+    return(readModelMap)
+}

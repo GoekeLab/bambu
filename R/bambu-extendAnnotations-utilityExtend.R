@@ -6,13 +6,10 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, max.txNDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     prefix = "", verbose = FALSE){
-  readIndex = combinedTranscripts$readIndex
-  combinedTranscripts = combinedTranscripts$combinedTranscripts     
-  combinedTranscripts$tempID = seq_len(nrow(combinedTranscripts))
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
-  if (nrow(combinedTranscripts > 0)) {
+  if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "tempID")
+                   "confidenceType","readCount", "maxTxScore")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -39,7 +36,6 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
       remove.subsetTx, max.txNDR, verbose)
-    metadata(extendedAnnotationRanges) = list(readIndex=readIndex)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -102,7 +98,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     minEqClasses$eqClass[match(names(extendedAnnotationRanges[
       geneListWithNewTx]), minEqClasses$queryTxId)]
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-      c("TXNAME", "GENEID", "eqClass", "newTxClass","readCount", "txNDR", "tempID")]
+                                                                     c("TXNAME", "GENEID", "eqClass", "newTxClass","readCount", "txNDR")]
   return(extendedAnnotationRanges)
 }
 
@@ -600,7 +596,7 @@ removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered,
     "newGene-spliced"
   extendedAnnotationRanges <- exonRangesCombinedFiltered
   mcols(extendedAnnotationRanges) <-
-    rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "tempID")]
+    rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "txNDR")]
   if (length(extendedAnnotationRanges)) 
     mcols(extendedAnnotationRanges)$TXNAME <- paste0(
       "tx",prefix, ".", seq_along(extendedAnnotationRanges))

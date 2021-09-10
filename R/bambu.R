@@ -125,14 +125,6 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     if (!quantOnly) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
-        if(trackReads){
-            metadata(annotations)$readIndex[is.na(metadata(annotations)$readIndex)]="*"
-            metadata(annotations)$readIndex=mcols(annotations)$TXNAME[match(metadata(annotations)$readIndex, mcols(annotations)$tempID)]
-            readNames = lapply(readClassList, FUN = function(x) metadata(x)$readNames)
-            readNames = do.call(c,readNames)
-            readModelMap = cbind(readNames, metadata(annotations)$readIndex)
-            colnames(readModelMap) = c("read_id", "transcript_id")
-        }
         if (!verbose) message("Finished extending annotations.")
         if (discoveryOnly){
             return(list(annotations=annotations, readModelMap = readModelMap))
@@ -151,11 +143,19 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
                 isoreParameters[['min.primarySecondaryDistStartEnd2']],
             emParameters = emParameters, ncore = ncore,
             verbose = verbose, BPPARAM = bpParameters)
+
+        readModelMap = NULL
+        if(trackReads){
+            for (i in seq_along(readClassList)){
+                metadata(readClassList[[i]])$distTable = metadata(countsSe[[i]])$distTable
+                readModelMap = rbind(readModelMap, generateReadModelMap(readClassList[[i]]))
+            }
+        }
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
         rowRanges(countsSe) <- annotations
+        metadata(countsSe)$readModelMap = readModelMap
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))#Clean temp directory
-        metadata(countsSe) = readModelMap
         return(countsSe)
     }
 }

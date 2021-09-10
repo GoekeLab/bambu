@@ -17,22 +17,16 @@ isore.combineTranscriptCandidates <- function(readClassList,
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
                                        min.readCount, min.readFractionByGene, 
-                                       min.txScore.multiExon, min.txScore.singleExon, verbose)
-    readIndex = combinedSplicedTranscripts$readIndex
-    combinedSplicedTranscripts <- combinedSplicedTranscripts$featureTibble %>% data.table()
+                                       min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
                                          stranded, min.readCount, min.readFractionByGene, 
-                                         min.txScore.multiExon, min.txScore.singleExon, verbose) 
-    output = list()
-    output$readIndex = pmin(readIndex,
-                     combinedUnsplicedTranscripts$readIndex+nrow(combinedSplicedTranscripts), na.rm = T)
-    combinedUnsplicedTranscripts = combinedUnsplicedTranscripts$combinedUnsplicedTibble  %>% data.table()
-    if(length(combinedUnsplicedTranscripts)!=0) combinedUnsplicedTranscripts[, confidenceType := "unsplicedNew"]
-    output$combinedTranscripts <- as_tibble(rbindlist(list(combinedSplicedTranscripts,
+                                         min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
+    combinedUnsplicedTranscripts[, confidenceType := "unsplicedNew"]
+    combinedTranscripts <- as_tibble(rbindlist(list(combinedSplicedTranscripts,
                                                     combinedUnsplicedTranscripts), fill = TRUE))
-    return(output)
+    return(combinedTranscripts)
 }
 
 
@@ -61,7 +55,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     combinedFeatureTibble <- 
         sequentialCombineFeatureTibble(combinedFeatureTibbleList, 
                                        indexList = NULL, intraGroup = FALSE) 
-    combinedFeatureTibble$featureTibble <- updateStartEndReadCount(combinedFeatureTibble$featureTibble)
+    combinedFeatureTibble <- updateStartEndReadCount(combinedFeatureTibble)
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
@@ -76,7 +70,7 @@ sequentialCombineFeatureTibble <- function(readClassList,
     combinedFeatureTibble <- NULL
     for (s in seq_along(readClassList)){
         combinedListNew <- readClassList[[s]]
-        if(intraGroup){   
+        if(intraGroup){
             combinedListNew <- 
                 extractFeaturesFromReadClassSE(readClassSe = combinedListNew,
                                                sample_id = indexList[s], min.readCount = min.readCount,
@@ -127,22 +121,14 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
 #' Function to combine featureTibble and create the NSample variables 
 #' @noRd
 combineFeatureTibble <- function(combinedFeatureTibble,
-                                 featureTibbleSummarised, index=1, intraGroup = TRUE){
-    readIndex <- featureTibbleSummarised$readIndex
-    featureTibbleSummarised <- featureTibbleSummarised$featureTibble
-    output = list()
+                                 featureTibbleSummarised, index=1, intraGroup = TRUE){ 
     if (is.null(combinedFeatureTibble)) { 
-        output$featureTibble <- featureTibbleSummarised %>% 
+        combinedTable <- featureTibbleSummarised %>% 
             select(intronStarts, intronEnds, chr, strand, maxTxScore, NSampleReadCount,
                    NSampleReadProp,NSampleTxScore, starts_with('start'),
                    starts_with('end'), starts_with('readCount'))
-        output$readIndex = readIndex
     } else { 
-        readIndexCombined <- combinedFeatureTibble$readIndex
-        combinedFeatureTibble <- combinedFeatureTibble$featureTibble
-        combinedFeatureTibble$id1 = seq_len(nrow(combinedFeatureTibble))
-        featureTibbleSummarised$id2 = seq_len(nrow(featureTibbleSummarised))
-        output$featureTibble = full_join(combinedFeatureTibble, 
+        combinedTable = full_join(combinedFeatureTibble, 
                                   featureTibbleSummarised, by = c('intronStarts',
                                                                   'intronEnds', 'chr', 'strand'),
                                   suffix=c('.combined','.new')) %>% 
@@ -153,20 +139,16 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                    NSampleTxScore = pmax0NA(NSampleTxScore.combined) + 
                        pmax0NA(NSampleTxScore.new),
                     maxTxScore = pmax(maxTxScore.combined, 
-                        maxTxScore.new, na.rm = TRUE),
-                        id = row_number()) %>% 
+                        maxTxScore.new, na.rm = TRUE)) %>% 
             select(intronStarts, intronEnds, chr, strand,
-                NSampleReadCount, NSampleReadProp, NSampleTxScore, maxTxScore, id, id1, id2,
-                starts_with('start'), starts_with('end'), starts_with('readCount')) 
-        readIndexCombined = output$featureTibble$id[order(output$featureTibble$id1)][readIndexCombined]
-        readIndex = output$featureTibble$id[order(output$featureTibble$id2)][readIndex]
-        output$readIndex = c(readIndexCombined, readIndex)
+            NSampleReadCount, NSampleReadProp, NSampleTxScore, maxTxScore, 
+            starts_with('start'), starts_with('end'), starts_with('readCount')) 
     } 
     if(intraGroup) 
-        output$featureTibble <- 
-            rename_with(output$featureTibble, ~gsub('^(end|start|readCount)$',
+        combinedTable <- 
+            rename_with(combinedTable, ~gsub('^(end|start|readCount)$',
                                              paste0('\\1\\.',index), .x)) 
-    return(output) 
+    return(combinedTable) 
 }
 #' pmax replace NAs with 0
 #' @noRd
@@ -191,17 +173,15 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     rowRangesSe <- rowRanges(readClassSe)
     rowData <- as_tibble(rowData(readClassSe)) %>% 
         mutate(start = unname(min(start(rowRangesSe))), 
-               end= unname(max(end(rowRangesSe))),
-               rowID = row_number())
-    group_var <- c("intronStarts", "intronEnds", "chr", "strand", "rowID", "rowID2")
+               end= unname(max(end(rowRangesSe))))
+    group_var <- c("intronStarts", "intronEnds", "chr", "strand")
     sum_var <- c("start","end","NSampleReadCount", "maxTxScore",
                  "readCount","NSampleReadProp","NSampleTxScore")
-    output=list()
-    output$featureTibble <- rowData %>% 
+    featureTibble <- rowData %>% 
         #filter(!equal) %>% # filter not compatible ones, i.e., overlapping with annotations?? if we are going to include subset tx, then can we still do the filtering?? maybe not equal but can be compatible 
         dplyr::select(chr = chr.rc, start, end, equal,
                       strand = strand.rc, intronStarts, intronEnds, confidenceType,
-                      readCount, geneReadProp, txScore, numExons, rowID) %>%
+                      readCount, geneReadProp, txScore, numExons) %>%
         filter(readCount > 1, # only use readCount>1 and highconfidence reads
                confidenceType == "highConfidenceJunctionReads") %>% 
         mutate(NSampleReadCount = (readCount >= min.readCount), 
@@ -209,16 +189,9 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
                NSampleReadProp = (geneReadProp >= min.readFractionByGene),
                NSampleTxScore = ((txScore >= min.txScore.multiExon & numExons >= 2) |
                 (txScore >= min.txScore.singleExon & numExons == 1)), 
-                maxTxScore = txScore,
-                rowID2 = row_number()) %>%
+                maxTxScore = txScore) %>%
         select(all_of(c(group_var, sum_var))) 
-    output$readIndex = metadata(readClassSe)$readIndex
-    output$readIndex[!(metadata(readClassSe)$readIndex %in% output$featureTibble$rowID)] = NA
-    index = rep(NA,max(output$featureTibble$rowID))
-    index[output$featureTibble$rowID] =  output$featureTibble$rowID2
-    output$readIndex = index[output$readIndex]
-    output$featureTibble <- output$featureTibble %>% select(-c(rowID, rowID2))
-    return(output)
+    return(featureTibble)
 }
 
 
@@ -242,39 +215,24 @@ combineUnsplicedTranscriptModels <-
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
         rangesList <- bplapply(newUnsplicedSeList, function(newUnsplicedSe){
             rr <- unlist(rowRanges(newUnsplicedSe))
-            rr$row_id <- rowData(newUnsplicedSe)$id
+            rr$row_id <- names(rr)
             return(rr)
         }, BPPARAM = bpParameters)
         colDataNames <-unlist(lapply(newUnsplicedSeList, colnames))
         start.ptm <- proc.time()
         combinedNewUnsplicedSe <- reduceUnsplicedRanges(rangesList, stranded)
-        #redirect read indexes to the new combined unspliced read classes
-        readIndex = do.call("c",lapply(readClassList, function(sample){
-            metadata(sample)$readIndex}))
-        output = list()
-        unlistedSe <- do.call("c",rangesList)
-        readIndex[!(readIndex %in% mcols(unlistedSe)$row_id)] = NA
-        if(length(combinedNewUnsplicedSe)==0) return(list(combinedUnsplicedTibble=NULL, 
-                readIndex = rep(NA,length(readIndex))))
-        splits = strsplit(unlist(mcols(combinedNewUnsplicedSe)),split = '\\+')
-        splits.len = sapply(splits,FUN = length)
-        splits.index = rep(seq_len(length(combinedNewUnsplicedSe)),splits.len)
-        splits.index2 = rep(NA,max(as.numeric(unlist(splits))))
-        splits.index2[as.numeric(unlist(splits))] = splits.index
-        output$readIndex = splits.index2[readIndex]
-
         end.ptm <- proc.time()
         if (verbose) message("reduce new unspliced ranges object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
         start.ptm <- proc.time()
-        output$combinedUnsplicedTibble <- 
+        combinedUnsplicedTibble <- 
             makeUnsplicedTibble(combinedNewUnsplicedSe,newUnsplicedSeList, 
                                 colDataNames, min.readCount, min.readFractionByGene,
                                 min.txScore.multiExon, min.txScore.singleExon, bpParameters)
         end.ptm <- proc.time()
         if (verbose) message("combine new unspliced tibble object across all
         samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-        return(output)
+        return(combinedUnsplicedTibble)
     }
 
 
@@ -288,7 +246,6 @@ extractNewUnsplicedRanges <- function(readClassSe, sample_id){
     rowData <- as_tibble(rowData(readClassSe))
     pre_names <- rownames(readClassSe)
     rownames(readClassSe) <- paste0("s",sample_id,"-",pre_names)
-    rowData(readClassSe)$id <- seq_len(nrow(rowData))
     newUnsplicedSe <- 
         readClassSe[which(rowData$confidenceType == "unsplicedNew" & 
                               rowData$readCount > 1 &
