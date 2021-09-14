@@ -187,8 +187,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
         mutate(NSampleReadCount = (readCount >= min.readCount), 
                # number of samples passed read count criteria
                NSampleReadProp = (geneReadProp >= min.readFractionByGene),
-               NSampleTxScore = ((txScore >= min.txScore.multiExon & numExons >= 2) |
-                (txScore >= min.txScore.singleExon & numExons == 1)), 
+               NSampleTxScore = ((txScore > min.txScore.multiExon & numExons >= 2) |
+                (txScore > min.txScore.singleExon & numExons == 1)), 
                 maxTxScore = txScore) %>%
         select(all_of(c(group_var, sum_var))) 
     return(featureTibble)
@@ -307,9 +307,10 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                   txScore = weighted.mean(txScore, readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
         summarise(readCount = sum(readCount),
+                    maxTxScore = weighted.mean(txScore, readCount_tmp)),
                     NSampleReadCount = sum(readCount >= min.readCount), 
                     NSampleReadProp = sum(geneReadProp >= 
                                             min.readFractionByGene),
-                    NSampleTxScore = sum(txScore >= min.txScore.singleExon))
+                    NSampleTxScore = sum(maxTxScore > min.txScore.singleExon))
     return(newUnsplicedTibble)
 }
