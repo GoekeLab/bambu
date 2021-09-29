@@ -17,10 +17,9 @@ Description: bambu is a R package for multi-sample transcript discovery and
     usage. 
 License: GPL-3  + file LICENSE
 Encoding: UTF-8
-LazyData: true
 ByteCompile: true
 Depends: 
-    R(>= 4.0.0),
+    R(>= 4.1),
     SummarizedExperiment(>= 1.1.6),
     S4Vectors(>= 0.22.1),
     IRanges

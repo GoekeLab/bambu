@@ -34,6 +34,14 @@ if (getRversion() >= "2.15.1") {
         "startSD","endSD","readCount.posStrand","alignmentStrand","newExonId",
         "newExonId.merge","newGeneId","readStart","readEnd","novelGene",
         "numReads","numExons","numRCs","geneReadProp","numAstart", "numAend",
-        "numTstart","numTend","tx_strand_bias"
+        "numTstart","numTend","tx_strand_bias", "maxTxScore", 
+        "NSampleReadCount", "NSampleReadProp", "NSampleTxScore", 
+        "NSampleReadCount.combined", "NSampleReadCount.new", 
+        "NSampleReadProp.combined", "NSampleReadProp.new", 
+        "NSampleTxScore.combined", "NSampleTxScore.new", "maxTxScore.combined",
+        "maxTxScore.new" ,"txScore" ,"row_id" ,"txScore", "sample_id", 
+        "sample_name", "txScore", "readCount_tmp", "group", "row_id", "rowID", 
+        "sumReadCount", "maxTxScore", "NSampleReadCount", "NSampleReadProp", 
+        "NSampleTxScore"
     ))
 }

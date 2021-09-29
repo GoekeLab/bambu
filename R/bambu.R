@@ -90,11 +90,10 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
     discoveryOnly = FALSE, quantOnly = FALSE, verbose = FALSE) {
     if (discoveryOnly & quantOnly) {
-        stop(paste0("At least 1 of discoveryOnly and quantOnly must be FALSE. 
- Rerun with either 1 or both parameters as FALSE"))
-    }
+        stop("At least 1 of discoveryOnly and quantOnly must be FALSE. 
+    Rerun with either 1 or both parameters as FALSE")}
     if(is.null(annotations)) annotations = GRangesList()
-    else annotations <- checkInputs(annotations, reads, readClass.file = rcFile, 
+    else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
@@ -106,45 +105,33 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     if (!is.null(reads)) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
-            message(paste0("There are more than 10 samples, read class files
+            message("There are more than 10 samples, read class files
                 will be temporarily saved to ", rcOutDir,
-                " for more efficient processing"))
+                " for more efficient processing")
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-            genomeSequence = genomeSequence, 
-            readClass.outputDir = rcOutDir, yieldSize, 
-            bpParameters, stranded, verbose,
-            min.readCount = isoreParameters[["min.readCount"]],
-            fitReadClassModel = isoreParameters[["fitReadClassModel"]])
-    } else {
-        readClassList <- rcFile
-    }
+            genomeSequence = genomeSequence, readClass.outputDir = rcOutDir, 
+            yieldSize, bpParameters, stranded, verbose, isoreParameters)
+    } else {readClassList <- rcFile}
     if (!quantOnly) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
-        if (discoveryOnly){
-            return(annotations)
-        }
+        if (discoveryOnly){return(annotations)}
     }
     if (!discoveryOnly) {
         if (!verbose) message("Start isoform quantification")
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
-        countsSe <- bplapply(readClassList,
-            bambu.quantify,annotations = annotations,
-            min.exonDistance = isoreParameters[["min.exonDistance"]],
-            min.primarySecondaryDist =
-                isoreParameters[['min.primarySecondaryDist']], 
-            min.primarySecondaryDistStartEnd =
-                isoreParameters[['min.primarySecondaryDistStartEnd2']],
-            emParameters = emParameters, ncore = ncore,
-            verbose = verbose, BPPARAM = bpParameters)
+        countsSe <- bplapply(readClassList, bambu.quantify,
+            annotations = annotations, isoreParameters = isoreParameters,
+            emParameters = emParameters, ncore = ncore,verbose = verbose, 
+            BPPARAM = bpParameters)
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
         rowRanges(countsSe) <- annotations
         if (!verbose) message("Finished isoform quantification.")
-        if (rm.readClassSe) file.remove(unlist(readClassList))#Clean temp directory
+        if (rm.readClassSe) file.remove(unlist(readClassList))
         return(countsSe)
     }
 }

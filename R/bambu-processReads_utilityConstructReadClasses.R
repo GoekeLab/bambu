@@ -21,7 +21,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
     if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
         warning("read Id not sorted, can result in wrong assignments.
-            Please report error")
+            Please report this")
     start.ptm <- proc.time()
     exonsByRC.spliced <- constructSplicedReadClasses(
         uniqueJunctions = uniqueJunctions,

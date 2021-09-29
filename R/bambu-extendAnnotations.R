@@ -33,6 +33,6 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         verbose = verbose)
     end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",
-                         round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
+        round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
     return(annotations)
 }

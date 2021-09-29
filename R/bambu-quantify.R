@@ -4,8 +4,12 @@
 #' @import data.table
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
-    verbose = FALSE, min.exonDistance = 35, min.primarySecondaryDist = 5, 
-    min.primarySecondaryDistStartEnd = 5) {
+    verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+    min.exonDistance = isoreParameters[["min.exonDistance"]]
+    min.primarySecondaryDist =
+        isoreParameters[['min.primarySecondaryDist']] 
+    min.primarySecondaryDistStartEnd =
+        isoreParameters[['min.primarySecondaryDistStartEnd2']]
     if (is.character(readClass)) readClass <- readRDS(file = readClass)
     readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
         min.exonDistance = min.exonDistance,
@@ -73,7 +77,7 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     }
     end.ptm <- proc.time()
     if (verbose) message("Finished estimate degradation bias in ",
-                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
         d_rateOut[1], d_mode = d_mode)
     removeList <- removeUnObservedGenes(readClassDt)
