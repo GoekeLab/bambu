@@ -16,8 +16,9 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
 
     thresholdIndex = which(rowData(se)$readCount
                         >=min.readCount)
-    compTable <- isReadClassCompatible(rowRanges(se[thresholdIndex,]), 
-                                    annotations)
+    RC.ranges = rowRanges(se[thresholdIndex,])
+    compTable <- isReadClassCompatible(RC.ranges, annotations)
+    
     polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
                                         genomeSequence)
     newRowData = data.frame(equal = compTable$equal,

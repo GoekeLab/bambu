@@ -29,6 +29,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         readGrgList = readGrgList,
         stranded = stranded)
     end.ptm <- proc.time()
+    rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
     message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
@@ -58,14 +59,15 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     correctedJunctionMatches <- 
         base::match(uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
             allToUniqueJunctionMatch], names(uniqueJunctions))
-
     unlisted_junctions <- correctIntronRanges(unlisted_junctions, 
         uniqueJunctions, correctedJunctionMatches)
+    rm(correctedJunctionMatches)
     if(any(mcols(unlisted_junctions)$remove)){  # remove microexons
         toRemove = which(mcols(unlisted_junctions)$remove)
         unlisted_junctions = unlisted_junctions[-toRemove]
         allToUniqueJunctionMatch = allToUniqueJunctionMatch[-toRemove]
     }
+
     if (isFALSE(stranded)) {
         readStrand <- correctReadStrandById(
             as.factor(strand(unlisted_junctions)),
@@ -73,7 +75,6 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     } else {
         readStrand <- as.factor(getStrandFromGrList(readGrgList))
     }
-
     # confidence type (note: can be changed to integer encoding)
     readConfidence <- factor(rep("highConfidenceJunctionReads",
         length(readStrand)), levels = c('highConfidenceJunctionReads',
@@ -82,11 +83,11 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         uniqueJunctions$mergedHighConfJunctionId[allToUniqueJunctionMatch],
         mcols(unlisted_junctions)$id))) > 0)
     readConfidence[lowConfidenceReads] <- "lowConfidenceJunctionReads"
-    
-    readTable <- createReadTable(unlisted_junctions, readGrgList,
+    rm(lowConfidenceReads, uniqueJunctions, allToUniqueJunctionMatch)
+    readTable <- createReadTable(start(unlisted_junctions), 
+        end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
         readStrand, readConfidence)
     exonsByReadClass <- createExonsByReadClass(readTable)
-    
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
@@ -152,26 +153,33 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #' @importFrom dplyr tibble %>% group_by n summarise nth order_by arrange mutate
 #'     row_number .groups
 #' @noRd
-createReadTable <- function(unlisted_junctions, readGrgList,
-    readStrand, readConfidence) {
+createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
+    unlisted_junctions_id, readGrgList,readStrand, readConfidence) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
+    readChr = getChrFromGrList(readGrgList)
+    readAlignStrand = getStrandFromGrList(readGrgList)
+    rm(readGrgList)
     intronStartCoordinatesInt <- 
-        as.integer(min(splitAsList(start(unlisted_junctions),
-        mcols(unlisted_junctions)$id)) - 2)
+        as.integer(min(splitAsList(unlisted_junctions_start,
+        unlisted_junctions_id)) - 2)
     intronEndCoordinatesInt <- 
-        as.integer(max(splitAsList(end(unlisted_junctions),
-        mcols(unlisted_junctions)$id)) + 2)
-    readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
+        as.integer(max(splitAsList(unlisted_junctions_end,
+        unlisted_junctions_id)) + 2)
+    readTable <- tibble(chr = as.factor(readChr), 
         intronStarts = 
-        unname(unstrsplit(splitAsList(as.character(start(unlisted_junctions)),
-            mcols(unlisted_junctions)$id), sep = ",")),
+        unname(unstrsplit(splitAsList(as.character(unlisted_junctions_start),
+            unlisted_junctions_id), sep = ",")),
         intronEnds = 
-            unname(unstrsplit(splitAsList(as.character(end(unlisted_junctions)),
-                mcols(unlisted_junctions)$id), sep = ",")),
+            unname(unstrsplit(splitAsList(as.character(unlisted_junctions_end),
+                unlisted_junctions_id), sep = ",")),
         start = pmin(start(readRanges), intronStartCoordinatesInt),
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
-        alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+')
+        alignmentStrand = as.character(readAlignStrand)=='+')
+    rm(readRanges, readChr, readStrand, readAlignStrand, 
+        unlisted_junctions_start, unlisted_junctions_end, 
+        unlisted_junctions_id, readConfidence, 
+        intronStartCoordinatesInt, intronEndCoordinatesInt)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
@@ -231,8 +239,12 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
             mcols(readClassListSpliced)$strand.rc != "*"], 
         use.names = FALSE)),
         granges(unlist(annotations, use.names = FALSE))))
+        rm(readClassListSpliced, annotations)
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
+    #remove duplicate ranges
+    reads.singleExon = unique(reads.singleExon)
+    referenceExons = unique(referenceExons)
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
@@ -264,27 +276,62 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     confidenceType = "unspliced", stranded = TRUE) {
     if (is.null(mcols(granges)$id))
         stop("ID column is missing from mcols(granges)")
-    hitsWithin <- findOverlaps(granges, grangesReference,
-        ignore.strand = !stranded, 
-        type = "within", 
-        select = "all")
-    # find reads that overlap with reference ranges
-    hitsDF <- initiateHitsDF(hitsWithin, grangesReference, stranded)
-    ## create single exon read class by using the minimum end
-    ## and maximum start of all overlapping exons (identical to
-    ## minimum equivalent class)
-    hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
-        group_by(queryHits, chr, strand) %>%
-        summarise(start = max(start), end = min(end), .groups = "drop") %>%
-        group_by(chr, start, end, strand) %>%
-        mutate(readClassId = paste0("rc", confidenceType, ".", 
-            cur_group_id())) %>% ungroup() %>%
-        mutate(alignmentStrand = as.character(strand(granges))[queryHits]=="+",
-            readStart = start(granges)[queryHits],
-            readEnd = end(granges)[queryHits])
-    readIds <- mcols(granges[hitsDF$queryHits])$id
-    #previously it took the first rows strand for a read class id
-    # which could be wrong, coded in an alternative but its likely very slow...
+    #split ranges over chromosomes to find overlaps
+    granges= split(granges, seqnames(granges))
+    grangesReference= split(grangesReference, seqnames(grangesReference))
+    hitsWithin = lapply(names(granges),FUN = function(i){
+        if(i %in% names(grangesReference)){
+
+            # hitsWithin <- findOverlaps(granges[[i]], grangesReference[[i]],
+            #     ignore.strand = !stranded, 
+            #     type = "within", 
+            #     select = "all")
+            # hitsDF <- initiateHitsDF(hitsWithin, grangesReference, stranded)
+
+            hitsWithin <- findOverlaps(granges[[i]], grangesReference[[i]],
+                ignore.strand = !stranded, 
+                type = "within", 
+                select = "arbitrary")
+                
+            queryHits = seq_len(length(hitsWithin))
+            hitsDF <- tibble(queryHits)
+            hitsDF$chr = as.factor(as.character(seqnames(grangesReference[[i]]))[hitsWithin])
+            hitsDF$start <- start(grangesReference[[i]])[hitsWithin]
+            hitsDF$end <- end(grangesReference[[i]])[hitsWithin]
+            if (stranded == FALSE) {
+                hitsDF$strand <- "*"
+            } else {
+                hitsDF$strand <-
+                    as.factor(strand(grangesReference[[i]])[hitsWithin])
+            }
+
+            grangesStart = start(granges[[i]])
+            grangesEnd = end(granges[[i]])
+            grangesStrand = strand(granges[[i]])
+            grangesId = mcols(granges[[i]])$id
+
+            hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
+            group_by(queryHits, chr, strand) %>%
+            filter(!is.na(start)) %>%
+            summarise(start = max(start), end = min(end), .groups = "drop") %>%
+            group_by(chr, start, end, strand) %>%
+            mutate(readClassId = paste0("rc", confidenceType, ".", 
+                cur_group_id())) %>% ungroup() %>%
+            mutate(alignmentStrand = as.character(grangesStrand)[queryHits]=="+",
+                readStart = grangesStart[queryHits],
+                readEnd = grangesEnd[queryHits])
+
+            readIds <- grangesId[hitsDF$queryHits]
+
+        }
+        return(list(hitsDF = hitsDF, readIds = readIds))
+    })
+    hitsDF = lapply(hitsWithin, FUN = function(x){x$hitsDF})
+    readIds = lapply(hitsWithin, FUN = function(x){x$readIds})
+    rm(granges, grangesReference, hitsWithin)
+    readIds = do.call("c",readIds)
+    hitsDF = do.call("rbind",hitsDF)
+
     hitsDF <- hitsDF %>% dplyr::select(chr, start, end, readStart, readEnd, 
                                 strand, readClassId, alignmentStrand) %>%
         group_by(readClassId) %>% summarise(start = start[1], end = end[1], 
@@ -301,6 +348,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     exByReadClassUnspliced$exon_endRank <- 1
     partitioning <- PartitioningByEnd(seq_along(exByReadClassUnspliced))
     exByReadClassUnspliced <- relist(exByReadClassUnspliced, partitioning)
+    rm(partitioning)
     names(exByReadClassUnspliced) <- hitsDF$readClassId
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
         intronStarts, intronEnds,
