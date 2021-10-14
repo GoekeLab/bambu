@@ -88,15 +88,15 @@
 #'     "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
 #'     package = "bambu"))
 #' se <- bambu(reads = test.bam, annotations = gr, 
-#'     genome = fa.file,  discovery = FALSE)
+#'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
-    discoveryOnly = FALSE, quantOnly = FALSE, verbose = FALSE) {
-    if (discoveryOnly & quantOnly) {
-        stop("At least 1 of discoveryOnly and quantOnly must be FALSE. 
-    Rerun with either 1 or both parameters as FALSE")}
+    discovery = TRUE, quant = TRUE, verbose = FALSE) {
+    if (!(discovery+quant)) {
+        stop("At least 1 of discovery and quant must be TRUE. 
+    Rerun with either 1 or both parameters as TRUE")}
     if(is.null(annotations)) annotations = GRangesList()
     else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -119,13 +119,13 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             genomeSequence = genomeSequence, readClass.outputDir = rcOutDir, 
             yieldSize, bpParameters, stranded, verbose, isoreParameters)
     } else {readClassList <- rcFile}
-    if (!quantOnly) {
+    if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
-        if (discoveryOnly){return(annotations)}
+        if (!quant){return(annotations)}
     }
-    if (!discoveryOnly) {
+    if (quant) {
         if (!verbose) message("Start isoform quantification")
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
