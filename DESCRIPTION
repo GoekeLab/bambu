@@ -26,6 +26,7 @@ Depends:
 Suggests: 
     AnnotationDbi,
     Biostrings,
+    rmarkdown,
     BiocFileCache,
     ggplot2,
     ComplexHeatmap,
