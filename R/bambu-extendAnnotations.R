@@ -9,9 +9,8 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         stranded, ## stranded used for unspliced reduce  
         min.readCount = isoreParameters[["min.readCount"]], 
         min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
-        max.geneFDR = isoreParameters[["max.geneFDR"]],
-        max.txFDR.multiExon = isoreParameters[["max.txFDR.multiExon"]],
-        max.txFDR.singleExon = isoreParameters[["max.txFDR.singleExon"]],
+        min.txScore.multiExon = isoreParameters[["min.txScore.multiExon"]],
+        min.txScore.singleExon = isoreParameters[["min.txScore.singleExon"]],
         bpParameters,
         verbose)
     end.ptm_all <- proc.time()
@@ -23,6 +22,7 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         annotationGrangesList = annotations,
         remove.subsetTx = isoreParameters[["remove.subsetTx"]],
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
+        max.txNDR = isoreParameters[["max.txNDR"]],
         min.exonDistance = isoreParameters[["min.exonDistance"]],
         min.exonOverlap = isoreParameters[["min.exonOverlap"]],
         min.primarySecondaryDist = 
@@ -33,6 +33,6 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         verbose = verbose)
     end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",
-                         round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
+        round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
     return(annotations)
 }
