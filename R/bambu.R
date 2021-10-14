@@ -35,22 +35,24 @@
 #'     \item min.sampleNumber specifying minimum sample number with minimum read
 #'     count, defaults to 1
 #'     \item min.exonDistance specifying minum distance to known transcript 
-#'     to be considered valid as new, defaults to 35
+#'     to be considered valid as new, defaults to 35bp
 #'     \item min.exonOverlap specifying minimum number of bases shared with
 #'     annotation to be assigned to the same gene id, defaults 10 base pairs
 #'     \item min.primarySecondaryDist specifying the minimum number of distance 
-#'     threshold
+#'     threshold, defaults to 5bp
 #'     \item min.primarySecondaryDistStartEnd1 specifying the minimum number 
-#'     of distance threshold, used for extending annotation
+#'     of distance threshold, used for extending annotation, defaults to 5bp
 #'     \item min.primarySecondaryDistStartEnd2 specifying the minimum number 
-#'     of distance threshold, used for estimating distance to annotation
-#'     \item min.geneScore specifying the minimum score for gene detection
+#'     of distance threshold, used for estimating distance to annotation, 
+#'     defaults to 5bp
 #'     \item min.txScore.multiExon specifying the minimum transcript level 
-#'     threshold for multi-exon transcripts during sample combining
+#'     threshold for multi-exon transcripts during sample combining, 
+#'     defaults to 0
 #'     \item min.txScore.singleExon specifying the minimum transcript level 
-#'     threshold for single-exon transcripts during sample combining
-#'     \item max.txNDR. specifying the maximum NDR rate to novel transcript 
-#'     output from detected read classes
+#'     threshold for single-exon transcripts during sample combining, defaults 
+#'     to 1
+#'     \item max.txNDR. specifying the maximum NDR rate to novel transcript
+#'     output from detected read classes, defaults to 0.1
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -60,10 +62,13 @@
 #'     \item degradationBias correcting for degradation bias, defaults to TRUE.
 #'     \item conv specifying the covergence trheshold control,
 #'     defaults to 0.0001.
-#'     \item minvalue specifying the minvalue for convergence consideration
+#'     \item minvalue specifying the minvalue for convergence consideration, 
+#'     defaults to 0.00000001
 #' }
 #' @param discovery A logical variable indicating whether annotations
-#' are to be extended for quantification.
+#' are to be extended
+#' @param quant A logical variable indicating whether quantification will 
+#' be performed
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
 #' @details
