@@ -349,6 +349,7 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons, unlistedIntronsAnnotations,
 #' @importFrom dplyr ungroup %>%
 #' @noRd
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
+<<<<<<< HEAD
         primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
         ignore.strand = FALSE) {
     # (1)  find overlaps of read classes with annotated transcripts,
@@ -407,6 +408,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
 #' @importFrom dplyr as_tibble group_by %>% mutate n arrange filter arrange
 #' @noRd
 genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
+<<<<<<< HEAD
         primarySecondaryDistStartEnd = 5, exByTx = NULL, setTMP = NULL,
         DistCalculated = FALSE) {
     ## initiate the table
@@ -448,7 +450,7 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
         filter(dist <= (min(dist) + primarySecondaryDist)) %>%
         mutate(txNumberFiltered = n())
     }
-    return(txToAnTableFiltered)
+    return(txToAnTableFiltered) 
 }
 
 #' extended annotations for unspliced reads
