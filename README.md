@@ -24,6 +24,7 @@
   - [General usage](#general-usage)
   - [Use precalculated annotation objects](#use-precalculated-annotation-objects)
   - [Advanced options](#advanced-options)
+  - [Output](#description-of-output)
   - [Complementary functions](#complementary-functions)
   - [Release History](#release-history)
   - [Citation](#citation)
