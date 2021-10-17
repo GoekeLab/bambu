@@ -201,7 +201,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
 #' @importFrom xgboost xgboost
 #' @importFrom stats fisher.test
 #' @noRd
-fitXGBoostModel <- function(labels.train, data.train, nround = 50, 
+fitXGBoostModel <- function(labels.train, data.train, nrounds = 50, 
                             show.cv=TRUE, maxSize.cv=10000){
     if (show.cv) {
         mySample <- sample(seq_along(labels.train),
@@ -212,7 +212,7 @@ fitXGBoostModel <- function(labels.train, data.train, nround = 50,
         labels.train.cv.test <- labels.train[-mySample]
 
         cv.fit <- xgboost(data = data.train.cv, 
-            label = labels.train.cv, nthread=1, nround=nround, 
+            label = labels.train.cv, nthread = 1, nrounds = nrounds, 
             objective = "binary:logistic", 
             eval_metric='error',
             verbose = 0)
@@ -230,7 +230,7 @@ fitXGBoostModel <- function(labels.train, data.train, nround = 50,
     }
 
     cv.fit <- xgboost(data = data.train, 
-            label = labels.train, nthread=1, nround=nround, 
+            label = labels.train, nthread=1, nrounds=nrounds, 
             objective = "binary:logistic", 
             eval_metric='error',
             verbose = 0)
