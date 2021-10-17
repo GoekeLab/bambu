@@ -118,12 +118,16 @@ splicing junctions in read alignments. Ideally, we recommend to use the same
 genome seqeunce file that was used for alignment to be used for bambu.
 ```{r}
 # get path to fasta file
-genomeSequence <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FASTA"))
+genomeSequenceData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FASTA"))
+genomeSequence <- genomeSequenceData[["EH3814"]]
+
+
+genomeSequence <- "/mnt/data/annotations/Grch38/ensembl-91/Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr22_1_25500000.fa"
 ```
 As an option, users can also choose to use a BSgenome object:
 ```{r}
 library(BSgenome.Hsapiens.NCBI.GRCh38)
-genomeSequence <- BSgenome.Hsapiens.NCBI.GRCh38
+genomeSequenceBsgenome <- BSgenome.Hsapiens.NCBI.GRCh38
 ```
 
 ### Genome annotations (bambu annotations object/ gtf file / TxDb object)
