@@ -37,7 +37,7 @@
 #'     \item min.exonDistance specifying minum distance to known transcript 
 #'     to be considered valid as new, defaults to 35bp
 #'     \item min.exonOverlap specifying minimum number of bases shared with
-#'     annotation to be assigned to the same gene id, defaults 10 base pairs
+#'     annotation to be assigned to the same gene id, defaults to 10bp
 #'     \item min.primarySecondaryDist specifying the minimum number of distance 
 #'     threshold, defaults to 5bp
 #'     \item min.primarySecondaryDistStartEnd1 specifying the minimum number 
@@ -94,13 +94,12 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
     discovery = TRUE, quant = TRUE, verbose = FALSE) {
-    if (!(discovery+quant)) {
-        stop("At least 1 of discovery and quant must be TRUE. 
-    Rerun with either 1 or both parameters as TRUE")}
+    if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
+    TRUE. Rerun with either 1 or both parameters as TRUE")
     if(is.null(annotations)) annotations = GRangesList()
     else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
-    genomeSequence <- checkInputSequence(genome)
+    if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
