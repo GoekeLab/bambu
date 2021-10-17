@@ -181,10 +181,10 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     sum_var <- c("start","end","NSampleReadCount", "maxTxScore",
                 "readCount","NSampleReadProp","NSampleTxScore")
     featureTibble <- rowData %>% 
-        dplyr::select(chr = chr.rc, start, end, equal, strand = strand.rc, 
+        dplyr::select(chr = chr.rc, start, end, strand = strand.rc, 
             intronStarts, intronEnds, confidenceType, readCount, geneReadProp, 
             txScore, numExons) %>%
-        filter(readCount > 1, # only use readCount>1 and highconfidence reads
+        filter(readCount >= 1, # only use readCount>1 and highconfidence reads
                 confidenceType == "highConfidenceJunctionReads") %>% 
         mutate(NSampleReadCount = (readCount >= min.readCount), 
                 # number of samples passed read count criteria
