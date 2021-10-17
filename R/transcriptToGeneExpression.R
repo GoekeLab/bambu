@@ -42,14 +42,17 @@ transcriptToGeneExpression <- function(se) {
     counts_gene_CPM <- setDF(counts_gene_CPM)
     rownames(counts_gene_CPM) <- RowNames
     ColNames <- colnames(counts_gene)[-1]
+    ColData <- colData(se)
+    ColData@rownames <- ColNames
+    ColData@listData$name <- ColNames
     seOutput <- SummarizedExperiment(
         assays = SimpleList(
-            counts = as.matrix(counts_gene[, -1], ncol = length(ColNames),
+            counts = as.matrix(counts_gene[, -1, drop = FALSE], ncol = length(ColNames),
                 dimnames = list(RowNames, ColNames)),
             CPM = as.matrix(counts_gene_CPM[match(RowNames,
-                counts_gene_CPM$GENEID), -1], ncol = length(ColNames),
+                counts_gene_CPM$GENEID), -1, drop = FALSE], ncol = length(ColNames),
                 dimnames = list(RowNames, ColNames))),
         rowRanges = exByGene[RowNames],
-        colData = colData(se))
+        colData = ColData)
     return(seOutput)
 }
