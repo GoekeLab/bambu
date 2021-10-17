@@ -95,15 +95,15 @@ countPolyATerminals = function(grl, genomeSequence){
         width = 10, fix = 'end', ignore.strand=FALSE)
     startSeqs = BSgenome::getSeq(genomeSequence,start)
     endSeqs = BSgenome::getSeq(genomeSequence,end)
-    numATstart = letterFrequency(startSeqs, c("A","T"))
-    numATend= letterFrequency(endSeqs, c("A","T"))
+    numATstart = BSgenome::letterFrequency(startSeqs, c("A","T"))
+    numATend= BSgenome::letterFrequency(endSeqs, c("A","T"))
     return(data.frame(numAstart=numATstart[,"A"], numAend= numATend[,"A"],  
                     numTstart=numATstart[,"T"], numTend=numATend[,"T"]))
 }
 
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
+getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
     if(checkFeatures(txFeatures) & fit){
@@ -113,7 +113,7 @@ getTranscriptScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
         transcriptModelME = fitXGBoostModel(
                     data.train=as.matrix(features[indexME,]),
                     labels.train=txFeatures$labels[indexME], 
-                    nround = nround, show.cv=FALSE)
+                    nrounds = nrounds, show.cv=FALSE)
         txScore = predict(transcriptModelME, as.matrix(features))
         } else txScore = NULL
 
@@ -123,7 +123,7 @@ getTranscriptScore = function(rowData, defaultModels, nround = 50, fit = TRUE){
         transcriptModelSE = fitXGBoostModel(
                     data.train=as.matrix(features[indexSE,]),
                     labels.train=txFeatures$labels[indexSE], 
-                    nround = nround, show.cv=FALSE)
+                    nrounds = nrounds, show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))
         } else txScoreSE = NULL
 
