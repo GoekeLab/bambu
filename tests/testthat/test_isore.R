@@ -27,7 +27,7 @@ test_that("isore.constructReadClasses completes successfully", {
     
     
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
-    genomeSequence <- checkInputSequence(genome)
+    genomeSequence <- checkInputSequence(genomeSequence)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
@@ -48,15 +48,16 @@ test_that("isore.constructReadClasses completes successfully", {
     # create error and strand corrected junction tables
     unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
     uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-                                                     annotations,genomeSequence, stranded = stranded, verbose = verbose)
+        annotations,genomeSequence, stranded = FALSE, verbose = FALSE)
     # create SE object with reconstructed readClasses
     se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
-                                     uniqueJunctions, runName =  "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000",
-                                     annotations, stranded = FALSE, verbose)
+        uniqueJunctions, 
+        runName =  "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000",
+        annotations,  stranded = FALSE, verbose = FALSE)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     seReadClassUnstranded <- scoreReadClasses(se,genomeSequence, annotations, 
                                               defaultModels = defaultModels, fit = TRUE,
-                                              min.readCount = min.readCount, verbose = verbose)
+                                              min.readCount = 2, verbose = FALSE)
     ## in case of testing on Mac
     names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronStarts) <-
         names(seReadClassUnstrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
@@ -74,7 +75,7 @@ test_that("isore.constructReadClasses completes successfully", {
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     seReadClassStranded <- scoreReadClasses(se,genomeSequence, annotations, 
                                             defaultModels = defaultModels, fit = TRUE,
-                                            min.readCount = min.readCount, verbose = verbose)
+                                            min.readCount = 2, verbose = FALSE)
     names(seReadClassStranded@rowRanges@elementMetadata@listData$intronStarts) <- 
         names(seReadClassStrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
     names(seReadClassStranded@rowRanges@elementMetadata@listData$intronEnds) <- 
