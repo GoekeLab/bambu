@@ -22,7 +22,7 @@
   - [General usage](#general-usage)
   - [Use precalculated annotation objects](#use-precalculated-annotation-objects)
   - [Advanced options](#advanced-options)
-  - [Details on the output ](#description-of-output)
+  - [Details on the output](#details-on-the-output)
   - [Complementary functions](#complementary-functions)
   - [Release History](#release-history)
   - [Citation](#citation)
