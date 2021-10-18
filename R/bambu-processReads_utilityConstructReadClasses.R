@@ -243,8 +243,11 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges
+    counts = (as.data.table(reads.singleExon) %>% 
+         count(seqnames,start,end,strand))$n
     reads.singleExon = unique(reads.singleExon)
-    referenceExons = unique(referenceExons)
+    mcols(reads.singleExon)$counts <- counts
+
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
@@ -276,70 +279,39 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     confidenceType = "unspliced", stranded = TRUE) {
     if (is.null(mcols(granges)$id))
         stop("ID column is missing from mcols(granges)")
-    #split ranges over chromosomes to find overlaps
-    granges= split(granges, seqnames(granges))
-    grangesReference= split(grangesReference, seqnames(grangesReference))
-    hitsWithin = lapply(names(granges),FUN = function(i){
-        if(i %in% names(grangesReference)){
 
-            # hitsWithin <- findOverlaps(granges[[i]], grangesReference[[i]],
-            #     ignore.strand = !stranded, 
-            #     type = "within", 
-            #     select = "all")
-            # hitsDF <- initiateHitsDF(hitsWithin, grangesReference, stranded)
+    hitsWithin <- findOverlaps(granges, grangesReference,
+        ignore.strand = !stranded, 
+        type = "within", 
+        select = "all")
+    hitsDF <- initiateHitsDF(hitsWithin, grangesReference, stranded)
 
-            hitsWithin <- findOverlaps(granges[[i]], grangesReference[[i]],
-                ignore.strand = !stranded, 
-                type = "within", 
-                select = "arbitrary")
-                
-            queryHits = seq_len(length(hitsWithin))
-            hitsDF <- tibble(queryHits)
-            hitsDF$chr = as.factor(as.character(seqnames(grangesReference[[i]]))[hitsWithin])
-            hitsDF$start <- start(grangesReference[[i]])[hitsWithin]
-            hitsDF$end <- end(grangesReference[[i]])[hitsWithin]
-            if (stranded == FALSE) {
-                hitsDF$strand <- "*"
-            } else {
-                hitsDF$strand <-
-                    as.factor(strand(grangesReference[[i]])[hitsWithin])
-            }
+    hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
+    group_by(queryHits, chr, strand) %>%
+    summarise(start = max(start), end = min(end), .groups = "drop") %>%
+    group_by(chr, start, end, strand) %>%
+    mutate(readClassId = paste0("rc", confidenceType, ".", 
+        cur_group_id())) %>% ungroup() %>%
+    mutate(alignmentStrand = as.character(strand(granges))[queryHits]=="+",
+        readStart = start(granges)[queryHits],
+        readEnd = end(granges)[queryHits],
+        counts = mcols(granges)$counts[queryHits])
 
-            grangesStart = start(granges[[i]])
-            grangesEnd = end(granges[[i]])
-            grangesStrand = strand(granges[[i]])
-            grangesId = mcols(granges[[i]])$id
+    readIds <- mcols(granges)$id[hitsDF$queryHits]
 
-            hitsDF <- hitsDF %>% dplyr::select(queryHits, chr, start, end, strand) %>%
-            group_by(queryHits, chr, strand) %>%
-            filter(!is.na(start)) %>%
-            summarise(start = max(start), end = min(end), .groups = "drop") %>%
-            group_by(chr, start, end, strand) %>%
-            mutate(readClassId = paste0("rc", confidenceType, ".", 
-                cur_group_id())) %>% ungroup() %>%
-            mutate(alignmentStrand = as.character(grangesStrand)[queryHits]=="+",
-                readStart = grangesStart[queryHits],
-                readEnd = grangesEnd[queryHits])
-
-            readIds <- grangesId[hitsDF$queryHits]
-
-        }
-        return(list(hitsDF = hitsDF, readIds = readIds))
-    })
-    hitsDF = lapply(hitsWithin, FUN = function(x){x$hitsDF})
-    readIds = lapply(hitsWithin, FUN = function(x){x$readIds})
     rm(granges, grangesReference, hitsWithin)
-    readIds = do.call("c",readIds)
-    hitsDF = do.call("rbind",hitsDF)
-
     hitsDF <- hitsDF %>% dplyr::select(chr, start, end, readStart, readEnd, 
-                                strand, readClassId, alignmentStrand) %>%
+                                strand, readClassId, alignmentStrand, 
+                                counts) %>%
         group_by(readClassId) %>% summarise(start = start[1], end = end[1], 
-        strand = strand[1], chr = chr[1], readCount = n(),
-        startSD = sd(readStart), endSD = sd(readEnd), 
-        readCount.posStrand = sum(alignmentStrand)) %>% 
+        strand = strand[1], chr = chr[1], readCount = sum(counts),
+        startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
+        readCount.posStrand = sum(rep(alignmentStrand,counts))) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
+    if(nrow(hitsDF)==0){
+        return(list(exonsByReadClass = GRangesList(), readIds = readIds))
+    }
     exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
         ranges = IRanges(start = hitsDF$start, end = hitsDF$end),

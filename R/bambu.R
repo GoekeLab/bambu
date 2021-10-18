@@ -88,7 +88,8 @@
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
-    discoveryOnly = FALSE, quantOnly = FALSE, verbose = FALSE) {
+    discoveryOnly = FALSE, quantOnly = FALSE, verbose = FALSE, 
+    lowMemory = FALSE) {
     if (discoveryOnly & quantOnly) {
         stop(paste0("At least 1 of discoveryOnly and quantOnly must be FALSE. 
  Rerun with either 1 or both parameters as FALSE"))
