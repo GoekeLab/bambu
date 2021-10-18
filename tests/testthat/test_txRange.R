@@ -79,6 +79,21 @@ test_that("getTranscriptScore() calculates the correct score", {
     expect_equal(rowData(se)$txScore, rowData(seExpected)$txScore)
 })
 
+test_that("prepareTranscriptModelFeatures() produces the correct data types",{
+    #TODO make a expected features dataset to compare to
+    se <- readRDS(system.file("extdata", "test_se_scored.rds", package = "bambu"))
+    features <- prepareTranscriptModelFeatures(rowData(se))
+    expect_is(features$numReads, class = 'numeric')
+    expect_is(features$geneReadProp, class = 'numeric')
+    expect_is(features$startSD, class = 'numeric')
+    expect_is(features$endSD, class = 'numeric')
+    expect_is(features$numAstart, class = 'integer')
+    expect_is(features$numAend, class = 'integer')
+    expect_is(features$numTstart, class = 'integer')
+    expect_is(features$numTend, class = 'integer')
+    expect_is(features$tx_strand_bias, class = 'numeric')
+})
+
 test_that("checkFeatures() detects insufficient samples",{
     se <- readRDS(system.file("extdata", "test_se_scored.rds", package = "bambu"))
     thresholdIndex = which(rowData(se)$readCount>=2)
