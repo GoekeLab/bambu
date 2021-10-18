@@ -36,7 +36,6 @@ Suggests:
     ggbio,
     gridExtra,
     knitr,
-    rmarkdown,
     testthat,
     BSgenome.Hsapiens.NCBI.GRCh38,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
