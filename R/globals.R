@@ -22,6 +22,26 @@ if (getRversion() >= "2.15.1") {
         "score","frame","dist","nobs","index",
         "uniqueStartLengthQuery", "value", "valueGene", "valueGeneCPM",
         "variable", "junctionMatchList", "readClass.file", 
-        "start.ptm", "verbose", ".insertGaps", ".","subjectList"
+        "start.ptm", "verbose", ".insertGaps", ".","subjectList",
+        "CPM", "FullLengthCounts", "PartialLengthCounts", "UniqueCounts",
+        "annotatedEnd", "annotatedJunction", "annotatedStart", "aval", 
+        "dObs", "endScore", "firstExonWidth", "fullTx", "junctionEndName",
+        "junctionStartName", "minEquiRC", "multi_align", "par_status",
+        "rc_width", "spliceMotif", "startScore", "theta", "totalWidth",
+        "txNumber", "txNumberExpected", "tx_id_new", "tx_len", "tx_ori",
+        "counts","intersectWidth", "newGeneId", "newTxId", 
+        "newGeneId.merge", "newTxId", "newGeneId","nTx","geneReadCount",
+        "startSD","endSD","readCount.posStrand","alignmentStrand","newExonId",
+        "newExonId.merge","newGeneId","readStart","readEnd","novelGene",
+        "numReads","numExons","numRCs","geneReadProp","numAstart", "numAend",
+        "numTstart","numTend","tx_strand_bias", "maxTxScore", 
+        "NSampleReadCount", "NSampleReadProp", "NSampleTxScore", 
+        "NSampleReadCount.combined", "NSampleReadCount.new", 
+        "NSampleReadProp.combined", "NSampleReadProp.new", 
+        "NSampleTxScore.combined", "NSampleTxScore.new", "maxTxScore.combined",
+        "maxTxScore.new" ,"txScore" ,"row_id" ,"txScore", "sample_id", 
+        "sample_name", "txScore", "readCount_tmp", "group", "row_id", "rowID", 
+        "sumReadCount", "maxTxScore", "NSampleReadCount", "NSampleReadProp", 
+        "NSampleTxScore"
     ))
 }

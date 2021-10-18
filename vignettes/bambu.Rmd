@@ -58,16 +58,12 @@ library(bambu)
 test.bam <- system.file("extdata",
     "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
     package = "bambu")
-
 fa.file <- system.file("extdata",
     "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
     package = "bambu")
-
 gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
     package = "bambu")
-
 bambuAnnotations <- prepareAnnotations(gtf.file)
-
 se <- bambu(reads = test.bam, annotations = bambuAnnotations,
     genome = fa.file)
 ```
@@ -100,11 +96,9 @@ from the *NanoporeRNASeq* package, which contains reads aligned to the first
 half of the human chromosome 22 using *minimap2*.
 ```{r}
 library(bambu)
-
 library(NanoporeRNASeq)
 data("SGNexSamples")
 SGNexSamples
-
 library(ExperimentHub)
 NanoporeData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","BAM"))
 bamFiles <- Rsamtools::BamFileList(NanoporeData[["EH3808"]],
@@ -118,12 +112,13 @@ splicing junctions in read alignments. Ideally, we recommend to use the same
 genome seqeunce file that was used for alignment to be used for bambu.
 ```{r}
 # get path to fasta file
-genomeSequence <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FASTA"))
+genomeSequenceData <- query(ExperimentHub(), c("NanoporeRNA", "GRCh38","FASTA"))
+genomeSequence <- genomeSequenceData[["EH7260"]]
 ```
 As an option, users can also choose to use a BSgenome object:
 ```{r}
 library(BSgenome.Hsapiens.NCBI.GRCh38)
-genomeSequence <- BSgenome.Hsapiens.NCBI.GRCh38
+genomeSequenceBsgenome <- BSgenome.Hsapiens.NCBI.GRCh38
 ```
 
 ### Genome annotations (bambu annotations object/ gtf file / TxDb object)
@@ -135,14 +130,12 @@ created from a gtf file:
 ```{r}
 gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
     package = "bambu")
-
 annotation <- prepareAnnotations(gtf.file)
 ```
 The annotation object can also be created from a TxDb object:
 ```{r}
 txdb <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
     package = "bambu")
-
 annotation <- prepareAnnotations(txdb)
 ```
 
@@ -297,9 +290,7 @@ sampleData = as.data.frame(colData(se)),
 design = ~sample + exon + condition:exon,
 featureID = rowData(se)$TXNAME, 
 groupID = rowData(se)$GENEID)
-
 dxr <- DEXSeq(dxd)
-
 head(dxr)
 ```
 
@@ -377,6 +368,3 @@ please cite using the following doi: 10.5281/zenodo.3900025.
 ```{r}
 sessionInfo()
 ```
-
-
-

@@ -1,176 +1,69 @@
-#' Create Junction tables from unlisted junction granges
-#' @importFrom BiocParallel bppram bpvec
+#' correct junction from prediction
+#' @param uniqueJunctions uniqueJunctions
+#' @param verbose verbose
 #' @noRd
-createJunctionTable <- function(unlisted_junction_granges,
-                                genomeSequence = NULL, ncore = 1) {
-    # License note: This function is adopted from the GenomicAlignments package 
-    if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
-        please provide fasta file or BSgenome name, see available.genomes()")
-    if (methods::is(genomeSequence, "character")) {
-        if (grepl(".fa", genomeSequence)) {
-            if (.Platform$OS.type == "windows") {
-                genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-                newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                    "[[", 1))
-                names(genomeSequence) <- newlevels
-            } else {
-                genomeSequence <- Rsamtools::FaFile(genomeSequence)
-            }
-        } else {
-            genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-        }
+junctionErrorCorrection <- function(uniqueJunctions, verbose) {
+    start.ptm <- proc.time()
+    if (sum(uniqueJunctions$annotatedJunction) > 5000 &
+        sum(!uniqueJunctions$annotatedJunction) > 4000) {
+        uniqJunctionsNmodels <-
+            findUniqueJunctions(uniqueJunctions, NULL, verbose)
+        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
+        junctionModel <- uniqJunctionsNmodels$predictSpliceSites[[2]]
+    } else {
+        junctionModel <- standardJunctionModels_temp
+        uniqJunctionsNmodels <-
+            findUniqueJunctions(uniqueJunctions, junctionModel, verbose)
+        uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
+        message("Junction correction with not enough data,
+            precalculated model is used")
     }
-    
-    if (!all(GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
-            GenomeInfoDb::seqlevels(genomeSequence))) {
-        message("not all chromosomes present in reference genome sequence,
-            ranges are dropped")
-        unlisted_junction_granges <-
-            GenomeInfoDb::keepSeqlevels(unlisted_junction_granges,
-            value = GenomeInfoDb::seqlevels(unlisted_junction_granges)[
-                GenomeInfoDb::seqlevels(unlisted_junction_granges) %in%
-                GenomeInfoDb::seqlevels(genomeSequence)],
-                pruning.mode = "coarse")
-    }
-    unstranded_unlisted_junctions <-
-        BiocGenerics::unstrand(unlisted_junction_granges)
-    uniqueJunctions <- sort(unique(unstranded_unlisted_junctions))
-    names(uniqueJunctions) <- paste("junc", seq_along(uniqueJunctions),
-                                    sep = ".")
-    uniqueJunctions <- calculateStrandedReadCounts(uniqueJunctions,
-        genomeSequence, unstranded_unlisted_junctions,
-        unlisted_junction_granges)
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Model to predict true splice sites built in ",
+                round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    start.ptm <- proc.time()
+    uniqueJunctions <- findHighConfidenceJunctions(junctions = uniqueJunctions,
+        junctionModel = junctionModel, verbose = verbose)
+    uniqueJunctions$mergedHighConfJunctionIdAll_noNA <- 
+        uniqueJunctions$mergedHighConfJunctionId
+    uniqueJunctions$mergedHighConfJunctionIdAll_noNA[
+        is.na(uniqueJunctions$mergedHighConfJunctionId)] <- 
+        names(uniqueJunctions[is.na(uniqueJunctions$mergedHighConfJunctionId)])
+    uniqueJunctions$strand.mergedHighConfJunction <- 
+        as.character(strand(
+            uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Finished correcting junction based on set of high confidence
+            junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(uniqueJunctions)
 }
 
-#' update junctions object if strand prediction improves overlap 
-#' with annotations
-#' @param annotatedIntronNumber annotatedIntronNumber
-#' @param uniqueJunctions uniqueJunctions
-#' @param uniqueJunctionsUpdate uniqueJunctionsUpdate
-#' @param uniqueAnnotatedIntrons uniqueAnnotatedIntrons
-#' @param strandStep strandStep
-#' @param verbose verbose
-#' @noRd
-updateJunctionwimprove <- function(annotatedIntronNumber, uniqueJunctions,
-    uniqueJunctionsUpdate, uniqueAnnotatedIntrons, strandStep, verbose) {
-    annotatedIntronNumberNew <- evalAnnotationOverlap(uniqueJunctionsUpdate,
-        uniqueAnnotatedIntrons, ignore.strand = FALSE)["TRUE"]
-    if (annotatedIntronNumberNew > annotatedIntronNumber & !is.na(
-        annotatedIntronNumber)) {
-        # update junctions object if strand prediction improves overlap
-        # with annotations
-        if (verbose) {
-            message("after strand correction, annotated introns:")
-            message(annotatedIntronNumberNew)
-            message(annotatedIntronNumberNew / length(uniqueJunctionsUpdate))
-        }
-        annotatedIntronNumber <- annotatedIntronNumberNew
-        uniqueJunctions <- uniqueJunctionsUpdate
-    } else {
-        strandStep <- FALSE
-    }
-    outputList <- list(
-        "strandStep" = strandStep,
-        "annotatedIntronNumber" = annotatedIntronNumber,
-        "uniqueJunctions" = uniqueJunctions
-    )
-    return(outputList)    
-}
 
-#' JUNCTIONSTRANDCORRECTION
+#' find unique junctions
 #' @noRd
-junctionStrandCorrection <- function(uniqueJunctions, unlisted_junction_granges,
-    uniqueAnnotatedIntrons, stranded, verbose = FALSE) {
-    # note: strand sometimes incorrectly infered based on motifs, might 
-    # introduce systematic errors due to alignment (biased to splice motifs)
-    allJunctionToUniqueJunctionOverlap <- 
-        findOverlaps(unlisted_junction_granges, uniqueJunctions,
-            type = "equal", ignore.strand = TRUE)
-    uniqueJunctionsUpdate <- uniqueJunctions
-    # make a copy to revert to if strand correction does not improve results
-    annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions,
-        uniqueAnnotatedIntrons,ignore.strand = FALSE)["TRUE"]
-    if (verbose) {
-        message("before strand correction, annotated introns:")
-        message(annotatedIntronNumber)
-        message(annotatedIntronNumber / length(uniqueJunctions))
-    }
-    # infer strand for each read based on strand of junctions
-    strandStep <- TRUE
-    while (strandStep) { # iterate twice to improve strand prediction w.t.
-        # mean junction counts, annotate junction strand with read strand
-        if (stranded) { # update junction strand score
-            uniqueJunctionsUpdate <- 
-                updateStrandScoreByRead(unlisted_junction_granges,
-                    uniqueJunctionsUpdate, uniqueJunctions, stranded, 
-                    allJunctionToUniqueJunctionOverlap)
-            strandScoreByRead <-
-                uniqueJunctionsUpdate$minus_score_inferedByRead -
-                uniqueJunctionsUpdate$plus_score_inferedByRead
-        } else{ 
-            strandScoreByRead <- uniqueJunctionsUpdate$minus_score -
-                uniqueJunctionsUpdate$plus_score
-        }
-        # overwrite info from motif which increases overlap with known junc
-        strand(uniqueJunctionsUpdate[strandScoreByRead < 0]) <- "+"
-        strand(uniqueJunctionsUpdate[strandScoreByRead > 0]) <- "-"
-        updatedList <- updateJunctionwimprove(annotatedIntronNumber,
-            uniqueJunctions, uniqueJunctionsUpdate, uniqueAnnotatedIntrons,
-            strandStep, verbose)
-        annotatedIntronNumber <- updatedList$annotatedIntronNumber
-        uniqueJunctions <- updatedList$uniqueJunctions
-        strandStep <- updatedList$strandStep
-    }
-    return(list(uniqueJunctions = uniqueJunctions,
-                unlisted_junctions = unlisted_junction_granges))
-}
-
-#' updateStrandScoreByRead
-#' @noRd
-updateStrandScoreByRead <- function(unlisted_junction_granges,
-    uniqueJunctionsUpdate, uniqueJunctions, stranded, 
-    allJunctionToUniqueJunctionOverlap){
-    unlisted_junction_granges_strand <-
-        as.character(strand(uniqueJunctionsUpdate)[subjectHits(
-            allJunctionToUniqueJunctionOverlap)])
-    unlisted_junction_granges_strandList <-
-        splitAsList(unlisted_junction_granges_strand,
-            mcols(unlisted_junction_granges)$id)
-    strandJunctionSum <-
-        sum(unlisted_junction_granges_strandList == "-") -
-        sum(unlisted_junction_granges_strandList == "+")
-    readStrand <- rep("*", length(unlisted_junction_granges_strandList))
-    readStrand[strandJunctionSum < 0] <- "+"
-    readStrand[strandJunctionSum > 0] <- "-"
-    strand(unlisted_junction_granges) <-
-        readStrand[match(mcols(unlisted_junction_granges)$id,
-            as.integer(names(unlisted_junction_granges_strandList)))]
-    unstranded_unlisted_junction_granges <-
-        BiocGenerics::unstrand(unlisted_junction_granges)
-    junctionMatchList <- methods::as(findMatches(uniqueJunctions,
-        unstranded_unlisted_junction_granges), "List")
-    tmp <- extractList(strand(unlisted_junction_granges),
-        junctionMatchList)
-    uniqueJunctionsUpdate$plus_score_inferedByRead <- sum(tmp == "+")
-    uniqueJunctionsUpdate$minus_score_inferedByRead <- sum(tmp == "-")
-    return(uniqueJunctionsUpdate)
+findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){
+    predictSpliceSites <- predictSpliceJunctions(
+        annotatedJunctions = uniqueJunctions,
+        junctionModel = junctionModel,
+        verbose = verbose)
+    uniqueJunctions <- predictSpliceSites[[1]][, c(
+        "score", "spliceMotif",
+        "spliceStrand", "junctionStartName", "junctionEndName",
+        "startScore", "endScore", "annotatedJunction",
+        "annotatedStart", "annotatedEnd")]
+    return(list("uniqueJunctions" = uniqueJunctions, 
+                "predictSpliceSites" = predictSpliceSites))
 }
 
 
-
-#' Evaluate annoation overlap
-#' @noRd
-evalAnnotationOverlap <- function(intronRanges, uniqueAnnotatedIntrons,
-    ignore.strand = FALSE) {
-    return(table(!is.na(GenomicRanges::match(intronRanges,
-    uniqueAnnotatedIntrons, ignore.strand = ignore.strand ))))
-}
 
 #' Test splice sites
+#' @importFrom stats model.matrix
 #' @noRd
 testSpliceSites <- function(data, splice = "Start", prime = "start", 
-    junctionModel = NULL, verbose = FALSE){ 
+                            junctionModel = NULL, verbose = FALSE){ 
     distSplice.prime <- data[, paste0("dist",splice,".",prime)]
     spliceStrand <- data[, "spliceStrand"]
     spliceStrand.prime <- data[, paste0("spliceStrand.",prime)]
@@ -179,7 +72,7 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
     annotatedSplice.prime <- data[, paste0("annotated",splice,".",prime)]
     annotatedSplice <- data[, paste0("annotated",splice)]
     predSplice.primeName <- paste0('spliceSitePrediction',splice,'.',prime)
-    if(prime == "start"){
+    if (prime == "start") {
         mySet.all <- which((distSplice.prime != 0) & (spliceStrand != "*") &
             (spliceScore > 0) & (distSplice.prime < 15))
     }else{
@@ -188,26 +81,26 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
     }
     predictionSplice.prime <- rep(NA, nrow(data))
     if (any(mySet.all)) {
-        mySet.training = 
+        mySet.training <- 
             which((annotatedSplice.prime | annotatedSplice)[mySet.all])
-        myData = data.frame(spliceScore / (spliceScore + spliceScore.prime),
+        myData <- data.frame(spliceScore / (spliceScore + spliceScore.prime),
             spliceScore, distSplice.prime, (spliceStrand.prime == "+"),
             (spliceStrand.prime == "-"), (spliceStrand == "+"))[mySet.all,]
         colnames(myData) <- paste('A',seq_len(ncol(myData)),sep = '.')
-        modelmatrix =
-            stats::model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
+        modelmatrix <- 
+            model.matrix(~A.1+A.2+A.3+A.4+A.5, data = data.frame(myData))
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
-            myResults = fitBinomialModel(labels.train = 
+            model = fitXGBoostModel(labels.train = 
                 as.integer(annotatedSplice)[mySet.all][mySet.training], 
                 data.train = modelmatrix[mySet.training,],
-                data.test = modelmatrix, show.cv = verbose, maxSize.cv = 10000)
-            predSplice.prime <- myResults[[2]]
-            predictions = myResults[[1]]
-        } else{
-            predictions = glmnet:::predict.cv.glmnet(
-                junctionModel[[predSplice.primeName]],
-                newx = modelmatrix,s = 'lambda.min')
+                show.cv = verbose, maxSize.cv = 10000)
+            
+            predSplice.prime <- model
+            predictions <- predict(model, modelmatrix)
+        } else {
+            predictions = xgboost:::predict.xgb.Booster(
+                junctionModel[[predSplice.primeName]], modelmatrix)
         }
         predictionsSplice.prime <- rep(NA, nrow(data))
         names(predictionSplice.prime) <-
@@ -228,8 +121,8 @@ createSpliceMetadata <- function(annotatedJunctions, splice){
     len <- length(annotatedJunctions)
     distdata <- data.frame(
         dist.start = c(0,(diff(start(annotatedJunctions)) *
-            as.integer((seqnames(annotatedJunctions[-1]) == 
-            seqnames(annotatedJunctions[-len]))))),
+        as.integer((seqnames(annotatedJunctions[-1]) == 
+        seqnames(annotatedJunctions[-len]))))),
         annotated.start = c(FALSE,metadata[,3][-len]),
         Score.start = c(FALSE,metadata[,1][-len]),
         spliceStrand.start = c(FALSE,metadata[,4][-len]),
@@ -243,31 +136,37 @@ createSpliceMetadata <- function(annotatedJunctions, splice){
         spliceMotif.end = c(metadata[,5][-1],FALSE))
     colnames(distdata) <- 
         c(paste0('dist',splice,'.start'),
-            paste0('annotated',splice,'.start'),
-            paste0(tolower(splice),'Score.start'),
-            'spliceStrand.start','spliceMotif.start',
-            paste0('dist',splice,'.end'), paste0('annotated',splice,'.end'),
-            paste0(tolower(splice),'Score.end'),
-            'spliceStrand.end', 'spliceMotif.end')
+          paste0('annotated',splice,'.start'),
+          paste0(tolower(splice),'Score.start'),
+          'spliceStrand.start','spliceMotif.start',
+          paste0('dist',splice,'.end'), paste0('annotated',splice,'.end'),
+          paste0(tolower(splice),'Score.end'),
+          'spliceStrand.end', 'spliceMotif.end')
     metadata <- cbind(metadata, distdata)
     return(metadata)
 }
 
 #' Predict splicing junctions
+#' @importFrom GenomicRanges GRanges
 #' @noRd
 predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
-    verbose = FALSE){
+                                   verbose = FALSE){
     spliceVec <- c("Start","End")
     ## if needed this can be a single function
     metadataList <- lapply(spliceVec, function(splice){
-        annotatedJunctionsTmp <- 
-            GenomicRanges::GRanges(seqnames = seqnames(annotatedJunctions),
-            ranges = IRanges(start = get(tolower(splice))(annotatedJunctions),
-            end = get(tolower(splice))(annotatedJunctions)), strand = '*')
-        mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
         if (splice == "Start") {
+            annotatedJunctionsTmp <- 
+            GRanges(seqnames = seqnames(annotatedJunctions),
+            ranges = IRanges(start = GenomicRanges::start(annotatedJunctions),
+            end = GenomicRanges::start(annotatedJunctions)), strand = '*')
+            mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- unique(annotatedJunctionsTmp)
-        }else{
+        } else {
+            annotatedJunctionsTmp <- 
+                GRanges(seqnames = seqnames(annotatedJunctions),
+                ranges = IRanges(start = GenomicRanges::end(annotatedJunctions),
+                end = GenomicRanges::end(annotatedJunctions)), strand = '*')
+            mcols(annotatedJunctionsTmp) <- mcols(annotatedJunctions)
             annotatedJunctionsTmp <- sort(unique(annotatedJunctionsTmp))
         }
         return(createSpliceMetadata(annotatedJunctionsTmp, splice))})
@@ -276,7 +175,7 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     preds <- lapply(spliceVec, function(splice){
         preds <- lapply(tolower(spliceVec), function(prime){
             return(testSpliceSites(metadataList[[splice]], splice = splice,
-                                    prime = prime, junctionModel, verbose))})
+                                   prime = prime, junctionModel, verbose))})
         names(preds) <- tolower(spliceVec) 
         return(preds)})
     names(preds) <- spliceVec
@@ -298,41 +197,51 @@ predictSpliceJunctions <- function(annotatedJunctions, junctionModel=NULL,
     return(list(annotatedJunctions, junctionModel))
 }
 
-#' Fit binomial model
+#' Fit xgboost model
+#' @importFrom xgboost xgboost
+#' @importFrom stats fisher.test
 #' @noRd
-fitBinomialModel <- function(labels.train, data.train, data.test, 
-    show.cv=TRUE, maxSize.cv=10000){
+fitXGBoostModel <- function(labels.train, data.train, nrounds = 50, 
+                            show.cv=TRUE, maxSize.cv=10000){
     if (show.cv) {
         mySample <- sample(seq_along(labels.train),
-            min(floor(length(labels.train)/2),maxSize.cv))
+                           min(floor(length(labels.train)/2),maxSize.cv))
         data.train.cv <- data.train[mySample,]
         labels.train.cv <- labels.train[mySample]
         data.train.cv.test <- data.train[-mySample,]
         labels.train.cv.test <- labels.train[-mySample]
-        cv.fit <- glmnet::cv.glmnet(x = data.train.cv,
-            y = labels.train.cv, family = 'binomial')
-        predictions <-
-            glmnet:::predict.cv.glmnet(cv.fit, newx = data.train.cv.test,
-            s = 'lambda.min')
+        
+        cv.fit <- xgboost(data = data.train.cv, 
+            label = labels.train.cv, nthread = 1, nrounds = nrounds, 
+            objective = "binary:logistic", 
+            eval_metric = 'error',
+            verbose = 0)
+        predictions <- predict(cv.fit, data.train.cv.test)
         message('prediction accuracy (CV) (higher for splice 
                 donor than splice acceptor)')
-        testResults <- 
-            stats::fisher.test(table(predictions > 0,labels.train.cv.test))
+        # Predictions is thresholded on 0.5 instead of 0 now to produce a 
+        # proper confusion matrix and fix an error that occurred with the
+        # argument to fisher.test()
+        testResults <- fisher.test(table(predictions > 0.5,
+                                         labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
         show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
-    cv.fit <- 
-        glmnet::cv.glmnet(x = data.train, y = labels.train,family = 'binomial')
-    predictions <-
-        glmnet:::predict.cv.glmnet(cv.fit, newx = data.test, s = 'lambda.min')
-    return(list(predictions,cv.fit))
+    
+    cv.fit <- xgboost(data = data.train, 
+                      label = labels.train, nthread=1, nrounds=nrounds, 
+                      objective = "binary:logistic", 
+                      eval_metric='error',
+                      verbose = 0)
+    
+    return(cv.fit)
 }
 
 #' if conflict (very rare) use reference junction with higher read count/score
 #' @noRd
 useRefJunctionForConflict <- function(junctions, candidateJunctionsMinus, 
-    candidateJunctionsPlus){
+                                      candidateJunctionsPlus){
     conflictJunctions <- junctions[names(candidateJunctionsMinus[which(!is.na(
         candidateJunctionsMinus$mergedHighConfJunctionId))][which(
             names(candidateJunctionsMinus)[!is.na(
@@ -369,19 +278,23 @@ useRefJunctionForConflict <- function(junctions, candidateJunctionsMinus,
 #' find junctions by plus and minus strand
 #' @noRd
 findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
-    junctionModel, verbose){
+                                  junctionModel, verbose){
     highConfJunctions <- predictSpliceJunctions(candidateJunctions[
         which(highConfidentJunctionSet)], junctionModel = junctionModel)[[1]]
     candidateJunctions$highConfJunctionPrediction = rep(FALSE,
-        length(candidateJunctions))
+                                                length(candidateJunctions))
     ## replace all NA's with 0
     spliceSitePredictionList <- 
         cbind(highConfJunctions$spliceSitePredictionStart.start,
-                highConfJunctions$spliceSitePredictionStart.end,
-                highConfJunctions$spliceSitePredictionEnd.start,
-                highConfJunctions$spliceSitePredictionEnd.end)
-    spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 2 # NA
-    setReferenceJunctions <- (apply(spliceSitePredictionList > 0,1,sum) == 4)| 
+              highConfJunctions$spliceSitePredictionStart.end,
+              highConfJunctions$spliceSitePredictionEnd.start,
+              highConfJunctions$spliceSitePredictionEnd.end)
+    # NAs set to 1 to make more sense 
+    # as spliceSitePredictionList holds probabilities
+    spliceSitePredictionList[is.na(spliceSitePredictionList)] <- 1 # NA
+    # xgboost returns probabilities so threshold is set to 0.5 instead of 1
+    setReferenceJunctions <- 
+        (apply(spliceSitePredictionList > 0.5,1,sum) == 4) |
         highConfJunctions$annotatedJunction
     candidateJunctions$highConfJunctionPrediction[highConfidentJunctionSet] <- 
         setReferenceJunctions
@@ -392,7 +305,7 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
         if (verbose) message(maxDist)
         overlapByDist = findOverlaps(candidateJunctions[which(is.na(
             mergedHighConfJunctionId))], candidateJunctions[which(
-            candidateJunctions$highConfJunctionPrediction)],
+                candidateJunctions$highConfJunctionPrediction)],
             maxgap = maxDist,type = 'equal')
         mergedHighConfJunctionId[which(is.na(mergedHighConfJunctionId))][
             queryHits(overlapByDist)] <- names(candidateJunctions)[
@@ -408,19 +321,20 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
 #' each junction originates from
 #' @noRd
 findHighConfidenceJunctions <- function(junctions, junctionModel,
-    verbose = FALSE) {
+                                        verbose = FALSE) {
     if (verbose) {
         message('reads count for all annotated junctions')
         message(sum(junctions$score[junctions$annotatedJunction]))
         message(sum(junctions$score[junctions$annotatedJunction]) /
                     sum(junctions$score))
     }
+    junctionStrand = as.character(strand(junctions))
     ##note: the output can be visualised (bed/bigbed track) 
     #calculation is based on distance and properties of next junctions
     candidateJunctionsPlus <-
-        junctions[which(strand(junctions) == '+' | strand(junctions) == '*')]
+        junctions[which(junctionStrand == '+' | junctionStrand == '*')]
     candidateJunctionsMinus <-
-        junctions[which(strand(junctions) == '-' | strand(junctions) == '*')]
+        junctions[which(junctionStrand == '-' | junctionStrand == '*')]
     highConfidentJunctionSetPlus <- candidateJunctionsPlus$score > 1 &
         candidateJunctionsPlus$spliceStrand == '+'
     highConfidentJunctionSetMinus <- candidateJunctionsMinus$score > 1 &
@@ -446,11 +360,12 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
         message('reads count for all annotated junctions after 
                 correction to reference junction')
         sumByJuncId <- tapply(junctions$score,
-                junctions$mergedHighConfJunctionId, sum)
+                            junctions$mergedHighConfJunctionId, sum)
         message(
             sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]))
-        message(sum(sumByJuncId[junctions[names(sumByJuncId)]$
-            annotatedJunction]) / sum(junctions$score))
+        message(
+            sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]) / 
+                sum(junctions$score))
     }
     return(junctions[,'mergedHighConfJunctionId'])
 }
@@ -467,7 +382,7 @@ evalutePerformance <- function(labels, scores, decreasing = TRUE){
     # TP/(TP+FP); positive predictive value;precision
     results[['precision']] <- cumsum(labels)/(seq_along(labels))
     results[['AUC']] <- sum(results[['TPR']][!duplicated( results[['FPR']],
-        fromLast = TRUE)] / sum(!duplicated( results[['FPR']],
-        fromLast = TRUE)))
+    fromLast = TRUE)] / sum(!duplicated( results[['FPR']],
+    fromLast = TRUE)))
     return(results)
 }
