@@ -136,6 +136,8 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
     return(se)
 }
 
+
+
 #' Check seqlevels for reads and annotations
 #' @importFrom GenomeInfoDb seqlevels
 #' @noRd

@@ -71,6 +71,8 @@
 #' be performed
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
+#' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
+#' is specified. This option provides an efficient way to process big samples.
 #' @details
 #' @return A list of two SummarizedExperiment object for transcript expression
 #' and gene expression.

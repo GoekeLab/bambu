@@ -1,5 +1,3 @@
-
-
 <img src="figures/transparent-bambu.png" title="Bambu" alt="Bambu">
 
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
@@ -24,6 +22,7 @@
   - [General usage](#general-usage)
   - [Use precalculated annotation objects](#use-precalculated-annotation-objects)
   - [Advanced options](#advanced-options)
+  - [Output](#description-of-output)
   - [Complementary functions](#complementary-functions)
   - [Release History](#release-history)
   - [Citation](#citation)
