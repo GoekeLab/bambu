@@ -22,7 +22,7 @@
   - [General usage](#general-usage)
   - [Use precalculated annotation objects](#use-precalculated-annotation-objects)
   - [Advanced options](#advanced-options)
-  - [Output](#description-of-output)
+  - [Details on the output ](#description-of-output)
   - [Complementary functions](#complementary-functions)
   - [Release History](#release-history)
   - [Citation](#citation)
@@ -59,7 +59,11 @@ bambuAnnotations <- prepareAnnotations(gtf.file)
 se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ```
+**Transcript discovery of samples only (no quantification)**
 
+```rscript
+bambu(reads = test.bam, annotations = txdb, genome = fa.file, quant = FALSE)
+```
 
 **Quantification of annotated transcripts and genes only (no transcript/gene discovery)**
 
@@ -118,6 +122,12 @@ bambu(reads, annotations, genome, opt.discovery = list(min.sampleNumber = 5))
 bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 0.1))
 ```
 
+- Set novel discovery rate to 50% per transcript: 
+
+```rscript
+bambu(reads, annotations, genome, opt.discovery = list(max.txNDR = 0.5))
+```
+
 **Quantification without bias correction**     
 
  The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.
@@ -136,6 +146,27 @@ bambu(reads, annotations, genome, ncore = 8)
 See [manual](docs/bambu_0.3.0.pdf) for details to customize other conditions.
 
 ---
+
+### Details on the output 
+
+***bambu*** will output different results depending on whether *quant* mode is on. 
+
+By default, *quant* is set to TRUE, 
+so ***bambu*** will generate a *SummarizedExperiment* object that contains the transcript expression estimates.  
+
+* access transcript expression estimates by ***counts()***, including a list of variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts, and theta
+    + counts: expression estimates
+    + CPM: sequencing depth normalized estimtes
+    + fullLengthCounts: estimates of reads that are mapped as full length reads for each transcript
+    + partialLengthCounts: estimates of reads that are mapped as partial length reads for each transcript
+    + uniqueCounts: counts of reads that are uniquely mapped to each transcript
+* access annotations that are matched to the transcript expression estimates by ***rowRanges()***
+* access transcript to gene id map by ***rowData()***, *eqClass* that defines the equivalent class transcripts is also reported
+
+In the case when *quant* is set to FALSE, i.e., only transcript discovery is performed, 
+***bambu*** will report the *grangeslist* of the extended annotations
+
+* access transcript to gene id map by ***mcols()***, *eqClass* that defines the equivalent class transcripts is also reported
 
 ### Complementary functions
 
@@ -182,6 +213,27 @@ writeBambuOutput(se, path = "./bambu/")
 
 ### Release History
 
+**bambu version 1.99.0**
+
+Release date: 2021-10-18
+
+Major Changes:
+ 
+- implemented a machine learning model to estimate transcript-level novel discovery rate
+- implemented full length estimates, partial length estimates and unique read counts in final output
+- improved the performance when extend annotations with simplified codes
+- improved the performance when large amounts of annotations are missing.
+- implemented a lowMemory option to allow more efficient processing for very large samples (>100million reads)
+
+
+Minor fixes:
+
+- remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) 
+and directly references the functions that should be used instead. 
+- bug fix when a fa file ois provdied as a string variable to non-windows system
+- bug fix when no single exon read class in provided samples
+- nug fix when no splice overlaps found between read class and annotations
+
 **bambu version 1.0.2**
 
 Release date: 2020-11-10
@@ -225,6 +277,6 @@ A manuscript describing bambu is currently in preparation. If you use bambu for 
 
 ### Contributors
 
-This package is developed and maintained by [Ying Chen](https://github.com/cying111), [Yuk Kei Wan](https://github.com/yuukiiwa), and  [Jonathan Goeke](https://github.com/jonathangoeke) at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
+This package is developed and maintained by [Ying Chen](https://github.com/cying111), [Andre Sim](https://github.com/andredsim), [Yuk Kei Wan](https://github.com/yuukiiwa), and  [Jonathan Goeke](https://github.com/jonathangoeke) at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
 
 <img src="figures/bambu_design_highres.png" title="Bambu" alt="Bambu">

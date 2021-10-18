@@ -1,18 +1,19 @@
-bambu v2.0.0 (Change date: 2021-10-27)
+bambu v1.99.0 (Change date: 2021-10-18)
 =============
 Major Changes:
     * Implemented a machine learning model to estimate transcript-level novel discovery rate
     * Implemented full length estimates, partial length estimates and unique read counts in final output
     * Improved the performance when extend annotations with simplified codes
-	* Improved the performance when large amounts of annotations are missing.
+    * Improved the performance when large amounts of annotations are missing.
+    * Implemented a lowMemory option to allow more efficient processing for very large samples (>100million reads)
 
 
 Minor fixes:
-	* Remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) 
+    * Remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) 
 and directly references the functions that should be used instead. 
     * Fixed the error when a fa file ois provdied as a string variable to non-windows system
-	* Fixed the error when no single exon read class in provided samples
-	* Fixed the bug when no splice overlaps found between read class and annotations
+    * Fixed the error when no single exon read class in provided samples
+    * Fixed the bug when no splice overlaps found between read class and annotations
 
 bambu v1.0.2 (Change date: 2020-11-10)
 ==============
