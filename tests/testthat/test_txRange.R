@@ -67,6 +67,17 @@ test_that("countPolyATerminals",{
     expect_equal(rowData(se)$numTend,rowData(seExpected)$numTend)
 })
 
+test_that("getTranscriptScore() calculates the correct score", {
+    seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+        package = "bambu"))
+    se=seExpected
+    thresholdIndex = which(rowData(se)$readCount >= 2)
+    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
+                                defaultModels, fit=TRUE)
+    rowData(se)$txScore = rep(NA,nrow(se))
+    rowData(se)$txScore[thresholdIndex] = txScore
+    expect_equal(rowData(se)$txScore, rowData(seExpected)$txScore)
+})
 
 test_that("checkFeatures() detects insufficient samples",{
     se <- readRDS(system.file("extdata", "test_se_scored.rds", package = "bambu"))
