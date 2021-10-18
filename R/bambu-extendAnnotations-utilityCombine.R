@@ -53,7 +53,7 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
     }, BPPARAM = bpParameters)
     combinedFeatureTibble <- 
         sequentialCombineFeatureTibble(combinedFeatureTibbleList, 
-                                        indexList = NULL, intraGroup = FALSE) 
+            indexList = NULL, intraGroup = FALSE) 
     combinedFeatureTibble <- updateStartEndReadCount(combinedFeatureTibble)
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all
@@ -185,14 +185,13 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
             intronStarts, intronEnds, confidenceType, readCount, geneReadProp, 
             txScore, numExons) %>%
         filter(readCount >= 1, # only use readCount>1 and highconfidence reads
-                confidenceType == "highConfidenceJunctionReads") %>% 
+            confidenceType == "highConfidenceJunctionReads") %>% 
         mutate(NSampleReadCount = (readCount >= min.readCount), 
-                # number of samples passed read count criteria
-                NSampleReadProp = (geneReadProp >= min.readFractionByGene),
-                NSampleTxScore = ((txScore >= min.txScore.multiExon 
-                    & numExons >= 2) | 
-                (txScore >= min.txScore.singleExon & numExons == 1)), 
-                maxTxScore = txScore) %>%
+            # number of samples passed read count criteria
+            NSampleReadProp = (geneReadProp >= min.readFractionByGene),
+            NSampleTxScore = ((txScore > min.txScore.multiExon & numExons >= 2) |
+            (txScore > min.txScore.singleExon & numExons == 1)), 
+            maxTxScore = txScore) %>%
         select(all_of(c(group_var, sum_var))) 
     return(featureTibble)
 }
@@ -309,9 +308,10 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                     txScore = weighted.mean(txScore, readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
         summarise(readCount = sum(readCount),
+                    maxTxScore = txScore,
                     NSampleReadCount = sum(readCount >= min.readCount), 
                     NSampleReadProp = sum(geneReadProp >= 
                                             min.readFractionByGene),
-                    NSampleTxScore = sum(txScore >= min.txScore.singleExon))
+                    NSampleTxScore = sum(maxTxScore > min.txScore.singleExon))
     return(newUnsplicedTibble)
 }

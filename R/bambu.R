@@ -93,7 +93,8 @@
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
-    discovery = TRUE, quant = TRUE, verbose = FALSE) {
+    discovery = TRUE, quant = TRUE, verbose = FALSE, 
+    lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
     if(is.null(annotations)) annotations = GRangesList()

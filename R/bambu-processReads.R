@@ -15,7 +15,8 @@
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
-    stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL)) {
+    stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
+    lowMemory=FALSE) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
@@ -46,7 +47,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
-        fitReadClassModel = fitReadClassModel, verbose = verbose)},
+        fitReadClassModel = fitReadClassModel, verbose = verbose,
+        lowMemory = lowMemory)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")
@@ -59,7 +61,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
-    fitReadClassModel = TRUE,  verbose = FALSE) {
+    fitReadClassModel = TRUE,  verbose = FALSE, lowMemory = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
@@ -79,18 +81,26 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     annotations <- keepSeqlevels(annotations, value = refSeqLevels,
         pruning.mode = "coarse")
     }
-    # create error and strand corrected junction tables
-    unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
-    uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-        annotations,genomeSequence, stranded = stranded, verbose = verbose)
-    # create SE object with reconstructed readClasses
-    se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
-        uniqueJunctions, runName = names(bam.file)[1],
-        annotations, stranded, verbose)
+    # construct read classes for each chromosome seperately 
+    if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
+        annotations, stranded, verbose,bam.file)
+    else { 
+        unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
+        uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
+                annotations,genomeSequence, stranded = stranded, verbose = verbose)
+        # create SE object with reconstructed readClasses
+        se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
+            uniqueJunctions, runName = names(bam.file)[1],
+            annotations, stranded, verbose)
+    }
+    rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
+    # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se,genomeSequence, annotations, 
-        defaultModels = defaultModels, fit = fitReadClassModel,
-        min.readCount = min.readCount, verbose = verbose)
+                             defaultModels = defaultModels,
+                             fit = fitReadClassModel,
+                             min.readCount = min.readCount,
+                             verbose = verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
             "_readClassSe.rds")
@@ -105,6 +115,24 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         saveRDS(se, file = readClassFile)
         se <- readClassFile
     }
+    return(se)
+}
+
+lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, 
+    annotations, stranded, verbose,bam.file){
+    readGrgList = split(readGrgList, getChrFromGrList(readGrgList))
+    se = lapply(names(readGrgList),FUN = function(i){
+        # create error and strand corrected junction tables
+        unlisted_junctions <- unlistIntrons(readGrgList[[i]], use.ids = TRUE)
+        uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
+            annotations,genomeSequence, stranded = stranded, verbose = verbose)
+        se.temp <- isore.constructReadClasses(readGrgList[[i]], 
+            unlisted_junctions, uniqueJunctions, runName = names(bam.file)[1],
+            annotations, stranded, verbose)
+        return(se.temp)
+    })
+    se = do.call("rbind",se)
+    rownames(se) = paste("rc", seq_len(nrow(se)), sep = ".")
     return(se)
 }
 

@@ -6,7 +6,7 @@ test_that("isore.constructReadClasses completes successfully", {
         "readGrgList_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
         package = "bambu"
     ))
-    annotations <- readRDS(system.file("extdata",
+    gr <- readRDS(system.file("extdata",
         "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
         package = "bambu"
     ))
@@ -26,37 +26,37 @@ test_that("isore.constructReadClasses completes successfully", {
     ))
     
    
-    seqlevelCheckReadsAnnotation(readGrgList, annotations)
-    genomeSequence <- checkInputSequence(genome)
-    #check seqlevels for consistency, drop ranges not present in genomeSequence
-    refSeqLevels <- seqlevels(genomeSequence)
-    if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
+    genomeSequence <- checkInputSequence(genomeSequence)
+    refSeqLevels <-  GenomeInfoDb::seqlevels(genomeSequence)
+    if (!all(GenomeInfoDb::seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
-        refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
-        readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
-                                     pruning.mode = "coarse")
+        readGrgList <- GenomeInfoDb::keepSeqlevels(readGrgList,
+            value =  refSeqLevels,
+            pruning.mode = "coarse")
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
-    if (!all(seqlevels(annotations) %in% refSeqLevels)) {
-        message("not all chromosomes from annotations present in reference genome 
+    if (!all(GenomeInfoDb::seqlevels(gr) %in% refSeqLevels)) {
+    message("not all chromosomes from annotations present in reference genome 
     sequence, annotations without reference chrosomomse sequence are dropped")
-        annotations <- keepSeqlevels(annotations, value = refSeqLevels,
-                                     pruning.mode = "coarse")
+    gr <- GenomeInfoDb::keepSeqlevels(gr,
+        value = refSeqLevels,pruning.mode = "coarse")
     }
-    # create error and strand corrected junction tables
     unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
     uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-                                                     annotations,genomeSequence, stranded = stranded, verbose = verbose)
-    # create SE object with reconstructed readClasses
-    se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
-                                     uniqueJunctions, runName =  "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000",
-                                     annotations, stranded = FALSE, verbose)
-    GenomeInfoDb::seqlevels(se) <- refSeqLevels
-    seReadClassUnstranded <- scoreReadClasses(se,genomeSequence, annotations, 
-                           defaultModels = defaultModels, fit = TRUE,
-                           min.readCount = min.readCount, verbose = verbose)
+        annotations = gr,genomeSequence)
+    
+    seReadClassUnstranded <- isore.constructReadClasses(
+        readGrgList = readGrgList,
+        unlisted_junctions, 
+        uniqueJunctions,
+        runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000",
+        annotations = gr,
+        stranded = FALSE,
+        verbose = FALSE
+    )
+    GenomeInfoDb::seqlevels(seReadClassUnstranded) <- refSeqLevels
     ## in case of testing on Mac
     names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronStarts) <-
         names(seReadClassUnstrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
@@ -64,17 +64,17 @@ test_that("isore.constructReadClasses completes successfully", {
         names(seReadClassUnstrandedExpected@rowRanges@elementMetadata@listData$intronEnds) <- NULL
     expect_equal(seReadClassUnstranded, seReadClassUnstrandedExpected)
 
-    se <- isore.constructReadClasses(readGrgList = readGrgList,
-                                     unlisted_junctions, 
-                                     uniqueJunctions,
-                                     runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_Stranded",
-                                     annotations,
-                                     stranded = TRUE,
-                                     verbose = FALSE)
-    GenomeInfoDb::seqlevels(se) <- refSeqLevels
-    seReadClassStranded <- scoreReadClasses(se,genomeSequence, annotations, 
-                           defaultModels = defaultModels, fit = TRUE,
-                           min.readCount = min.readCount, verbose = verbose)
+
+    seReadClassStranded <- isore.constructReadClasses(
+        readGrgList = readGrgList,
+        unlisted_junctions, 
+        uniqueJunctions,
+        runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_Stranded",
+        annotations = gr,
+        stranded = TRUE,
+        verbose = FALSE
+    )
+    GenomeInfoDb::seqlevels(seReadClassStranded) <- refSeqLevels
     names(seReadClassStranded@rowRanges@elementMetadata@listData$intronStarts) <- 
         names(seReadClassStrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
     names(seReadClassStranded@rowRanges@elementMetadata@listData$intronEnds) <- 
@@ -100,34 +100,27 @@ test_that("isore.combineTranscriptCandidates completes successfully", {
         "seIsoReCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds",
         package = "bambu"
     ))
-    rcFileList <- system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
-    
-    bpParameters <- setBiocParallelParameters(reads = NULL, readClass.file = rcFileList,
-                                              ncore = 1, verbose = FALSE)
-    seIsoReRef <- isore.combineTranscriptCandidates(readClassList = list(seReadClass1),
-                                                    stranded = FALSE,min.readCount = 2,
-                                                    min.txScore.multiExon = 0,
-                                                    min.txScore.singleExon = 1,
-                                                    min.readFractionByGene = 0.05,
-                                                    verbose = FALSE, bpParameters = bpParameters)
+
+    seIsoReRef <- isore.combineTranscriptCandidates(
+        readClassSe = seReadClass1,
+        readClassSeRef = NULL,
+        stranded = FALSE,
+        verbose = FALSE
+    )
     expect_equal(seIsoReRef, seIsoReRefExpected)
 
-    rcFileList <- c(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"),
-                    system.file("extdata", "seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    bpParameters <- setBiocParallelParameters(reads = NULL, readClass.file = rcFileList,
-                                              ncore = 1, verbose = FALSE)
-    seIsoReCombined <- isore.combineTranscriptCandidates(readClassList = list(seReadClass1,seReadClass2),
-                                                         stranded = FALSE,
-                                                         min.readCount = 2,
-                                                         min.txScore.multiExon = 0,
-                                                         min.txScore.singleExon = 1,
-                                                         min.readFractionByGene = 0.05,
-                                                         verbose = FALSE, bpParameters = bpParameters)
+    seIsoReCombined <- isore.combineTranscriptCandidates(
+        readClassSe = seReadClass2,
+        readClassSeRef = seIsoReRef,
+        stranded = FALSE,
+        verbose = FALSE
+    )
 
     expect_equal(seIsoReCombined, seIsoReCombinedExpected)
-    expect_named(seIsoReCombined,
-                 c('intronStarts', 'intronEnds', 'chr', 'strand', 'maxTxScore', 
-                  'NSampleReadCount', 'NSampleReadProp', 'NSampleTxScore', 'start', 'end', 'readCount', 'confidenceType') 
+    expect_named(assays(seIsoReCombined), c("counts", "start", "end"))
+    expect_named(
+        rowData(seIsoReCombined),
+        c("chr", "start", "end", "strand", "intronStarts", "intronEnds", "confidenceType")
     )
 })
 
@@ -148,13 +141,16 @@ test_that("isore.extendAnnotations completes successfully", {
     ))
 
     extendedAnnotations <- isore.extendAnnotations(
-        combinedTranscripts=seIsoReCombined,
-        annotationGrangesList=gr,
-        remove.subsetTx = TRUE, min.sampleNumber = 1, max.txNDR = 0.1, 
-        min.exonDistance = 35, min.exonOverlap = 10,
-        min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-        prefix='',
-        verbose=FALSE
+        se = seIsoReCombined,
+        annotationGrangesList = gr,
+        remove.subsetTx = TRUE,
+        min.readCount = 2,
+        min.readFractionByGene = 0.05,
+        min.sampleNumber = 1,
+        min.exonDistance = 35,
+        min.exonOverlap = 10,
+        prefix = "",
+        verbose = FALSE
     )
     expect_equal(extendedAnnotations, extendedAnnotationsExpected)
 })

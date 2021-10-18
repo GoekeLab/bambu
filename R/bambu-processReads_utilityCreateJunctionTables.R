@@ -81,6 +81,7 @@ createJunctionTable <- function(unlisted_junctions,
     minus_score <- countMatches(uniqueJunctions,
         unlisted_junctions[strand(unlisted_junctions) == '-'], 
         ignore.strand = TRUE)
+
     junctionSeqStart <- BSgenome::getSeq(genomeSequence,
         IRanges::shift(flank(uniqueJunctions,width = 2), 2))#shift from IRanges
     junctionSeqEnd <- BSgenome::getSeq(genomeSequence,
