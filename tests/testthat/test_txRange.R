@@ -50,10 +50,17 @@ test_that("countPolyATerminals",{
     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
     genomeSequence <- readRDS(system.file("extdata", "test_genomeSequence.rds", 
         package = "bambu"))
-    seExpected = readRDS(system.file("extdata", 
-        "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds", 
-        package = "bambu"))
-    se = countPolyATerminals(se, genomeSequence)
+    seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+                                     package = "bambu"))
+    thresholdIndex = which(rowData(se)$readCount>=2)
+    polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), genomeSequence)
+    newRowData = data.frame(numAstart = polyATerminals$numAstart,
+                            numAend = polyATerminals$numAend,
+                            numTstart = polyATerminals$numTstart,
+                            numTend = polyATerminals$numTend)
+    rowData(se)[names(newRowData)] = NA
+    rowData(se)[thresholdIndex,names(newRowData)] = newRowData
+    
     expect_equal(rowData(se)$numAstart,rowData(seExpected)$numAstart)
     expect_equal(rowData(se)$numAend,rowData(seExpected)$numAend)
     expect_equal(rowData(se)$numTstart,rowData(seExpected)$numTstart)
