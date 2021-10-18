@@ -17,29 +17,34 @@ test_that("txRange generates a gene and transcript score",{
 })
 
 
-test_that("calculateGeneProportion",{
+test_that("calculateGeneProportion()",{
     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
     annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
         package = "bambu"))
-    seExpected = readRDS(system.file("extdata", 
-        "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds", 
+    seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
         package = "bambu"))
     rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-    se = calculateGeneProportion(se)
-    expect_equal(rowData(se)$totalGeneReadProp, 
-        rowData(seExpected)$totalGeneReadProp)
+    countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
+                                        geneIds=mcols(se)$GENEID)
+    expect_equal(countsTBL$geneReadProp, 
+        rowData(seExpected)$geneReadProp)
 })
 
-# test_that("isReadClassEqual",{
-#     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
-#     annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
-#         package = "bambu"))
-#     seExpected = readRDS(system.file("extdata", 
-#         "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds", 
-#         package = "bambu"))
-#     expect_equal(isReadClassEqual(rowRanges(se), annotations),
-#         rowData(seExpected)$equal)
-# })
+test_that("isReadClassCompatible() classifies RCs correctly",{
+    se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
+    annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
+        package = "bambu"))
+    seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+        package = "bambu"))
+    thresholdIndex = which(rowData(se)$readCount>=2)
+    compTable = isReadClassCompatible(rowRanges(se[thresholdIndex,]), annotations)
+    newRowData = data.frame(equal = compTable$equal,
+                            compatible = compTable$compatible)
+    rowData(se)[names(newRowData)] = NA
+    rowData(se)[thresholdIndex,names(newRowData)] = newRowData
+    expect_equal(rowData(se)$equal,rowData(seExpected)$equal)
+    expect_equal(rowData(se)$compatible, rowData(seExpected)$compatible)
+})
 
 test_that("countPolyATerminals",{
     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
