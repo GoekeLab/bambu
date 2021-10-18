@@ -15,7 +15,7 @@
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
-    stranded=FALSE, verbose=FALSE, min.readCount = 2, fitReadClassModel = T,
+    stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
     lowMemory=FALSE) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
@@ -39,6 +39,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         reads <- BamFileList(reads, yieldSize = yieldSize)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     }
+    min.readCount = isoreParameters[["min.readCount"]]
+    fitReadClassModel = isoreParameters[["fitReadClassModel"]]
     if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
@@ -68,8 +70,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
         refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
-        readGrgList <- keepSeqlevels(readGrgList,
-            value =  refSeqLevels,
+        readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
             pruning.mode = "coarse")
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
@@ -77,11 +78,12 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     if (!all(seqlevels(annotations) %in% refSeqLevels)) {
     message("not all chromosomes from annotations present in reference genome 
     sequence, annotations without reference chrosomomse sequence are dropped")
-    annotations <- keepSeqlevels(annotations,
-        value = refSeqLevels,pruning.mode = "coarse")
+    annotations <- keepSeqlevels(annotations, value = refSeqLevels,
+        pruning.mode = "coarse")
     }
     # construct read classes for each chromosome seperately 
-    if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList)
+    if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
+        annotations, stranded, verbose,bam.file)
     else { 
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
@@ -93,7 +95,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     }
     rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
-
     # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se,genomeSequence, annotations, 
                              defaultModels = defaultModels,
@@ -105,8 +106,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             "_readClassSe.rds")
         if (file.exists(readClassFile)) {
             show(paste(readClassFile, "exists, will be overwritten"))
-            # warning is not printed, use show in addition
-            warning(paste(readClassFile, "exists, will be overwritten"))
+            warning(readClassFile, "exists, will be overwritten")
         } else {
             readClassFile <- BiocFileCache::bfcnew(BiocFileCache::BiocFileCache(
                 readClass.outputDir, ask = FALSE),
@@ -118,15 +118,16 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     return(se)
 }
 
-lowMemoryConstructReadClasses <- function(readGrgList){
+lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, 
+    annotations, stranded, verbose,bam.file){
     readGrgList = split(readGrgList, getChrFromGrList(readGrgList))
     se = lapply(names(readGrgList),FUN = function(i){
         # create error and strand corrected junction tables
         unlisted_junctions <- unlistIntrons(readGrgList[[i]], use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
             annotations,genomeSequence, stranded = stranded, verbose = verbose)
-        se.temp <- isore.constructReadClasses(readGrgList[[i]], unlisted_junctions, 
-            uniqueJunctions, runName = names(bam.file)[1],
+        se.temp <- isore.constructReadClasses(readGrgList[[i]], 
+            unlisted_junctions, uniqueJunctions, runName = names(bam.file)[1],
             annotations, stranded, verbose)
         return(se.temp)
     })
@@ -141,7 +142,7 @@ lowMemoryConstructReadClasses <- function(readGrgList){
 seqlevelCheckReadsAnnotation <- function(reads, annotations){
     if (length(intersect(seqlevels(reads),
         seqlevels(annotations))) == 0)
-        warning("Warning: no annotations with matching seqlevel styles, 
+        warning("no annotations with matching seqlevel styles, 
         all missing chromosomes will use de-novo annotations")
     if (!all(seqlevels(reads) %in% 
         seqlevels(annotations))) 
