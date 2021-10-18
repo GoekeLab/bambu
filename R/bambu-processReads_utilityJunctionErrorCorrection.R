@@ -40,7 +40,6 @@ junctionErrorCorrection <- function(uniqueJunctions, verbose) {
     return(uniqueJunctions)
 }
 
-
 #' find unique junctions
 #' @noRd
 findUniqueJunctions <- function(uniqueJunctions, junctionModel, verbose){

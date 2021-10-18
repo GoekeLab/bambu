@@ -14,6 +14,7 @@ transcriptToGeneExpression <- function(se) {
     counts <- as.data.table(assays(se)$counts, keep.rownames = TRUE)
     runnames <- colnames(counts)[-1]
     colnames(counts)[-1] <- rename_duplicatedNames(runnames)
+    colData(se)@rownames <- rename_duplicatedNames(colData(se)@rownames)
     counts <- melt(counts, id.vars = "rn", measure.vars = colnames(counts)[-1])
     setnames(counts, "rn", "TXNAME")
     rowDataSe <- as.data.table(rowData(se))
