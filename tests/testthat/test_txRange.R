@@ -16,23 +16,6 @@ test_that("txRange generates a gene and transcript score",{
     expect_equal(rowData(se)$txScore, rowData(seExpected)$txScore)
 })
 
-# test_that("addRowData adds all the correct rowData features",{
-#     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
-#     genomeSequence <- readRDS(system.file("extdata", "test_genomeSequence.rds", 
-#         package = "bambu"))
-#     annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
-#         package = "bambu")) 
-#     se = addRowData(se, genomeSequence, annotations)
-#     expect_is(rowData(se)$numExons, class = 'numeric')
-#     expect_is(rowData(se)$equal, class = 'logical')
-#     expect_is(rowData(se)$GENEID, class = 'character')
-#     expect_is(rowData(se)$novelGene, class = 'logical')
-#     expect_is(rowData(se)$totalGeneReadProp, class = 'numeric')
-#     expect_is(rowData(se)$numAstart, class = 'integer')
-#     expect_is(rowData(se)$numAend, class = 'integer')
-#     expect_is(rowData(se)$numTstart, class = 'integer')
-#     expect_is(rowData(se)$numTend, class = 'integer')
-# })
 
 test_that("calculateGeneProportion",{
     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
@@ -73,23 +56,22 @@ test_that("countPolyATerminals",{
 })
 
 
-# ## same for this one, is it still existing in the code, can't seem to find it
-# test_that("getAgnosticFeatures",{
-#     #TODO make a expected features dataset to compare to
-#     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
-#     features <- as.data.frame(getAgnosticFeatures(se))
-#     expect_is(features$numReads, class = 'numeric')
-#     expect_is(features$SD, class = 'numeric')
-#     expect_is(features$SDend, class = 'numeric')
-#     expect_is(features$geneReadProp, class = 'numeric')
-#     expect_is(features$tx_strand_bias, class = 'numeric')
-#     expect_is(features$numAstart, class = 'numeric')
-#     expect_is(features$numAend, class = 'numeric')
-#     expect_is(features$numTstart, class = 'numeric')
-#     expect_is(features$numTend, class = 'numeric')
-#     expect_is(features$transcriptProp, class = 'numeric')
-#     expect_is(features$transcriptPropMin, class = 'numeric')
-# })
+test_that("checkFeatures() detects insufficient samples",{
+    se <- readRDS(system.file("extdata", "test_se_scored.rds", package = "bambu"))
+    thresholdIndex = which(rowData(se)$readCount>=2)
+    features <- prepareTranscriptModelFeatures(rowData(se)[thresholdIndex,])
+    trainable = checkFeatures(features)
+    #normal se
+    expect_equal(trainable, FALSE)
+    #TODO se has all TRUE labels
+    expect_equal(trainable, FALSE)
+    #TODOse with no TRUE labels
+    expect_equal(trainable, FALSE)
+    #TODO se with not enough points
+    expect_equal(trainable, FALSE)
+    #TODO se with not enough true/false labels
+    expect_equal(trainable, FALSE)
+})
 
 test_that("assignGeneIds",{
     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
@@ -101,17 +83,3 @@ test_that("assignGeneIds",{
     expect_equal(assignGeneIds(rowRanges(se), annotations),
         rowData(seExpected)$GENEID)
 })
-
-
-# ## is this still use?? should it be prepareTranscriptModelFeatures??
-# test_that("prepareGeneModelFeatures",{
-#     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
-#     geneFeatures <- as.data.frame(prepareGeneModelFeatures(se))
-#     expect_is(features$numReadsLog, class = 'numeric')
-#     expect_is(features$strand_bias, class = 'numeric')
-#     expect_is(features$numRCs, class = 'numeric')
-#     expect_is(features$numNonSubsetRCs, class = 'numeric')
-#     expect_is(features$numExons, class = 'numeric')
-#     expect_is(features$isSpliced, class = 'numeric')
-#      expect_is(features$highConfidence, class = 'numeric')
-# })
