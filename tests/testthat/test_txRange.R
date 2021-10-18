@@ -115,9 +115,8 @@ test_that("assignGeneIds",{
     se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
     annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
         package = "bambu"))
-    seExpected = readRDS(system.file("extdata", 
-        "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds", 
-        package = "bambu"))
+    seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+                                     package = "bambu"))
     expect_equal(assignGeneIds(rowRanges(se), annotations),
         rowData(seExpected)$GENEID)
 })
