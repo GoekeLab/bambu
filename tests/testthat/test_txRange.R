@@ -1,14 +1,19 @@
 context("txRange, full length transcript prediction")
 
 test_that("txRange generates a gene and transcript score",{
-    se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
-    genomeSequence <- readRDS(system.file("extdata", "test_genomeSequence.rds", 
+    se <- readRDS(system.file("extdata", "test_se.rds", 
         package = "bambu"))
-    annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
+    genomeSequence <- readRDS(system.file("extdata", 
+        "test_genomeSequence.rds", package = "bambu"))
+    annotations <- readRDS(system.file("extdata", 
+        "test_annotations.rds", package = "bambu"))
+    se = scoreReadClasses(se, genomeSequence, annotations, defaultModels)
+
+    seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
         package = "bambu"))
-    se = scoreReadClasses(se, genomeSequence, annotations)
-    expect_is(rowData(se)$geneScore, class = 'numeric')
+
     expect_is(rowData(se)$txScore, class = 'numeric')
+    expect_equal(rowData(se)$txScore, rowData(seExpected)$txScore)
 })
 
 # test_that("addRowData adds all the correct rowData features",{
