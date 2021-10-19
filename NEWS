@@ -12,7 +12,7 @@ Minor fixes:
     * Remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) 
 and directly references the functions that should be used instead. 
     * Fixed the error when a .fa file is provided as a string variable in non-windows system
-    * Fixed the error when no single exon read class in provided samples
+    * Fixed the error when no single exon read class is provided in any samples
     * Fixed the bug when no splice overlaps found between read class and annotations
 
 bambu v1.0.2 (Change date: 2020-11-10)
