@@ -158,7 +158,7 @@ so ***bambu*** will generate a *SummarizedExperiment* object that contains the t
     + counts: expression estimates
     + CPM: sequencing depth normalized estimates
     + fullLengthCounts: estimates of read counts mapped as full length reads for each transcript
-    + partialLengthCounts: estimates of reads that are mapped as partial length reads for each transcript
+    + partialLengthCounts: estimates of read counts mapped as partial length reads for each transcript
     + uniqueCounts: counts of reads that are uniquely mapped to each transcript
 * access annotations that are matched to the transcript expression estimates by ***rowRanges()***
 * access transcript to gene id map by ***rowData()***, *eqClass* that defines the equivalent class transcripts is also reported
