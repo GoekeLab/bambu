@@ -151,7 +151,7 @@ bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
 bambu(reads, annotations, genome, ncore = 8)
 ```
 
-See [manual](docs/bambu_0.3.0.pdf) for details to customize other conditions.
+See [manual](docs/bambu_1.99.0.pdf) for details to customize other conditions.
 
 ---
 
