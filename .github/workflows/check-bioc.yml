@@ -1,0 +1,13 @@
+## Read more about GitHub actions the features of this GitHub Actions workflow
+## at https://lcolladotor.github.io/biocthis/articles/biocthis.html#use_bioc_github_action
+##
+## For more details, check the biocthis developer notes vignette at
+## https://lcolladotor.github.io/biocthis/articles/biocthis_dev_notes.html
+##
+## You can add this workflow to other packages using:
+## > biocthis::use_bioc_github_action()
+##
+## Since https://github.com/lcolladotor/biocthis/pull/11, the following option
+## is no longer supported:
+## > usethis::use_github_action("check-bioc", "https://bit.ly/biocthis_gha", "check-bioc.yml")
+## without having to install biocthis.
