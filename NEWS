@@ -3,10 +3,9 @@ bambu v1.99.0 (Change date: 2021-10-18)
 Major Changes:
     * Implemented a machine learning model to estimate transcript-level novel discovery rate
     * Implemented full length estimates, partial length estimates and unique read counts in final output
-    * Improved the performance when extend annotations with simplified codes
+    * Improved the performance when extending annotations with simplified code
     * Improved the performance when large amounts of annotations are missing.
-    * Implemented a lowMemory option to allow more efficient processing for very large samples (>100million reads)
-
+    * Implemented a lowMemory option to reduce the memory requirements for very large samples (>100 million reads)
 
 Minor fixes:
     * Remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) 

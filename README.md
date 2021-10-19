@@ -77,6 +77,13 @@ For larger sample numbers we recommend to write the processed data to a file:
 ```rscript
 bambu(reads = test.bam, rcOutDir = "./bambu/", annotations = bambuAnnotations, genome = fa.file)
 ```
+
+For very large samples (>100 million reads) where memory is limiting we recommend running Bambu in lowMemory mode:
+
+```rscript
+bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file, lowMemory = TRUE)
+```
+
 ---
 
 
@@ -122,7 +129,7 @@ bambu(reads, annotations, genome, opt.discovery = list(min.sampleNumber = 5))
 bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 0.1))
 ```
 
-- Set novel discovery rate to 50% per transcript: 
+- Set novel transcript discovery rate to 50% of the detected transcripts (lower is more): 
 
 ```rscript
 bambu(reads, annotations, genome, opt.discovery = list(max.txNDR = 0.5))
@@ -165,8 +172,6 @@ so ***bambu*** will generate a *SummarizedExperiment* object that contains the t
 
 In the case when *quant* is set to FALSE, i.e., only transcript discovery is performed, 
 ***bambu*** will report the *grangeslist* of the extended annotations
-
-* access transcript to gene id map by ***mcols()***, *eqClass* that defines the equivalent class transcripts is also reported
 
 ### Complementary functions
 
@@ -218,12 +223,12 @@ writeBambuOutput(se, path = "./bambu/")
 Release date: 2021-10-18
 
 Major Changes:
- 
-- implemented a machine learning model to estimate transcript-level novel discovery rate
-- implemented full length estimates, partial length estimates and unique read counts in final output
-- improved the performance when extend annotations with simplified codes
-- improved the performance when large amounts of annotations are missing.
-- implemented a lowMemory option to allow more efficient processing for very large samples (>100million reads)
+
+    * Implemented a machine learning model to estimate transcript-level novel discovery rate
+    * Implemented full length estimates, partial length estimates and unique read counts in final output
+    * Improved the performance when extending annotations with simplified code
+    * Improved the performance when large amounts of annotations are missing.
+    * Implemented a lowMemory option to reduce the memory requirements for very large samples (>100 million reads)
 
 
 Minor fixes:
