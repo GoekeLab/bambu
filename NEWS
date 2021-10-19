@@ -8,8 +8,7 @@ Major Changes:
     * Implemented a lowMemory option to reduce the memory requirements for very large samples (>100 million reads)
 
 Minor fixes:
-    * Remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) 
-and directly references the functions that should be used instead. 
+    * Remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) and directly references the functions that should be used instead. 
     * Fixed the error when a .fa file is provided as a string variable in non-windows system
     * Fixed the error when no single exon read class is provided in any samples
     * Fixed the bug when no splice overlap is found between read classes and annotations
