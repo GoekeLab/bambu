@@ -110,13 +110,3 @@ test_that("checkFeatures() detects insufficient samples",{
   #TODO se with not enough true/false labels
   expect_equal(trainable, FALSE)
 })
-
-test_that("assignGeneIds",{
-  se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
-  annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
-                                     package = "bambu"))
-  seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
-                                   package = "bambu"))
-  expect_equal(assignGeneIds(rowRanges(se), annotations),
-               rowData(seExpected)$GENEID)
-})
