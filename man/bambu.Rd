@@ -75,7 +75,7 @@ reconstruction process:
     \item min.txScore.singleExon specifying the minimum transcript level 
     threshold for single-exon transcripts during sample combining, defaults 
     to 1
-    \item max.txNDR. specifying the maximum NDR rate to novel transcript
+    \item max.txNDR specifying the maximum NDR rate to novel transcript
     output from detected read classes, defaults to 0.1
 }}
 
@@ -104,8 +104,31 @@ be printed.}
 is specified. This option provides an efficient way to process big samples.}
 }
 \value{
-A list of two SummarizedExperiment object for transcript expression
-and gene expression.
+\code{bambu} will output different results depending on whether *quant* 
+mode is on. 
+
+By default, *quant* is set to TRUE, 
+so \code{bambu} will generate a *SummarizedExperiment* object that 
+contains the transcript expression estimates.  
+
+* access transcript expression estimates by *counts()*, including a list of 
+variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts,
+and theta
+    + counts: expression estimates
+    + CPM: sequencing depth normalized estimates
+    + fullLengthCounts: estimates of read counts mapped as full length reads
+    for each transcript
+    + partialLengthCounts: estimates of read counts mapped as partial length 
+    reads for each transcript
+    + uniqueCounts: counts of reads that are uniquely mapped to each transcript
+* access annotations that are matched to the transcript expression estimates 
+by *rowRanges()*
+* access transcript to gene id map by *rowData()*, *eqClass* that defines the 
+equivalent class transcripts is also reported
+
+In the case when *quant* is set to FALSE, i.e., only transcript discovery is 
+performed, \code{bambu} will report the *grangeslist* of the
+extended annotations.
 }
 \description{
 This function takes bam file of genomic alignments and performs
