@@ -7,9 +7,10 @@
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
 [![Install](https://img.shields.io/badge/Install-Github-brightgreen)](#installation)
 [![Build](http://bioconductor.org/shields/build/release/bioc/bambu.svg)](http://bioconductor.org/checkResults/release/bioc-LATEST/bambu/)
+[![R-CMD-check](https://github.com/GoekeLab/bambu/workflows/R-CMD-check/badge.svg)](https://github.com/GoekeLab/bambu/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3900025.svg)](https://doi.org/10.5281/zenodo.3900025)
-
+[![CodeFactor](https://www.codefactor.io/repository/github/goekelab/bambu/badge)](https://www.codefactor.io/repository/github/goekelab/bambu)
 
 ***bambu*** is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use ***bambu*** after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from ***bambu*** can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.
 
