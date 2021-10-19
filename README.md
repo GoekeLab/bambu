@@ -156,7 +156,7 @@ so ***bambu*** will generate a *SummarizedExperiment* object that contains the t
 
 * access transcript expression estimates by ***counts()***, including a list of variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts, and theta
     + counts: expression estimates
-    + CPM: sequencing depth normalized estimtes
+    + CPM: sequencing depth normalized estimates
     + fullLengthCounts: estimates of reads that are mapped as full length reads for each transcript
     + partialLengthCounts: estimates of reads that are mapped as partial length reads for each transcript
     + uniqueCounts: counts of reads that are uniquely mapped to each transcript
