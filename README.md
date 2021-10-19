@@ -59,7 +59,7 @@ bambuAnnotations <- prepareAnnotations(gtf.file)
 se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ```
-**Transcript discovery of samples only (no quantification)**
+**Transcript discovery only (no quantification)**
 
 ```rscript
 bambu(reads = test.bam, annotations = txdb, genome = fa.file, quant = FALSE)
@@ -163,9 +163,9 @@ so ***bambu*** will generate a *SummarizedExperiment* object that contains the t
 
 * access transcript expression estimates by ***counts()***, including a list of variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts, and theta
     + counts: expression estimates
-    + CPM: sequencing depth normalized estimtes
-    + fullLengthCounts: estimates of reads that are mapped as full length reads for each transcript
-    + partialLengthCounts: estimates of reads that are mapped as partial length reads for each transcript
+    + CPM: sequencing depth normalized estimates
+    + fullLengthCounts: estimates of read counts mapped as full length reads for each transcript
+    + partialLengthCounts: estimates of read counts mapped as partial length reads for each transcript
     + uniqueCounts: counts of reads that are uniquely mapped to each transcript
 * access annotations that are matched to the transcript expression estimates by ***rowRanges()***
 * access transcript to gene id map by ***rowData()***, *eqClass* that defines the equivalent class transcripts is also reported
