@@ -22,48 +22,48 @@
 #' @param yieldSize see \code{Rsamtools}.
 #' @param opt.discovery A list of controlling parameters for isoform
 #' reconstruction process:
-#' \itemize{
-#'     \item prefix specifying prefix for new gene Ids (genePrefix.number),
-#'     defaults to empty
-#'     \item remove.subsetTx indicating whether filter to remove read classes
-#'     which are a subset of known transcripts(), defaults to TRUE
-#'     \item min.readCount specifying minimun read count to consider a read
-#'     class valid in a sample, defaults to 2
-#'     \item min.readFractionByGene specifying minimum relative read count per
+#' \describe{
+#'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
+#'     defaults to empty}
+#'     \item{remove.subsetTx}{indicating whether filter to remove read classes
+#'     which are a subset of known transcripts(), defaults to TRUE}
+#'     \item{min.readCount}{specifying minimun read count to consider a read
+#'     class valid in a sample, defaults to 2}
+#'     \item{min.readFractionByGene}{specifying minimum relative read count per
 #'     gene, highly expressed genes will have many high read count low relative
-#'     abundance transcripts that can be filtered, defaults to 0.05
-#'     \item min.sampleNumber specifying minimum sample number with minimum read
-#'     count, defaults to 1
-#'     \item min.exonDistance specifying minum distance to known transcript 
-#'     to be considered valid as new, defaults to 35bp
-#'     \item min.exonOverlap specifying minimum number of bases shared with
-#'     annotation to be assigned to the same gene id, defaults to 10bp
-#'     \item min.primarySecondaryDist specifying the minimum number of distance 
-#'     threshold, defaults to 5bp
-#'     \item min.primarySecondaryDistStartEnd1 specifying the minimum number 
-#'     of distance threshold, used for extending annotation, defaults to 5bp
-#'     \item min.primarySecondaryDistStartEnd2 specifying the minimum number 
+#'     abundance transcripts that can be filtered, defaults to 0.05}
+#'     \item{min.sampleNumber}{specifying minimum sample number with minimum read
+#'     count, defaults to 1}
+#'     \item{min.exonDistance}{specifying minum distance to known transcript 
+#'     to be considered valid as new, defaults to 35bp}
+#'     \item{min.exonOverlap}{specifying minimum number of bases shared with
+#'     annotation to be assigned to the same gene id, defaults to 10bp}
+#'     \item{min.primarySecondaryDist}{specifying the minimum number of distance 
+#'     threshold, defaults to 5bp}
+#'     \item{min.primarySecondaryDistStartEnd1}{specifying the minimum number 
+#'     of distance threshold, used for extending annotation, defaults to 5bp}
+#'     \item{min.primarySecondaryDistStartEnd2}{specifying the minimum number 
 #'     of distance threshold, used for estimating distance to annotation, 
-#'     defaults to 5bp
-#'     \item min.txScore.multiExon specifying the minimum transcript level 
+#'     defaults to 5bp}
+#'     \item{min.txScore.multiExon}{specifying the minimum transcript level 
 #'     threshold for multi-exon transcripts during sample combining, 
-#'     defaults to 0
-#'     \item min.txScore.singleExon specifying the minimum transcript level 
+#'     defaults to 0}
+#'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
-#'     to 1
-#'     \item max.txNDR specifying the maximum NDR rate to novel transcript
-#'     output from detected read classes, defaults to 0.1
+#'     to 1}
+#'     \item{max.txNDR}{specifying the maximum NDR rate to novel transcript
+#'     output from detected read classes, defaults to 0.1}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
-#' \itemize{
-#'     \item maxiter specifying maximum number of run interations,
-#'     defaults to 10000.
-#'     \item degradationBias correcting for degradation bias, defaults to TRUE.
-#'     \item conv specifying the covergence trheshold control,
-#'     defaults to 0.0001.
-#'     \item minvalue specifying the minvalue for convergence consideration, 
-#'     defaults to 0.00000001
+#' \describe{
+#'     \item{maxiter}{specifying maximum number of run iterations,
+#'     defaults to 10000}
+#'     \item{degradationBias}{correcting for degradation bias, defaults to TRUE}
+#'     \item{conv}{specifying the covergence threshold control, 
+#'     defaults to 0.0001}
+#'     \item{minvalue}{specifying the minvalue for convergence consideration, 
+#'     defaults to 0.00000001}
 #' }
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended
@@ -74,30 +74,31 @@
 #' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
 #' is specified. This option provides an efficient way to process big samples.
 #' @details
-#' @return \code{bambu} will output different results depending on whether *quant* 
-#' mode is on. 
-# 
-#' By default, *quant* is set to TRUE, 
-#' so \code{bambu} will generate a *SummarizedExperiment* object that 
-#' contains the transcript expression estimates.  
-#' * access transcript expression estimates by *counts()*, including a list of 
-#' variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts,
-#' and theta
-#' + counts: expression estimates
-#' + CPM: sequencing depth normalized estimates
-#' + fullLengthCounts: estimates of read counts mapped as full length reads
-#' for each transcript
-#' + partialLengthCounts: estimates of read counts mapped as partial length 
-#' reads for each transcript
-#' + uniqueCounts: counts of reads that are uniquely mapped to each transcript
-#' * access annotations that are matched to the transcript expression estimates 
-#' by *rowRanges()*
-#' * access transcript to gene id map by *rowData()*, *eqClass* that defines the 
-#' equivalent class transcripts is also reported
+#' @return \code{bambu} will output different results depending on whether
+#' \emph{quant} mode is on. By default, \emph{quant} is set to TRUE, so 
+#' \code{bambu} will generate a \emph{SummarizedExperiment} object that contains
+#' the transcript expression estimates. Transcript expression estimates can be 
+#' accessed by \emph{counts()}, including the following variables
+#' \describe{
+#'     \item{counts}{expression estimates}
+#'     \item{CPM}{sequencing depth normalized estimates}
+#'     \item{fullLengthCounts}{estimates of read counts mapped as full length 
+#'     reads for each transcript}
+#'     \item{partialLengthCounts}{estimates of read counts mapped as partial 
+#'     length reads for each transcript}
+#'     \item{uniqueCounts}{counts of reads that are uniquely mapped to each 
+#'     transcript}
+#'     \item{theta}{raw estimates}
+#' }
+#' Output annotations that are usually the annotations with/without novel 
+#' transcripts/genes added, depending on whether \emph{discovery} mode is on
+#' can be accessed by \emph{rowRanges()}
+#' Transcript to gene map can be accessed by \emph{rowData()}, with 
+#' \emph{eqClass} that defining equivalent class for each transcript
 #' 
-#' In the case when *quant* is set to FALSE, i.e., only transcript discovery is 
-#' performed, \code{bambu} will report the *grangeslist* of the
-#' extended annotations.
+#' In the case when \emph{quant} is set to FALSE, i.e., only transcript 
+#' discovery is performed, \code{bambu} will report the \emph{grangeslist} of 
+#' the extended annotations.
 #' @importFrom BiocParallel bplapply
 #' @importFrom SummarizedExperiment cbind
 #' @examples
