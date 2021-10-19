@@ -136,10 +136,6 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
     return(se)
 }
 
-getChrFromGrList <- function(grl) {
-    return(unlist(seqnames(grl), use.names = FALSE)[cumsum(elementNROWS(grl))])
-}
-
 #' Check seqlevels for reads and annotations
 #' @importFrom GenomeInfoDb seqlevels
 #' @noRd
