@@ -59,7 +59,7 @@ bambuAnnotations <- prepareAnnotations(gtf.file)
 se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ```
-**Transcript discovery of samples only (no quantification)**
+**Transcript discovery only (no quantification)**
 
 ```rscript
 bambu(reads = test.bam, annotations = txdb, genome = fa.file, quant = FALSE)
