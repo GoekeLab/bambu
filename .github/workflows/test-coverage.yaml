@@ -26,16 +26,5 @@ jobs:
           extra-packages: covr
 
       - name: Test coverage
-        run: covr::codecov(token = 'CODECOV_TOKEN')
+        run: covr::codecov()
         shell: Rscript {0}
-
-  after-success:
-    needs: [test-coverage]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v1
