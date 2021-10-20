@@ -145,7 +145,7 @@ jobs:
 
       - name: Install Windows system dependencies
         if: runner.os == 'Windows'
-         run: |
+        run: |
           message(paste('****', Sys.time(), 'installing rtools ****'))
           remotes::install_cran("rtools")
         shell: Rscript {0}
