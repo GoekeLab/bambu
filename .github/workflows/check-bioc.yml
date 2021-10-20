@@ -54,7 +54,7 @@ jobs:
         config:
           - { os: ubuntu-latest, r: '4.1', bioc: '3.14', cont: "bioconductor/bioconductor_docker:devel", rspm: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest" }
           - { os: macOS-latest, r: '4.1', bioc: '3.14'}
-          - { os: windows-latest, r: '4.1', bioc: '3.14'}
+          #- { os: windows-latest, r: '4.1', bioc: '3.14'}
           ## Check https://github.com/r-lib/actions/tree/master/examples
           ## for examples using the http-user-agent
     env:
@@ -146,8 +146,7 @@ jobs:
       - name: Install Windows system dependencies
         if: runner.os == 'Windows'
         run: |
-          message(paste('****', Sys.time(), 'installing rtools ****'))
-          remotes::install_cran("rtools")
+          ## Edit below if you have any Windows system dependencies
         shell: Rscript {0}
 
       - name: Install BiocManager
@@ -200,10 +199,10 @@ jobs:
           ## This pass does not use AnVIL and will thus update any packages
           ## that have seen been updated in Bioconductor
           message(paste('****', Sys.time(), 'pass number 2 at installing dependencies: any remaining dependencies ****'))
-          #remotes::install_local(dependencies = TRUE, repos = BiocManager::repositories(), build_vignettes = TRUE, upgrade = TRUE, force = TRUE)
-          BiocManager::install(version = 'devel', ask = FALSE, update = FALSE)
-          library(remotes)
-          update(dev_package_deps(dependencies = TRUE), quiet = TRUE)
+          remotes::install_local(dependencies = TRUE, repos = BiocManager::repositories(), build_vignettes = TRUE, upgrade = TRUE, force = TRUE)
+          # BiocManager::install(version = 'devel', ask = FALSE, update = FALSE)
+          # library(remotes)
+          # update(dev_package_deps(dependencies = TRUE), quiet = TRUE)
         shell: Rscript {0}
 
       - name: Install BiocGenerics
@@ -236,6 +235,7 @@ jobs:
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
+        if: ${{ matrix.config.os != 'windows-latest' }}
         run: |
           options(crayon.enabled = TRUE)
           rcmdcheck::rcmdcheck(
@@ -256,6 +256,7 @@ jobs:
         run: |
           BiocGenerics:::testPackage()
         shell: Rscript {0}
+        
       - name: Run BiocCheck
         env:
           DISPLAY: 99.0
