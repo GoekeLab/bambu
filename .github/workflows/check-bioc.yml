@@ -145,8 +145,9 @@ jobs:
 
       - name: Install Windows system dependencies
         if: runner.os == 'Windows'
-        run: |
-          ## Edit below if you have any Windows system dependencies
+         run: |
+          message(paste('****', Sys.time(), 'installing rtools ****'))
+          remotes::install_cran("rtools")
         shell: Rscript {0}
 
       - name: Install BiocManager
