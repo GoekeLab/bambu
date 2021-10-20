@@ -231,16 +231,11 @@ jobs:
           pkgs <- installed.packages()[, "Package"]
           sessioninfo::session_info(pkgs, include_base = TRUE)
         shell: Rscript {0}
-      - name: Windows check
-        if: ${{ matrix.config.os == 'windows-latest' }}
-        run: |
-          Rscript -e "rcmdcheck::rcmdcheck(args = c('--no-manual', '--force-multiarch', '--install-args=`"--force-biarch`"'), error_on = 'warning', check_dir = 'check')"
-    
+
       - name: Run CMD check
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
-        if: ${{ matrix.config.os != 'windows-latest' }}
         run: |
           options(crayon.enabled = TRUE)
           rcmdcheck::rcmdcheck(
