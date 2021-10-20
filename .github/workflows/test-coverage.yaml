@@ -29,11 +29,9 @@ jobs:
         run: covr::codecov(token = 'CODECOV_TOKEN')
         shell: Rscript {0}
 
-  upload-to-codecov:
-    needs: [frontend-tests, backend-tests]
+  after-success:
+    needs: [test-coverage]
     runs-on: ubuntu-latest
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
