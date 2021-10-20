@@ -3,12 +3,17 @@
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/GoekeLab/bambu)](https://github.com/GoekeLab/bambu/releases/)
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
 [![Install](https://img.shields.io/badge/Install-Github-brightgreen)](#installation)
-[![Build](http://bioconductor.org/shields/build/release/bioc/bambu.svg)](http://bioconductor.org/checkResults/release/bioc-LATEST/bambu/)
+[![R build status](https://github.com/goekelab/bambu/workflows/R-CMD-check-bioc/badge.svg)](https://github.com/goekelab/bambu/actions)  
+[![GitHub issues](https://img.shields.io/github/issues/goekelab/bambu)](https://github.com/goekelab/bambu/issues) 
+[![GitHub pulls](https://img.shields.io/github/issues-pr/goekelab/bambu)](https://github.com/goekelab/bambu/pulls) 
+[![BioC status](http://bioconductor.org/shields/build/release/bioc/bambu.svg)](http://bioconductor.org/checkResults/release/bioc-LATEST/bambu/)
+[![BioC dev status](http://www.bioconductor.org/shields/build/devel/bioc/bambu.svg)](https://bioconductor.org/checkResults/devel/bioc-LATEST/bambu)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3900025.svg)](https://doi.org/10.5281/zenodo.3900025)
+[![CodeFactor](https://www.codefactor.io/repository/github/goekelab/bambu/badge)](https://www.codefactor.io/repository/github/goekelab/bambu)
+[![codecov](https://codecov.io/gh/goekelab/bambu/branch/estDistToAnno_patch/graph/badge.svg?token=PMeRi0r1tj)](https://codecov.io/gh/goekelab/bambu)
 
 
 ***bambu*** is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use ***bambu*** after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from ***bambu*** can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.
@@ -22,7 +27,7 @@
   - [General usage](#general-usage)
   - [Use precalculated annotation objects](#use-precalculated-annotation-objects)
   - [Advanced options](#advanced-options)
-  - [Details on the output ](#description-of-output)
+  - [Details on the output](#details-on-the-output)
   - [Complementary functions](#complementary-functions)
   - [Release History](#release-history)
   - [Citation](#citation)
@@ -59,7 +64,7 @@ bambuAnnotations <- prepareAnnotations(gtf.file)
 se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ```
-**Transcript discovery of samples only (no quantification)**
+**Transcript discovery only (no quantification)**
 
 ```rscript
 bambu(reads = test.bam, annotations = txdb, genome = fa.file, quant = FALSE)
@@ -77,6 +82,13 @@ For larger sample numbers we recommend to write the processed data to a file:
 ```rscript
 bambu(reads = test.bam, rcOutDir = "./bambu/", annotations = bambuAnnotations, genome = fa.file)
 ```
+
+For very large samples (>100 million reads) where memory is limiting we recommend running Bambu in lowMemory mode:
+
+```rscript
+bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file, lowMemory = TRUE)
+```
+
 ---
 
 
@@ -122,7 +134,7 @@ bambu(reads, annotations, genome, opt.discovery = list(min.sampleNumber = 5))
 bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 0.1))
 ```
 
-- Set novel discovery rate to 50% per transcript: 
+- Set novel transcript discovery rate to 50% of the detected transcripts (lower is more): 
 
 ```rscript
 bambu(reads, annotations, genome, opt.discovery = list(max.txNDR = 0.5))
@@ -143,7 +155,7 @@ bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
 bambu(reads, annotations, genome, ncore = 8)
 ```
 
-See [manual](docs/bambu_0.3.0.pdf) for details to customize other conditions.
+See [manual](docs/bambu_1.99.0.pdf) for details to customize other conditions.
 
 ---
 
@@ -156,17 +168,16 @@ so ***bambu*** will generate a *SummarizedExperiment* object that contains the t
 
 * access transcript expression estimates by ***counts()***, including a list of variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts, and theta
     + counts: expression estimates
-    + CPM: sequencing depth normalized estimtes
-    + fullLengthCounts: estimates of reads that are mapped as full length reads for each transcript
-    + partialLengthCounts: estimates of reads that are mapped as partial length reads for each transcript
+    + CPM: sequencing depth normalized estimates
+    + fullLengthCounts: estimates of read counts mapped as full length reads for each transcript
+    + partialLengthCounts: estimates of read counts mapped as partial length reads for each transcript
     + uniqueCounts: counts of reads that are uniquely mapped to each transcript
+    + theta: raw estimates
 * access annotations that are matched to the transcript expression estimates by ***rowRanges()***
 * access transcript to gene id map by ***rowData()***, *eqClass* that defines the equivalent class transcripts is also reported
 
 In the case when *quant* is set to FALSE, i.e., only transcript discovery is performed, 
 ***bambu*** will report the *grangeslist* of the extended annotations
-
-* access transcript to gene id map by ***mcols()***, *eqClass* that defines the equivalent class transcripts is also reported
 
 ### Complementary functions
 
@@ -218,12 +229,12 @@ writeBambuOutput(se, path = "./bambu/")
 Release date: 2021-10-18
 
 Major Changes:
- 
-- implemented a machine learning model to estimate transcript-level novel discovery rate
-- implemented full length estimates, partial length estimates and unique read counts in final output
-- improved the performance when extend annotations with simplified codes
-- improved the performance when large amounts of annotations are missing.
-- implemented a lowMemory option to allow more efficient processing for very large samples (>100million reads)
+
+- Implemented a machine learning model to estimate transcript-level novel discovery rate
+- Implemented full length estimates, partial length estimates and unique read counts in final output
+- Improved the performance when extending annotations with simplified code
+- Improved the performance when large amounts of annotations are missing.
+- Implemented a lowMemory option to reduce the memory requirements for very large samples (>100 million reads)
 
 
 Minor fixes:
