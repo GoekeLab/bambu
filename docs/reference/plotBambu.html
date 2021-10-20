@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>write GRangeslist into GTF file — writeToGTF • bambu</title>
+<title>plot.bambu — plotBambu • bambu</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="write GRangeslist into GTF file — writeToGTF" />
-<meta property="og:description" content="Write annotation GRangesList into a GTF file" />
+<meta property="og:title" content="plot.bambu — plotBambu" />
+<meta property="og:description" content="plotSEOuptut" />
 
 
 
@@ -111,46 +111,67 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>write GRangeslist into GTF file</h1>
-    <small class="dont-index">Source: <a href='https://github.com/GoekeLab/bambu/blob/master/R/readWrite.R'><code>R/readWrite.R</code></a></small>
-    <div class="hidden name"><code>writeToGTF.Rd</code></div>
+    <h1>plot.bambu</h1>
+    <small class="dont-index">Source: <a href='https://github.com/GoekeLab/bambu/blob/master/R/plotBambu.R'><code>R/plotBambu.R</code></a></small>
+    <div class="hidden name"><code>plotBambu.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Write annotation GRangesList into a GTF file</p>
+    <p>plotSEOuptut</p>
     </div>
 
-    <pre class="usage"><span class='fu'>writeToGTF</span><span class='op'>(</span><span class='va'>annotation</span>, <span class='va'>file</span>, geneIDs <span class='op'>=</span> <span class='cn'>NULL</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>plotBambu</span><span class='op'>(</span>
+    <span class='va'>se</span>,
+    group.variable <span class='op'>=</span> <span class='cn'>NULL</span>,
+    type <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"annotation"</span>, <span class='st'>"pca"</span>, <span class='st'>"heatmap"</span><span class='op'>)</span>,
+    gene_id <span class='op'>=</span> <span class='cn'>NULL</span>,
+    transcript_id <span class='op'>=</span> <span class='cn'>NULL</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>annotation</th>
-      <td><p>a <code>GRangesList</code> object</p></td>
+      <th>se</th>
+      <td><p>An summarized experiment object obtained from <code><a href='bambu.html'>bambu</a></code>
+or <code><a href='transcriptToGeneExpression.html'>transcriptToGeneExpression</a></code>.</p></td>
     </tr>
     <tr>
-      <th>file</th>
-      <td><p>the output gtf file name</p></td>
+      <th>group.variable</th>
+      <td><p>Variable for grouping in plot, has be to provided if
+choosing to plot PCA.</p></td>
     </tr>
     <tr>
-      <th>geneIDs</th>
-      <td><p>an optional dataframe of geneIDs (column 2) with
-the corresponding transcriptIDs (column 1)</p></td>
+      <th>type</th>
+      <td><p>plot type variable, a values of annotation for a single gene with
+heatmap for isoform expressions,  pca,  or heatmap, see details.</p></td>
+    </tr>
+    <tr>
+      <th>gene_id</th>
+      <td><p>specifying the gene_id for plotting gene annotation, either
+gene_id or transcript_id has to be provided when type = "annotation".</p></td>
+    </tr>
+    <tr>
+      <th>transcript_id</th>
+      <td><p>specifying the transcript_id for plotting transcript
+annotation, either gene_id or transcript_id has to be provided when 
+type = "annotation"</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>gtf a GTF dataframe</p>
+    <p>A heatmap plot for all samples</p>
+    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
+
+    <p><code><a href='https://rdrr.io/r/base/typeof.html'>type</a></code> indicates the type of plots to be plotted. There
+are two types of plots can be chosen, PCA or heatmap.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='va'>outputGtfFile</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span><span class='op'>(</span><span class='op'>)</span>
-<span class='va'>gr</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/readRDS.html'>readRDS</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,
-    <span class='st'>"annotationGranges_txdbGrch38_91_chr9_1_1000000.rds"</span>,
-    package <span class='op'>=</span> <span class='st'>"bambu"</span>
-<span class='op'>)</span><span class='op'>)</span>
-<span class='fu'>writeToGTF</span><span class='op'>(</span><span class='va'>gr</span>, <span class='va'>outputGtfFile</span><span class='op'>)</span>
+    <pre class="examples"><div class='input'><span class='va'>se</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/readRDS.html'>readRDS</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,
+<span class='st'>"seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds"</span>,
+package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span><span class='op'>)</span>
+<span class='fu'>plotBambu</span><span class='op'>(</span><span class='va'>se</span>, type <span class='op'>=</span> <span class='st'>"PCA"</span><span class='op'>)</span>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">

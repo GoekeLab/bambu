@@ -72,7 +72,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.0</span>
       </span>
     </div>
 
@@ -80,7 +80,7 @@
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -94,7 +94,7 @@
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/GoekeLab/bambu/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -120,7 +120,7 @@
     <p>Reduce transcript expression to gene expression</p>
     </div>
 
-    <pre class="usage"><span class='fu'>transcriptToGeneExpression</span>(<span class='no'>se</span>)</pre>
+    <pre class="usage"><span class='fu'>transcriptToGeneExpression</span><span class='op'>(</span><span class='va'>se</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -131,7 +131,25 @@
     </tr>
     </table>
 
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
+    <p>A SummarizedExperiment object</p>
+
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='va'>se</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/readRDS.html'>readRDS</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,
+    <span class='st'>"seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds"</span>,
+    package <span class='op'>=</span> <span class='st'>"bambu"</span>
+<span class='op'>)</span><span class='op'>)</span>
+<span class='fu'>transcriptToGeneExpression</span><span class='op'>(</span><span class='va'>se</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; class: RangedSummarizedExperiment 
+#&gt; dim: 23 1 
+#&gt; metadata(0):
+#&gt; assays(2): counts CPM
+#&gt; rownames(23): ENSG00000064218 ENSG00000107099 ... ENSG00000277631
+#&gt;   ENSG00000283921
+#&gt; rowData names(0):
+#&gt; colnames(1): SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000
+#&gt; colData names(3): name d_rate nGeneFordRate</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -143,11 +161,11 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Ying Chen Developer, Jonathan Goeke Developer.</p>
+  <p>Developed by Ying Chen, Andre Sim, Yuk Kei Wan, Jonathan Goeke.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
