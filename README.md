@@ -167,6 +167,7 @@ so ***bambu*** will generate a *SummarizedExperiment* object that contains the t
     + fullLengthCounts: estimates of read counts mapped as full length reads for each transcript
     + partialLengthCounts: estimates of read counts mapped as partial length reads for each transcript
     + uniqueCounts: counts of reads that are uniquely mapped to each transcript
+    + theta: raw estimates
 * access annotations that are matched to the transcript expression estimates by ***rowRanges()***
 * access transcript to gene id map by ***rowData()***, *eqClass* that defines the equivalent class transcripts is also reported
 
@@ -224,11 +225,11 @@ Release date: 2021-10-18
 
 Major Changes:
 
-    * Implemented a machine learning model to estimate transcript-level novel discovery rate
-    * Implemented full length estimates, partial length estimates and unique read counts in final output
-    * Improved the performance when extending annotations with simplified code
-    * Improved the performance when large amounts of annotations are missing.
-    * Implemented a lowMemory option to reduce the memory requirements for very large samples (>100 million reads)
+- Implemented a machine learning model to estimate transcript-level novel discovery rate
+- Implemented full length estimates, partial length estimates and unique read counts in final output
+- Improved the performance when extending annotations with simplified code
+- Improved the performance when large amounts of annotations are missing.
+- Implemented a lowMemory option to reduce the memory requirements for very large samples (>100 million reads)
 
 
 Minor fixes:
