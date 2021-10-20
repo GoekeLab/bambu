@@ -155,7 +155,7 @@ bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
 bambu(reads, annotations, genome, ncore = 8)
 ```
 
-See [our page](https://goekelab.github.io/bambu/) for details to customize other conditions.
+See [our page](https://goekelab.github.io/bambu/) for a complete step-by-step workflow and manual on how to customize other condictions.
 
 ---
 
