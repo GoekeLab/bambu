@@ -1,6 +1,6 @@
 ---
 title: "Analysing Long Read RNA-Seq data with bambu"
-author: Ying Chen, Yuk Kei Wan, Jonathan Göke
+author: Ying Chen, Andre Sim, Yuk Kei Wan, Jonathan Göke
 output: rmarkdown::html_vignette
 vignette: >
     %\VignetteIndexEntry{bambu}
@@ -345,8 +345,8 @@ bambu allows parallel computation.
 ```{r, eval = FALSE}
 bambu(reads, annotations, genome, ncore = 8)
 ```
-See *[manual
-](https://github.com/GoekeLab/bambu/blob/master/docs/bambu_0.1.0.pdf)* 
+See *[our page
+](https://goekelab.github.io/bambu/)* 
 for details to customize other conditions.
 
 # Getting help {#get-help}
