@@ -41,7 +41,7 @@ env:
   run_covr: 'false'
   run_pkgdown: 'false'
   has_RUnit: 'false'
-  cache-version: 'cache-v1'
+  cache-version: 'cache-v2'
   run_docker: 'false'
 
 jobs:
@@ -56,7 +56,7 @@ jobs:
       matrix:
         config:
           - { os: ubuntu-latest, r: '4.1', bioc: '3.14', cont: "bioconductor/bioconductor_docker:devel", rspm: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest" }
-          - { os: macOS-latest, r: '4.1', bioc: '3.14'}
+          - { os: macOS-11, r: '4.1', bioc: '3.14'}
           - { os: windows-latest, r: '4.1', bioc: '3.14'}
           ## Check https://github.com/r-lib/actions/tree/master/examples
           ## for examples using the http-user-agent
@@ -127,7 +127,7 @@ jobs:
           sudo -s eval "$sysreqs"
 
       - name: Install macOS system dependencies
-        if: matrix.config.os == 'macOS-latest'
+        if: matrix.config.os == 'macOS-11'
         run: |
           ## Enable installing XML from source if needed
           brew install libxml2
@@ -234,7 +234,7 @@ jobs:
           sessioninfo::session_info(pkgs, include_base = TRUE)
         shell: Rscript {0}
 
-      - name: Run CMD check 
+      - name: Run CMD check
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
