@@ -57,7 +57,7 @@ jobs:
         config:
           - { os: ubuntu-latest, r: '4.1', bioc: '3.14', cont: "bioconductor/bioconductor_docker:devel", rspm: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest" }
           - { os: macOS-latest, r: '4.1', bioc: '3.14'}
-          #- { os: windows-latest, r: '4.1', bioc: '3.14'}
+          - { os: windows-latest, r: '4.1', bioc: '3.14'}
           ## Check https://github.com/r-lib/actions/tree/master/examples
           ## for examples using the http-user-agent
     env:
@@ -202,7 +202,7 @@ jobs:
           ## This pass does not use AnVIL and will thus update any packages
           ## that have seen been updated in Bioconductor
           message(paste('****', Sys.time(), 'pass number 2 at installing dependencies: any remaining dependencies ****'))
-          remotes::install_local(dependencies = TRUE, repos = BiocManager::repositories(), build_vignettes = TRUE, upgrade = TRUE, force = TRUE)
+          remotes::install_local(dependencies = TRUE, repos = BiocManager::repositories(), build_vignettes = FALSE, upgrade = TRUE, force = TRUE)
           # BiocManager::install(version = 'devel', ask = FALSE, update = FALSE)
           # library(remotes)
           # update(dev_package_deps(dependencies = TRUE), quiet = TRUE)
