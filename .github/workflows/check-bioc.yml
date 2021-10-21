@@ -22,7 +22,10 @@
 
 on:
   push:
+    branches: 
+      - master
   pull_request:
+    branches: [main, master]
 
 name: R-CMD-check-bioc
 
@@ -235,7 +238,6 @@ jobs:
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
-        if: ${{ matrix.config.os != 'windows-latest' }}
         run: |
           options(crayon.enabled = TRUE)
           rcmdcheck::rcmdcheck(
