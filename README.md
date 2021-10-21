@@ -2,7 +2,7 @@
 
 # bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
 
-
+[![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-stable-green.svg)](https://www.tidyverse.org/lifecycle/#stable)
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
 [![Install](https://img.shields.io/badge/Install-Github-brightgreen)](#installation)
 [![R build status](https://github.com/goekelab/bambu/workflows/R-CMD-check-bioc/badge.svg)](https://github.com/goekelab/bambu/actions)  
