@@ -56,7 +56,7 @@ jobs:
       matrix:
         config:
           - { os: ubuntu-latest, r: '4.1', bioc: '3.14', cont: "bioconductor/bioconductor_docker:devel", rspm: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest" }
-          - { os: macOS-11, r: '4.1', bioc: '3.14'}
+          - { os: macOS-latest, r: '4.1', bioc: '3.14'}
           - { os: windows-latest, r: '4.1', bioc: '3.14'}
           ## Check https://github.com/r-lib/actions/tree/master/examples
           ## for examples using the http-user-agent
@@ -127,7 +127,7 @@ jobs:
           sudo -s eval "$sysreqs"
 
       - name: Install macOS system dependencies
-        if: matrix.config.os == 'macOS-11'
+        if: matrix.config.os == 'macOS-latest'
         run: |
           ## Enable installing XML from source if needed
           brew install libxml2
@@ -234,8 +234,8 @@ jobs:
           sessioninfo::session_info(pkgs, include_base = TRUE)
         shell: Rscript {0}
 
-      - name: Run CMD check for windows
-        if: runner.os == 'Windows'
+      - name: Run CMD check for non-linux
+        if: runner.os != 'Linux'
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
@@ -244,14 +244,14 @@ jobs:
           options(rcmdcheck.test_output = TRUE)
           rcmdcheck::rcmdcheck(
               args = c("--no-manual", "--no-vignettes", "--timings", "--no-multiarch", "--ignore-vignettes"),
-              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-build-vignettes "),
+              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-build-vignettes"),
               error_on = "warning",
               check_dir = "check"
           )
         shell: Rscript {0}
 
-      - name: Run CMD check for non-windows
-        if: runner.os != 'Windows'
+      - name: Run CMD check for linux
+        if: runner.os == 'Linux'
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
