@@ -235,7 +235,7 @@ jobs:
         shell: Rscript {0}
 
       - name: Run CMD check for windows
-        if: runner.os == 'Windows'
+        if: runner.os != 'linux'
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
@@ -249,8 +249,8 @@ jobs:
           )
         shell: Rscript {0}
 
-      - name: Run CMD check for non-windows
-        if: runner.os != 'Windows'
+      - name: Run CMD check for linux
+        if: runner.os == 'linux'
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
