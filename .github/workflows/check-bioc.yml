@@ -243,8 +243,8 @@ jobs:
           options(crayon.enabled = TRUE)
           options(rcmdcheck.test_output = TRUE)
           rcmdcheck::rcmdcheck(
-              args = c("--no-manual", "--no-vignettes", "--timings"),
-              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-multiarch"),
+              args = c("--no-manual", "--no-vignettes", "--timings", "--no-multiarch", "--ignore-vignettes"),
+              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-build-vignettes "),
               error_on = "warning",
               check_dir = "check"
           )
