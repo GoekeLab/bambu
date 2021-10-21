@@ -5,7 +5,7 @@ output: rmarkdown::html_vignette
 vignette: >
     %\VignetteIndexEntry{bambu}
     %\VignetteEngine{knitr::rmarkdown}
-    % \VignettePackage{bambu}
+    %\VignettePackage{bambu}
     %\VignetteEncoding{UTF-8}
 ---
 

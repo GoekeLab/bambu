@@ -234,23 +234,7 @@ jobs:
           sessioninfo::session_info(pkgs, include_base = TRUE)
         shell: Rscript {0}
 
-      - name: Run CMD check for windows
-        if: runner.os != 'linux'
-        env:
-          _R_CHECK_CRAN_INCOMING_: false
-          DISPLAY: 99.0
-        run: |
-          options(crayon.enabled = TRUE)
-          rcmdcheck::rcmdcheck(
-              args = c("--no-manual", "--no-vignettes", "--timings"),
-              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data","--no-build-vignettes"),
-              error_on = "warning",
-              check_dir = "check"
-          )
-        shell: Rscript {0}
-
-      - name: Run CMD check for linux
-        if: runner.os == 'linux'
+      - name: Run CMD check 
         env:
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
