@@ -11,7 +11,6 @@
 [![BioC status](http://bioconductor.org/shields/build/release/bioc/bambu.svg)](http://bioconductor.org/checkResults/release/bioc-LATEST/bambu/)
 [![BioC dev status](http://www.bioconductor.org/shields/build/devel/bioc/bambu.svg)](https://bioconductor.org/checkResults/devel/bioc-LATEST/bambu)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3900025.svg)](https://doi.org/10.5281/zenodo.3900025)
 [![CodeFactor](https://www.codefactor.io/repository/github/goekelab/bambu/badge)](https://www.codefactor.io/repository/github/goekelab/bambu)
 [![codecov](https://codecov.io/gh/GoekeLab/bambu/branch/master/graph/badge.svg?token=PMeRi0r1tj)](https://codecov.io/gh/GoekeLab/bambu)
 
