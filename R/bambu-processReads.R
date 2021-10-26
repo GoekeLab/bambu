@@ -81,6 +81,9 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     annotations <- keepSeqlevels(annotations, value = refSeqLevels,
         pruning.mode = "coarse")
     }
+    #removes reads that are outside genome coordinates
+    readGrgList = readGrgList[max(end(ranges(readGrgList)))<
+        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]]
     # construct read classes for each chromosome seperately 
     if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
         annotations, stranded, verbose,bam.file)
