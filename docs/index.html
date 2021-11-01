@@ -165,7 +165,7 @@ For larger sample numbers we recommend to write the processed data to a file:</p
 <ul>
 <li>Set novel transcript discovery rate to 50% of the detected transcripts (lower is more):</li>
 </ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(max.txNDR = 0.5))</a></code></pre>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, NDR = 0.5)</a></code></pre>
 <p><strong>Quantification without bias correction</strong></p>
 <p>The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.</p>
 <pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.em = list(bias = FALSE))</a></code></pre>

@@ -30,7 +30,6 @@ setIsoreParameters <- function(isoreParameters){
         min.exonOverlap = 10,
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
-        max.txNDR = 0.1,
         fitReadClassModel = TRUE,
         prefix = "") 
     isoreParameters <- 
