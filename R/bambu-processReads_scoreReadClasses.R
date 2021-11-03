@@ -93,6 +93,8 @@ countPolyATerminals = function(grl, genomeSequence){
     end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, 
             exonNumber = 1), use.names = FALSE)), 
                   width = 10, fix = 'end', ignore.strand=FALSE)
+    strand(start)[which(strand(start)=='*')] = "+"
+    strand(end)[which(strand(end)=='*')] = "+"
     startSeqs = BSgenome::getSeq(genomeSequence,start)
     endSeqs = BSgenome::getSeq(genomeSequence,end)
     numATstart = BSgenome::letterFrequency(startSeqs, c("A","T"))
