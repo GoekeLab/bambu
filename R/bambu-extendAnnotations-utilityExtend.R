@@ -3,7 +3,7 @@
 #' @noRd
 isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     remove.subsetTx = TRUE,
-                                    min.sampleNumber = 1, max.txNDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
+                                    min.sampleNumber = 1, NDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     prefix = "", verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
@@ -35,7 +35,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, max.txNDR, verbose)
+      remove.subsetTx, NDR, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -63,7 +63,7 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 #'     ungroup .funs .name_repair vars 
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
-                                          exonRangesCombined, prefix,  remove.subsetTx, max.txNDR, verbose) {
+                                          exonRangesCombined, prefix,  remove.subsetTx, NDR, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatiblity with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
@@ -74,7 +74,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   #(2) remove transcripts below NDR threshold
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
   # remove equals to prevent duplicates when merging with anno
-  filterSet = (rowDataCombined$txNDR <= max.txNDR) & !rowDataCombined$readClassType == "equalcompatible"
+  filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
   # (3) remove transcripts with identical junctions to annotations

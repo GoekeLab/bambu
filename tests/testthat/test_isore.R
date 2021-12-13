@@ -151,7 +151,7 @@ test_that("isore.extendAnnotations completes successfully", {
     extendedAnnotations <- isore.extendAnnotations(
         combinedTranscripts=seIsoReCombined,
         annotationGrangesList=gr,
-        remove.subsetTx = TRUE, min.sampleNumber = 1, max.txNDR = 0.1, 
+        remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.1, 
         min.exonDistance = 35, min.exonOverlap = 10,
         min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
         prefix='',
