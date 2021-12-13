@@ -77,6 +77,9 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
+  if(sum(filterSet)==0) warning("No novel transcripts meet the given thresholds")
+  if(sum(filterSet==0) & length(annotationGrangesList==0)) stop(
+    "No annotations were provided. Please increase NDR threshold to use novel transcripts")
   # (3) remove transcripts with identical junctions to annotations
   extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
     rowDataCombined, exonRangesCombined, 
