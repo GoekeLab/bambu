@@ -127,6 +127,10 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
+
+    #below line is to be compatible with earlier version of running bambu
+    if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
+
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
         ncore, verbose)
