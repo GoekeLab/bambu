@@ -128,9 +128,21 @@ getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
         } else txScoreSE = NULL
         
     } else {
-        warning("Transcript model not trained. Using pre-trained models")
-        txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
-        txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
+        if (!is.null(defaultModels)){
+            warning("Transcript model not trained. Using pre-trained models")
+            txScore = predict(defaultModels$txModel.dcDNA.ME, 
+                as.matrix(features))
+            txScoreSE = predict(defaultModels$txModel.dcDNA.SE, 
+                as.matrix(features))
+        } else {
+            warning("Transcript model not trained. ",
+                "No pre-trained models provided. ",
+                "Scores will not be calculated and ",
+                "transcript discovery will not happen")
+            txScore = rep(0, nrow(features)))
+            txScoreSE = rep(0, nrow(features))
+        }
+
     }
     txScore[which(rowData$numExons==1)] =
         txScoreSE[which(rowData$numExons==1)]

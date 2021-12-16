@@ -41,14 +41,15 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     }
     min.readCount = isoreParameters[["min.readCount"]]
     fitReadClassModel = isoreParameters[["fitReadClassModel"]]
+    defaultModels = isoreParameters[["defaultModels"]]
     if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
         genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
-        fitReadClassModel = fitReadClassModel, verbose = verbose,
-        lowMemory = lowMemory)},
+        fitReadClassModel = fitReadClassModel, defaultModels = defaultModels,
+        verbose = verbose, lowMemory = lowMemory)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")
@@ -60,8 +61,9 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
-    fitReadClassModel = TRUE,  verbose = FALSE, lowMemory = FALSE) {
+        readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
+        fitReadClassModel = TRUE, defaultModels = NULL, verbose = FALSE, 
+        lowMemory = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence

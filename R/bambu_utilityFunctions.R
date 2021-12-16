@@ -32,6 +32,7 @@ setIsoreParameters <- function(isoreParameters){
         min.txScore.singleExon = 1,
         max.txNDR = 0.1,
         fitReadClassModel = TRUE,
+        defaultModels = defaultModels,
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
@@ -137,4 +138,36 @@ checkInputSequence <- function(genomeSequence) {
         }
     }
     return(genomeSequence)
+}
+
+#' Function to train a model for use on other data
+#' @noRd
+bambu.train <- function(rcFile = NULL,annotations = NULL, nrounds = 50) {
+    rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
+    txFeatures = prepareTranscriptModelFeatures(rowData)
+    features = dplyr::select(txFeatures,!c(labels))
+    if(checkFeatures(txFeatures)){
+
+    }
+
+    ## Multi-Exon
+    indexME = which(!rowData$novelGene & rowData$numExons>1)
+    if(length(indexME)>0){
+        transcriptModelME = fitXGBoostModel(
+            data.train=as.matrix(features[indexME,]),
+            labels.train=txFeatures$labels[indexME], 
+            nrounds = nrounds, show.cv=FALSE)
+    }
+    
+    ## Single-Exon
+    indexSE = which(!rowData$novelGene & rowData$numExons==1)
+    if(length(indexSE)>0){
+        transcriptModelSE = fitXGBoostModel(
+            data.train=as.matrix(features[indexSE,]),
+            labels.train=txFeatures$labels[indexSE], 
+            nrounds = nrounds, show.cv=FALSE)
+    }
+        
+    return(list(transcriptModelME = txModel.dcDNA.ME, #transcriptModelME, 
+                transcriptModelSE = txModel.dcDNA.SE)) #transcriptModelSE))
 }
