@@ -139,7 +139,7 @@ getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
                 "No pre-trained models provided. ",
                 "Scores will not be calculated and ",
                 "transcript discovery will not happen")
-            txScore = rep(0, nrow(features)))
+            txScore = rep(0, nrow(features))
             txScoreSE = rep(0, nrow(features))
         }
 
