@@ -118,7 +118,7 @@
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
-    discovery = TRUE, quant = TRUE, verbose = FALSE, 
+    discovery = TRUE, quant = TRUE, readClassOnly = FALSE, verbose = FALSE, 
     lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
@@ -144,6 +144,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             genomeSequence = genomeSequence, readClass.outputDir = rcOutDir, 
             yieldSize, bpParameters, stranded, verbose, isoreParameters)
     } else {readClassList <- rcFile}
+    if (readClassOnly) return(readClassList)
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations,
             isoreParameters, stranded, bpParameters, verbose = verbose)
