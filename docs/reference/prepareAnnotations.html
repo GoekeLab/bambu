@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>prepare annotations from txdb object — prepareAnnotations • bambu</title>
+<title>prepare annotations from txdb object or gtf file — prepareAnnotations • bambu</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,9 @@
 
 
 
-<meta property="og:title" content="prepare annotations from txdb object — prepareAnnotations" />
-<meta property="og:description" content="Function to prepare tables and genomic ranges for transript reconstruction using a txdb object" />
+<meta property="og:title" content="prepare annotations from txdb object or gtf file — prepareAnnotations" />
+<meta property="og:description" content="Function to prepare tables and genomic ranges for
+transript reconstruction using a txdb object" />
 
 
 
@@ -72,7 +73,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.1</span>
       </span>
     </div>
 
@@ -80,7 +81,7 @@
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -94,7 +95,7 @@
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/GoekeLab/bambu/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -111,36 +112,76 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>prepare annotations from txdb object</h1>
-    <small class="dont-index">Source: <a href='https://github.com/GoekeLab/bambu/blob/master/R/annotationFunctions.R'><code>R/annotationFunctions.R</code></a></small>
+    <h1>prepare annotations from txdb object or gtf file</h1>
+    <small class="dont-index">Source: <a href='https://github.com/GoekeLab/bambu/blob/master/R/prepareAnnotations.R'><code>R/prepareAnnotations.R</code></a></small>
     <div class="hidden name"><code>prepareAnnotations.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Function to prepare tables and genomic ranges for transript reconstruction using a txdb object</p>
+    <p>Function to prepare tables and genomic ranges for
+transript reconstruction using a txdb object</p>
     </div>
 
-    <pre class="usage"><span class='fu'>prepareAnnotations</span>(<span class='no'>txdb</span>)</pre>
+    <pre class="usage"><span class='fu'>prepareAnnotations</span><span class='op'>(</span><span class='va'>x</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>txdb</th>
-      <td><p>a <code>TxDb</code> object</p></td>
+      <th>x</th>
+      <td><p>A <code>TxDb</code> object or a gtf file</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>A <code>GrangesList</code> object</p>
+    <p>A <code>GRangesList</code> object</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
- <span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>TxDb.Hsapiens.UCSC.hg38.knownGene</span>)
- <span class='no'>txdb</span> <span class='kw'>&lt;-</span> <span class='no'>TxDb.Hsapiens.UCSC.hg38.knownGene</span>
- <span class='fu'>prepareAnnotations</span>(<span class='no'>txdb</span>)
- }</div></pre>
+    <pre class="examples"><div class='input'><span class='va'>gtf.file</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,
+    <span class='st'>"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf"</span>,
+    package <span class='op'>=</span> <span class='st'>"bambu"</span>
+<span class='op'>)</span>
+<span class='fu'>prepareAnnotations</span><span class='op'>(</span>x <span class='op'>=</span> <span class='va'>gtf.file</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; GRangesList object of length 105:
+#&gt; $ENST00000190165
+#&gt; GRanges object with 2 ranges and 2 metadata columns:
+#&gt;       seqnames        ranges strand | exon_rank exon_endRank
+#&gt;          &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;
+#&gt;   [1]        9 976964-977455      + |         1            2
+#&gt;   [2]        9 990041-991731      + |         2            1
+#&gt;   -------
+#&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths
+#&gt; 
+#&gt; $ENST00000305248
+#&gt; GRanges object with 2 ranges and 2 metadata columns:
+#&gt;       seqnames      ranges strand | exon_rank exon_endRank
+#&gt;          &lt;Rle&gt;   &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;
+#&gt;   [1]        9 34965-35264      - |         2            1
+#&gt;   [2]        9 35504-35871      - |         1            2
+#&gt;   -------
+#&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths
+#&gt; 
+#&gt; $ENST00000314367
+#&gt; GRanges object with 16 ranges and 2 metadata columns:
+#&gt;        seqnames        ranges strand | exon_rank exon_endRank
+#&gt;           &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;
+#&gt;    [1]        9 121060-121573      - |        16            1
+#&gt;    [2]        9 121961-122090      - |        15            2
+#&gt;    [3]        9 123217-123282      - |        14            3
+#&gt;    [4]        9 123386-123454      - |        13            4
+#&gt;    [5]        9 134979-135030      - |        12            5
+#&gt;    ...      ...           ...    ... .       ...          ...
+#&gt;   [12]        9 172081-172172      - |         5           12
+#&gt;   [13]        9 173270-173366      - |         4           13
+#&gt;   [14]        9 175698-175784      - |         3           14
+#&gt;   [15]        9 177723-177820      - |         2           15
+#&gt;   [16]        9 178816-179047      - |         1           16
+#&gt;   -------
+#&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths
+#&gt; 
+#&gt; ...
+#&gt; &lt;102 more elements&gt;</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -152,11 +193,11 @@
 
       <footer>
       <div class="copyright">
-  <p>Developed by Ying Chen Developer, Jonathan Goeke Developer.</p>
+  <p>Developed by Ying Chen, Andre Sim, Yuk Kei Wan, Jonathan Goeke.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

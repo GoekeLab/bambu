@@ -1,92 +1,112 @@
 context("txRange, full length transcript prediction")
 
 test_that("txRange generates a gene and transcript score",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  genomeSequence <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_genomeSequence.rds")
-  annotations <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_annotations.rds")
-  se = txrange.scoreReadClasses(se, genomeSequence, annotations)
-  expect_is(rowData(se)$geneScore, class = 'numeric')
-  expect_is(rowData(se)$txScore, class = 'numeric')
-})
-
-test_that("addRowData adds all the correct rowData features",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  genomeSequence <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_genomeSequence.rds")
-  annotations <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_annotations.rds")
-  se = addRowData(se, genomeSequence, annotations)
-  expect_is(rowData(se)$numExons, class = 'numeric')
-  expect_is(rowData(se)$equal, class = 'logical')
-  expect_is(rowData(se)$GENEID, class = 'character')
-  expect_is(rowData(se)$novelGene, class = 'logical')
-  expect_is(rowData(se)$totalGeneReadProp, class = 'numeric')
-  expect_is(rowData(se)$numAstart, class = 'integer')
-  expect_is(rowData(se)$numAend, class = 'integer')
-  expect_is(rowData(se)$numTstart, class = 'integer')
-  expect_is(rowData(se)$numTend, class = 'integer')
-})
-
-test_that("calculateGeneProportion",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  annotations <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_annotations.rds")
-  seExpected = readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds")
-  rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-  se = calculateGeneProportion(se)
-  expect_equal(rowData(se)$totalGeneReadProp, rowData(seExpected)$totalGeneReadProp)
+  se <- readRDS(system.file("extdata", "test_se.rds", 
+    package = "bambu"))
+  genomeSequence <- readRDS(system.file("extdata", 
+    "test_genomeSequence.rds", package = "bambu"))
+  annotations <- readRDS(system.file("extdata", 
+                                     "test_annotations.rds", package = "bambu"))
+  se = scoreReadClasses(se, genomeSequence, annotations, defaultModels)
   
+  seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+                                   package = "bambu"))
+  
+  expect_is(rowData(se)$txScore, class = 'numeric')
+  expect_equal(rowData(se)$txScore, rowData(seExpected)$txScore)
 })
 
-test_that("isReadClassEqual",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  annotations <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_annotations.rds")
-  seExpected = readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds")
-  expect_equal(isReadClassEqual(rowRanges(se), annotations),rowData(seExpected)$equal)
+
+test_that("calculateGeneProportion()",{
+  se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
+  annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
+    package = "bambu"))
+  seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+    package = "bambu"))
+  rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
+  countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
+                                      geneIds=mcols(se)$GENEID)
+  expect_equal(countsTBL$geneReadProp, 
+               rowData(seExpected)$geneReadProp)
+})
+
+test_that("isReadClassCompatible() classifies RCs correctly",{
+  se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
+  annotations <- readRDS(system.file("extdata", "test_annotations.rds", 
+                                     package = "bambu"))
+  seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+                                   package = "bambu"))
+  thresholdIndex = which(rowData(se)$readCount>=2)
+  compTable = isReadClassCompatible(rowRanges(se[thresholdIndex,]), annotations)
+  newRowData = data.frame(equal = compTable$equal,
+                          compatible = compTable$compatible)
+  rowData(se)[names(newRowData)] = NA
+  rowData(se)[thresholdIndex,names(newRowData)] = newRowData
+  expect_equal(rowData(se)$equal,rowData(seExpected)$equal)
+  expect_equal(rowData(se)$compatible, rowData(seExpected)$compatible)
 })
 
 test_that("countPolyATerminals",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  genomeSequence <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_genomeSequence.rds")
-  seExpected = readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds")
-  se = countPolyATerminals(se, genomeSequence)
+  se <- readRDS(system.file("extdata", "test_se.rds", package = "bambu"))
+  genomeSequence <- readRDS(system.file("extdata", "test_genomeSequence.rds", 
+                                        package = "bambu"))
+  seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+                                   package = "bambu"))
+  thresholdIndex = which(rowData(se)$readCount>=2)
+  polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), genomeSequence)
+  newRowData = data.frame(numAstart = polyATerminals$numAstart,
+                          numAend = polyATerminals$numAend,
+                          numTstart = polyATerminals$numTstart,
+                          numTend = polyATerminals$numTend)
+  rowData(se)[names(newRowData)] = NA
+  rowData(se)[thresholdIndex,names(newRowData)] = newRowData
+  
   expect_equal(rowData(se)$numAstart,rowData(seExpected)$numAstart)
   expect_equal(rowData(se)$numAend,rowData(seExpected)$numAend)
   expect_equal(rowData(se)$numTstart,rowData(seExpected)$numTstart)
   expect_equal(rowData(se)$numTend,rowData(seExpected)$numTend)
 })
 
-test_that("getAgnosticFeatures",{
+test_that("getTranscriptScore() calculates the correct score", {
+  seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
+                                   package = "bambu"))
+  se=seExpected
+  thresholdIndex = which(rowData(se)$readCount >= 2)
+  txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
+                               defaultModels, fit=TRUE)
+  rowData(se)$txScore = rep(NA,nrow(se))
+  rowData(se)$txScore[thresholdIndex] = txScore
+  expect_equal(rowData(se)$txScore, rowData(seExpected)$txScore)
+})
+
+test_that("prepareTranscriptModelFeatures() produces the correct data types",{
   #TODO make a expected features dataset to compare to
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  features = getAgnosticFeatures(se)
-  features = as.data.frame(features)
+  se <- readRDS(system.file("extdata", "test_se_scored.rds", package = "bambu"))
+  features <- prepareTranscriptModelFeatures(rowData(se))
   expect_is(features$numReads, class = 'numeric')
-  expect_is(features$SD, class = 'numeric')
-  expect_is(features$SDend, class = 'numeric')
   expect_is(features$geneReadProp, class = 'numeric')
+  expect_is(features$startSD, class = 'numeric')
+  expect_is(features$endSD, class = 'numeric')
+  expect_is(features$numAstart, class = 'integer')
+  expect_is(features$numAend, class = 'integer')
+  expect_is(features$numTstart, class = 'integer')
+  expect_is(features$numTend, class = 'integer')
   expect_is(features$tx_strand_bias, class = 'numeric')
-  expect_is(features$numAstart, class = 'numeric')
-  expect_is(features$numAend, class = 'numeric')
-  expect_is(features$numTstart, class = 'numeric')
-  expect_is(features$numTend, class = 'numeric')
-  expect_is(features$transcriptProp, class = 'numeric')
-  expect_is(features$transcriptPropMin, class = 'numeric')
 })
 
-test_that("assignGeneIds",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  annotations <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_annotations.rds")
-  seExpected = readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_readClassSe.rds")
-  expect_equal(assignGeneIds(rowRanges(se), annotations),rowData(seExpected)$GENEID)
-})
-
-test_that("prepareGeneModelFeatures",{
-  se <- readRDS("C:/Users/simandred/Documents/GitHub/bambu/tests/testData/test_se.rds")
-  geneFeatures = prepareGeneModelFeatures(se)
-  geneFeatures = as.data.frame(geneFeatures)
-  expect_is(features$numReadsLog, class = 'numeric')
-  expect_is(features$strand_bias, class = 'numeric')
-  expect_is(features$numRCs, class = 'numeric')
-  expect_is(features$numNonSubsetRCs, class = 'numeric')
-  expect_is(features$numExons, class = 'numeric')
-  expect_is(features$isSpliced, class = 'numeric')
-  expect_is(features$highConfidence, class = 'numeric')
+test_that("checkFeatures() detects insufficient samples",{
+  se <- readRDS(system.file("extdata", "test_se_scored.rds", package = "bambu"))
+  thresholdIndex = which(rowData(se)$readCount>=2)
+  features <- prepareTranscriptModelFeatures(rowData(se)[thresholdIndex,])
+  trainable = checkFeatures(features)
+  #normal se
+  expect_equal(trainable, FALSE)
+  #TODO se has all TRUE labels
+  expect_equal(trainable, FALSE)
+  #TODOse with no TRUE labels
+  expect_equal(trainable, FALSE)
+  #TODO se with not enough points
+  expect_equal(trainable, FALSE)
+  #TODO se with not enough true/false labels
+  expect_equal(trainable, FALSE)
 })

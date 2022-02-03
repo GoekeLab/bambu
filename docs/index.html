@@ -5,14 +5,21 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reference-guided isoform reconstruction and quantification for long read RNA-Seq data • bambu</title>
+<title>Reference-guided isoform reconstruction and quantification for long read 
+    RNA-Seq data • bambu</title>
 <!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script><!-- Bootstrap --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script><!-- bootstrap-toc --><link rel="stylesheet" href="bootstrap-toc.css">
 <script src="bootstrap-toc.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="pkgdown.css" rel="stylesheet">
-<script src="pkgdown.js"></script><meta property="og:title" content="Reference-guided isoform reconstruction and quantification for long read RNA-Seq data">
-<meta property="og:description" content="Multi-sample transcript discovery and quantification using long read RNA-Seq data. ">
+<script src="pkgdown.js"></script><meta property="og:title" content="Reference-guided isoform reconstruction and quantification for long read 
+    RNA-Seq data">
+<meta property="og:description" content="bambu is a R package for multi-sample transcript discovery and 
+    quantification using long read RNA-Seq data. You can use bambu after read 
+    alignment to obtain expression estimates for known and novel transcripts and 
+    genes. The output from bambu can directly be used for visualisation and 
+    downstream analysis such as differential gene expression or transcript
+    usage. ">
 <!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
@@ -31,7 +38,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.1</span>
       </span>
     </div>
 
@@ -39,7 +46,7 @@
       <ul class="nav navbar-nav">
 <li>
   <a href="index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -53,7 +60,7 @@
 <ul class="nav navbar-nav navbar-right">
 <li>
   <a href="https://github.com/GoekeLab/bambu/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -74,7 +81,7 @@
 <div id="bambu-reference-guided-transcript-discovery-and-quantification-for-long-read-rna-seq-data" class="section level1">
 <div class="page-header"><h1 class="hasAnchor">
 <a href="#bambu-reference-guided-transcript-discovery-and-quantification-for-long-read-rna-seq-data" class="anchor"></a>bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data</h1></div>
-<p><a href="https://github.com/GoekeLab/bambu"><img src="https://img.shields.io/github/v/release/GoekeLab/bambu?style=plastic" alt="GitHub release (latest by date)"></a> <a href="https://github.com/GoekeLab/bambu/graphs/contributors"><img src="https://img.shields.io/badge/Maintained%3F-Yes-brightgreen" alt="Maintained?"></a> <a href="#installation"><img src="https://img.shields.io/badge/Install-Github-brightgreen" alt="Install"></a> <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a></p>
+<p><a href="https://www.tidyverse.org/lifecycle/#stable"><img src="https://img.shields.io/badge/lifecycle-stable-green.svg" alt="Lifecycle: maturing"></a> <a href="https://github.com/GoekeLab/bambu/graphs/contributors"><img src="https://img.shields.io/badge/Maintained%3F-Yes-brightgreen" alt="Maintained?"></a> <a href="#installation"><img src="https://img.shields.io/badge/Install-Github-brightgreen" alt="Install"></a> <a href="https://github.com/goekelab/bambu/actions"><img src="https://github.com/goekelab/bambu/workflows/R-CMD-check-bioc/badge.svg" alt="R build status"></a><br><a href="https://github.com/goekelab/bambu/issues"><img src="https://img.shields.io/github/issues/goekelab/bambu" alt="GitHub issues"></a> <a href="https://github.com/goekelab/bambu/pulls"><img src="https://img.shields.io/github/issues-pr/goekelab/bambu" alt="GitHub pulls"></a> <a href="http://bioconductor.org/checkResults/release/bioc-LATEST/bambu/"><img src="http://bioconductor.org/shields/build/release/bioc/bambu.svg" alt="BioC status"></a> <a href="https://bioconductor.org/checkResults/devel/bioc-LATEST/bambu"><img src="http://www.bioconductor.org/shields/build/devel/bioc/bambu.svg" alt="BioC dev status"></a> <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a> <a href="https://doi.org/10.5281/zenodo.3900025"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.3900025.svg" alt="DOI"></a> <a href="https://www.codefactor.io/repository/github/goekelab/bambu"><img src="https://www.codefactor.io/repository/github/goekelab/bambu/badge" alt="CodeFactor"></a> <a href="https://codecov.io/gh/GoekeLab/bambu"><img src="https://codecov.io/gh/GoekeLab/bambu/branch/master/graph/badge.svg?token=PMeRi0r1tj" alt="codecov"></a></p>
 <p><strong><em>bambu</em></strong> is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use <strong><em>bambu</em></strong> after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from <strong><em>bambu</em></strong> can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.</p>
 <hr>
 <div id="content" class="section level3">
@@ -85,28 +92,27 @@
 <li><a href="#general-usage">General usage</a></li>
 <li><a href="#use-precalculated-annotation-objects">Use precalculated annotation objects</a></li>
 <li><a href="#advanced-options">Advanced options</a></li>
+<li><a href="#details-on-the-output">Details on the output</a></li>
 <li><a href="#complementary-functions">Complementary functions</a></li>
 <li><a href="#release-history">Release History</a></li>
+<li><a href="#citation">Citation</a></li>
 <li><a href="#contributors">Contributors</a></li>
 </ul>
 </div>
 <div id="installation" class="section level3">
 <h3 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h3>
-<p>You can install <strong><em>bambu</em></strong> from github:</p>
-<pre class="rscript"><code>if (!requireNamespace("devtools", quietly = TRUE))
-    install.packages("devtools")
-devtools::install_github("GoekeLab/bambu")</code></pre>
+<p>You can install <strong><em>bambu</em></strong> from bioconductor:</p>
+<pre class="rscript"><code>if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("bambu")</code></pre>
 <hr>
 </div>
 <div id="general-usage" class="section level3">
 <h3 class="hasAnchor">
 <a href="#general-usage" class="anchor"></a>General Usage</h3>
-<p>The default mode to run <em><strong>bambu</strong> is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). </em><strong>bambu</strong>* will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates:</p>
-<p>```rscript library(bambu)</p>
-<p>test.bam &lt;- system.file(“extdata”, “SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam”, package = “bambu”)</p>
-<p>se &lt;- bambu(reads = test.bam, annotations = “TxDb.Hsapiens.UCSC.hg38.knownGene”, genomeSequence = “BSgenome.Hsapiens.NCBI.GRCh38”)</p>
-<p>```</p>
+<p>The default mode to run <em><strong>bambu</strong> is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). </em><strong>bambu</strong>* will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates.</p>
 <p>We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run <strong><em>bambu</em></strong> with the following options:</p>
 <pre class="rscript"><code>test.bam &lt;- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
   
@@ -114,15 +120,19 @@ fa.file &lt;- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembl
 
 gtf.file &lt;- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
 
-bambuAnnotations &lt;- prepareAnnotationsFromGTF(gtf.file)
+bambuAnnotations &lt;- prepareAnnotations(gtf.file)
 
-se &lt;- bambu(reads = test.bam, annotations = bambuAnnotations, genomeSequence = fa.file)
+se &lt;- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 </code></pre>
+<p><strong>Transcript discovery only (no quantification)</strong></p>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, annotations = txdb, genome = fa.file, quant = FALSE)</a></code></pre>
 <p><strong>Quantification of annotated transcripts and genes only (no transcript/gene discovery)</strong></p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, annotations = txdb, genomeSequence = fa.file, extendAnnotations = FALSE)</a></code></pre>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, annotations = txdb, genome = fa.file, discovery = FALSE)</a></code></pre>
 <p><strong>Large sample number/ limited memory</strong><br>
 For larger sample numbers we recommend to write the processed data to a file:</p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, readClass.outputDir = "./bambu/", annotations = bambuAnnotations, genomeSequence = fa.file)</a></code></pre>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, rcOutDir = "./bambu/", annotations = bambuAnnotations, genome = fa.file)</a></code></pre>
+<p>For very large samples (&gt;100 million reads) where memory is limiting we recommend running Bambu in lowMemory mode:</p>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file, lowMemory = TRUE)</a></code></pre>
 <hr>
 </div>
 <div id="use-precalculated-annotation-objects" class="section level3">
@@ -131,7 +141,7 @@ For larger sample numbers we recommend to write the processed data to a file:</p
 <p>You can also use precalculated annotations.</p>
 <p>If you plan to run <strong><em>bambu</em></strong> more frequently, we recommend to save the bambuAnnotations object.</p>
 <p>The bambuAnnotation object can be calculated from a <em>.gtf</em> file:</p>
-<pre class="rscript"><code>annotations &lt;- prepareAnnotationFromGTF(gtf.file)</code></pre>
+<pre class="rscript"><code>annotations &lt;- prepareAnnotation(gtf.file)</code></pre>
 <p>From <em>TxDb</em> object</p>
 <pre class="rscript"><code>annotations &lt;- prepareAnnotations(txdb)</code></pre>
 <hr>
@@ -143,22 +153,48 @@ For larger sample numbers we recommend to write the processed data to a file:</p
 <ul>
 <li>Keep novel transcripts with min 5 read count in at least 1 sample:</li>
 </ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readCount = 5))</a></code></pre>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(min.readCount = 5))</a></code></pre>
 <ul>
 <li>Keep novel transcripts with min 5 samples having at least 2 counts:</li>
 </ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, isoreParameters = list(min.sampleNumber = 5))</a></code></pre>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(min.sampleNumber = 5))</a></code></pre>
 <ul>
 <li>Filter out transcripts with relative abundance within gene lower than 10%:</li>
 </ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, isoreParameters = list(min.readFractionByGene = 0.1))</a></code></pre>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 0.1))</a></code></pre>
+<ul>
+<li>Set novel transcript discovery rate to 50% of the detected transcripts (lower is more):</li>
+</ul>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(max.txNDR = 0.5))</a></code></pre>
 <p><strong>Quantification without bias correction</strong></p>
 <p>The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.</p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, emParameters = list(bias = FALSE))</a></code></pre>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.em = list(bias = FALSE))</a></code></pre>
 <p><strong>Parallel computation</strong><br><strong><em>bambu</em></strong> allows parallel computation.</p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genomeSequence, ncore = 8)</a></code></pre>
-<p>See <a href="docs/bambu_0.1.0.pdf">manual</a> for details to customize other conditions.</p>
+<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, ncore = 8)</a></code></pre>
+<p>See <a href="https://goekelab.github.io/bambu/">our page</a> for a complete step-by-step workflow and manual on how to customize other condictions.</p>
 <hr>
+</div>
+<div id="details-on-the-output" class="section level3">
+<h3 class="hasAnchor">
+<a href="#details-on-the-output" class="anchor"></a>Details on the output</h3>
+<p><strong><em>bambu</em></strong> will output different results depending on whether <em>quant</em> mode is on.</p>
+<p>By default, <em>quant</em> is set to TRUE, so <strong><em>bambu</em></strong> will generate a <em>SummarizedExperiment</em> object that contains the transcript expression estimates.</p>
+<ul>
+<li>access transcript expression estimates by <strong><em>counts()</em></strong>, including a list of variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts, and theta
+<ul>
+<li>counts: expression estimates</li>
+<li>CPM: sequencing depth normalized estimates</li>
+<li>fullLengthCounts: estimates of read counts mapped as full length reads for each transcript</li>
+<li>partialLengthCounts: estimates of read counts mapped as partial length reads for each transcript</li>
+<li>uniqueCounts: counts of reads that are uniquely mapped to each transcript</li>
+<li>theta: raw estimates</li>
+</ul>
+</li>
+<li>access annotations that are matched to the transcript expression estimates by <strong><em>rowRanges()</em></strong>
+</li>
+<li>access transcript to gene id map by <strong><em>rowData()</em></strong>, <em>eqClass</em> that defines the equivalent class transcripts is also reported</li>
+</ul>
+<p>In the case when <em>quant</em> is set to FALSE, i.e., only transcript discovery is performed, <strong><em>bambu</em></strong> will report the <em>grangeslist</em> of the extended annotations</p>
 </div>
 <div id="complementary-functions" class="section level3">
 <h3 class="hasAnchor">
@@ -166,24 +202,24 @@ For larger sample numbers we recommend to write the processed data to a file:</p
 <p><strong>Transcript expression to gene expression</strong></p>
 <pre class="rscript"><code><a href="reference/transcriptToGeneExpression.html">transcriptToGeneExpression(se)</a></code></pre>
 <p><strong>Visualization</strong></p>
-<p>You can visualize the novel genes/transcripts using <strong><em>plot.bambu</em></strong> function</p>
-<pre class="rscript"><code><a href="reference/plot.bambu.html">plot.bambu(se, type = "annotation", gene_id)
+<p>You can visualize the novel genes/transcripts using <strong><em>plotBambu</em></strong> function</p>
+<pre class="rscript"><code><a href="reference/plotBambu.html">plotBambu(se, type = "annotation", gene_id)
 
-plot.bambu(se, type = "annotation", transcript_id)</a></code></pre>
+plotBambu(se, type = "annotation", transcript_id)</a></code></pre>
 <ul>
 <li>
-<strong><em>plot.bambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions</li>
+<strong><em>plotBambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions</li>
 </ul>
-<pre class="rscript"><code><a href="reference/plot.bambu.html">plot.bambu(se, type = "heatmap") # heatmap 
+<pre class="rscript"><code><a href="reference/plotBambu.html">plotBambu(se, type = "heatmap") # heatmap 
 
-plot.bambu(se, type = "pca") # PCA visualization</a></code></pre>
+plotBambu(se, type = "pca") # PCA visualization</a></code></pre>
 <ul>
 <li>
-<strong><em>plot.bambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable</li>
+<strong><em>plotBambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable</li>
 </ul>
-<pre class="rscript"><code><a href="reference/plot.bambu.html">plot.bambu(se, type = "heatmap", group.var) # heatmap 
+<pre class="rscript"><code><a href="reference/plotBambu.html">plotBambu(se, type = "heatmap", group.var) # heatmap 
 
-plot.bambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
+plotBambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 <p><strong>Write bambu outputs to files</strong></p>
 <ul>
 <li>
@@ -195,13 +231,63 @@ plot.bambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 <div id="release-history" class="section level3">
 <h3 class="hasAnchor">
 <a href="#release-history" class="anchor"></a>Release History</h3>
+<p><strong>bambu version 1.99.0</strong></p>
+<p>Release date: 2021-10-18</p>
+<p>Major Changes:</p>
+<ul>
+<li>Implemented a machine learning model to estimate transcript-level novel discovery rate</li>
+<li>Implemented full length estimates, partial length estimates and unique read counts in final output</li>
+<li>Improved the performance when extending annotations with simplified code</li>
+<li>Improved the performance when large amounts of annotations are missing.</li>
+<li>Implemented a lowMemory option to reduce the memory requirements for very large samples (&gt;100 million reads)</li>
+</ul>
+<p>Minor fixes:</p>
+<ul>
+<li>remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) and directly references the functions that should be used instead.</li>
+<li>bug fix when a fa file ois provdied as a string variable to non-windows system</li>
+<li>bug fix when no single exon read class in provided samples</li>
+<li>nug fix when no splice overlaps found between read class and annotations</li>
+</ul>
+<p><strong>bambu version 1.0.2</strong></p>
+<p>Release date: 2020-11-10</p>
+<ul>
+<li>bug fix for author name display</li>
+<li>bug fix for calling fasta file and bam file from ExperimentHub</li>
+<li>update NEWS file</li>
+</ul>
+<p><strong>bambu version 1.0.0</strong></p>
+<p>Release date: 2020-11-06</p>
+<ul>
+<li>bug fix for parallel computation to avoid bplapply</li>
+</ul>
+<p><strong>bambu version 0.99.4</strong></p>
+<p>Release date: 2020-08-18</p>
+<ul>
+<li>remove codes using seqlevelStyle to allow customized annotation</li>
+<li>update the requirement of R version and ExperimentHub version</li>
+</ul>
+<p><strong>bambu version 0.3.0</strong></p>
+<p>Release date: 2020-07-27</p>
+<ul>
+<li>bambu now runs on windows with a fasta file</li>
+<li>update to the documentation (vignette)</li>
+<li>prepareAnnotations now works with TxDb or gtf file</li>
+<li>minor bug fixes</li>
+</ul>
+<p><strong>bambu version 0.2.0</strong></p>
+<p>Release date: 2020-06-18</p>
 <p><strong>bambu version 0.1.0</strong></p>
-<p>Release date: 29th May 2020</p>
+<p>Release date: 2020-05-29</p>
+</div>
+<div id="citation" class="section level3">
+<h3 class="hasAnchor">
+<a href="#citation" class="anchor"></a>Citation</h3>
+<p>A manuscript describing bambu is currently in preparation. If you use bambu for your research, please cite using the following doi: 10.18129/B9.bioc.bambu. Please specificy that you are using a pre-publication release.</p>
 </div>
 <div id="contributors" class="section level3">
 <h3 class="hasAnchor">
 <a href="#contributors" class="anchor"></a>Contributors</h3>
-<p>This package is developed and maintained by <a href="https://github.com/cying111">Ying Chen</a>, <a href="https://github.com/yuukiiwa">Yuk Kei Wan</a>, and <a href="https://github.com/jonathangoeke">Jonathan Goeke</a> at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.</p>
+<p>This package is developed and maintained by <a href="https://github.com/cying111">Ying Chen</a>, <a href="https://github.com/andredsim">Andre Sim</a>, <a href="https://github.com/yuukiiwa">Yuk Kei Wan</a>, and <a href="https://github.com/jonathangoeke">Jonathan Goeke</a> at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.</p>
 <p><img src="figures/bambu_design_highres.png" title="Bambu" alt="Bambu"></p>
 </div>
 </div>
@@ -212,6 +298,8 @@ plot.bambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
     <div class="links">
 <h2>Links</h2>
 <ul class="list-unstyled">
+<li>Download from BIOC at <br><a href="https://www.bioconductor.org/packages/bambu">https://​www.bioconductor.org/​packages/​bambu</a>
+</li>
 <li>Browse source code at <br><a href="https://github.com/GoekeLab/bambu/">https://​github.com/​GoekeLab/​bambu/​</a>
 </li>
 </ul>
@@ -220,14 +308,17 @@ plot.bambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 <h2>License</h2>
 <ul class="list-unstyled">
 <li>
-<a href="https://www.r-project.org/Licenses/GPL-3">GPL-3</a> </li>
+<a href="https://www.r-project.org/Licenses/GPL-3">GPL-3</a>  + file <a href="LICENSE-text.html">LICENSE</a>
+</li>
 </ul>
 </div>
 <div class="developers">
 <h2>Developers</h2>
 <ul class="list-unstyled">
-<li>Ying Chen Developer <br><small class="roles"> Maintainer </small>  </li>
-<li>Jonathan Goeke Developer <br><small class="roles"> Author </small>  </li>
+<li>Ying Chen <br><small class="roles"> Maintainer, author </small>  </li>
+<li>Andre Sim <br><small class="roles"> Author </small>  </li>
+<li>Yuk Kei Wan <br><small class="roles"> Author </small>  </li>
+<li>Jonathan Goeke <br><small class="roles"> Author </small>  </li>
 </ul>
 </div>
 
@@ -236,11 +327,11 @@ plot.bambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 
 
       <footer><div class="copyright">
-  <p>Developed by Ying Chen Developer, Jonathan Goeke Developer.</p>
+  <p>Developed by Ying Chen, Andre Sim, Yuk Kei Wan, Jonathan Goeke.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
