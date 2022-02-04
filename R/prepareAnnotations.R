@@ -45,10 +45,14 @@ prepareAnnotations <- function(x) {
             names(exonsByTx),
             minEqClasses$queryTxId
         )]
-        return(exonsByTx)
     } else {
-        if (grepl(".gtf", x)) {
-            return(prepareAnnotationsFromGTF(x))
-        }
+        tryCatch({
+            exonsByTx = prepareAnnotationsFromGTF(x)
+            },
+        error = function(cond){
+            stop("Input annotation file not readable. ",
+                "Requires .gtf/.gff format or TxDb object")
+        })
     }
+    return(exonsByTx)
 }

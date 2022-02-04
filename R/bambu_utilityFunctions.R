@@ -30,7 +30,6 @@ setIsoreParameters <- function(isoreParameters){
         min.exonOverlap = 10,
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
-        max.txNDR = 0.1,
         fitReadClassModel = TRUE,
         prefix = "") 
     isoreParameters <- 
@@ -120,21 +119,26 @@ checkInputs <- function(annotations, reads, readClass.file,
 checkInputSequence <- function(genomeSequence) {
     if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
         please provide fasta file or BSgenome name, see available.genomes()")
-    if (is(genomeSequence, "character")) {
-        if (grepl(".fa", genomeSequence)) {
+    if (genomeSequence %in% BSgenome::available.genomes()) {
+        genomeSequence <- BSgenome::getBSgenome(genomeSequence)
+    } else {
+        tryCatch(
+        {
             if (.Platform$OS.type == "windows") {
-                genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-                newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                    "[[", 1))
-                names(genomeSequence) <- newlevels
-            } else {
-                indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
-                if (!indexFileExists) indexFa(genomeSequence)
-                genomeSequence <- FaFile(genomeSequence)
-            }
+            genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
+            newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
+                "[[", 1))
+            names(genomeSequence) <- newlevels
         } else {
-            genomeSequence <- BSgenome::getBSgenome(genomeSequence)
+            indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
+            if (!indexFileExists) indexFa(genomeSequence)
+            genomeSequence <- FaFile(genomeSequence)
         }
-    }
+        },
+        error=function(cond) {
+            stop("Input genome file not readable.",
+                "Requires a FASTA or BSgenome name")
+        }
+    )}
     return(genomeSequence)
 }
