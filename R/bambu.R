@@ -19,6 +19,8 @@
 #' @param stranded A boolean for strandedness, defaults to FALSE.
 #' @param ncore specifying number of cores used when parallel processing 
 #' is used, defaults to 1.
+#' @param NDR specifying the maximum NDR rate to novel transcript
+#'     output from detected read classes, defaults to 0.1
 #' @param yieldSize see \code{Rsamtools}.
 #' @param opt.discovery A list of controlling parameters for isoform
 #' reconstruction process:
@@ -51,8 +53,6 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
-#'     \item{max.txNDR}{specifying the maximum NDR rate to novel transcript
-#'     output from detected read classes, defaults to 0.1}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -116,7 +116,7 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
-    annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1,
+    annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
     discovery = TRUE, quant = TRUE, verbose = FALSE, 
     lowMemory = FALSE) {
@@ -127,6 +127,10 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
+
+    #below line is to be compatible with earlier version of running bambu
+    if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
+
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
         ncore, verbose)
@@ -145,7 +149,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             yieldSize, bpParameters, stranded, verbose, isoreParameters)
     } else {readClassList <- rcFile}
     if (discovery) {
-        annotations <- bambu.extendAnnotations(readClassList, annotations,
+        annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
         if (!quant){return(annotations)}
