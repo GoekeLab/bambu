@@ -122,9 +122,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
-    }
-    if(is.null(annotations)) annotations = GRangesList()
-    else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
+    if(is.null(annotations)) { annotations = GRangesList()
+    } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
