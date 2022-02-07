@@ -138,6 +138,7 @@ allow comparison.</p>
     genome <span class='op'>=</span> <span class='cn'>NULL</span>,
     stranded <span class='op'>=</span> <span class='cn'>FALSE</span>,
     ncore <span class='op'>=</span> <span class='fl'>1</span>,
+    NDR <span class='op'>=</span> <span class='fl'>0.1</span>,
     yieldSize <span class='op'>=</span> <span class='cn'>NULL</span>,
     opt.discovery <span class='op'>=</span> <span class='cn'>NULL</span>,
     opt.em <span class='op'>=</span> <span class='cn'>NULL</span>,
@@ -184,6 +185,11 @@ obtained by <code><a href='prepareAnnotations.html'>prepareAnnotations</a></code
       <td><p>specifying number of cores used when parallel processing 
 is used, defaults to 1.</p></td>
     </tr>
+    <tr>
+        <th>NDR</th>
+        <td><p>specifying the approximated precision for included novel transcripts, 
+defaults to 0.1 (10% precision).</p></td>
+      </tr>
     <tr>
       <th>yieldSize</th>
       <td><p>see <code>Rsamtools</code>.</p></td>
