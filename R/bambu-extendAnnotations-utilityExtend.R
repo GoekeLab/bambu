@@ -77,7 +77,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
-  if(sum(filterSet)==0) warning("No novel transcripts meet the given thresholds")
+  if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
   # (3) remove transcripts with identical junctions to annotations
@@ -112,7 +112,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts){
     if(sum(equal, na.rm = TRUE)<50 | 
         sum(!equal, na.rm = TRUE)<50){
           combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
-          warning("Less than 50 TRUE or FALSE read classes for precision stabilization. 
+          message("Less than 50 TRUE or FALSE read classes for precision stabilization. 
           Filtering by prediction score instead")
     } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     return(combinedTranscripts)
