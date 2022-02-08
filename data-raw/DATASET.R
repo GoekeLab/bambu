@@ -1,5 +1,18 @@
 ## code to prepare `sysdata.rda` dataset goes here
 
+# Train and test matrix and labels for mock data used for
+# fitXGBoostModel() in test_xgboost.R 
+data_train <- matrix(seq(1:300000), nrow=100000)
+data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
+labels_train <- c(rep(1,50000), rep(0,50000))
+xgb_model <- fitXGBoostModel(labels_train, data_train, data_test, show.cv=TRUE)
+# Extract the predictions and results from the list
+xgb_predictions = predict(xgb_model, data_test)
+xgb.dump(xgb_model, './inst/extdata/xgb_model_splice_junction_correction.txt',
+         dump_format='json')
+writeLines(as.character(xgb_predictions),
+           './inst/extdata/xgb_predictions_splice_junction_correction.txt')
+
 
 data1 <- data.frame(
     tx_id = c( 1,"1Start", 2, "2Start"),
@@ -299,7 +312,7 @@ gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_100
 
 extendedAnnotations <- isore.extendAnnotations(combinedTranscripts=seIsoReCombined,
                                                annotationGrangesList=gr,
-                                               remove.subsetTx = TRUE, min.sampleNumber = 1, max.txNDR = 0.1, 
+                                               remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.1, 
                                                min.exonDistance = 35, min.exonOverlap = 10,
                                                min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                                prefix='',
@@ -311,7 +324,6 @@ saveRDS(extendedAnnotations, file = "./inst/extdata/extendedAnnotationGranges_tx
 test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
 fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
 gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-
 
 set.seed(1234)
 seOutput = bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(degradationBias = FALSE), discovery = FALSE)
@@ -343,6 +355,13 @@ set.seed(1234)
 seOutputCombined2 <- bambu(rcFile = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
 saveRDS(seOutputCombined2, file = "./inst/extdata/seOutputCombined2_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
+# calculate results for test cases
+se <- system.file("extdata", "proto_seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
+se <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+genomeSequence <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+genomeSequence <- checkInputSequence(genomeSequence)
+se = scoreReadClasses(se, genomeSequence, gr)
 
 query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
 subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))

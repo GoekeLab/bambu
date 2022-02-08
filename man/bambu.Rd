@@ -12,6 +12,7 @@ bambu(
     genome = NULL,
     stranded = FALSE,
     ncore = 1,
+    NDR = 0.1,
     yieldSize = NULL,
     opt.discovery = NULL,
     opt.em = NULL,
@@ -41,6 +42,9 @@ obtained by \code{\link{prepareAnnotations}}.}
 
 \item{ncore}{specifying number of cores used when parallel processing 
 is used, defaults to 1.}
+
+\item{NDR}{specifying the maximum NDR rate to novel transcript
+output from detected read classes, defaults to 0.1}
 
 \item{yieldSize}{see \code{Rsamtools}.}
 
@@ -75,8 +79,6 @@ reconstruction process:
     \item{min.txScore.singleExon}{specifying the minimum transcript level 
     threshold for single-exon transcripts during sample combining, defaults 
     to 1}
-    \item{max.txNDR}{specifying the maximum NDR rate to novel transcript
-    output from detected read classes, defaults to 0.1}
 }}
 
 \item{opt.em}{A list of controlling parameters for quantification

@@ -93,6 +93,8 @@ countPolyATerminals = function(grl, genomeSequence){
     end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, 
             exonNumber = 1), use.names = FALSE)), 
                   width = 10, fix = 'end', ignore.strand=FALSE)
+    strand(start)[which(strand(start)=='*')] = "+"
+    strand(end)[which(strand(end)=='*')] = "+"
     startSeqs = BSgenome::getSeq(genomeSequence,start)
     endSeqs = BSgenome::getSeq(genomeSequence,end)
     numATstart = BSgenome::letterFrequency(startSeqs, c("A","T"))
@@ -128,7 +130,7 @@ getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
         } else txScoreSE = NULL
         
     } else {
-        warning("Transcript model not trained. Using pre-trained models")
+        message("Transcript model not trained. Using pre-trained models")
         txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
         txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
     }

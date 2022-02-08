@@ -81,6 +81,16 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     annotations <- keepSeqlevels(annotations, value = refSeqLevels,
         pruning.mode = "coarse")
     }
+    #removes reads that are outside genome coordinates
+    tempGrgListLen = length(readGrgList)
+    readGrgList = readGrgList[max(end(ranges(readGrgList)))<
+        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]]
+    numBadReads = tempGrgListLen - length(readGrgList)
+    if(numBadReads > 0 ){
+        warning(paste0(numBadReads, " reads are mapped outside the provided ",
+        "genomic regions. These reads will be dropped. Check you are using the ",
+        "same genome used for the alignment"))
+    }
     # construct read classes for each chromosome seperately 
     if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
         annotations, stranded, verbose,bam.file)
