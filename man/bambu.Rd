@@ -12,6 +12,7 @@ bambu(
     genome = NULL,
     stranded = FALSE,
     ncore = 1,
+    NDR = 0.1,
     yieldSize = NULL,
     opt.discovery = NULL,
     opt.em = NULL,
