@@ -6,8 +6,10 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                             fit = TRUE, min.readCount = 2, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
-    rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-    rowData(se)$novelGene = grepl("gene.", rowData(se)$GENEID)
+    geneIds = assignGeneIds(rowRanges(se), annotations)
+    rowData(se)$GENEID = geneIds$geneIds
+    rowData(se)$novelGene = FALSE
+    rowData(se)$novelGene[geneIds$newGeneSet] = TRUE
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
