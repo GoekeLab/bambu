@@ -375,7 +375,8 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 }
 
 #' Main function which calls other gene id assigner functions
-#' Returns a list of gene ids for each read class
+#' Returns a list of gene ids for each read class and an 
+#' index of which genes are novel
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
 assignGeneIds <- function(grl, annotations) {
@@ -384,7 +385,7 @@ assignGeneIds <- function(grl, annotations) {
     newGeneSet <- which(is.na(geneIds))
     newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
     geneIds[newGeneSet] <- newGeneIds
-    return(geneIds)
+    return(list(geneIds=geneIds, newGeneSet = newGeneSet))
 }
 
 #' Return gene ids for read classes which overlap
