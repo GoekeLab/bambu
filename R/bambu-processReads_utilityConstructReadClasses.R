@@ -23,7 +23,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         warning("read Id not sorted, can result in wrong assignments.
             Please report this")
     start.ptm <- proc.time()
-    splRC.output <- constructSplicedReadClasses(
+    exonsByRC.spliced <- constructSplicedReadClasses(
         uniqueJunctions = uniqueJunctions,
         unlisted_junctions = unlisted_junctions,
         readGrgList = readGrgList,
@@ -33,16 +33,17 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     if (verbose) 
         message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    unsplRC.output <- constructUnsplicedReadClasses(reads.singleExon, 
-        annotations, splRC.output$exonsByReadClass, splRC.output$indices, stranded, verbose)
-    exonsByRC <- c(splRC.output$exonsByReadClass, unsplRC.output$exonsByReadClass)
+    if(length(reads.singleExon)==0) exonsByRC.unspliced <- NULL
+    exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
+        annotations, exonsByRC.spliced$exonsByReadClass, exonsByRC.spliced$indices, stranded, verbose)
+    exonsByRC <- c(exonsByRC.spliced$exonsByReadClass, exonsByRC.unspliced$exonsByReadClass)
     colDataDf <- DataFrame(name = runName, row.names = runName)
     #TODO later remove assays = SimpleList(counts = counts)
     counts <- matrix(mcols(exonsByRC)$readCount,
                      dimnames = list(names(exonsByRC), runName))
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
         rowRanges = exonsByRC, colData = colDataDf)
-    metadata(se)$readIndex = unsplRC.output$readIndex
+    metadata(se)$readIndex = exonsByRC.unspliced$readIndex
     return(se)
 }
 
