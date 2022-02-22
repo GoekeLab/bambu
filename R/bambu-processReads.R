@@ -67,7 +67,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
     if(trackReads) readNames = names(readGrgList)
-    unname(readGrgList)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
@@ -84,12 +83,11 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         pruning.mode = "coarse")
     }
     #removes reads that are outside genome coordinates
-    tempGrgListLen = length(readGrgList)
-    badReads = max(end(ranges(readGrgList)))<
-    seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
-    readGrgList = readGrgList[badReads]
-    readNames =readNames[badReads]
-    numBadReads = tempGrgListLen - length(readGrgList)
+    badReads = max(end(ranges(readGrgList)))>=
+        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
+    readGrgList = readGrgList[!badReads]
+    readNames =readNames[!badReads]
+    numBadReads = sum(badReads)
     if(numBadReads > 0 ){
         warning(paste0(numBadReads, " reads are mapped outside the provided ",
         "genomic regions. These reads will be dropped. Check you are using the ",
