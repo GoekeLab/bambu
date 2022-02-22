@@ -150,13 +150,12 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads)
     } else { readClassList <- rcFile}
-    readModelMap = NULL
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
         if (!quant){
-            return(list(annotations=annotations, readModelMap = readModelMap))
+            return(list(annotations=annotations))
         }
     }
     if (quant) {
