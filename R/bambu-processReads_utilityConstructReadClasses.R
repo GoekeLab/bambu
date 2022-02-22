@@ -162,7 +162,6 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     readChr = getChrFromGrList(readGrgList)
     readAlignStrand = getStrandFromGrList(readGrgList)
-    rm(readGrgList)
     intronStartCoordinatesInt <- 
         as.integer(min(splitAsList(unlisted_junctions_start,
         unlisted_junctions_id)) - 2)
@@ -249,7 +248,7 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
                                  mcols(readClassListSpliced)$strand.rc != "*"], 
         use.names = FALSE)),
         granges(unlist(annotations, use.names = FALSE))))
-        rm(readClassListSpliced, annotations)
+        rm(annotations)
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges
