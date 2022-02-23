@@ -24,6 +24,7 @@ Depends:
     R(>= 4.1),
     SummarizedExperiment(>= 1.1.6),
     S4Vectors(>= 0.22.1),
+    BSgenome,
     IRanges
 Suggests: 
     AnnotationDbi,
@@ -72,7 +73,6 @@ LinkingTo:
     RcppArmadillo
 Imports:
     BiocGenerics,
-    BSgenome,
     BiocParallel,
     data.table,
     dplyr,
