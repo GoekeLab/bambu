@@ -86,7 +86,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     badReads = max(end(ranges(readGrgList)))>=
         seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
     readGrgList = readGrgList[!badReads]
-    readNames =readNames[!badReads]
+    if(trackReads) readNames = readNames[!badReads]
     numBadReads = sum(badReads)
     if(numBadReads > 0 ){
         warning(paste0(numBadReads, " reads are mapped outside the provided ",
@@ -106,7 +106,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             annotations, stranded, verbose)
     }
     if(trackReads) metadata(se)$readNames = readNames
-    rm(readGrgList)
+    rm(readGrgList, readNames)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se,genomeSequence, annotations, 
