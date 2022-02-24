@@ -7,7 +7,7 @@ plotAnnotation <- function(se, gene_id, transcript_id) {
     if (is.null(gene_id) & (is.null(transcript_id)))
         stop("Please provide the gene_id(s) of the gene of interest or
             transcript_id(s) for the transcripts of interest!")
-    if (ncol(rowData(se)) == 0) {
+    if (!("TXNAME" %in% colnames(rowData(se)))) {
         if (is.null(gene_id))
             stop("Please provide the gene_id(s) of the gene of interest
                 when gene expression are provided!")

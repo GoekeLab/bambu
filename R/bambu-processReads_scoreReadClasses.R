@@ -34,7 +34,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                  defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
-    rowData(se)$txScore[thresholdIndex] = txScore
+    if(!is.null(txScore)) rowData(se)$txScore[thresholdIndex] = txScore
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
