@@ -83,7 +83,6 @@ reconstruction process:
 }}
 \item{trackReads}{Read names will be tracked and their relationship to read classes 
     and transcript output as metadata.}
-}
 
 \item{opt.em}{A list of controlling parameters for quantification
 algorithm estimation process:
