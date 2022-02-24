@@ -106,7 +106,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             annotations, stranded, verbose)
     }
     if(trackReads) metadata(se)$readNames = readNames
-    rm(readGrgList, readNames)
+    rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se,genomeSequence, annotations, 
