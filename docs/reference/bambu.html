@@ -141,6 +141,7 @@ allow comparison.</p>
     NDR <span class='op'>=</span> <span class='fl'>0.1</span>,
     yieldSize <span class='op'>=</span> <span class='cn'>NULL</span>,
     opt.discovery <span class='op'>=</span> <span class='cn'>NULL</span>,
+    trackReads <span class='op'>=</span> <span class='cn'>FALSE</span>,
     opt.em <span class='op'>=</span> <span class='cn'>NULL</span>,
     discovery <span class='op'>=</span> <span class='cn'>TRUE</span>,
     quant <span class='op'>=</span> <span class='cn'>TRUE</span>,
@@ -230,6 +231,11 @@ reconstruction process:</p><dl>
     output from detected read classes, defaults to 0.1</p></dd>
 
 </dl></td>
+    </tr>
+    <tr>
+        <th>trackReads</th>
+        <td><p>Read names will be tracked and their relationship to read classes 
+            and transcript output as metadata.</p></td>
     </tr>
     <tr>
       <th>opt.em</th>

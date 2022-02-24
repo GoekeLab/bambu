@@ -54,6 +54,8 @@
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
 #' }
+#' @param trackReads Read names will be tracked and their relationship to read classes 
+#' and transcript output as metadata.
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \describe{
