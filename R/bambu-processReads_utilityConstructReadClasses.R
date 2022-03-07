@@ -35,15 +35,15 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) exonsByRC.unspliced <- NULL
     exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
-        annotations, exonsByRC.spliced$exonsByReadClass, exonsByRC.spliced$indices, stranded, verbose)
-    exonsByRC <- c(exonsByRC.spliced$exonsByReadClass, exonsByRC.unspliced$exonsByReadClass)
+        annotations, exonsByRC.spliced, stranded, verbose)
+    exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
     colDataDf <- DataFrame(name = runName, row.names = runName)
     #TODO later remove assays = SimpleList(counts = counts)
     counts <- matrix(mcols(exonsByRC)$readCount,
                      dimnames = list(names(exonsByRC), runName))
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
         rowRanges = exonsByRC, colData = colDataDf)
-    metadata(se)$readIndex = exonsByRC.unspliced$readIndex
+    metadata(se)$readIndex = metadata(exonsByRC.unspliced)$readIndex
     return(se)
 }
 
@@ -89,17 +89,17 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readTable <- createReadTable(start(unlisted_junctions), 
         end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
         readStrand, readConfidence)
-    output = list(indices = readTable$indices)
-    readTable = readTable$readTable
-    output$exonsByReadClass <- createExonsByReadClass(readTable)
+    indices = attributes(readTable)$indices
+    exonsByReadClass <- createExonsByReadClass(readTable)
+    metadata(exonsByReadClass) = list(indices=indices)
     
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount)
-    mcols(output$exonsByReadClass) <- readTable
+    mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
-    return(output)
+    return(exonsByReadClass)
 }
 
 #' this functions uses the uniqueJunction table which has reference junctions
@@ -169,8 +169,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     intronEndCoordinatesInt <- 
         as.integer(max(splitAsList(unlisted_junctions_end,
         unlisted_junctions_id)) + 2)
-    output = list()
-    output$readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
+    readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
         intronStarts = 
         unname(unstrsplit(splitAsList(as.character(unlisted_junctions_start),
             unlisted_junctions_id), sep = ",")),
@@ -186,10 +185,10 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
-    output$indices = group_indices(output$readTable %>% group_by(chr, strand,
+    indices = group_indices(readTable %>% group_by(chr, strand,
         intronEnds, intronStarts, confidenceType)) 
-    names(output$indices) = mcols(readGrgList)$id
-    output$readTable <- output$readTable %>% 
+    names(indices) = mcols(readGrgList)$id
+    readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
         start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
@@ -197,9 +196,10 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         readCount.posStrand = sum(alignmentStrand, na.rm = TRUE),
         .groups = 'drop') %>% mutate(readClassId = row_number()) %>% 
         arrange(chr, start, end)
-    output$indices = seq_len(nrow(output$readTable))[order(output$readTable$readClassId)][output$indices]
-    output$readTable = output$readTable %>% mutate(readClassId = paste("rc", row_number(), sep = "."))
-    return(output)
+    indices = seq_len(nrow(readTable))[order(readTable$readClassId)][indices]
+    readTable = readTable %>% mutate(readClassId = paste("rc", row_number(), sep = "."))
+    attributes(readTable)$indices = indices
+    return(readTable)
 }
 
 #' @noRd
@@ -241,7 +241,7 @@ createExonsByReadClass <- function(readTable){
 #' @importFrom GenomicRanges granges unlist reduce 
 #' @noRd
 constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
-        readClassListSpliced, readIndex, stranded, verbose = FALSE){
+        readClassListSpliced, stranded, verbose = FALSE){
     start.ptm <- proc.time()
     referenceExons <- unique(c(granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
@@ -263,6 +263,7 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
         confidenceType = "unsplicedWithin", stranded = stranded)
     indices = rcUnsplicedAnnotation$indices
     readIds = as.numeric(names(indices))
+    readIndex = metadata(readClassListSpliced)$indices
     readIndex[readIds] = indices + length(readClassListSpliced)
     reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
         readIds]
@@ -280,10 +281,10 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    output = list(readIndex = readIndex)
-    output$exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass, 
+    exonsByReadClass <- c(rcUnsplicedAnnotation$exonsByReadClass, 
         rcUnsplicedReduced$exonsByReadClass)
-    return(output)
+    metadata(exonsByReadClass)=list(readIndex=readIndex)
+    return(exonsByReadClass)
 }
 
 
@@ -385,7 +386,8 @@ assignGeneIds <- function(grl, annotations) {
     newGeneSet <- which(is.na(geneIds))
     newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
     geneIds[newGeneSet] <- newGeneIds
-    return(list(geneIds=geneIds, newGeneSet = newGeneSet))
+    attributes(geneIds)$newGeneSet = newGeneSet
+    return(geneIds)
 }
 
 #' Return gene ids for read classes which overlap
