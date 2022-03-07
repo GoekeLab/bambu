@@ -30,6 +30,7 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         min.primarySecondaryDistStartEnd = 
         isoreParameters[['min.primarySecondaryDistStartEnd1']],
         prefix = isoreParameters[["prefix"]],
+        txScoreBaseline = isoreParameters[["txScoreBaseline"]],
         verbose = verbose)
     end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",

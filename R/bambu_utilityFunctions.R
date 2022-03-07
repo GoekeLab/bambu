@@ -33,6 +33,7 @@ setIsoreParameters <- function(isoreParameters){
         max.txNDR = 0.1,
         fitReadClassModel = TRUE,
         defaultModels = defaultModels,
+        setIsoreParameters = 0.8,
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
