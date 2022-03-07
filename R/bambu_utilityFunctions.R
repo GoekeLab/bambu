@@ -142,7 +142,7 @@ checkInputSequence <- function(genomeSequence) {
 
 #' Function to train a model for use on other data
 #' @noRd
-bambu.train <- function(rcFile = NULL,annotations = NULL, nrounds = 50) {
+bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nrounds = 50) {
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
@@ -168,6 +168,6 @@ bambu.train <- function(rcFile = NULL,annotations = NULL, nrounds = 50) {
             nrounds = nrounds, show.cv=FALSE)
     }
         
-    return(list(transcriptModelME = txModel.dcDNA.ME, #transcriptModelME, 
-                transcriptModelSE = txModel.dcDNA.SE)) #transcriptModelSE))
+    return(list(txModel.dcDNA.ME = transcriptModelME, 
+                txModel.dcDNA.SE = transcriptModelSE)) 
 }
