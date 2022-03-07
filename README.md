@@ -162,7 +162,7 @@ bambu(reads, annotations, genome, ncore = 8)
 
  ```rscript
 readClassList <- bambu(reads = species1.bam, annotations = species1Annotations, genome = species1.fa, readClassOnly = TRUE)
-models = bambu.train(rcFile = readClassList, annotations = species1Annotations)
+models = bambu.train(rcFile = readClassList[[1]], annotations = species1Annotations)
 se = bambu(reads = species2.bam, genome = species2.fa, opt.discovery = list(defaultModels = models, fitReadClassModel = FALSE))
  ```
 
