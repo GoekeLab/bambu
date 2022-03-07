@@ -96,8 +96,9 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     return(list(theta_est, d_rateOut[1], d_rateOut[2]))
 }
 
-generateReadModelMap <- function(readClassList){
-    read_id = metadata(readClassList)$readNames
+generateReadModelMap <- function(readClassList, trackReads = FALSE){
+    if(trackReads) { read_id = metadata(readClassList)$readNames}
+    else { read_id = 1:length(metadata(readClassList)$readId)}
     readClass_id = rownames(readClassList)[metadata(readClassList)$readIndex]
     transcript_id = metadata(readClassList)$distTable
     transcript_id = transcript_id[which(transcript_id$equal),]

@@ -67,6 +67,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
     if(trackReads) readNames = names(readGrgList)
+    readId = 1:length(readGrgList)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
@@ -87,6 +88,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
     readGrgList = readGrgList[!badReads]
     if(trackReads) readNames = readNames[!badReads]
+    readId = readId[!badReads]
     numBadReads = sum(badReads)
     if(numBadReads > 0 ){
         warning(paste0(numBadReads, " reads are mapped outside the provided ",
@@ -106,6 +108,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             annotations, stranded, verbose)
     }
     if(trackReads) metadata(se)$readNames = readNames
+    metadata(se)$readId = readId
     rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses

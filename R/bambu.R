@@ -170,13 +170,11 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             BPPARAM = bpParameters)
 
         readModelMap = NULL
-        if(trackReads){
-            for (i in seq_along(readClassList)){
-                if (is.character(readClassList[[i]])) readClassList[[i]] <- readRDS(file = readClassList[[i]])
-                metadata(readClassList[[i]])$distTable = metadata(countsSe[[i]])$distTable
-                readModelMap = rbind(readModelMap, generateReadModelMap(readClassList[[i]]))
-                readClassList[[i]]=NULL
-            }
+        for (i in seq_along(readClassList)){
+            if (is.character(readClassList[[i]])) readClassList[[i]] <- readRDS(file = readClassList[[i]])
+            metadata(readClassList[[i]])$distTable = metadata(countsSe[[i]])$distTable
+            readModelMap = rbind(readModelMap, generateReadModelMap(readClassList[[i]], trackReads))
+            readClassList[[i]]=NULL
         }
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
         rowRanges(countsSe) <- annotations
