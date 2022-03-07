@@ -154,6 +154,18 @@ bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
 bambu(reads, annotations, genome, ncore = 8)
 ```
 
+**Optimizing Bambu on samples with poor reference annotations**
+
+ ***bambu*** uses a default model trained on Homo sapian Nanopore direct cDNA data. For samples where the reference annotations are poor or non-existant, but well annotated but closely related data is available, we recommend training a new model. 
+ Species1 = Related, well annotated sample
+ Species2 = New poorly annotated sample
+
+ ```rscript
+readClassList <- bambu(reads = species1.bam, annotations = species1Annotations, genome = species1.fa, readClassOnly = TRUE)
+models = bambu.train(rcFile = readClassList, annotations = species1Annotations)
+se = bambu(reads = species2.bam, genome = species2.fa, opt.discovery = list(defaultModels = models, fitReadClassModel = FALSE))
+ ```
+
 See [our page](https://goekelab.github.io/bambu/) for a complete step-by-step workflow and manual on how to customize other condictions.
 
 ---
