@@ -33,6 +33,13 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                                  defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
     rowData(se)$txScore[thresholdIndex] = txScore
+
+    #calculate using the default model for NDR recommendation
+    txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
+                                 defaultModels, fit=FALSE)
+    rowData(se)$txScore.noFit = rep(NA,nrow(se))
+    rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 

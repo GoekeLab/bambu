@@ -41,7 +41,7 @@ if (getRversion() >= "2.15.1") {
         "NSampleTxScore.combined", "NSampleTxScore.new", "maxTxScore.combined",
         "maxTxScore.new" ,"txScore" ,"row_id" ,"txScore", "sample_id", 
         "sample_name", "txScore", "readCount_tmp", "group", "row_id", "rowID", 
-        "sumReadCount", "maxTxScore", "NSampleReadCount", "NSampleReadProp", 
+        "sumReadCount", "maxTxScore.noFit", "NSampleReadCount", "NSampleReadProp", 
         "NSampleTxScore"
     ))
 }
