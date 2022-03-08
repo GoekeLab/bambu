@@ -2,7 +2,7 @@
 #' Extend annotations
 #' @inheritParams bambu
 #' @noRd
-bambu.extendAnnotations <- function(readClassList, annotations,
+bambu.extendAnnotations <- function(readClassList, annotations, NDR,
     isoreParameters, stranded, bpParameters, verbose = FALSE) {
     start.ptm_all <- proc.time()
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClassList,
@@ -22,7 +22,7 @@ bambu.extendAnnotations <- function(readClassList, annotations,
         annotationGrangesList = annotations,
         remove.subsetTx = isoreParameters[["remove.subsetTx"]],
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
-        max.txNDR = isoreParameters[["max.txNDR"]],
+        NDR = NDR,
         min.exonDistance = isoreParameters[["min.exonDistance"]],
         min.exonOverlap = isoreParameters[["min.exonOverlap"]],
         min.primarySecondaryDist = 

@@ -2,7 +2,7 @@ Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read 
     RNA-Seq data
-Version: 1.99.2
+Version: 2.1.6
 Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
              email = "chen_ying@gis.a-star.edu.sg"),
              person("Andre", "Sim", role = "aut",
@@ -24,6 +24,7 @@ Depends:
     R(>= 4.1),
     SummarizedExperiment(>= 1.1.6),
     S4Vectors(>= 0.22.1),
+    BSgenome,
     IRanges
 Suggests: 
     AnnotationDbi,
@@ -42,7 +43,6 @@ Suggests:
     ExperimentHub (>= 1.15.3),
     DESeq2,
     NanoporeRNASeq,
-    BSgenome,
     apeglm,
     utils,
     DEXSeq

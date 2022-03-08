@@ -6,8 +6,10 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                             fit = TRUE, min.readCount = 2, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
-    rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
-    rowData(se)$novelGene = grepl("gene.", rowData(se)$GENEID)
+    geneIds = assignGeneIds(rowRanges(se), annotations)
+    rowData(se)$GENEID = geneIds$geneIds
+    rowData(se)$novelGene = FALSE
+    rowData(se)$novelGene[geneIds$newGeneSet] = TRUE
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
@@ -32,7 +34,8 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                  defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
-    rowData(se)$txScore[thresholdIndex] = txScore
+
+    if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
 
     #calculate using the default model for NDR recommendation
     txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
@@ -100,6 +103,8 @@ countPolyATerminals = function(grl, genomeSequence){
     end <- resize(granges(unlist(selectEndExonsFromGrangesList(grl, 
             exonNumber = 1), use.names = FALSE)), 
                   width = 10, fix = 'end', ignore.strand=FALSE)
+    strand(start)[which(strand(start)=='*')] = "+"
+    strand(end)[which(strand(end)=='*')] = "+"
     startSeqs = BSgenome::getSeq(genomeSequence,start)
     endSeqs = BSgenome::getSeq(genomeSequence,end)
     numATstart = BSgenome::letterFrequency(startSeqs, c("A","T"))
@@ -149,7 +154,6 @@ getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
             txScore = rep(0, nrow(features))
             txScoreSE = rep(0, nrow(features))
         }
-
     }
     txScore[which(rowData$numExons==1)] =
         txScoreSE[which(rowData$numExons==1)]

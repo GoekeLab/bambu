@@ -136,7 +136,7 @@ bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 
 - Set novel transcript discovery rate to 50% of the detected transcripts (lower is more): 
 
 ```rscript
-bambu(reads, annotations, genome, opt.discovery = list(max.txNDR = 0.5))
+bambu(reads, annotations, genome, NDR = 0.5)
 ```
 
 **Quantification without bias correction**     

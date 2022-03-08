@@ -5,14 +5,14 @@
 data_train <- matrix(seq(1:300000), nrow=100000)
 data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
 labels_train <- c(rep(1,50000), rep(0,50000))
-results <- fitXGBoostModel(labels_train, data_train, data_test, show.cv=TRUE)
+xgb_model <- fitXGBoostModel(labels_train, data_train, data_test, show.cv=TRUE)
 # Extract the predictions and results from the list
-xgb_predictions <- results[[1]]
-xgb_model <- results[[2]]
+xgb_predictions = predict(xgb_model, data_test)
 xgb.dump(xgb_model, './inst/extdata/xgb_model_splice_junction_correction.txt',
          dump_format='json')
 writeLines(as.character(xgb_predictions),
            './inst/extdata/xgb_predictions_splice_junction_correction.txt')
+
 
 data1 <- data.frame(
     tx_id = c( 1,"1Start", 2, "2Start"),
@@ -312,7 +312,7 @@ gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_100
 
 extendedAnnotations <- isore.extendAnnotations(combinedTranscripts=seIsoReCombined,
                                                annotationGrangesList=gr,
-                                               remove.subsetTx = TRUE, min.sampleNumber = 1, max.txNDR = 0.1, 
+                                               remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.1, 
                                                min.exonDistance = 35, min.exonOverlap = 10,
                                                min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                                prefix='',
