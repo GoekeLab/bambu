@@ -137,9 +137,9 @@ getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
     } else {
         if (!is.null(defaultModels)){
             warning("Transcript model not trained. Using pre-trained models")
-            txScore = predict(defaultModels$txModel.dcDNA.ME, 
+            txScore = predict(defaultModels$transcriptModelME, 
                 as.matrix(features))
-            txScoreSE = predict(defaultModels$txModel.dcDNA.SE, 
+            txScoreSE = predict(defaultModels$transcriptModelSE, 
                 as.matrix(features))
         } else {
             warning("Transcript model not trained. ",

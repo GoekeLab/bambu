@@ -33,7 +33,7 @@ setIsoreParameters <- function(isoreParameters){
         max.txNDR = 0.1,
         fitReadClassModel = TRUE,
         defaultModels = defaultModels,
-        setIsoreParameters = 0.8,
+        txScoreBaseline = defaultModels$txScoreBaseline,
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
@@ -147,10 +147,10 @@ bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nro
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(checkFeatures(txFeatures)){
-
+    if(!checkFeatures(txFeatures)){
+        stop("No output")
     }
-
+    print(1)
     ## Multi-Exon
     indexME = which(!rowData$novelGene & rowData$numExons>1)
     if(length(indexME)>0){
@@ -160,7 +160,7 @@ bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nro
             nrounds = nrounds, show.cv=FALSE)
         txScore = predict(transcriptModelME, as.matrix(features))[indexME]
     }
-    
+    print(2)
     ## Single-Exon
     indexSE = which(!rowData$novelGene & rowData$numExons==1)
     if(length(indexSE)>0){
@@ -170,18 +170,20 @@ bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nro
             nrounds = nrounds, show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
     }
-
+    print(3)
     ##Calculate the txScore baseline
     NDR = calculateNDR(txScore, txFeatures$labels[indexME])
+    print(4)
     NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
+    print
     #lm of NDR vs txScore
     lmNDR = lm(txScore~NDR)
     txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
     lmNDR.SE = lm(txScoreSE~NDR.SE)
     txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
 
-    return(list(txModel.dcDNA.ME = transcriptModelME, 
-                txModel.dcDNA.SE = transcriptModelSE,
+    return(list(transcriptModelME = transcriptModelME, 
+                transcriptModelSE = transcriptModelSE,
                 txScoreBaseline = txScoreBaseline,
                 txScoreBaselineSE = txScoreBaselineSE,
                 lmNDR = lmNDR,
