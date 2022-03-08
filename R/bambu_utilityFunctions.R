@@ -143,7 +143,7 @@ checkInputSequence <- function(genomeSequence) {
 
 #' Function to train a model for use on other data
 #' @noRd
-bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nrounds = 50) {
+bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1) {
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
@@ -158,6 +158,7 @@ bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nro
             data.train=as.matrix(features[indexME,]),
             labels.train=txFeatures$labels[indexME], 
             nrounds = nrounds, show.cv=FALSE)
+        txScore = predict(transcriptModelME, as.matrix(features))[indexME]
     }
     
     ## Single-Exon
@@ -167,8 +168,22 @@ bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nro
             data.train=as.matrix(features[indexSE,]),
             labels.train=txFeatures$labels[indexSE], 
             nrounds = nrounds, show.cv=FALSE)
+        txScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
     }
-        
+
+    ##Calculate the txScore baseline
+    NDR = calculateNDR(txScore, txFeatures$labels[indexME])
+    NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
+    #lm of NDR vs txScore
+    lmNDR = lm(txScore~NDR)
+    txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
+    lmNDR.SE = lm(txScoreSE~NDR.SE)
+    txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
+
     return(list(txModel.dcDNA.ME = transcriptModelME, 
-                txModel.dcDNA.SE = transcriptModelSE)) 
+                txModel.dcDNA.SE = transcriptModelSE,
+                txScoreBaseline = txScoreBaseline,
+                txScoreBaselineSE = txScoreBaselineSE,
+                lmNDR = lmNDR,
+                lmNDR.SE = lmNDR.SE))
 }
