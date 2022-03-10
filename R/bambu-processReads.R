@@ -66,7 +66,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
-    if(trackReads) readNames = names(readGrgList)
     readId = 1:length(readGrgList)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
@@ -87,7 +86,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     badReads = max(end(ranges(readGrgList)))>=
         seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
     readGrgList = readGrgList[!badReads]
-    if(trackReads) readNames = readNames[!badReads]
+    if(trackReads) readNames = names(readGrgList)[!badReads]
     readId = readId[!badReads]
     numBadReads = sum(badReads)
     if(numBadReads > 0 ){
