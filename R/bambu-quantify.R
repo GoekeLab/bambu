@@ -99,7 +99,13 @@ bambu.quantDT <- function(readClassDt = readClassDt,
 generateReadModelMap <- function(readClassList, trackReads = FALSE){
     if(trackReads) { read_id = metadata(readClassList)$readNames}
     else { read_id = metadata(readClassList)$readId}
-    readClass_id = rownames(readClassList)[metadata(readClassList)$readIndex]
+
+    readOrder = order(unlist(rowData(readClassList)$readIds))
+    lens = lengths(rowData(readClassList)$readIds)
+    rcIndex = seq_along(readClassList)
+    readToRC = rep(rcIndex, lens)[readOrder]
+
+    readClass_id = rownames(readClassList)[readToRC]
     transcript_id = metadata(readClassList)$distTable
     transcript_id = transcript_id[which(transcript_id$equal),]
     transcript_id = transcript_id$annotationTxId[match(readClass_id, transcript_id$readClassId)]
