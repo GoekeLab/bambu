@@ -23,7 +23,8 @@ test_that("calculateGeneProportion()",{
     package = "bambu"))
   seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
     package = "bambu"))
-  rowData(se)$GENEID = assignGeneIds(rowRanges(se), annotations)
+  geneIds = assignGeneIds(rowRanges(se), annotations)
+  rowData(se)[,names(geneIds)] = geneIds
   countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                       geneIds=mcols(se)$GENEID)
   expect_equal(countsTBL$geneReadProp, 
