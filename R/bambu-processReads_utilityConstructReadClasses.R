@@ -363,13 +363,12 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
 assignGeneIds <- function(grl, annotations) {
-    if(length(annotations)==0) geneIds =rep(NA, length(grl))
-    else geneIds <- assignGeneIdsByReference(grl, annotations) 
-    newGeneSet <- which(is.na(geneIds))
+    if(length(annotations)==0) GENEID =rep(NA, length(grl))
+    else GENEID <- assignGeneIdsByReference(grl, annotations) 
+    newGeneSet <- is.na(GENEID)
     newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
-    geneIds[newGeneSet] <- newGeneIds
-    attributes(geneIds)$newGeneSet = newGeneSet
-    return(geneIds)
+    GENEID[newGeneSet] <- newGeneIds
+    return(data.frame(GENEID=GENEID, novelGene = newGeneSet))
 }
 
 #' Return gene ids for read classes which overlap
