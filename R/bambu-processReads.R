@@ -66,7 +66,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
-    readId = 1:length(readGrgList)
+    readId = mcols(readGrgList)$id
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
