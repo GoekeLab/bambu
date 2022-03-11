@@ -316,7 +316,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
-        return(list(exonsByReadClass = GRangesList(), indices = indices))
+        return(list(GRangesList()))
     }
     exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
