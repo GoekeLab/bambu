@@ -33,9 +33,10 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     if (verbose) 
         message("Finished create transcript models (read classes) for reads with
     spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    if(length(reads.singleExon)==0) exonsByRC.unspliced <- NULL
-    exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
-        annotations, exonsByRC.spliced, stranded, verbose)
+    if(length(reads.singleExon)==0) { 
+        exonsByRC.unspliced <- NULL
+    } else {exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
+        annotations, exonsByRC.spliced, stranded, verbose)}
     exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
     colDataDf <- DataFrame(name = runName, row.names = runName)
     #TODO later remove assays = SimpleList(counts = counts)
