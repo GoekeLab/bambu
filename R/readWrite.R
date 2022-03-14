@@ -30,23 +30,40 @@ writeBambuOutput <- function(se, path, prefix = "") {
             "extended_annotations.gtf", sep = "")
         gtf <- writeToGTF(annotation = transcript_grList,
             file = transcript_gtffn)
-        transcript_counts <- as.data.frame(assays(se)$counts)
-        geneIDs <- data.frame(mcols(transcript_grList,
-            use.names = FALSE)$TXNAME, mcols(transcript_grList,
-            use.names = FALSE)$GENEID)
-        colnames(geneIDs) <- c("TXNAME", "GENEID")
-        transcript_counts <- cbind(geneIDs, transcript_counts)
-        transcript_countsfn <- paste(outdir, prefix, 
-            "counts_transcript.txt", sep = "")
-        utils::write.table(transcript_counts, file = transcript_countsfn,
-            sep = "\t", quote = FALSE, row.names = FALSE)
-        gene_se <- transcriptToGeneExpression(se)
-        gene_counts <- as.data.frame(assays(gene_se)$counts)
-        gene_countsfn <- paste(outdir, prefix, "counts_gene.txt", sep = "")
-        utils::write.table(gene_counts, file = gene_countsfn, 
-            sep = "\t", quote = FALSE)
+        
+        report <- data.table(v = c("counts","fullLengthCounts",
+                      "partialLengthCounts","uniqueCounts","counts"),
+                      t = c(rep("transcript",4),"gene"))
+        for(d in seq_len(nrow(report))){
+            report_se <- se
+            report_feature <- report[d]$t
+            report_varname <- report[d]$v
+            if(report_feature == "gene"){
+                report_se <- transcriptToGeneExpression(se)
+            }
+            writeCountsOutput(se, transcript_grList, report_varname,
+                             report_feature,outdir, prefix)
+        }
     }
 }
+
+
+#' helper function to write counts 
+writeCountsOutput <- function(se,transcript_grList = NULL, varname = "counts",
+                              feature = "transcript", outdir, prefix){
+    estimates <- as.data.frame(assays(se)[[varname]])
+    if(feature == "transcript"){
+        geneIDs <- data.frame(mcols(transcript_grList,use.names = FALSE)$TXNAME, 
+                              mcols(transcript_grList,use.names = FALSE)$GENEID)
+        colnames(geneIDs) <- c("TXNAME", "GENEID")
+        estimates <- cbind(geneIDs, estimates)
+    }
+    estimatesfn <- paste(outdir, prefix, 
+                                 varname,"_",feature,".txt", sep = "")
+    utils::write.table(estimates, file = estimatesfn,
+                       sep = "\t", quote = FALSE, row.names = FALSE)
+}
+
 #' Write annotation GRangesList into a GTF file
 #' @title write GRangeslist into GTF file
 #' @param annotation a \code{GRangesList} object
