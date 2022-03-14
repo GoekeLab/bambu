@@ -30,6 +30,7 @@ test_that("isore.constructReadClasses completes successfully", {
     genomeSequence <- checkInputSequence(genomeSequence)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
+    readId = mcols(readGrgList)$id
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
@@ -58,6 +59,7 @@ test_that("isore.constructReadClasses completes successfully", {
     seReadClassUnstranded <- scoreReadClasses(se,genomeSequence, annotations, 
                                               defaultModels = defaultModels, fit = TRUE,
                                               min.readCount = 2, verbose = FALSE)
+    metadata(seReadClassUnstranded)$readId = readId
     ## in case of testing on Mac
     names(seReadClassUnstranded@rowRanges@elementMetadata@listData$intronStarts) <-
         names(seReadClassUnstrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
@@ -76,6 +78,7 @@ test_that("isore.constructReadClasses completes successfully", {
     seReadClassStranded <- scoreReadClasses(se,genomeSequence, annotations, 
                                             defaultModels = defaultModels, fit = TRUE,
                                             min.readCount = 2, verbose = FALSE)
+    metadata(seReadClassStranded)$readId = readId
     names(seReadClassStranded@rowRanges@elementMetadata@listData$intronStarts) <- 
         names(seReadClassStrandedExpected@rowRanges@elementMetadata@listData$intronStarts) <- NULL
     names(seReadClassStranded@rowRanges@elementMetadata@listData$intronEnds) <- 

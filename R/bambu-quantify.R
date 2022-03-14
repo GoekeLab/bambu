@@ -110,6 +110,6 @@ generateReadModelMap <- function(readClassList, trackReads = FALSE){
     transcript_id = transcript_id[which(transcript_id$equal),]
     transcript_id = transcript_id$annotationTxId[match(readClass_id, transcript_id$readClassId)]
     readModelMap = cbind(read_id, transcript_id)
-    readModelMap = na.omit(readModelMap)
+    readModelMap = readModelMap[!is.na(transcript_id),]
     return(readModelMap)
 }
