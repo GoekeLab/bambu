@@ -40,6 +40,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
             ncol = 1, dimnames = list(NULL, colNameRC)),
         theta = matrix(counts$theta, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
+    metadata(seOutput)$distTable = metadata(readClass)$distTable
     return(seOutput)
 }
 
@@ -95,3 +96,20 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     return(list(theta_est, d_rateOut[1], d_rateOut[2]))
 }
 
+generateReadModelMap <- function(readClassList, trackReads = FALSE){
+    if(trackReads) { read_id = metadata(readClassList)$readNames}
+    else { read_id = metadata(readClassList)$readId}
+
+    readOrder = order(unlist(rowData(readClassList)$readIds))
+    lens = lengths(rowData(readClassList)$readIds)
+    rcIndex = seq_along(readClassList)
+    readToRC = rep(rcIndex, lens)[readOrder]
+
+    readClass_id = rownames(readClassList)[readToRC]
+    transcript_id = metadata(readClassList)$distTable
+    transcript_id = transcript_id[which(transcript_id$equal),]
+    transcript_id = transcript_id$annotationTxId[match(readClass_id, transcript_id$readClassId)]
+    readModelMap = cbind(read_id, transcript_id)
+    readModelMap = na.omit(readModelMap)
+    return(readModelMap)
+}

@@ -15,6 +15,7 @@ bambu(
     NDR = 0.1,
     yieldSize = NULL,
     opt.discovery = NULL,
+    trackReads = FALSE,
     opt.em = NULL,
     discovery = TRUE,
     quant = TRUE,
@@ -80,6 +81,8 @@ reconstruction process:
     threshold for single-exon transcripts during sample combining, defaults 
     to 1}
 }}
+\item{trackReads}{Read names will be tracked and their relationship to read classes 
+    and transcript output as metadata.}
 
 \item{opt.em}{A list of controlling parameters for quantification
 algorithm estimation process:

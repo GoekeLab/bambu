@@ -16,7 +16,7 @@
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
-    lowMemory=FALSE) {
+    lowMemory=FALSE, trackReads = FALSE) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
@@ -47,8 +47,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
-        fitReadClassModel = fitReadClassModel, verbose = verbose,
-        lowMemory = lowMemory)},
+        fitReadClassModel = fitReadClassModel, verbose = verbose, 
+        lowMemory = lowMemory, trackReads = trackReads)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")
@@ -61,11 +61,12 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
-    fitReadClassModel = TRUE,  verbose = FALSE, lowMemory = FALSE) {
-    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose)
+    fitReadClassModel = TRUE,  verbose = FALSE, lowMemory = FALSE, trackReads = FALSE) {
+    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
+    readId = mcols(readGrgList)$id
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
@@ -82,10 +83,12 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         pruning.mode = "coarse")
     }
     #removes reads that are outside genome coordinates
-    tempGrgListLen = length(readGrgList)
-    readGrgList = readGrgList[max(end(ranges(readGrgList)))<
-        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]]
-    numBadReads = tempGrgListLen - length(readGrgList)
+    badReads = max(end(ranges(readGrgList)))>=
+        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
+    readGrgList = readGrgList[!badReads]
+    if(trackReads) readNames = names(readGrgList)[!badReads]
+    readId = readId[!badReads]
+    numBadReads = sum(badReads)
     if(numBadReads > 0 ){
         warning(paste0(numBadReads, " reads are mapped outside the provided ",
         "genomic regions. These reads will be dropped. Check you are using the ",
@@ -103,6 +106,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             uniqueJunctions, runName = names(bam.file)[1],
             annotations, stranded, verbose)
     }
+    if(trackReads) metadata(se)$readNames = readNames
+    metadata(se)$readId = readId
     rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses

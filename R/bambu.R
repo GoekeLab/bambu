@@ -54,6 +54,8 @@
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
 #' }
+#' @param trackReads Read names will be tracked and their relationship to read classes 
+#' and transcript output as metadata.
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \describe{
@@ -117,13 +119,13 @@
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
-    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
+    yieldSize = NULL, opt.discovery = NULL, trackReads = FALSE, opt.em = NULL,
     discovery = TRUE, quant = TRUE, verbose = FALSE, 
     lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
-    if(is.null(annotations)) annotations = GRangesList()
-    else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
+    if(is.null(annotations)) { annotations = GRangesList()
+    } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
@@ -145,14 +147,18 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-            genomeSequence = genomeSequence, readClass.outputDir = rcOutDir, 
-            yieldSize, bpParameters, stranded, verbose, isoreParameters)
-    } else {readClassList <- rcFile}
+            genomeSequence = genomeSequence, 
+            readClass.outputDir = rcOutDir, yieldSize, 
+            bpParameters, stranded, verbose,
+            isoreParameters, trackReads = trackReads)
+    } else { readClassList <- rcFile}
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
-        if (!quant){return(annotations)}
+        if (!quant){
+            return(list(annotations=annotations))
+        }
     }
     if (quant) {
         if (!verbose) message("Start isoform quantification")
@@ -160,10 +166,20 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
             annotations = annotations, isoreParameters = isoreParameters,
-            emParameters = emParameters, ncore = ncore,verbose = verbose, 
+            emParameters = emParameters, ncore = ncore, verbose = verbose, 
             BPPARAM = bpParameters)
+
+        readModelMap = NULL
+        if(!is.list(readClassList)) readClassList = as.list(readClassList)
+        for (i in seq_along(readClassList)){
+            if (is.character(readClassList[[i]])) readClassList[[i]] <- readRDS(file = readClassList[[i]])
+            metadata(readClassList[[i]])$distTable = metadata(countsSe[[i]])$distTable
+            readModelMap = rbind(readModelMap, generateReadModelMap(readClassList[[i]], trackReads))
+            readClassList[[i]]=NA
+        }
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
         rowRanges(countsSe) <- annotations
+        metadata(countsSe)$readModelMap = readModelMap
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
         return(countsSe)
