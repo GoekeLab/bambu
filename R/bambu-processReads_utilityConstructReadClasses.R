@@ -178,7 +178,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
         alignmentStrand = as.character(readAlignStrand)=='+',
-        readId = seq_along(readGrgList))
+        readId = mcols(readGrgList)$id)
     rm(readRanges, readChr, readStrand, readAlignStrand, 
         unlisted_junctions_start, unlisted_junctions_end, 
         unlisted_junctions_id, readConfidence, 
@@ -191,8 +191,8 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
                 .groups = 'drop') %>% 
+        arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = ".")) %>% 
-        arrange(chr, start, end)
   
     return(readTable)
 }
