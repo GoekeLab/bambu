@@ -17,7 +17,6 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     mcols(reads.singleExon)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
     #only keep multi exons reads in readGrgList   
-    readIndex=rep(NA, length(readGrgList))
     readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
     if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
         warning("read Id not sorted, can result in wrong assignments.
@@ -90,7 +89,6 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
         readStrand, readConfidence)
     exonsByReadClass <- createExonsByReadClass(readTable)
-    
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
@@ -159,8 +157,6 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
     unlisted_junctions_id, readGrgList,readStrand, readConfidence) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
-    readChr = getChrFromGrList(readGrgList)
-    readAlignStrand = getStrandFromGrList(readGrgList)
     intronStartCoordinatesInt <- 
         as.integer(min(splitAsList(unlisted_junctions_start,
         unlisted_junctions_id)) - 2)
@@ -177,11 +173,10 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         start = pmin(start(readRanges), intronStartCoordinatesInt),
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
-        alignmentStrand = as.character(readAlignStrand)=='+',
+        alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+',
         readId = mcols(readGrgList)$id)
-    rm(readRanges, readChr, readStrand, readAlignStrand, 
-        unlisted_junctions_start, unlisted_junctions_end, 
-        unlisted_junctions_id, readConfidence, 
+    rm(readRanges, readStrand, unlisted_junctions_start, 
+        unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
@@ -244,7 +239,6 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
                                  mcols(readClassListSpliced)$strand.rc != "*"], 
         use.names = FALSE)),
         granges(unlist(annotations, use.names = FALSE))))
-        rm(annotations)
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges

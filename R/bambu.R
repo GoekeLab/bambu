@@ -157,7 +157,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
         if (!quant){
-            return(list(annotations=annotations))
+            return(annotations=annotations)
         }
     }
     if (quant) {

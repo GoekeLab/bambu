@@ -82,11 +82,10 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         pruning.mode = "coarse")
     }
     #removes reads that are outside genome coordinates
-    badReads = max(end(ranges(readGrgList)))>=
-        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
+    badReads = which(max(end(ranges(readGrgList)))>=
+        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
     readGrgList = readGrgList[!badReads]
-    numBadReads = sum(badReads)
-    if(numBadReads > 0 ){
+    if(length(numBadReads) > 0 ){
         warning(paste0(numBadReads, " reads are mapped outside the provided ",
         "genomic regions. These reads will be dropped. Check you are using the ",
         "same genome used for the alignment"))
