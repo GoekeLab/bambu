@@ -151,7 +151,9 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads)
-    } else { readClassList <- rcFile}
+    } else { 
+        if(is.list(rcFile)) {readClassList <- rcFile}
+        else {readClassList <- as.list(rcFile)}}
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, verbose = verbose)
@@ -170,7 +172,6 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             BPPARAM = bpParameters)
 
         if(trackReads){ 
-            if(!is.list(readClassList)) readClassList = as.list(readClassList)
             readToTranscriptMaps = bplapply(Map(list,readClassList,countsSe), generateReadToTranscriptMap,
                 annotations, BPPARAM = bpParameters)
         }
