@@ -142,7 +142,7 @@ test_that("Running bambu without annotations works",{
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    qbambu = purrr::quietly(foo)
+    qbambu = purrr::quietly(bambu)
     se <- qbambu(reads = test.bam, annotations = NULL, genome = fa.file,
             opt.em = list(degradationBias = FALSE), lowMemory = TRUE, NDR = 1)
     expect_s4_class(se, "SummarizedExperiment")
