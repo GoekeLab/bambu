@@ -41,7 +41,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
             if(report_feature == "gene"){
                 report_se <- transcriptToGeneExpression(se)
             }
-            writeCountsOutput(se, transcript_grList, report_varname,
+            writeCountsOutput(report_se, transcript_grList, report_varname,
                              report_feature,outdir, prefix)
         }
     }
