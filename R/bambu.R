@@ -67,6 +67,13 @@
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
 #' }
+#' @param trackReads When TRUE read names will be tracked and output as
+#' metadata in the final output as readToTranscriptMaps detailing. 
+#' the assignment of reads to transcripts. The output is a list with 
+#' an entry for each sample.
+#' @param outputDistTable When TRUE the calculated distance table between
+#' read classes and annotations will be output as metadata as 
+#' distTables. The output is a list with an entry for each sample.
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended
 #' @param quant A logical variable indicating whether quantification will 
