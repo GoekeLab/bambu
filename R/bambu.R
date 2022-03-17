@@ -119,8 +119,8 @@
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
-    yieldSize = NULL, opt.discovery = NULL, trackReads = FALSE, opt.em = NULL,
-    discovery = TRUE, quant = TRUE, verbose = FALSE, 
+    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
+    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, verbose = FALSE, 
     lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
@@ -170,12 +170,17 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             annotations = annotations, isoreParameters = isoreParameters,
             emParameters = emParameters, ncore = ncore, verbose = verbose, 
             BPPARAM = bpParameters)
-
         if(trackReads){ 
             readToTranscriptMaps = bplapply(Map(list,readClassList,countsSe), generateReadToTranscriptMap,
                 annotations, BPPARAM = bpParameters)
         }
+        if(returnDistTable){
+            distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})}
+        countsSe = lapply(countsSe, FUN = function(se){
+            metadata(se)$distTable=NULL
+            return(se)})
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
+        if(returnDistTable) metadata(countsSe)$distTables = distTables
         rowRanges(countsSe) <- annotations
         if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
         if (!verbose) message("Finished isoform quantification.")
