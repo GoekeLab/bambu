@@ -51,12 +51,15 @@ writeBambuOutput <- function(se, path, prefix = "") {
 #' helper function to write counts 
 writeCountsOutput <- function(se,transcript_grList = NULL, varname = "counts",
                               feature = "transcript", outdir, prefix){
-    estimates <- as.data.frame(assays(se)[[varname]])
+   estimates <- data.table(as.data.frame(assays(se)[[varname]]),
+                            keep.rownames = TRUE)
     if(feature == "transcript"){
-        geneIDs <- data.frame(mcols(transcript_grList,use.names = FALSE)$TXNAME, 
-                              mcols(transcript_grList,use.names = FALSE)$GENEID)
-        colnames(geneIDs) <- c("TXNAME", "GENEID")
-        estimates <- cbind(geneIDs, estimates)
+        setnames(estimates, "rn", "TXNAME")
+        geneIDs <- data.table(as.data.frame(mcols(transcript_grList,
+            use.names = FALSE)[,c("TXNAME","GENEID")]))
+        estimates <- geneIDs[estimates, on = "TXNAME"]
+    }else{
+        setnames(estimates, "rn","GENEID")
     }
     estimatesfn <- paste(outdir, prefix, 
                                  varname,"_",feature,".txt", sep = "")
