@@ -169,17 +169,14 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             emParameters = emParameters, ncore = ncore, verbose = verbose, 
             BPPARAM = bpParameters)
 
-        readModelMap = NULL
-        if(!is.list(readClassList)) readClassList = as.list(readClassList)
-        for (i in seq_along(readClassList)){
-            if (is.character(readClassList[[i]])) readClassList[[i]] <- readRDS(file = readClassList[[i]])
-            metadata(readClassList[[i]])$distTable = metadata(countsSe[[i]])$distTable
-            readModelMap = rbind(readModelMap, generateReadModelMap(readClassList[[i]], trackReads))
-            readClassList[[i]]=NA
+        if(trackReads){ 
+            if(!is.list(readClassList)) readClassList = as.list(readClassList)
+            readToTranscriptMaps = bplapply(Map(list,readClassList,countsSe), generateReadToTranscriptMap,
+                annotations, BPPARAM = bpParameters)
         }
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
         rowRanges(countsSe) <- annotations
-        metadata(countsSe)$readModelMap = readModelMap
+        if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
         return(countsSe)

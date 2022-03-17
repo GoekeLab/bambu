@@ -102,7 +102,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             uniqueJunctions, runName = names(bam.file)[1],
             annotations, stranded, verbose)
     }
-    if(trackReads) metadata(se)$readNames = names(readGrgList)[!badReads]
+    if(trackReads) metadata(se)$readNames = names(readGrgList)
     metadata(se)$readId = mcols(readGrgList)$id
     rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
