@@ -145,6 +145,6 @@ test_that("Running bambu without annotations works",{
     qbambu = purrr::quietly(bambu)
     se <- qbambu(reads = test.bam, annotations = NULL, genome = fa.file,
             opt.em = list(degradationBias = FALSE), lowMemory = TRUE, NDR = 1)
-    expect_s4_class(se, "SummarizedExperiment")
+    expect_s4_class(se$result, "SummarizedExperiment")
     expect_equal(se$result, seExpected)
 })
