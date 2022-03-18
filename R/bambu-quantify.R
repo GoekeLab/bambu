@@ -124,7 +124,6 @@ generateReadToTranscriptMap <- function(readClass, annotations){
         group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
     compatible_matches = compatible_matches$annotationTxIds[match(readClass_id, compatible_matches$readClassId)]
     readToTranscriptMap = tibble(read_id=read_id, equal_matches = equal_matches, compatible_matches = compatible_matches)
-    #readToTranscriptMap = readToTranscriptMap[!is.na(transcript_id),]
 
     return(readToTranscriptMap)
 }
