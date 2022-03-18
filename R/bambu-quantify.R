@@ -104,6 +104,8 @@ generateReadToTranscriptMap <- function(readClass, annotations){
         read_id = metadata(readClass)$readNames}
     else { read_id = metadata(readClass)$readId}
 
+    print(distTable)
+
     #unpack and reverse the read class to read id reletionship
     readOrder = order(unlist(rowData(readClass)$readIds))
     lens = lengths(rowData(readClass)$readIds)
@@ -125,5 +127,6 @@ generateReadToTranscriptMap <- function(readClass, annotations){
     compatible_matches = compatible_matches$annotationTxIds[match(readClass_id, compatible_matches$readClassId)]
     readToTranscriptMap = data.table(read_id=read_id, equal_matches = equal_matches, compatible_matches = compatible_matches)
     #readToTranscriptMap = readToTranscriptMap[!is.na(transcript_id),]
+
     return(readToTranscriptMap)
 }
