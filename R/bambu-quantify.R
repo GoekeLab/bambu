@@ -104,7 +104,7 @@ generateReadToTranscriptMap <- function(readClass, annotations){
         read_id = metadata(readClass)$readNames}
     else { read_id = metadata(readClass)$readId}
 
-    #unpack and reverse the read class to read id reletionship
+    #unpack and reverse the read class to read id relationship
     readOrder = order(unlist(rowData(readClass)$readIds))
     lens = lengths(rowData(readClass)$readIds)
     rcIndex = seq_along(readClass)
