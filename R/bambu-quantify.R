@@ -104,8 +104,6 @@ generateReadToTranscriptMap <- function(readClass, annotations){
         read_id = metadata(readClass)$readNames}
     else { read_id = metadata(readClass)$readId}
 
-    print(distTable)
-
     #unpack and reverse the read class to read id reletionship
     readOrder = order(unlist(rowData(readClass)$readIds))
     lens = lengths(rowData(readClass)$readIds)

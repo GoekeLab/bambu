@@ -175,12 +175,14 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             annotations = annotations, isoreParameters = isoreParameters,
             emParameters = emParameters, ncore = ncore, verbose = verbose, 
             BPPARAM = bpParameters)
+        sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
         if(trackReads){ 
             readToTranscriptMaps = bplapply(Map(list,readClassList,countsSe), generateReadToTranscriptMap,
                 annotations, BPPARAM = bpParameters)
-        }
+            names(readToTranscriptMaps) = sampleNames}
         if(returnDistTable){
-            distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})}
+            distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
+            names(distTables) = sampleNames}
         countsSe = lapply(countsSe, FUN = function(se){
             metadata(se)$distTable=NULL
             return(se)})
