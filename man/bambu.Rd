@@ -21,8 +21,7 @@ bambu(
     discovery = TRUE,
     quant = TRUE,
     verbose = FALSE,
-    lowMemory = FALSE,
-
+    lowMemory = FALSE
 )
 }
 \arguments{
