@@ -109,6 +109,7 @@ generateReadToTranscriptMap <- function(readClass, annotations){
     lens = lengths(rowData(readClass)$readIds)
     rcIndex = seq_along(readClass)
     readToRC = rep(rcIndex, lens)[readOrder]
+    read_id = read_id[(match(unlist(rowData(readClass)$readIds)[readOrder], metadata(readClass)$readId))]
 
     #get annotation indexs
     distTable$annotationTxId = match(distTable$annotationTxId, names(annotations))
