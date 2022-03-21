@@ -141,8 +141,8 @@ allow comparison.</p>
     NDR <span class='op'>=</span> <span class='fl'>0.1</span>,
     yieldSize <span class='op'>=</span> <span class='cn'>NULL</span>,
     opt.discovery <span class='op'>=</span> <span class='cn'>NULL</span>,
-    trackReads <span class='op'>=</span> <span class='cn'>FALSE</span>,
     opt.em <span class='op'>=</span> <span class='cn'>NULL</span>,
+    trackReads <span class='op'>=</span> <span class='cn'>FALSE</span>,
     discovery <span class='op'>=</span> <span class='cn'>TRUE</span>,
     quant <span class='op'>=</span> <span class='cn'>TRUE</span>,
     verbose <span class='op'>=</span> <span class='cn'>FALSE</span>,
@@ -233,11 +233,6 @@ reconstruction process:</p><dl>
 </dl></td>
     </tr>
     <tr>
-        <th>trackReads</th>
-        <td><p>Read names will be tracked and their relationship to read classes 
-            and transcript output as metadata.</p></td>
-    </tr>
-    <tr>
       <th>opt.em</th>
       <td><p>A list of controlling parameters for quantification
 algorithm estimation process:</p><dl>
@@ -251,6 +246,19 @@ algorithm estimation process:</p><dl>
 
 </dl></td>
     </tr>
+    <tr>
+        <th>trackReads</th>
+        <td><p>When TRUE read names will be tracked and output as
+            metadata in the final output as readToTranscriptMaps detailing. 
+            the assignment of reads to transcripts. The output is a list with 
+            an entry for each sample.</p></td>
+      </tr>
+      <tr>
+        <th>outputDistTable</th>
+        <td><p>When TRUE the calculated distance table between
+            read classes and annotations will be output as metadata as 
+            distTables. The output is a list with an entry for each sample.</p></td>
+      </tr>
     <tr>
       <th>discovery</th>
       <td><p>A logical variable indicating whether annotations

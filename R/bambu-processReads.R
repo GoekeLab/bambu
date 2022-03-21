@@ -66,7 +66,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
-    readId = mcols(readGrgList)$id
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
@@ -83,14 +82,11 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         pruning.mode = "coarse")
     }
     #removes reads that are outside genome coordinates
-    badReads = max(end(ranges(readGrgList)))>=
-        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))]
-    readGrgList = readGrgList[!badReads]
-    if(trackReads) readNames = names(readGrgList)[!badReads]
-    readId = readId[!badReads]
-    numBadReads = sum(badReads)
-    if(numBadReads > 0 ){
-        warning(paste0(numBadReads, " reads are mapped outside the provided ",
+    badReads = which(max(end(ranges(readGrgList)))>=
+        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
+    if(length(badReads) > 0 ){
+        readGrgList = readGrgList[-badReads]
+        warning(paste0(length(badReads), " reads are mapped outside the provided ",
         "genomic regions. These reads will be dropped. Check you are using the ",
         "same genome used for the alignment"))
     }
@@ -106,8 +102,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             uniqueJunctions, runName = names(bam.file)[1],
             annotations, stranded, verbose)
     }
-    if(trackReads) metadata(se)$readNames = readNames
-    metadata(se)$readId = readId
+    if(trackReads) metadata(se)$readNames = names(readGrgList)
+    metadata(se)$readId = mcols(readGrgList)$id
     rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses

@@ -96,20 +96,34 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     return(list(theta_est, d_rateOut[1], d_rateOut[2]))
 }
 
-generateReadModelMap <- function(readClassList, trackReads = FALSE){
-    if(trackReads) { read_id = metadata(readClassList)$readNames}
-    else { read_id = metadata(readClassList)$readId}
+generateReadToTranscriptMap <- function(readClass, annotations){
+    distTable = metadata(readClass[[2]])$distTable
+    readClass = readClass[[1]]
+    if (is.character(readClass)) readClass <- readRDS(file = readClass)
+    if(!is.null(metadata(readClass)$readNames)) { 
+        read_id = metadata(readClass)$readNames}
+    else { read_id = metadata(readClass)$readId}
 
-    readOrder = order(unlist(rowData(readClassList)$readIds))
-    lens = lengths(rowData(readClassList)$readIds)
-    rcIndex = seq_along(readClassList)
+    #unpack and reverse the read class to read id relationship
+    readOrder = order(unlist(rowData(readClass)$readIds))
+    lens = lengths(rowData(readClass)$readIds)
+    rcIndex = seq_along(readClass)
     readToRC = rep(rcIndex, lens)[readOrder]
 
-    readClass_id = rownames(readClassList)[readToRC]
-    transcript_id = metadata(readClassList)$distTable
-    transcript_id = transcript_id[which(transcript_id$equal),]
-    transcript_id = transcript_id$annotationTxId[match(readClass_id, transcript_id$readClassId)]
-    readModelMap = cbind(read_id, transcript_id)
-    readModelMap = na.omit(readModelMap)
-    return(readModelMap)
+    #get annotation indexs
+    distTable$annotationTxId = match(distTable$annotationTxId, names(annotations))
+
+    #match read classes with transcripts
+    readClass_id = rownames(readClass)[readToRC]
+    equal_matches = distTable %>% 
+        filter(equal) %>% 
+        group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
+    equal_matches = equal_matches$annotationTxIds[match(readClass_id, equal_matches$readClassId)]
+    compatible_matches = distTable %>% 
+        filter(!equal & compatible) %>% 
+        group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
+    compatible_matches = compatible_matches$annotationTxIds[match(readClass_id, compatible_matches$readClassId)]
+    readToTranscriptMap = tibble(read_id=read_id, equal_matches = equal_matches, compatible_matches = compatible_matches)
+
+    return(readToTranscriptMap)
 }

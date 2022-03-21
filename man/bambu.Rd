@@ -15,8 +15,9 @@ bambu(
     NDR = 0.1,
     yieldSize = NULL,
     opt.discovery = NULL,
-    trackReads = FALSE,
     opt.em = NULL,
+    trackReads = FALSE,
+    returnDistTable = FALSE,
     discovery = TRUE,
     quant = TRUE,
     verbose = FALSE,
@@ -81,8 +82,6 @@ reconstruction process:
     threshold for single-exon transcripts during sample combining, defaults 
     to 1}
 }}
-\item{trackReads}{Read names will be tracked and their relationship to read classes 
-    and transcript output as metadata.}
 
 \item{opt.em}{A list of controlling parameters for quantification
 algorithm estimation process:
@@ -95,6 +94,15 @@ algorithm estimation process:
     \item{minvalue}{specifying the minvalue for convergence consideration, 
     defaults to 0.00000001}
 }}
+
+\item{trackReads}{When TRUE read names will be tracked and output as
+    metadata in the final output as readToTranscriptMaps detailing. 
+    the assignment of reads to transcripts. The output is a list with 
+    an entry for each sample.}
+
+\item{returnDistTable}{When TRUE the calculated distance table between
+    read classes and annotations will be output as metadata as 
+    distTables. The output is a list with an entry for each sample.}
 
 \item{discovery}{A logical variable indicating whether annotations
 are to be extended for quantification.}

@@ -54,8 +54,6 @@
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
 #' }
-#' @param trackReads Read names will be tracked and their relationship to read classes 
-#' and transcript output as metadata.
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \describe{
@@ -67,6 +65,13 @@
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
 #' }
+#' @param trackReads When TRUE read names will be tracked and output as
+#' metadata in the final output as readToTranscriptMaps detailing. 
+#' the assignment of reads to transcripts. The output is a list with 
+#' an entry for each sample.
+#' @param outputDistTable When TRUE the calculated distance table between
+#' read classes and annotations will be output as metadata as 
+#' distTables. The output is a list with an entry for each sample.
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended
 #' @param quant A logical variable indicating whether quantification will 
@@ -119,8 +124,8 @@
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
-    yieldSize = NULL, opt.discovery = NULL, trackReads = FALSE, opt.em = NULL,
-    discovery = TRUE, quant = TRUE, verbose = FALSE, 
+    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
+    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, verbose = FALSE, 
     lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
@@ -151,13 +156,15 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads)
-    } else { readClassList <- rcFile}
+    } else { 
+        if(is.list(rcFile)) {readClassList <- rcFile}
+        else {readClassList <- as.list(rcFile)}}
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
         if (!quant){
-            return(list(annotations=annotations))
+            return(annotations)
         }
     }
     if (quant) {
@@ -168,18 +175,21 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             annotations = annotations, isoreParameters = isoreParameters,
             emParameters = emParameters, ncore = ncore, verbose = verbose, 
             BPPARAM = bpParameters)
-
-        readModelMap = NULL
-        if(!is.list(readClassList)) readClassList = as.list(readClassList)
-        for (i in seq_along(readClassList)){
-            if (is.character(readClassList[[i]])) readClassList[[i]] <- readRDS(file = readClassList[[i]])
-            metadata(readClassList[[i]])$distTable = metadata(countsSe[[i]])$distTable
-            readModelMap = rbind(readModelMap, generateReadModelMap(readClassList[[i]], trackReads))
-            readClassList[[i]]=NA
-        }
+        sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
+        if(trackReads){ 
+            readToTranscriptMaps = bplapply(Map(list,readClassList,countsSe), generateReadToTranscriptMap,
+                annotations, BPPARAM = bpParameters)
+            names(readToTranscriptMaps) = sampleNames}
+        if(returnDistTable){
+            distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
+            names(distTables) = sampleNames}
+        countsSe = lapply(countsSe, FUN = function(se){
+            metadata(se)$distTable=NULL
+            return(se)})
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
+        if(returnDistTable) metadata(countsSe)$distTables = distTables
         rowRanges(countsSe) <- annotations
-        metadata(countsSe)$readModelMap = readModelMap
+        if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
         return(countsSe)
