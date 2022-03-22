@@ -5,7 +5,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     remove.subsetTx = TRUE,
                                     min.sampleNumber = 1, NDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-                                    prefix = "", verbose = FALSE){
+                                    fusionMode = FALSE, prefix = "", verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -32,6 +32,12 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     rowDataCombined <- assignGeneIDexonMatch(
       rowDataCombined, exonRangesCombined, annotationGrangesList,
       min.exonOverlap, prefix, verbose)
+    
+    ## run fusion transcript mode
+    if(fusionMode) {
+      rowDataCombined <- assignFusionGene(rowDataCombined, exonRangesCombined, 
+                                          annotationGrangesList, min.exonOverlap)
+      }
     ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
@@ -61,6 +67,25 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
   return(combinedTranscripts)
 }
 
+#' transcripts which map to multiple genes are assigned multi-gene ID
+#' separated by ':', the readClassType is set to 'fusionTranscript' 
+#' alignment purely based on ranges does lead to false positives (so exon 
+#' overlap is required here, which can be controlled by min.exonOverlap)
+#' @noRd
+assignFusionGene <- function(rowDataCombined, exonRangesCombined, 
+                             annotationGrangesList, min.exonOverlap){
+  exonMatchGene <- findOverlaps(exonRangesCombined, annotationGrangesList,
+                                select = "all", minoverlap = min.exonOverlap)
+  txGeneTbl <- tibble(txId = queryHits(exonMatchGene), 
+                      GENEID = mcols(annotationGrangesList)$GENEID[subjectHits(exonMatchGene)]) %>%
+    distinct() %>% group_by(txId) %>% filter(n()>1) %>% summarise(GENEID = paste(GENEID, collapse=':'))
+  rowDataCombined$GENEID[txGeneTbl$txId] <- txGeneTbl$GENEID
+  rowDataCombined$readClassType[txGeneTbl$txId] <- 'fusionTranscript'
+  return(rowDataCombined)
+}
+
+
+
 #' calculate minimum equivalent classes for extended annotations
 #' @importFrom dplyr select as_tibble %>% mutate_at mutate group_by 
 #'     ungroup .funs .name_repair vars 
@@ -74,7 +99,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
-  #(2) remove transcripts below NDR threshold
+  #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
   # remove equals to prevent duplicates when merging with anno
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
@@ -83,8 +108,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
-  # (3) remove transcripts with identical junctions to annotations
-  extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
+  # (3) combine novel transcripts with annotations ## Todo: rename this function
+  extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
     annotationGrangesList, prefix)
   end.ptm <- proc.time()
@@ -583,9 +608,9 @@ includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
   return(temp)
 }
 
-#' remove transcripts with identical junctions to annotations
+#' combine annotations with predicted transcripts
 #' @noRd
-removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered, 
+combineWithAnnotations <- function(rowDataCombinedFiltered, 
                                         exonRangesCombinedFiltered,annotationGrangesList, prefix){
   # commented as notEqual is already filtered in the beginning
   # notEqual <- which(rowDataCombinedFiltered$readClassType != "equal")

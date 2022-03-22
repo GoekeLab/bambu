@@ -125,8 +125,8 @@
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
-    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, verbose = FALSE, 
-    lowMemory = FALSE) {
+    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
+    verbose = FALSE, lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
     if(is.null(annotations)) { annotations = GRangesList()
@@ -161,7 +161,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         else {readClassList <- as.list(rcFile)}}
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-            isoreParameters, stranded, bpParameters, verbose = verbose)
+            isoreParameters, stranded, bpParameters, fusionMode, verbose)
         if (!verbose) message("Finished extending annotations.")
         if (!quant){
             return(annotations)
