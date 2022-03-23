@@ -27,6 +27,23 @@ prepareAnnotationsFromGTF <- function(file) {
         data$strand[data$strand == "."] <- "*"
         data$GENEID <- gsub("gene_id (.*?);.*", "\\1", data$attribute)
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
+        multiTxCheck <- as_tibble(data) %>% select(seqname, GENEID) %>% distinct() %>% group_by(GENEID) %>% 
+            mutate(n=n(), id=paste0('-',row_number()))
+        if(any(multiTxCheck$n>1)) { # identical TXNAMES
+            warning('Annotations contain duplicated transcript names
+                        Transcript names will be made unique')
+            uniqueNamesTbl <- as_tibble(data) %>% 
+                select(seqname, TXNAME, GENEID) %>% 
+                mutate(order=row_number()) %>% left_join(multiTxCheck) %>%
+               mutate(gene_unique = paste0(GENEID, ifelse(n==1,'', id)),
+                      tx_unique = paste0(TXNAME, ifelse(n==1,'', id))) %>%
+                arrange(order)
+            
+            data$TXNAME_Original <- data$TXNAME
+            data$GENEID_Original <- data$GENEID
+            data$TXNAME <- uniqueNamesTbl$tx_unique
+            data$GENEID <- uniqueNamesTbl$gene_unique
+            }
         geneData <- unique(data[, c("TXNAME", "GENEID")])
         grlist <- makeGRangesListFromDataFrame(
         data[, c("seqname", "start", "end", "strand", "TXNAME")],
