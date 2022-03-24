@@ -115,21 +115,6 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   end.ptm <- proc.time()
   if (verbose) message("transcript filtering in ",
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  start.ptm <- proc.time()
-  geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in%
-                               mcols(extendedAnnotationRanges)$GENEID[
-                                 which(mcols(extendedAnnotationRanges)$newTxClass != "annotation")])
-  minEqClasses <-
-    getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
-  end.ptm <- proc.time()
-  if (verbose) message("calculated minimum equivalent classes for
-        extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
-                       " mins.")
-  mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <-
-    minEqClasses$eqClass[match(names(extendedAnnotationRanges[
-      geneListWithNewTx]), minEqClasses$queryTxId)]
-  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                                                                     c("TXNAME", "GENEID", "eqClass", "newTxClass","readCount", "txNDR")]
   return(extendedAnnotationRanges)
 }
 
@@ -637,8 +622,24 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     rep(NA,length(annotationRangesToMerge))
   mcols(annotationRangesToMerge)$newTxClass <- 
     rep("annotation",length(annotationRangesToMerge))
+  mcols(annotationRangesToMerge)$txNDR <- 
+    rep(NA,length(annotationRangesToMerge))
+  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
   extendedAnnotationRanges <-
     c(extendedAnnotationRanges, annotationRangesToMerge)
+  mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
+  start.ptm <- proc.time()
+   minEqClasses <-
+    getMinimumEqClassByTx(extendedAnnotationRanges)
+  end.ptm <- proc.time()
+  if (verbose) message("calculated minimum equivalent classes for
+        extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
+        " mins.")
+  if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
+  mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass
+  mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
+  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
+                                                                     c("TXNAME", "GENEID", "eqClass", "txid", "eqClassById", "newTxClass","readCount", "txNDR")]
   return(extendedAnnotationRanges)
 }
 
