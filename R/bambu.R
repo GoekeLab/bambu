@@ -29,7 +29,7 @@
 #'     defaults to empty}
 #'     \item{remove.subsetTx}{indicating whether filter to remove read classes
 #'     which are a subset of known transcripts(), defaults to TRUE}
-#'     \item{min.readCount}{specifying minimun read count to consider a read
+#'     \item{min.readCount}{specifying minimum read count to consider a read
 #'     class valid in a sample, defaults to 2}
 #'     \item{min.readFractionByGene}{specifying minimum relative read count per
 #'     gene, highly expressed genes will have many high read count low relative
@@ -53,6 +53,9 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
+#'     \item{min.readFractionByFusionGene}{specifying minimum relative read 
+#'     count per fusion gene (when fusionMode=TRUE). Will be set to 
+#'     min.readFractionByGene (default 0.05)}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:

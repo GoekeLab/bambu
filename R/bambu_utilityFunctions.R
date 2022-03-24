@@ -31,6 +31,7 @@ setIsoreParameters <- function(isoreParameters){
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
         fitReadClassModel = TRUE,
+        min.readFractionByFusionGene = 0,
         prefix = "") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
