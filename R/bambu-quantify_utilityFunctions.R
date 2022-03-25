@@ -467,11 +467,16 @@ updateAnnotations <- function(readClassMod, annotations){
         unlist(rowRanges(readClassMod)[unique(unidentified$readClassId)])
     un_names <- unidentified[match(names(un_ranges),readClassId)]$annotationTxId
     names(un_ranges) <- un_names
+    strand(un_ranges[strand(un_ranges) == "*"]) <- "+"
     newList <- split(un_ranges, un_names)
     unidentified_annotations <- reduce(newList)
-    unidentified_annotations$exon
+    # prune strand
+    strand(unidentified_annotations) <- 
+        splitAsList(rep(unlist(lapply(as.list(unique(strand(unidentified_annotations))),"[",1)),
+        elementNROWS(unidentified_annotations)),
+        rep(names(unidentified_annotations),
+            elementNROWS(unidentified_annotations)))
     un_names <- names(unidentified_annotations)
-    
     
     mcols(unidentified_annotations) <- DataFrame(TXNAME = un_names,
         GENEID = gsub("_unidentified","",un_names),
@@ -479,7 +484,7 @@ updateAnnotations <- function(readClassMod, annotations){
         newTxClass = "unidentified",
         readCount = readCountTable[match(un_names, annotationTxId)]$readCount,
         txNDR = NA)
-    annotations_combined <- c(annotations,unidentified_annotations)
+    suppressWarnings(annotations_combined <- c(annotations,unidentified_annotations))
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished updating annotations with unidentified reads in ",
@@ -487,6 +492,74 @@ updateAnnotations <- function(readClassMod, annotations){
     return(annotations_combined)
 }
 
+#' combine unidentified annotations across samples
+#' @noRd
+combineAnnotations <- function(rowRangesList){
+    rowRangesList <- do.call("c", rowRangesList)
+    mcolsList <- data.table(as.data.frame(mcols(rowRangesList)))
+    # update read count to be the sum 
+    mcolsList[grep("unidentified",TXNAME), 
+              readCount := sum(readCount), by = TXNAME]
+    # update eqClass to be the sum
+    mcolsList[grep("unidentified",TXNAME), 
+              eqClass := .SD[order(nchar(eqClass), 
+              decreasing = TRUE)]$eqClass[1], by = TXNAME]
+    mcolsList <- unique(mcolsList)
+    
+    rowRangesNew <- split(unlist(rowRangesList), names(unlist(rowRangesList)))
+    rowRangesNew <- reduce(rowRangesNew)
+    # prune strand
+    strand(rowRangesNew) <- 
+        splitAsList(rep(unlist(lapply(as.list(unique(strand(rowRangesNew))),"[",1)),
+                        elementNROWS(rowRangesNew)),
+                    rep(names(rowRangesNew),
+                        elementNROWS(rowRangesNew)))
+    rowRangesNew <- rowRangesNew[mcolsList$TXNAME]
+    mcols(rowRangesNew) <- DataFrame(mcolsList)
+    return(rowRangesNew)
+}
+
+
+#' combined counts with unidentified transcripts across samples
+#' @noRd
+combineCounts <- function(countsSe,annotationsUpdated){
+    countsList <- lapply(countsSe,"[[",1)
+    rowRangesList <- lapply(countsSe, "[[",2)
+    tx_nameDt <- data.table(tx_name = names(annotationsUpdated))
+    countsList <- lapply(seq_along(countsList), function(k){
+        countsK <- countsList[[k]]
+        assayK <- assays(countsK)
+        counts <- data.table(tx_name = names(rowRangesList[[k]]),
+            counts = as.numeric(assayK$counts),
+            CPM = as.numeric(assayK$CPM),
+            fullLengthCounts = as.numeric(assayK$fullLengthCounts),
+            partialLengthCounts = as.numeric(assayK$partialLengthCounts),
+            uniqueCounts = as.numeric(assayK$uniqueCounts),
+            theta = as.numeric(assayK$theta))
+        counts <- merge(tx_nameDt, counts, on ="tx_name",all = TRUE)
+        counts <- counts[match(names(annotationsUpdated), tx_name)]
+        counts[is.na(counts)] <- 0
+        colNameRC <- colnames(countsK)
+        colDataRC <- colData(countsK)
+        seOutput <- SummarizedExperiment(
+            assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
+            dimnames =  list(NULL, colNameRC)), CPM = matrix(counts$CPM,
+            ncol =  1, dimnames = list(NULL, colNameRC)),
+            fullLengthCounts = matrix(counts$fullLengthCounts, ncol = 1,
+            dimnames = list(NULL, colNameRC)),
+            partialLengthCounts = matrix(counts$partialLengthCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC)),
+            uniqueCounts = matrix(counts$uniqueCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC)),
+            theta = matrix(counts$theta, 
+            ncol = 1, dimnames = list(NULL, colNameRC))),
+            colData = colDataRC)
+        return(seOutput)
+    })
+    countsSeUpdated <- do.call(SummarizedExperiment::cbind, countsList)
+    rowRanges(countsSeUpdated) <- annotationsUpdated
+    return(countsSeUpdated)
+}
 
 #' @useDynLib bambu, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
