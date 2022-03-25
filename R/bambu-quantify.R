@@ -1,11 +1,14 @@
-
 #' Perform quantification
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
-    verbose = FALSE, min.exonDistance = 35, min.primarySecondaryDist = 5, 
-    min.primarySecondaryDistStartEnd = 5) {
+    verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+    min.exonDistance = isoreParameters[["min.exonDistance"]]
+    min.primarySecondaryDist =
+        isoreParameters[['min.primarySecondaryDist']] 
+    min.primarySecondaryDistStartEnd =
+        isoreParameters[['min.primarySecondaryDistStartEnd2']]
     if (is.character(readClass)) readClass <- readRDS(file = readClass)
     readClassDist <- isore.estimateDistanceToAnnotations(readClass, annotations,
         min.exonDistance = min.exonDistance,
@@ -33,15 +36,15 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         nGeneFordRate = countsOut[[3]])
     seOutput <- SummarizedExperiment(
         assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
-            dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
-            ncol =  1, dimnames = list(NULL, colNameRC)),
-            fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
+        dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
+        ncol =  1, dimnames = list(NULL, colNameRC)),
+        fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
             dimnames = list(NULL, colNameRC)),
-            partialLengthCounts = matrix(counts$PartialLengthCounts, 
+        partialLengthCounts = matrix(counts$PartialLengthCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC)),
-            uniqueCounts = matrix(counts$UniqueCounts, 
+        uniqueCounts = matrix(counts$UniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC)),
-            theta = matrix(counts$theta, 
+        theta = matrix(counts$theta, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     return(seOutput)
 }
@@ -54,12 +57,12 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
 #' @inheritParams bambu
 #' @noRd
 bambu.quantDT <- function(readClassDt = readClassDt, 
-    emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
-    minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
+                          emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
+                                              minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
     } else if (any(!(c("gene_id", "tx_id", "read_class_id","nobs") %in% 
-        colnames(readClassDt)))) {
+                     colnames(readClassDt)))) {
         stop("Columns gene_id, tx_id, read_class_id, nobs,
             are missing from object.")
     }
@@ -81,21 +84,20 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     if (verbose) message("Finished estimate degradation bias in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
-        d_rateOut[1], d_mode = d_mode)
+                                                    d_rateOut[1], d_mode = d_mode)
     removeList <- removeUnObservedGenes(readClassDt)
     readClassDt <- removeList[[1]] # keep only observed genes for estimation
     outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
     start.ptm <- proc.time()
     outListEst <- abundance_quantification(readClassDt,
-        ncore = ncore,
-        maxiter = emParameters[["maxiter"]],
-        conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
+                                           ncore = ncore,
+                                           maxiter = emParameters[["maxiter"]],
+                                           conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.ptm <- proc.time()
     if (verbose) message("Finished EM estimation in ",
-        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     theta_est <- formatOutput(rbind(outList,outListEst),ori_txvec,geneVec)
     theta_est <- removeDuplicates(theta_est)
     return(list(theta_est, d_rateOut[1], d_rateOut[2]))
 }
-
 

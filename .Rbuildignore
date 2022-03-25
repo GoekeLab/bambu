@@ -4,3 +4,5 @@
 ^\.Rprofile$
 ^doc$
 ^Meta$
+^\.github$
+^docs$

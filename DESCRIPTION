@@ -2,9 +2,11 @@ Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read 
     RNA-Seq data
-Version: 1.2.2
+Version: 2.1.6
 Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
              email = "chen_ying@gis.a-star.edu.sg"),
+             person("Andre", "Sim", role = "aut",
+             email = "andre_sim@gis.a-star.edu.sg"),
              person("Yuk Kei", "Wan", role = "aut",
              email = "Wan_Yuk_Kei@gis.a-star.edu.sg"),
              person("Jonathan", "Goeke", role = "aut",
@@ -17,16 +19,17 @@ Description: bambu is a R package for multi-sample transcript discovery and
     usage. 
 License: GPL-3  + file LICENSE
 Encoding: UTF-8
-LazyData: true
 ByteCompile: true
 Depends: 
-    R(>= 4.0.0),
+    R(>= 4.1),
     SummarizedExperiment(>= 1.1.6),
     S4Vectors(>= 0.22.1),
+    BSgenome,
     IRanges
 Suggests: 
     AnnotationDbi,
     Biostrings,
+    rmarkdown,
     BiocFileCache,
     ggplot2,
     ComplexHeatmap,
@@ -40,7 +43,6 @@ Suggests:
     ExperimentHub (>= 1.15.3),
     DESeq2,
     NanoporeRNASeq,
-    BSgenome,
     apeglm,
     utils,
     DEXSeq
@@ -83,7 +85,6 @@ Imports:
     Rsamtools,
     methods,
     Rcpp,
-    BSgenome,
     xgboost
 VignetteBuilder: 
     knitr

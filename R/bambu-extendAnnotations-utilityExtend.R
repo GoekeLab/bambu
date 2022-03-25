@@ -3,7 +3,7 @@
 #' @noRd
 isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     remove.subsetTx = TRUE,
-                                    min.sampleNumber = 1, max.txNDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
+                                    min.sampleNumber = 1, NDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     prefix = "", verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
@@ -34,7 +34,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, max.txNDR, verbose)
+      remove.subsetTx, NDR, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -49,10 +49,13 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
   filterSet = NULL
   if (nrow(combinedTranscripts) > 0){
     #filter by read counts
+    naTxscore <- is.na(combinedTranscripts$NSampleTxScore)
+    if(any(naTxscore)) 
+       combinedTranscripts$NSampleTxScore[naTxscore] <- 0
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
         combinedTranscripts$NSampleTxScore >= min.sampleNumber) & (
         combinedTranscripts$NSampleReadProp >= min.sampleNumber)
-  }  
+  }
   combinedTranscripts = combinedTranscripts[filterSet,]
   return(combinedTranscripts)
 }
@@ -62,7 +65,7 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 #'     ungroup .funs .name_repair vars 
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
-                                          exonRangesCombined, prefix,  remove.subsetTx, max.txNDR, verbose) {
+                                          exonRangesCombined, prefix,  remove.subsetTx, NDR, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatiblity with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
@@ -73,9 +76,12 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   #(2) remove transcripts below NDR threshold
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
   # remove equals to prevent duplicates when merging with anno
-  filterSet = (rowDataCombined$txNDR <= max.txNDR) & !rowDataCombined$readClassType == "equalcompatible"
+  filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
+  if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
+  if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
+    "No annotations were provided. Please increase NDR threshold to use novel transcripts")
   # (3) remove transcripts with identical junctions to annotations
   extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
     rowDataCombined, exonRangesCombined, 
@@ -108,7 +114,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts){
     if(sum(equal, na.rm = TRUE)<50 | 
         sum(!equal, na.rm = TRUE)<50){
           combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
-          warning("Less than 50 TRUE or FALSE read classes for precision stabilization. 
+          message("Less than 50 TRUE or FALSE read classes for precision stabilization. 
           Filtering by prediction score instead")
     } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     return(combinedTranscripts)

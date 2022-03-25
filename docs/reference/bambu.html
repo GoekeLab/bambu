@@ -40,9 +40,12 @@
 
 
 <meta property="og:title" content="long read isoform reconstruction and quantification — bambu" />
-<meta property="og:description" content="This function takes bam file of genomic alignments and performs isoform recontruction and gene and transcript expression quantification.
-It also allows saving of read class files of alignments, extending provided annotations, and quantification based on extended annotations.
-When multiple samples are provided, extended annotations will be combined across samples to allow comparison." />
+<meta property="og:description" content="This function takes bam file of genomic alignments and performs
+isoform recontruction and gene and transcript expression quantification.
+It also allows saving of read class files of alignments, extending provided
+annotations, and quantification based on extended annotations. When multiple
+samples are provided, extended annotations will be combined across samples to
+allow comparison." />
 
 
 
@@ -74,7 +77,7 @@ When multiple samples are provided, extended annotations will be combined across
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.1</span>
       </span>
     </div>
 
@@ -82,7 +85,7 @@ When multiple samples are provided, extended annotations will be combined across
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -96,7 +99,7 @@ When multiple samples are provided, extended annotations will be combined across
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/GoekeLab/bambu/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -119,96 +122,232 @@ When multiple samples are provided, extended annotations will be combined across
     </div>
 
     <div class="ref-description">
-    <p>This function takes bam file of genomic alignments and performs isoform recontruction and gene and transcript expression quantification.
-It also allows saving of read class files of alignments, extending provided annotations, and quantification based on extended annotations.
-When multiple samples are provided, extended annotations will be combined across samples to allow comparison.</p>
+    <p>This function takes bam file of genomic alignments and performs
+isoform recontruction and gene and transcript expression quantification.
+It also allows saving of read class files of alignments, extending provided
+annotations, and quantification based on extended annotations. When multiple
+samples are provided, extended annotations will be combined across samples to
+allow comparison.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>bambu</span>(
-  <span class='kw'>reads</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>readClass.file</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>readClass.outputDir</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>annotations</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>genomeSequence</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>stranded</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>ncore</span> <span class='kw'>=</span> <span class='fl'>1</span>,
-  <span class='kw'>yieldSize</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>isoreParameters</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>emParameters</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>extendAnnotations</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>verbose</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>
-)</pre>
+    <pre class="usage"><span class='fu'>bambu</span><span class='op'>(</span>
+    reads <span class='op'>=</span> <span class='cn'>NULL</span>,
+    rcFile <span class='op'>=</span> <span class='cn'>NULL</span>,
+    rcOutDir <span class='op'>=</span> <span class='cn'>NULL</span>,
+    annotations <span class='op'>=</span> <span class='cn'>NULL</span>,
+    genome <span class='op'>=</span> <span class='cn'>NULL</span>,
+    stranded <span class='op'>=</span> <span class='cn'>FALSE</span>,
+    ncore <span class='op'>=</span> <span class='fl'>1</span>,
+    NDR <span class='op'>=</span> <span class='fl'>0.1</span>,
+    yieldSize <span class='op'>=</span> <span class='cn'>NULL</span>,
+    opt.discovery <span class='op'>=</span> <span class='cn'>NULL</span>,
+    opt.em <span class='op'>=</span> <span class='cn'>NULL</span>,
+    discovery <span class='op'>=</span> <span class='cn'>TRUE</span>,
+    quant <span class='op'>=</span> <span class='cn'>TRUE</span>,
+    verbose <span class='op'>=</span> <span class='cn'>FALSE</span>,
+    lowMemory <span class='op'>=</span> <span class='cn'>FALSE</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>reads</th>
-      <td><p>A string or a vector of strings specifying the paths of bam files for genomic alignments, or a <code>BamFile</code> object or a <code>BamFileList</code>  object (see <code>Rsamtools</code>).</p></td>
+      <td><p>A string or a vector of strings specifying the paths of bam
+files for genomic alignments, or a <code>BamFile</code> object or a
+<code>BamFileList</code>  object (see <code>Rsamtools</code>).</p></td>
     </tr>
     <tr>
-      <th>readClass.file</th>
-      <td><p>A string or a vector of strings specifying the read class files that are saved during previous run of <code>bambu</code>.</p></td>
+      <th>rcFile</th>
+      <td><p>A string or a vector of strings specifying the read
+class files that are saved during previous run of <code>bambu</code>.</p></td>
     </tr>
     <tr>
-      <th>readClass.outputDir</th>
-      <td><p>A string variable specifying the path to where read class files will be saved.</p></td>
+      <th>rcOutDir</th>
+      <td><p>A string variable specifying the path to where
+read class files will be saved.</p></td>
     </tr>
     <tr>
       <th>annotations</th>
-      <td><p>A <code>TxDb</code> object or A GRangesList object obtained by <code><a href='prepareAnnotations.html'>prepareAnnotations</a></code> or <code><a href='prepareAnnotationsFromGTF.html'>prepareAnnotationsFromGTF</a></code>.</p></td>
+      <td><p>A <code>TxDb</code> object or A GRangesList object
+obtained by <code><a href='prepareAnnotations.html'>prepareAnnotations</a></code>.</p></td>
     </tr>
     <tr>
-      <th>genomeSequence</th>
+      <th>genome</th>
       <td><p>A fasta file or a BSGenome object.</p></td>
     </tr>
     <tr>
-      <th>ncore</th>
-      <td><p>specifying number of cores used when parallel processing is used, defaults to 1.</p></td>
+      <th>stranded</th>
+      <td><p>A boolean for strandedness, defaults to FALSE.</p></td>
     </tr>
+    <tr>
+      <th>ncore</th>
+      <td><p>specifying number of cores used when parallel processing 
+is used, defaults to 1.</p></td>
+    </tr>
+    <tr>
+        <th>NDR</th>
+        <td><p>specifying the approximated precision for included novel transcripts, 
+defaults to 0.1 (10% precision).</p></td>
+      </tr>
     <tr>
       <th>yieldSize</th>
       <td><p>see <code>Rsamtools</code>.</p></td>
     </tr>
     <tr>
-      <th>isoreParameters</th>
-      <td><p>A list of controlling parameters for isoform reconstruction process:</p><ul>
-<li><p>prefix specifying prefix for new gene Ids (genePrefix.number), defaults to empty</p></li>
-<li><p>remove.subsetTx indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE</p></li>
-<li><p>min.readCount specifying minimun read count to consider a read class valid in a sample, defaults to 2</p></li>
-<li><p>min.readFractionByGene specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05</p></li>
-<li><p>min.sampleNumber specifying minimum sample number with minimum read count, defaults to 1</p></li>
-<li><p>min.exonDistance specifying minum distance to known transcript to be considered valid as new, defaults to 35</p></li>
-<li><p>min.exonOverlap specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults 10 base pairs</p></li>
-</ul></td>
+      <th>opt.discovery</th>
+      <td><p>A list of controlling parameters for isoform
+reconstruction process:</p><dl>
+    <dt>prefix</dt><dd><p>specifying prefix for new gene Ids (genePrefix.number),
+    defaults to empty</p></dd>
+    <dt>remove.subsetTx</dt><dd><p>indicating whether filter to remove read classes
+    which are a subset of known transcripts(), defaults to TRUE</p></dd>
+    <dt>min.readCount</dt><dd><p>specifying minimun read count to consider a read
+    class valid in a sample, defaults to 2</p></dd>
+    <dt>min.readFractionByGene</dt><dd><p>specifying minimum relative read count per
+    gene, highly expressed genes will have many high read count low relative
+    abundance transcripts that can be filtered, defaults to 0.05</p></dd>
+    <dt>min.sampleNumber</dt><dd><p>specifying minimum sample number with minimum read
+    count, defaults to 1</p></dd>
+    <dt>min.exonDistance</dt><dd><p>specifying minum distance to known transcript 
+    to be considered valid as new, defaults to 35bp</p></dd>
+    <dt>min.exonOverlap</dt><dd><p>specifying minimum number of bases shared with
+    annotation to be assigned to the same gene id, defaults to 10bp</p></dd>
+    <dt>min.primarySecondaryDist</dt><dd><p>specifying the minimum number of distance 
+    threshold, defaults to 5bp</p></dd>
+    <dt>min.primarySecondaryDistStartEnd1</dt><dd><p>specifying the minimum number 
+    of distance threshold, used for extending annotation, defaults to 5bp</p></dd>
+    <dt>min.primarySecondaryDistStartEnd2</dt><dd><p>specifying the minimum number 
+    of distance threshold, used for estimating distance to annotation, 
+    defaults to 5bp</p></dd>
+    <dt>min.txScore.multiExon</dt><dd><p>specifying the minimum transcript level 
+    threshold for multi-exon transcripts during sample combining, 
+    defaults to 0</p></dd>
+    <dt>min.txScore.singleExon</dt><dd><p>specifying the minimum transcript level 
+    threshold for single-exon transcripts during sample combining, defaults 
+    to 1</p></dd>
+    <dt>NDR</dt><dd><p>specifying the maximum NDR rate to novel transcript
+    output from detected read classes, defaults to 0.1</p></dd>
+
+</dl></td>
     </tr>
     <tr>
-      <th>emParameters</th>
-      <td><p>A list of controlling parameters for quantification algorithm estimation process:</p><ul>
-<li><p>maxiter specifying maximum number of run interations, defaults to 10000.</p></li>
-<li><p>bias specifying whether to correct for bias, defaults to FALSE.</p></li>
-<li><p>conv specifying the covergence trheshold control, defaults to 0.0001.</p></li>
-</ul></td>
+      <th>opt.em</th>
+      <td><p>A list of controlling parameters for quantification
+algorithm estimation process:</p><dl>
+    <dt>maxiter</dt><dd><p>specifying maximum number of run iterations,
+    defaults to 10000</p></dd>
+    <dt>degradationBias</dt><dd><p>correcting for degradation bias, defaults to TRUE</p></dd>
+    <dt>conv</dt><dd><p>specifying the covergence threshold control, 
+    defaults to 0.0001</p></dd>
+    <dt>minvalue</dt><dd><p>specifying the minvalue for convergence consideration, 
+    defaults to 0.00000001</p></dd>
+
+</dl></td>
     </tr>
     <tr>
-      <th>extendAnnotations</th>
-      <td><p>A logical variable indicating whether annotations are to be extended for quantification.</p></td>
+      <th>discovery</th>
+      <td><p>A logical variable indicating whether annotations
+are to be extended for quantification.</p></td>
+    </tr>
+    <tr>
+      <th>quant</th>
+      <td><p>A logical variable indicating whether quantification will 
+be performed</p></td>
     </tr>
     <tr>
       <th>verbose</th>
-      <td><p>A logical variable indicating whether processing messages will be printed.</p></td>
+      <td><p>A logical variable indicating whether processing messages will
+be printed.</p></td>
+    </tr>
+    <tr>
+      <th>lowMemory</th>
+      <td><p>Read classes will be processed by chromosomes when lowMemory 
+is specified. This option provides an efficient way to process big samples.</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>A list of two SummarizedExperiment object for transcript expression and gene expression.</p>
+    <p><code>bambu</code> will output different results depending on whether
+<em>quant</em> mode is on. By default, <em>quant</em> is set to TRUE, so 
+<code>bambu</code> will generate a <em>SummarizedExperiment</em> object that contains
+the transcript expression estimates. Transcript expression estimates can be 
+accessed by <em>counts()</em>, including the following variables</p><dl>
+    <dt>counts</dt><dd><p>expression estimates</p></dd>
+    <dt>CPM</dt><dd><p>sequencing depth normalized estimates</p></dd>
+    <dt>fullLengthCounts</dt><dd><p>estimates of read counts mapped as full length 
+    reads for each transcript</p></dd>
+    <dt>partialLengthCounts</dt><dd><p>estimates of read counts mapped as partial 
+    length reads for each transcript</p></dd>
+    <dt>uniqueCounts</dt><dd><p>counts of reads that are uniquely mapped to each 
+    transcript</p></dd>
+    <dt>theta</dt><dd><p>raw estimates</p></dd>
+
+</dl><p>Output annotations that are usually the annotations with/without novel 
+transcripts/genes added, depending on whether <em>discovery</em> mode is on
+can be accessed by <em>rowRanges()</em>
+Transcript to gene map can be accessed by <em>rowData()</em>, with 
+<em>eqClass</em> that defining equivalent class for each transcript</p>
+<p>In the case when <em>quant</em> is set to FALSE, i.e., only transcript 
+discovery is performed, <code>bambu</code> will report the <em>grangeslist</em> of 
+the extended annotations.</p>
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
     <p>Main function</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"></pre>
+    <pre class="examples"><div class='input'><span class='co'>## =====================</span>
+<span class='va'>test.bam</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,
+    <span class='st'>"SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam"</span>,
+    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span>
+<span class='va'>fa.file</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>, 
+    <span class='st'>"Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa"</span>, 
+    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span>
+<span class='va'>gr</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/readRDS.html'>readRDS</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>, 
+    <span class='st'>"annotationGranges_txdbGrch38_91_chr9_1_1000000.rds"</span>,
+    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span><span class='op'>)</span>
+<span class='va'>se</span> <span class='op'>&lt;-</span> <span class='fu'>bambu</span><span class='op'>(</span>reads <span class='op'>=</span> <span class='va'>test.bam</span>, annotations <span class='op'>=</span> <span class='va'>gr</span>, 
+    genome <span class='op'>=</span> <span class='va'>fa.file</span>, discovery <span class='op'>=</span> <span class='cn'>TRUE</span>, quant <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='message'>Start generating read class files</span></div><div class='output co'>#&gt; 
+  |                                                                            
+  |                                                                      |   0%</div><div class='output co'>#&gt; <span class='message'>not all chromosomes present in reference annotations,</span>
+#&gt; <span class='message'>            annotations might be incomplete. Please compare objects</span>
+#&gt; <span class='message'>            on the same reference</span></div><div class='output co'>#&gt; <span class='message'>not all chromosomes from reads present in reference genome </span>
+#&gt; <span class='message'>            sequence, reads without reference chromosome sequence are dropped</span></div><div class='output co'>#&gt; <span class='message'>Junction correction with not enough data,</span>
+#&gt; <span class='message'>            precalculated model is used</span></div><div class='output co'>#&gt; <span class='message'>Not enough data points</span></div><div class='output co'>#&gt; <span class='message'>Not enough TRUE/FALSE labels</span></div><div class='output co'>#&gt; <span class='warning'>Warning: Transcript model not trained. Using pre-trained models</span></div><div class='output co'>#&gt; 
+  |                                                                            
+  |======================================================================| 100%
+#&gt; </div><div class='output co'>#&gt; <span class='message'>Finished generating read classes from genomic alignments.</span></div><div class='output co'>#&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+#&gt; 
+#&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+#&gt; 
+#&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+#&gt; 
+#&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+#&gt; </div><div class='output co'>#&gt; <span class='warning'>Warning: Less than 50 TRUE or FALSE read classes for precision stabilization. </span>
+#&gt; <span class='warning'>          Filtering by prediction score instead</span></div><div class='output co'>#&gt; <span class='message'>Finished extending annotations.</span></div><div class='output co'>#&gt; <span class='message'>Start isoform quantification</span></div><div class='output co'>#&gt; 
+  |                                                                            
+  |                                                                      |   0%
+  |                                                                            
+  |======================================================================| 100%
+#&gt; </div><div class='output co'>#&gt; <span class='message'>Finished isoform quantification.</span></div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -220,11 +359,11 @@ When multiple samples are provided, extended annotations will be combined across
 
       <footer>
       <div class="copyright">
-  <p>Developed by Ying Chen Developer, Jonathan Goeke Developer.</p>
+  <p>Developed by Ying Chen, Andre Sim, Yuk Kei Wan, Jonathan Goeke.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

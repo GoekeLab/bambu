@@ -1,3 +1,37 @@
+bambu v2.0.4 (Change date: 2022-02-08)
+===========================================
+Minor fixes: 
+    * Fix out of bounds aligned reads bug
+    * Fix bsgenome strand bug
+    * Make error clear when in the de novo mode and threshold is too low
+    * Move NDR out of discovery parameters list
+    
+
+bambu v2.0.3 (Change date: 2022-01-30)
+===========================================
+Minor fixes: 
+    * Skip the errors when txScore is not calculated
+
+bambu v2.0.1 (Change date: 2022-11-23)
+===========================================
+Minor fixes: 
+    * Update saved objects using updated Bioc 3.14 packages 
+
+bambu v2.0.0 (Change date: 2021-10-18)
+=============
+Major Changes:
+    * Implemented a machine learning model to estimate transcript-level novel discovery rate
+    * Implemented full length estimates, partial length estimates and unique read counts in final output
+    * Improved the performance for the extend-annotations module with simplified code
+    * Improved the performance when large amounts of annotations are missing.
+    * Implemented a lowMemory option to reduce the memory requirements for very large samples (>100 million reads)
+
+Minor fixes:
+    * Remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) and directly references the functions that should be used instead. 
+    * Fixed the error when a .fa file is provided as a string variable in non-windows system
+    * Fixed the error when no single exon read class is provided in any samples
+    * Fixed the bug when no splice overlap is found between read classes and annotations
+
 bambu v1.0.2 (Change date: 2020-11-10)
 ==============
 

@@ -119,11 +119,11 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 #' keep.extra.columns=c('gene_name','gene_biotype',
 #' 'transcript_biotype', 'transcript_name')
 #' @return grlist a \code{GRangesList} object, with two columns
-#' \itemize{
-#'     \item TXNAME specifying prefix for new gene Ids (genePrefix.number),
-#'         defaults to empty
-#'     \item GENEID indicating whether filter to remove read classes which are
-#'         a subset of known transcripts(), defaults to TRUE
+#' \describe{
+#'     \item{TXNAME}{specifying prefix for new gene Ids (genePrefix.number),
+#'         defaults to empty}
+#'     \item{GENEID}{indicating whether filter to remove read classes which are
+#'         a subset of known transcripts(), defaults to TRUE}
 #'   }
 #' @importFrom GenomicRanges makeGRangesListFromDataFrame
 #' @export

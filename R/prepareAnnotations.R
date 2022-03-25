@@ -14,12 +14,15 @@
 #' prepareAnnotations(x = gtf.file)
 prepareAnnotations <- function(x) {
     if (is(x, "TxDb")) {
-        exonsByTx <- exonsBy(x, by = "tx", use.names = TRUE)
-        if (any(duplicated(names(exonsByTx)))) {
-            warning("transcript names are not unique,
+        exonsByTx <- exonsBy(x, by = "tx", use.names = FALSE)
+        txNames <- values(transcripts(x, columns="tx_name"))$tx_name
+        if (any(duplicated(txNames))) {
+            message("transcript names are not unique,
             only one transcript per ID will be kept")
-            exonsByTx <- exonsByTx[!duplicated(exonsByTx)]
+            exonsByTx <- exonsByTx[!duplicated(txNames)]
+            txNames <- txNames[!duplicated(txNames)]
         }
+        names(exonsByTx) <- txNames
         unlistedExons <- unlist(exonsByTx, use.names = FALSE)
         partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByTx)),
             names = NULL)
@@ -45,10 +48,14 @@ prepareAnnotations <- function(x) {
             names(exonsByTx),
             minEqClasses$queryTxId
         )]
-        return(exonsByTx)
     } else {
-        if (grepl(".gtf", x)) {
-            return(prepareAnnotationsFromGTF(x))
-        }
+        tryCatch({
+            exonsByTx = prepareAnnotationsFromGTF(x)
+            },
+        error = function(cond){
+            stop("Input annotation file not readable. ",
+                "Requires .gtf/.gff format or TxDb object")
+        })
     }
+    return(exonsByTx)
 }
