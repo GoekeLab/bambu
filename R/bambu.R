@@ -162,10 +162,10 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             annotations = annotations, isoreParameters = isoreParameters,
             emParameters = emParameters, ncore = ncore,verbose = verbose, 
             BPPARAM = bpParameters)
-        countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
-        rowRanges(countsSe) <- annotations
+        annotationsUpdated <- combineAnnotations(lapply(countsSe,"[[",2))
+        countsSeCombined <- combineCounts(countsSe, annotationsUpdated)
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
-        return(countsSe)
+        return(countsSeCombined)
     }
 }
