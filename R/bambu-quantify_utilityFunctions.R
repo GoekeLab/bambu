@@ -252,15 +252,34 @@ removeUnObservedGenes <- function(readClassDt){
 #' @import data.table
 #' @noRd
 genEquiRCs <- function(readClass, annotations){
+    start.ptm <- proc.time()
     ## aggregate rc's based on their alignment to full or partial transcripts
     distTable <- splitReadClass(readClass)
+    end.ptm <- proc.time()
+    if (verbose) message("Finished format full or partial alignments in ",
+                round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     ## get total number of read count for each equi read class
     eqClassTable <- getUniCountPerEquiRC(distTable)
     ## merge distTable with eqClassTable 
+    start.ptm <- proc.time()
     equiRCTable <- unique(unique(distTable[, .(tx_id, GENEID, 
         read_class_id)], by = NULL)[eqClassTable, on = c("GENEID",
         "read_class_id"), allow.cartesian = TRUE], by = NULL)
-    equiRCTable_final <- addEmptyRC(annotations, equiRCTable)
+    end.ptm <- proc.time()
+    if (verbose) message("Finished update eqClass with annotations in ",
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    start.ptm <- proc.time()
+    unidentified_equiRCTable <- equiRCTable[grepl("unidentified",tx_id)]
+    unidentified_equiRCTable[, minEquiRC := 1]
+    equiRCTable_final <- 
+        unique(rbind(addEmptyRC(annotations[!grepl("unidentified",
+            names(annotations))], 
+            equiRCTable[!grepl("unidentified",tx_id)]),
+            unidentified_equiRCTable),by = NULL)
+    
+    end.ptm <- proc.time()
+    if (verbose) message("Finished add empty equiRC in ",
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     setnames(equiRCTable_final, "GENEID", "gene_id")
     return(equiRCTable_final)
 }
@@ -271,9 +290,10 @@ genEquiRCs <- function(readClass, annotations){
 #' @import data.table
 #' @noRd
 splitReadClass <- function(readClass){
+    unlisted_rowranges <- unlist(rowRanges(readClass))
     rcWidth <- data.table(readClassId = rownames(readClass),
-        firstExonWidth = width(unlist(rowRanges(readClass))[unlist(rowRanges(
-        readClass))$exon_rank == 1,]),
+        firstExonWidth =
+            width(unlisted_rowranges[unlisted_rowranges$exon_rank == 1,]),
         totalWidth = sum(width(rowRanges(readClass))))
     distTable <- data.table(metadata(readClass)$distTable)[, .(readClassId, 
         annotationTxId, readCount, GENEID, dist,equal)]
@@ -346,10 +366,14 @@ addEmptyRC <- function(annotations, equiRCTable){
     rcAnnoDt[, minEquiRC := 1] # this empty identifies read class observed only
     equiRCTable_final <- merge(equiRCTable, rcAnnoDt, 
         on = c("tx_id","GENEID","read_class_id"), all = TRUE)
+    
     ## for is.na(nobs) 
     equiRCTable_final[is.na(nobs) ,`:=`(nobs = 0, rc_width = 0)]
     return(equiRCTable_final)
 }
+
+
+
 
 #' This function changes the concatenating symbol
 #' @noRd
