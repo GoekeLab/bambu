@@ -3,10 +3,11 @@
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
-                            fit = TRUE, min.readCount = 2, verbose = FALSE){
+                            fit = TRUE, min.readCount = 2, min.exonOverlap = 10,
+                            fusionMode = FALSE, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
-    geneIds = assignGeneIds(rowRanges(se), annotations)
+    geneIds = assignGeneIds(rowRanges(se), annotations, min.exonOverlap, fusionMode)
     rowData(se)$GENEID = geneIds$GENEID
     rowData(se)$novelGene = geneIds$novelGene
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
