@@ -388,6 +388,78 @@ createMultimappingBaseOnEmptyRC <- function(rcDt,
     return(rcDt)
 }
 
+#' modifiy uncompatible read classes assignment
+#' @import data.table
+#' @noRd
+modifyUncompatibleAssignment <- function(readClassDist){
+   
+    distTable <- data.table(as.data.frame(metadata(readClassDist)$distTable))
+    distTable[,`:=`(anyCompatible = any(compatible), 
+                    anyEqual = any(equal)),
+              by = readClassId]
+    ## for uncompatible reads, change annotationTxId to gene_id_unidentified
+    distTable[which(!anyCompatible), 
+        annotationTxId := paste0(GENEID, 
+        "_unidentified")]
+    
+    ## multiple distances and rows might exist for the same annotationTxId and 
+    ## readClassId matching, take the smallest one (does not matter here as 
+    ## distance value is not used)
+    distTable[grep("unidentified",annotationTxId), 
+              dist := min(dist), 
+              by = list(annotationTxId, readClassId)]
+    
+    distTable[,`:=`(anyCompatible = NULL,
+                    anyEqual = NULL)]
+    metadata(readClassDist)$distTable <- as_tibble(unique(distTable, by = NULL))
+    end.ptm <- proc.time()
+ 
+    return(readClassDist)
+}
+
+#' update annotations to include unidentified read classes
+#' @import data.table
+#' @noRd
+updateAnnotations <- function(readClassMod, annotations){
+    start.ptm <- proc.time()
+    unidentified <- unique(data.table(metadata(readClassMod)$distTable)[,
+        .(annotationTxId,readClassId,dist,readCount)], 
+        by = NULL)[grep("unidentified",annotationTxId)]
+
+    eqTable <- unique(unidentified[order(readClassId, annotationTxId),
+        .(annotationTxId, readClassId)],by = NULL)
+    eqTable[, eqClass := paste(annotationTxId, 
+        collapse = "."),by = readClassId]
+    eqClassTable <- unique(eqTable[,.(annotationTxId, eqClass)])
+    
+    unidentified[, nTx := length(unique(annotationTxId)), by = readClassId]
+    readCountTable <- unique(unidentified[,list(readCount = sum(readCount/nTx)), 
+        by = list(annotationTxId)], by = NULL)
+   
+    un_ranges <- 
+        unlist(rowRanges(readClassMod)[unique(unidentified$readClassId)])
+    un_names <- unidentified[match(names(un_ranges),readClassId)]$annotationTxId
+    names(un_ranges) <- un_names
+    newList <- split(un_ranges, un_names)
+    unidentified_annotations <- reduce(newList)
+    unidentified_annotations$exon
+    un_names <- names(unidentified_annotations)
+    
+    
+    mcols(unidentified_annotations) <- DataFrame(TXNAME = un_names,
+        GENEID = gsub("_unidentified","",un_names),
+        eqClass = eqClassTable[match(un_names, annotationTxId)]$eqClass,
+        newTxClass = "unidentified",
+        readCount = readCountTable[match(un_names, annotationTxId)]$readCount,
+        txNDR = NA)
+    annotations_combined <- c(annotations,unidentified_annotations)
+    end.ptm <- proc.time()
+    if (verbose) 
+        message("Finished updating annotations with unidentified reads in ",
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    return(annotations_combined)
+}
+
 
 #' @useDynLib bambu, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
