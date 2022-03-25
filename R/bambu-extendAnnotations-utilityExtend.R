@@ -41,7 +41,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, NDR, fusionMode, verbose)
+      remove.subsetTx, NDR, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -91,8 +91,7 @@ assignFusionGene <- function(rowDataCombined, exonRangesCombined,
 #'     ungroup .funs .name_repair vars 
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
-                                          exonRangesCombined, prefix, remove.subsetTx, NDR, 
-                                          fusionMode=FALSE, verbose) {
+                                          exonRangesCombined, prefix, remove.subsetTx, NDR, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
@@ -104,12 +103,6 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
   # remove equals to prevent duplicates when merging with anno
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
-  # if(fusionMode) { # fusion mode: apply relative expression filter
-  #   relReadCount <- rowDataCombined %>% group_by(GENEID) %>% 
-  #     mutate(relReadCount = readCount/sum(readCount)) %>% ungroup() %>% 
-  #     select(relReadCount)
-  #   filterSet <- filterSet & relReadCount$relReadCount>min.readFractionByFusionGene
-  #   }
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
