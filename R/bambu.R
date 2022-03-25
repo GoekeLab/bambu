@@ -53,9 +53,10 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
-#'     \item{min.readFractionByFusionGene}{specifying minimum relative read 
-#'     count per fusion gene (when fusionMode=TRUE). Will be set to 
-#'     min.readFractionByGene (default 0.05)}
+#'     \item{min.readFractionByEqClass}{indicating the minimum relative read
+#'     count of a subset transcript compared to all superset transcripts 
+#'     (ie the relative read count within the minimum equivalent class),
+#'      defaults to 0}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -158,7 +159,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             genomeSequence = genomeSequence, 
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
-            isoreParameters, trackReads = trackReads)
+            isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
     } else { 
         if(is.list(rcFile)) {readClassList <- rcFile}
         else {readClassList <- as.list(rcFile)}}

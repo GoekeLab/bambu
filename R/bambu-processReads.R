@@ -16,7 +16,7 @@
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
-    lowMemory=FALSE, trackReads = FALSE) {
+    lowMemory=FALSE, trackReads = FALSE, fusionMode = FALSE) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {

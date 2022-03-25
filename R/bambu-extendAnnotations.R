@@ -5,11 +5,6 @@
 bambu.extendAnnotations <- function(readClassList, annotations, NDR,
     isoreParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE) {
     start.ptm_all <- proc.time()
-    if(fusionMode) { # in fusion analysis, filtering will be applied after gene assignments
-        isoreParameters[['min.readFractionByFusionGene']] <- isoreParameters[["min.readFractionByGene"]]
-        isoreParameters[["min.readFractionByGene"]] <- 0
-    }
-    
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClassList,
         stranded, ## stranded used for unspliced reduce  
         min.readCount = isoreParameters[["min.readCount"]], 
@@ -35,8 +30,6 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
         min.primarySecondaryDistStartEnd = 
         isoreParameters[['min.primarySecondaryDistStartEnd1']],
         fusionMode = fusionMode,
-        min.readFractionByFusionGene = 
-        isoreParameters[['min.readFractionByFusionGene']],
         prefix = isoreParameters[["prefix"]],
         verbose = verbose)
     end.ptm_all <- proc.time()

@@ -5,7 +5,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     remove.subsetTx = TRUE,
                                     min.sampleNumber = 1, NDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-                                    fusionMode = FALSE, min.readFractionByFusionGene=0, prefix = "", verbose = FALSE){
+                                    fusionMode = FALSE, prefix = "", verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -35,13 +35,13 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     
     ## run fusion transcript mode
     if(fusionMode) {
-      rowDataCombined <- assignFusionGene(rowDataCombined, exonRangesCombined, 
+      rowDataCombined <- assignFusionGene(rowDataCombined, exonRangesCombined,
                                           annotationGrangesList, min.exonOverlap)
-      }
+    }
     ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, NDR, fusionMode, min.readFractionByFusionGene, verbose)
+      remove.subsetTx, NDR, fusionMode, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -92,7 +92,7 @@ assignFusionGene <- function(rowDataCombined, exonRangesCombined,
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
                                           exonRangesCombined, prefix, remove.subsetTx, NDR, 
-                                          fusionMode=FALSE, min.readFractionByFusionGene=0, verbose) {
+                                          fusionMode=FALSE, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
@@ -104,12 +104,12 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
   # remove equals to prevent duplicates when merging with anno
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
-  if(fusionMode) { # fusion mode: apply relative expression filter
-    relReadCount <- rowDataCombined %>% group_by(GENEID) %>% 
-      mutate(relReadCount = readCount/sum(readCount)) %>% ungroup() %>% 
-      select(relReadCount)
-    filterSet <- filterSet & relReadCount$relReadCount>min.readFractionByFusionGene
-    }
+  # if(fusionMode) { # fusion mode: apply relative expression filter
+  #   relReadCount <- rowDataCombined %>% group_by(GENEID) %>% 
+  #     mutate(relReadCount = readCount/sum(readCount)) %>% ungroup() %>% 
+  #     select(relReadCount)
+  #   filterSet <- filterSet & relReadCount$relReadCount>min.readFractionByFusionGene
+  #   }
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
@@ -635,13 +635,9 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   extendedAnnotationRanges <-
     c(extendedAnnotationRanges, annotationRangesToMerge)
   mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
-  start.ptm <- proc.time()
-   minEqClasses <-
-    getMinimumEqClassByTx(extendedAnnotationRanges)
-  end.ptm <- proc.time()
-  if (verbose) message("calculated minimum equivalent classes for
-        extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
-        " mins.")
+  
+  minEqClasses <-
+    getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
   mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
