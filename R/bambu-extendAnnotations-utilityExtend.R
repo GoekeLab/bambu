@@ -108,7 +108,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
-  # (3) combine novel transcripts with annotations ## Todo: rename this function
+  # (3) combine novel transcripts with annotations
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
     annotationGrangesList, prefix)
