@@ -21,9 +21,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
     #     annotationTxId)]$annotationTxId)
     readClassDt <- genEquiRCs(readClassMod, annotationsUpdated)
     tx_len <- rbind(data.table(tx_id = names(annotationsUpdated),
-        tx_len = sum(width(annotationsUpdated))),
-        data.table(tx_id = paste0(names(annotationsUpdated),"Start"),
-        tx_len = sum(width(annotationsUpdated))))
+                               tx_len = sum(width(annotationsUpdated))),
+                    data.table(tx_id = paste0(names(annotationsUpdated),"Start"),
+                               tx_len = sum(width(annotationsUpdated))))
     readClassDt <- unique(tx_len[readClassDt, on = "tx_id"])
     countsOut <- bambu.quantDT(readClassDt, emParameters = emParameters,
         ncore = ncore, verbose = verbose)
@@ -46,7 +46,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
             ncol = 1, dimnames = list(NULL, colNameRC)),
         theta = matrix(counts$theta, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-    return(seOutput)
+    return(list(seOutput,annotationsUpdated))
 }
 
 
