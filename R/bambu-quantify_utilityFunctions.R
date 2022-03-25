@@ -307,7 +307,10 @@ splitReadClass <- function(readClass){
         unique(distTable$readClassId), .(readClassId, GENEID)],
         on = c("readClassId", "GENEID")]
     distTable[, tx_id := paste0(annotationTxId, ifelse(equal,"Start",""))]
-    distTable[, read_class_id := paste(sort(unique(tx_id)), collapse = "."),
+    
+    ##this step is very slow, consider to use integers instead of tx_ids
+    distTable[order(readClassId,GENEID,tx_id), 
+        read_class_id := paste(unique(tx_id), collapse = "."),
         by = list(readClassId, GENEID)]
     return(distTable)
 }
