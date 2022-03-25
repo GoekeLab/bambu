@@ -7,21 +7,27 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
     verbose = FALSE, min.exonDistance = 35, min.primarySecondaryDist = 5, 
     min.primarySecondaryDistStartEnd = 5) {
     if (is.character(readClass)) readClass <- readRDS(file = readClass)
-    readClass <- isore.estimateDistanceToAnnotations(readClass, annotations,
+    readClassDist <- isore.estimateDistanceToAnnotations(readClass, annotations,
         min.exonDistance = min.exonDistance,
         min.primarySecondaryDist = min.primarySecondaryDist,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
-    readClassDt <- genEquiRCs(readClass, annotations)
-    tx_len <- rbind(data.table(tx_id = names(annotations),
-        tx_len = sum(width(annotations))),
-        data.table(tx_id = paste0(names(annotations),"Start"),
-        tx_len = sum(width(annotations))))
+    readClassMod <- modifyUncompatibleAssignment(readClassDist)
+    annotationsUpdated <- updateAnnotations(readClassMod, annotations)
+    # unidentified_transcripts <- unique(readClassMod[grep("unidentified",
+    #     annotationTxId)]$annotationTxId)
+    readClassDt <- genEquiRCs(readClassMod, annotationsUpdated)
+    tx_len <- rbind(data.table(tx_id = names(annotationsUpdated),
+        tx_len = sum(width(annotationsUpdated))),
+        data.table(tx_id = paste0(names(annotationsUpdated),"Start"),
+        tx_len = sum(width(annotationsUpdated))))
     readClassDt <- unique(tx_len[readClassDt, on = "tx_id"])
     countsOut <- bambu.quantDT(readClassDt, emParameters = emParameters,
         ncore = ncore, verbose = verbose)
     counts <- countsOut[[1]]
-    counts <- counts[match(names(annotations), tx_name)]
+    annoDt <- data.table(tx_name = names(annotationsUpdated))
+    counts <- merge(counts, annoDt, all = TRUE, by = "tx_name")
+    counts[is.na(counts)] <- 0
     colNameRC <- colnames(readClass)
     colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
         nGeneFordRate = countsOut[[3]])

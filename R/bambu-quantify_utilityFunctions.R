@@ -52,26 +52,29 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
     #The following steps clean up the rc to tx matrix
     #step1:removes transcripts without any read class support
     a_mat <- aMatArray[,,1]
+    # in the case, when a_mat dimension is of 1 need to transform 1 more time
     if (is(a_mat,"numeric")) a_mat <- t(a_mat)
     rids <- which(apply(t(t(a_mat) * n.obs * K),1,sum) != 0)
     #step2: removes read classes without transcript assignment after step1
     a_mat <- aMatArray[rids,,1]
     cids <- which(apply(t(a_mat),1,sum) != 0)
+    if( is(a_mat, "vector")) cids <- which(a_mat != 0)
     n.obs <- n.obs[cids]
     aMatArrayNew <- array(NA,dim = c(length(rids), length(cids),4))
     aMatArrayNew <- aMatArray[rids,cids,, drop = FALSE]
     if (is(aMatArrayNew[,,1],"numeric")) {
         aMatArrayUpdated <- K*n.obs*aMatArrayNew
-        out[rids, `:=`(counts = aMatArrayUpdated[1],
-            FullLengthCounts = aMatArrayUpdated[2],
-            PartialLengthCounts = aMatArrayUpdated[3],
-            UniqueCounts = aMatArrayUpdated[4])]
+        out[rids, `:=`(counts = sum(aMatArrayUpdated[,,1]),
+            FullLengthCounts = sum(aMatArrayUpdated[,,2]),
+            PartialLengthCounts =sum(aMatArrayUpdated[,,3]),
+            UniqueCounts = sum(aMatArrayUpdated[,,4]))]
     }else{
         est_output <- emWithL1(A = aMatArrayNew, Y = n.obs, K = K,
             lambda = lambda, maxiter = maxiter,
             minvalue = minvalue, conv = conv)
         out <- modifyQuantOut(est_output, rids, cids, out)
     }
+    end.ptm <- proc.time()
     return(out)
 }
 
