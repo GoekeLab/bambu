@@ -332,6 +332,7 @@ addEmptyRC <- function(annotations, equiRCTable){
     rcAnno <- data.table(as.data.frame(mcols(annotations)))
     rcAnno_partial <- copy(rcAnno)
     setnames(rcAnno_partial, "eqClass","read_class_id")
+    # full match will be assigned to Start
     rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"$"),
         paste0(TXNAME, "Start"), eqClass), 
         tx_id = paste0(TXNAME, "Start")), by = TXNAME]
