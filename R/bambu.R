@@ -176,26 +176,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             emParameters = emParameters, trackReads = trackReads, 
             returnDistTable = returnDistTable, ncore = ncore, verbose = verbose, 
             BPPARAM = bpParameters)
-        sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
-        #group the metadata together as a list
-        if(trackReads){
-            readToTranscriptMaps = lapply(countsSe, FUN = function(se){metadata(se)$readToTranscriptMap})
-            names(readToTranscriptMaps) = sampleNames
-            countsSe = lapply(countsSe, FUN = function(se){
-                metadata(se)$readToTranscriptMap=NULL
-                return(se)})
-        }
-        if(returnDistTable){
-            distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
-            names(distTables) = sampleNames
-            countsSe = lapply(countsSe, FUN = function(se){
-                metadata(se)$distTable=NULL
-                return(se)})
-        }
-        countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
-        print(sampleNames)
-        if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
-        if(returnDistTable) metadata(countsSe)$distTables = distTables
+        countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
         rowRanges(countsSe) <- annotations
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))

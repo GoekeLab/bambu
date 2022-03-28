@@ -127,8 +127,24 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
     return(readToTranscriptMap)
 }
 
-collateMetadata <- function(countsSe, metadataType = "distTable", sampleNames = NULL){
-    metadata = lapply(countsSe, FUN = function(se){metadata(se)[[metadataType]]})
-    names(metadata) = sampleNames
-    return(metadata)
+combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
+    sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
+    if(trackReads){
+        readToTranscriptMaps = lapply(countsSe, FUN = function(se){metadata(se)$readToTranscriptMap})
+        names(readToTranscriptMaps) = sampleNames
+        countsSe = lapply(countsSe, FUN = function(se){
+            metadata(se)$readToTranscriptMap=NULL
+            return(se)})
+    }
+    if(returnDistTable){
+        distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
+        names(distTables) = sampleNames
+        countsSe = lapply(countsSe, FUN = function(se){
+            metadata(se)$distTable=NULL
+            return(se)})
+    }
+    countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
+    if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
+    if(returnDistTable) metadata(countsSe)$distTables = distTables
+    return(countsSe)
 }
