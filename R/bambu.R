@@ -173,23 +173,30 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
             annotations = annotations, isoreParameters = isoreParameters,
-            emParameters = emParameters, ncore = ncore, verbose = verbose, 
+            emParameters = emParameters, trackReads = trackReads, 
+            returnDistTable = returnDistTable, ncore = ncore, verbose = verbose, 
             BPPARAM = bpParameters)
         sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
-        if(trackReads){ 
-            readToTranscriptMaps = bplapply(Map(list,readClassList,countsSe), generateReadToTranscriptMap,
-                annotations, BPPARAM = bpParameters)
-            names(readToTranscriptMaps) = sampleNames}
+        #group the metadata together as a list
+        if(trackReads){
+            readToTranscriptMaps = lapply(countsSe, FUN = function(se){metadata(se)$readToTranscriptMap})
+            names(readToTranscriptMaps) = sampleNames
+            countsSe = lapply(countsSe, FUN = function(se){
+                metadata(se)$readToTranscriptMap=NULL
+                return(se)})
+        }
         if(returnDistTable){
             distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
-            names(distTables) = sampleNames}
-        countsSe = lapply(countsSe, FUN = function(se){
-            metadata(se)$distTable=NULL
-            return(se)})
+            names(distTables) = sampleNames
+            countsSe = lapply(countsSe, FUN = function(se){
+                metadata(se)$distTable=NULL
+                return(se)})
+        }
         countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
+        print(sampleNames)
+        if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
         if(returnDistTable) metadata(countsSe)$distTables = distTables
         rowRanges(countsSe) <- annotations
-        if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
         return(countsSe)
