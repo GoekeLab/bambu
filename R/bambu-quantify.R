@@ -16,10 +16,10 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
     readClassMod <- modifyUncompatibleAssignment(readClassDist)
-    annotationsUpdated <- updateAnnotations(readClassMod, annotations)
+    annotationsUpdated <- updateAnnotations(readClassMod, annotations, verbose)
     # unidentified_transcripts <- unique(readClassMod[grep("unidentified",
     #     annotationTxId)]$annotationTxId)
-    readClassDt <- genEquiRCs(readClassMod, annotationsUpdated)
+    readClassDt <- genEquiRCs(readClassMod, annotationsUpdated, verbose)
     tx_len <- rbind(data.table(tx_id = names(annotationsUpdated),
                                tx_len = sum(width(annotationsUpdated))),
                     data.table(tx_id = paste0(names(annotationsUpdated),"Start"),
@@ -29,8 +29,12 @@ bambu.quantify <- function(readClass, annotations, emParameters,ncore = 1,
         ncore = ncore, verbose = verbose)
     counts <- countsOut[[1]]
     annoDt <- data.table(tx_name = names(annotationsUpdated))
-    counts <- merge(counts, annoDt, all = TRUE, by = "tx_name")
+    if(any(!(counts$tx_name %in% annoDt$tx_name))) 
+        warning("For developer: transcript names in counts table not
+    found in updated annotations, please check!")
+    counts <-counts[annoDt, on = "tx_name"]
     counts[is.na(counts)] <- 0
+    counts <- counts[match(names(annotationsUpdated),tx_name)]
     colNameRC <- colnames(readClass)
     colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
         nGeneFordRate = countsOut[[3]])
