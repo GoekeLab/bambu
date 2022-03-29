@@ -251,7 +251,7 @@ removeUnObservedGenes <- function(readClassDt){
 #' eqClass from annotations
 #' @import data.table
 #' @noRd
-genEquiRCs <- function(readClass, annotations){
+genEquiRCs <- function(readClass, annotations, verbose){
     start.ptm <- proc.time()
     ## aggregate rc's based on their alignment to full or partial transcripts
     distTable <- splitReadClass(readClass)
@@ -447,7 +447,7 @@ modifyUncompatibleAssignment <- function(readClassDist){
 #' update annotations to include unidentified read classes
 #' @import data.table
 #' @noRd
-updateAnnotations <- function(readClassMod, annotations){
+updateAnnotations <- function(readClassMod, annotations, verbose){
     start.ptm <- proc.time()
     unidentified <- unique(data.table(metadata(readClassMod)$distTable)[,
         .(annotationTxId,readClassId,dist,readCount)], 
