@@ -463,10 +463,10 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
     readCountTable <- unique(unidentified[,list(readCount = sum(readCount/nTx)), 
         by = list(annotationTxId)], by = NULL)
    
-    un_ranges <- 
-        unlist(rowRanges(readClassMod)[unique(unidentified$readClassId)])
-    un_names <- unidentified[match(names(un_ranges),readClassId)]$annotationTxId
-    names(un_ranges) <- un_names
+    un_ranges <- rowRanges(readClassMod)[unidentified$readClassId]
+    names(un_ranges) <- unidentified$annotationTxId
+    un_ranges <- unlist(un_ranges)
+    un_names <- names(un_ranges)
     strand(un_ranges[strand(un_ranges) == "*"]) <- "+"
     newList <- split(un_ranges, un_names)
     unidentified_annotations <- reduce(newList)
@@ -477,7 +477,6 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
         rep(names(unidentified_annotations),
             elementNROWS(unidentified_annotations)))
     un_names <- names(unidentified_annotations)
-    
     mcols(unidentified_annotations) <- DataFrame(TXNAME = un_names,
         GENEID = gsub("_unidentified","",un_names),
         eqClass = eqClassTable[match(un_names, annotationTxId)]$eqClass,
