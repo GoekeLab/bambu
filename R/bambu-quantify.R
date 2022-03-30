@@ -11,12 +11,12 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     min.primarySecondaryDistStartEnd =
         isoreParameters[['min.primarySecondaryDistStartEnd2']]
     if (is.character(readClass)) readClass <- readRDS(file = readClass)
-    readClass2 <- isore.estimateDistanceToAnnotations(readClass, annotations,
+    readClass.dist <- isore.estimateDistanceToAnnotations(readClass, annotations,
         min.exonDistance = min.exonDistance,
         min.primarySecondaryDist = min.primarySecondaryDist,
         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
         verbose = verbose)
-    readClassDt <- genEquiRCs(readClass2, annotations)
+    readClassDt <- genEquiRCs(readClass.dist, annotations)
     tx_len <- rbind(data.table(tx_id = names(annotations),
         tx_len = sum(width(annotations))),
                     data.table(tx_id = paste0(names(annotations),"Start"),
@@ -26,8 +26,8 @@ bambu.quantify <- function(readClass, annotations, emParameters,
         ncore = ncore, verbose = verbose)
     counts <- countsOut[[1]]
     counts <- counts[match(names(annotations), tx_name)]
-    colNameRC <- colnames(readClass2)
-    colDataRC <- cbind(colData(readClass2), d_rate = countsOut[[2]],
+    colNameRC <- colnames(readClass.dist)
+    colDataRC <- cbind(colData(readClass.dist), d_rate = countsOut[[2]],
         nGeneFordRate = countsOut[[3]])
     seOutput <- SummarizedExperiment(
         assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
@@ -41,9 +41,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,
             ncol = 1, dimnames = list(NULL, colNameRC)),
         theta = matrix(counts$theta, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClass2)$distTable
+    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClass.dist)$distTable
     if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-        generateReadToTranscriptMap(readClass, metadata(readClass2)$distTable, 
+        generateReadToTranscriptMap(readClass, metadata(readClass.dist)$distTable, 
         annotations)
     return(seOutput)
 }
