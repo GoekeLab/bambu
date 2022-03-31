@@ -55,8 +55,10 @@
 #'     to 1}
 #'     \item{min.readFractionByEqClass}{indicating the minimum relative read
 #'     count of a subset transcript compared to all superset transcripts 
-#'     (ie the relative read count within the minimum equivalent class),
-#'      defaults to 0}
+#'     (ie the relative read count within the minimum equivalent class). This 
+#'     filter is applied on the set of annotations across all samples using the 
+#'     total read count, this is not a per-sample filter. Please use with 
+#'     caution. defaults to 0}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:

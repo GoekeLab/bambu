@@ -5,7 +5,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     remove.subsetTx = TRUE,
                                     min.sampleNumber = 1, NDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-                                    fusionMode = FALSE, prefix = "", verbose = FALSE){
+                                    min.readFractionByEqClass = 0, fusionMode = FALSE, prefix = "", verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -33,7 +33,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
       rowDataCombined, exonRangesCombined, annotationGrangesList,
       min.exonOverlap, prefix, verbose)
     
-    ## run fusion transcript mode
+    ## run fusion transcript mode (Todo: use assignGeneIds())
     if(fusionMode) {
       rowDataCombined <- assignFusionGene(rowDataCombined, exonRangesCombined,
                                           annotationGrangesList, min.exonOverlap)
@@ -41,7 +41,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, NDR, verbose)
+      remove.subsetTx, min.readFractionByEqClass, NDR, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -91,7 +91,8 @@ assignFusionGene <- function(rowDataCombined, exonRangesCombined,
 #'     ungroup .funs .name_repair vars 
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
-                                          exonRangesCombined, prefix, remove.subsetTx, NDR, verbose) {
+                                          exonRangesCombined, prefix, remove.subsetTx, 
+                                          min.readFractionByEqClass, NDR, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
@@ -105,6 +106,14 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
+  if(min.readFractionByEqClass>0 & sum(filterSet)>0) {
+    mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
+    minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
+    rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
+    filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass
+    exonRangesCombined <- exonRangesCombined[filterSet]
+    rowDataCombined <- rowDataCombined[filterSet,]
+  }
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")

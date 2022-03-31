@@ -29,6 +29,8 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
         isoreParameters[['min.primarySecondaryDist']], 
         min.primarySecondaryDistStartEnd = 
         isoreParameters[['min.primarySecondaryDistStartEnd1']],
+        min.readFractionByEqClass =  
+        isoreParameters[['min.readFractionByEqClass']],
         fusionMode = fusionMode,
         prefix = isoreParameters[["prefix"]],
         verbose = verbose)
