@@ -122,7 +122,6 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
         filter(!equal & compatible) %>% 
         group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
     compatible_matches = compatible_matches$annotationTxIds[match(readClass_id, compatible_matches$readClassId)]
-    read_id= read_id[(match(unlist(rowData(readClass)$readIds)[readOrder], metadata(readClass)$readId))]
     readToTranscriptMap = tibble(read_id=read_id, equal_matches = equal_matches, compatible_matches = compatible_matches)
 
     return(readToTranscriptMap)
