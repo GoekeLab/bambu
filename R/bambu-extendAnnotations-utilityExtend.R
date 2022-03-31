@@ -106,7 +106,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
-  if(min.readFractionByEqClass>0 & sum(filterSet)>0) {
+  if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
     mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
     minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
     rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
