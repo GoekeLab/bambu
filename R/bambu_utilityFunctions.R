@@ -84,18 +84,7 @@ checkInputs <- function(annotations, reads, readClass.file,
             if(anyDuplicated(mcols(annotations)$TXNAME)) {
                 warning('Annotations contain duplicated transcript/gene names
                         Please re-create your annotation object')
-            #     newTxName <- as_tibble(mcols(annotations)) %>% group_by(TXNAME) %>% 
-            #         mutate(n=n(), id=paste0('-',row_number()), 
-            #                uniqueNames = paste0(TXNAME, ifelse(n==1, '', id)))
-            #     mcols(annotations)$TXNAME_Original <-  mcols(annotations)$TXNAME
-            #     mcols(annotations)$TXNAME <- newTxName$uniqueNames
-            #     if(!identical(mcols(annotations)$txid, seq_along(annotations))) {
-            #         mcols(annotations)$txid <- seq_along(annotations)
-            #     }
-            #     minEqClasses <- getMinimumEqClassByTx(annotations)
-            #     mcols(annotations)$eqClass <- minEqClasses$eqClass
-            #     mcols(annotations)$eqClassById <- minEqClasses$eqClassById
-             }
+            }
         } else {
             stop("The annotations is not a GRangesList object.")
         }
