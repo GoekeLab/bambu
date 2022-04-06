@@ -94,15 +94,17 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in%
                                mcols(extendedAnnotationRanges)$GENEID[
                                  which(mcols(extendedAnnotationRanges)$newTxClass != "annotation")])
-  minEqClasses <-
-    getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
-  end.ptm <- proc.time()
-  if (verbose) message("calculated minimum equivalent classes for
-        extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
-                       " mins.")
-  mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <-
-    minEqClasses$eqClass[match(names(extendedAnnotationRanges[
-      geneListWithNewTx]), minEqClasses$queryTxId)]
+  if(length(geneListWithNewTx)>0){
+    minEqClasses <-
+        getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
+    end.ptm <- proc.time()
+    if (verbose) message("calculated minimum equivalent classes for
+            extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
+                        " mins.")
+    mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <-
+        minEqClasses$eqClass[match(names(extendedAnnotationRanges[
+        geneListWithNewTx]), minEqClasses$queryTxId)]
+  }
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                                                                      c("TXNAME", "GENEID", "eqClass", "newTxClass","readCount", "txNDR")]
   return(extendedAnnotationRanges)
