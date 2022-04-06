@@ -88,3 +88,4 @@ Imports:
     xgboost
 VignetteBuilder: 
     knitr
+LazyData: true

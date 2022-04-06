@@ -3,13 +3,13 @@
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
-                            fit = TRUE, min.readCount = 2, verbose = FALSE){
+                            fit = TRUE, returnModel = FALSE, 
+                            min.readCount = 2, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     geneIds = assignGeneIds(rowRanges(se), annotations)
-    rowData(se)$GENEID = geneIds$geneIds
-    rowData(se)$novelGene = FALSE
-    rowData(se)$novelGene[geneIds$newGeneSet] = TRUE
+    rowData(se)$GENEID = geneIds$GENEID
+    rowData(se)$novelGene = geneIds$novelGene
     rowData(se)$numExons = unname(elementNROWS(rowRanges(se)))
     countsTBL = calculateGeneProportion(counts=mcols(se)$readCount,
                                         geneIds=mcols(se)$GENEID)
@@ -31,7 +31,9 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
-    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
+    if (fit) model = bambu.train(se)
+    if(returnModel) metadata(se)$model = model
+    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
 
@@ -39,7 +41,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
 
     #calculate using the default model for NDR recommendation
     txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
-                                 defaultModels, fit=FALSE)
+                                model, defaultModels, fit=FALSE)
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
 
@@ -115,33 +117,24 @@ countPolyATerminals = function(grl, genomeSequence){
 
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
+getTranscriptScore = function(rowData, model = NULL, defaultModels, nrounds = 50, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(checkFeatures(txFeatures) & fit){
+    if(checkFeatures(txFeatures) & fit & !is.null(model)){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
         if(length(indexME)>0){
-            transcriptModelME = fitXGBoostModel(
-                data.train=as.matrix(features[indexME,]),
-                labels.train=txFeatures$labels[indexME], 
-                nrounds = nrounds, show.cv=FALSE)
-            txScore = predict(transcriptModelME, as.matrix(features))
+            txScore = predict(model$transcriptModelME, as.matrix(features))
         } else txScore = NULL
         
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
         if(length(indexSE)>0){
-            transcriptModelSE = fitXGBoostModel(
-                data.train=as.matrix(features[indexSE,]),
-                labels.train=txFeatures$labels[indexSE], 
-                nrounds = nrounds, show.cv=FALSE)
-            txScoreSE = predict(transcriptModelSE, as.matrix(features))
+            txScoreSE = predict(model$transcriptModelSE, as.matrix(features))
         } else txScoreSE = NULL
         
     } else {
         if (!is.null(defaultModels)){
-            warning("Transcript model not trained. Using pre-trained models")
             txScore = predict(defaultModels$transcriptModelME, 
                 as.matrix(features))
             txScoreSE = predict(defaultModels$transcriptModelSE, 
@@ -158,6 +151,51 @@ getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
     txScore[which(rowData$numExons==1)] =
         txScoreSE[which(rowData$numExons==1)]
     return(txScore)
+}
+
+#' Function to train a model for use on other data
+#' @noRd
+bambu.train <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1) {
+    rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
+    txFeatures = prepareTranscriptModelFeatures(rowData)
+    features = dplyr::select(txFeatures,!c(labels))
+    if(!checkFeatures(txFeatures)){
+        message("Transcript model not trained. Using pre-trained models")
+        return(NULL)
+    }
+    ## Multi-Exon
+    indexME = which(!rowData$novelGene & rowData$numExons>1)
+    if(length(indexME)>0){
+        transcriptModelME = fitXGBoostModel(
+            data.train=as.matrix(features[indexME,]),
+            labels.train=txFeatures$labels[indexME], 
+            nrounds = nrounds, show.cv=FALSE)
+        txScore = predict(transcriptModelME, as.matrix(features))[indexME]
+    }
+    ## Single-Exon
+    indexSE = which(!rowData$novelGene & rowData$numExons==1)
+    if(length(indexSE)>0){
+        transcriptModelSE = fitXGBoostModel(
+            data.train=as.matrix(features[indexSE,]),
+            labels.train=txFeatures$labels[indexSE], 
+            nrounds = nrounds, show.cv=FALSE)
+        txScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
+    }
+    ##Calculate the txScore baseline
+    NDR = calculateNDR(txScore, txFeatures$labels[indexME])
+    NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
+    #lm of NDR vs txScore
+    lmNDR = lm(txScore~poly(NDR,3,raw=TRUE))
+    txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
+    lmNDR.SE = lm(txScoreSE~NDR.SE)
+    txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
+
+    return(list(transcriptModelME = transcriptModelME, 
+                transcriptModelSE = transcriptModelSE,
+                txScoreBaseline = txScoreBaseline,
+                txScoreBaselineSE = txScoreBaselineSE,
+                lmNDR = lmNDR,
+                lmNDR.SE = lmNDR.SE))
 }
 
 #' calculate and format read class features for model training

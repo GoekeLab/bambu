@@ -32,8 +32,12 @@ setIsoreParameters <- function(isoreParameters){
         min.txScore.singleExon = 1,
         fitReadClassModel = TRUE,
         defaultModels = defaultModels,
+        returnModel = FALSE,
         txScoreBaseline = defaultModels$txScoreBaseline,
         prefix = "") 
+    if("defaultModels" %in% names(isoreParameters) & !("txScoreBaseline" %in% names(isoreParameters))){
+        isoreParameters["txScoreBaseline"]=isoreParameters$defaultModels$txScoreBaseline
+    }
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
     return(isoreParameters)
@@ -145,53 +149,4 @@ checkInputSequence <- function(genomeSequence) {
     }
     )}
     return(genomeSequence)
-}
-
-#' Function to train a model for use on other data
-#' @noRd
-bambu.train <- function(rcFile = NULL,annotations = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1) {
-    rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
-    txFeatures = prepareTranscriptModelFeatures(rowData)
-    features = dplyr::select(txFeatures,!c(labels))
-    if(!checkFeatures(txFeatures)){
-        stop("No output")
-    }
-    print(1)
-    ## Multi-Exon
-    indexME = which(!rowData$novelGene & rowData$numExons>1)
-    if(length(indexME)>0){
-        transcriptModelME = fitXGBoostModel(
-            data.train=as.matrix(features[indexME,]),
-            labels.train=txFeatures$labels[indexME], 
-            nrounds = nrounds, show.cv=FALSE)
-        txScore = predict(transcriptModelME, as.matrix(features))[indexME]
-    }
-    print(2)
-    ## Single-Exon
-    indexSE = which(!rowData$novelGene & rowData$numExons==1)
-    if(length(indexSE)>0){
-        transcriptModelSE = fitXGBoostModel(
-            data.train=as.matrix(features[indexSE,]),
-            labels.train=txFeatures$labels[indexSE], 
-            nrounds = nrounds, show.cv=FALSE)
-        txScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
-    }
-    print(3)
-    ##Calculate the txScore baseline
-    NDR = calculateNDR(txScore, txFeatures$labels[indexME])
-    print(4)
-    NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
-    print
-    #lm of NDR vs txScore
-    lmNDR = lm(txScore~NDR)
-    txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
-    lmNDR.SE = lm(txScoreSE~NDR.SE)
-    txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
-
-    return(list(transcriptModelME = transcriptModelME, 
-                transcriptModelSE = transcriptModelSE,
-                txScoreBaseline = txScoreBaseline,
-                txScoreBaselineSE = txScoreBaselineSE,
-                lmNDR = lmNDR,
-                lmNDR.SE = lmNDR.SE))
 }

@@ -35,7 +35,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, NDR, verbose)
+      remove.subsetTx, txScoreBaseline, NDR, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -66,7 +66,7 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 #'     ungroup .funs .name_repair vars 
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
-                                          exonRangesCombined, prefix,  remove.subsetTx, txScoreBaseline = 0.8, NDR = NULL , verbose) {
+                                          exonRangesCombined, prefix,  remove.subsetTx, txScoreBaseline = 0.8, NDR = NULL, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   if (remove.subsetTx) { # (1) based on compatiblity with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
@@ -76,20 +76,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   }
   #(2) remove transcripts below NDR threshold
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
-  NDR.rec = recommendNDR(rowDataCombined, txScoreBaseline)
-  if(is.null(max.txNDR)) 
-  {
-      max.txNDR = NDR.rec
-      message("Using a novel discovery rate of: ", max.txNDR)
-  }
-  else{
-      if(abs(NDR.rec-max.txNDR)>=0.1){
-          warning(paste0("For your sample and reference annotations we recommend an NDR of ", NDR.rec,
-          ". You are currently using an NDR threshold of ", max.txNDR, 
-          ". A higher NDR is suited for samples where the reference annotations are poor,", 
-          "whereas a lower NDR is suited for samples with already high quality annotations"))
-      }
-  }
+  NDR = recommendNDR(rowDataCombined, txScoreBaseline, NDR)
 
   # remove equals to prevent duplicates when merging with anno
   filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
@@ -124,14 +111,43 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 }
 
 #' calculates an expected NDR based on the annotations'
-recommendNDR <- function(combinedTranscripts, baseline = 0.8){
+recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL){
+    message("-- Predicting annotation completeness to determine NDR threshold --")
     equal = combinedTranscripts$readClassType == "equalcompatible"
     equal[is.na(equal)] = FALSE
-    NDR = calculateNDR(combinedTranscripts$maxTxScore.noFit, equal)
-    score = combinedTranscripts$maxTxScore
-    NDR.rec = predict(lm(NDR~score), newdata=data.frame(score=baseline))
+
+    NDRscores = calculateNDR(combinedTranscripts$maxTxScore.noFit, equal)
+    score = combinedTranscripts$maxTxScore.noFit
+    NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
     if (NDR.rec < 0) NDR.rec = 0
-    return(NDR.rec)
+    message("Calculated NDR: ", NDR.rec)
+    #test if default model is appropriate to recommend NDR threshold
+    defaultSuitabilityScore = mean(combinedTranscripts$maxTxScore.noFit[equal] - 
+        combinedTranscripts$maxTxScore[equal])
+    if(defaultSuitabilityScore < -0.1) {
+        message("Unable to accurately predict annotation completeness")
+        message("Model agreement score: ", defaultSuitabilityScore)
+        #message("Calculated NDR: ", NDR.rec)
+        if(is.null(NDR)) message("Therefore, Bambu will use a default NDR of 0.1. To adjust this run Bambu with the NDR parameter")
+        message("To calculate annotation completeness in future runs, use a default model trained on more similiar data (see documentation)")
+        NDR.rec = 0.1
+    }
+
+    #if users are using an NDR let them know if the recommended NDR is different
+    if(is.null(NDR)) 
+    {
+        NDR = NDR.rec
+        message("Using a novel discovery rate (NDR) of: ", NDR)
+    }
+    else{
+        if(abs(NDR.rec-NDR)>=0.1 & defaultSuitabilityScore >= -0.1){
+            message(paste0("For your combination of sample and reference annotations we recommend an NDR of ", NDR.rec,
+            ". You are currently using an NDR threshold of ", NDR, 
+            ". A higher NDR is suited for samples where the reference annotations are poor and more novel transcripts are expected,", 
+            "whereas a lower NDR is suited for samples with already high quality annotations"))
+        }
+    }
+    return(NDR)
 }
 
 calculateNDROnTranscripts <- function(combinedTranscripts){
@@ -243,6 +259,12 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     compatibleQhits[!duplicated(compatibleQhits)]] <- "compatible"
   classificationTable$compatible[classificationTable$equal == "equal"] <- ""
   # annotate with transcript and gene Ids
+  equalShits <- subjectHits(ovExon[mcols(ovExon)$equal])
+  rowDataFilteredSpliced$TXNAME <- NA
+  rowDataFilteredSpliced$TXNAME[
+    equalQhits[!duplicated(equalQhits)]] <-
+    mcols(annotationGrangesList)$TXNAME[
+      equalShits[!duplicated(equalQhits)]]
   compatibleShits <- subjectHits(ovExon[mcols(ovExon)$compatible])
   rowDataFilteredSpliced$GENEID <- NA
   rowDataFilteredSpliced$GENEID[
@@ -613,12 +635,6 @@ includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
 #' @noRd
 removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered, 
                                         exonRangesCombinedFiltered,annotationGrangesList, prefix){
-  # commented as notEqual is already filtered in the beginning
-  # notEqual <- which(rowDataCombinedFiltered$readClassType != "equal")
-  # exonRangesCombinedFiltered <- exonRangesCombinedFiltered[notEqual]
-  # rowDataCombinedFiltered <- rowDataCombinedFiltered[notEqual,]
-  # countsTibbleFiltered <- countsTibbleFiltered[notEqual,]
-  # simplified classification, can be further improved for readibility
   rowDataCombinedFiltered$newTxClass <- rowDataCombinedFiltered$readClassType
   rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
                                      == "unsplicedNew" & grepl("gene", rowDataCombinedFiltered$GENEID)] <-
@@ -629,6 +645,9 @@ removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered,
   extendedAnnotationRanges <- exonRangesCombinedFiltered
   mcols(extendedAnnotationRanges) <-
     rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "txNDR")]
+  equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
+  #remove extended ranges that are already present in annotation
+  extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
   if (length(extendedAnnotationRanges)) 
     mcols(extendedAnnotationRanges)$TXNAME <- paste0(
       "tx",prefix, ".", seq_along(extendedAnnotationRanges))
@@ -638,6 +657,9 @@ removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered,
     rep(NA,length(annotationRangesToMerge))
   mcols(annotationRangesToMerge)$newTxClass <- 
     rep("annotation",length(annotationRangesToMerge))
+    #copy over stats to annotations from read classes
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$txNDR = equalRanges$txNDR
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
   extendedAnnotationRanges <-
     c(extendedAnnotationRanges, annotationRangesToMerge)
   return(extendedAnnotationRanges)
