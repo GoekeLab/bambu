@@ -127,11 +127,6 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
     returnDistTable = FALSE, discovery = TRUE, quant = TRUE, verbose = FALSE, 
     lowMemory = FALSE) {
-<<<<<<< HEAD
-=======
-    if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
-    TRUE. Rerun with either 1 or both parameters as TRUE")
->>>>>>> master
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -155,7 +150,6 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-<<<<<<< HEAD
             genomeSequence = genomeSequence, readClass.outputDir = rcOutDir, 
             yieldSize, bpParameters, stranded, verbose, isoreParameters, 
             trackReads = trackReads)
@@ -163,22 +157,11 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         if(is.list(rcFile)) {readClassList <- rcFile}
         else {readClassList <- as.list(rcFile)}}
     if (!discovery & !quant) return(readClassList)
-=======
-            genomeSequence = genomeSequence, 
-            readClass.outputDir = rcOutDir, yieldSize, 
-            bpParameters, stranded, verbose,
-            isoreParameters, trackReads = trackReads)
-    } else { 
-        if(is.list(rcFile)) {readClassList <- rcFile}
-        else {readClassList <- as.list(rcFile)}}
->>>>>>> master
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, verbose = verbose)
         if (!verbose) message("Finished extending annotations.")
-        if (!quant){
-            return(annotations)
-        }
+        if (!quant){return(annotations)}
     }
     if (quant) {
         if (!verbose) message("Start isoform quantification")
