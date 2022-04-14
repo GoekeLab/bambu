@@ -356,16 +356,47 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' index of which genes are novel
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
-assignGeneIds <- function(grl, annotations, min.exonOverlap = 10, fusionMode = FALSE) {
-    if(length(annotations)==0) GENEID =rep(NA, length(grl))
-    else GENEID <- assignGeneIdsByReference(grl, annotations,
-                                            min.exonOverlap = min.exonOverlap,
-                                            fusionMode = fusionMode) 
-    newGeneSet <- is.na(GENEID)
-    newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
-    GENEID[newGeneSet] <- newGeneIds
-    return(data.frame(GENEID=GENEID, novelGene = newGeneSet))
+#' @param min.exonOverlap minimum length of overlap to be assigned to a gene
+#' @param fusionMode if TRUE will assign multiple GENEIDs to fusion transcripts, separated by ":"
+assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = FALSE) {
+  strandedRanges <- as.logical(getStrandFromGrList(grl)!='*')
+  mcols(grl)$GENEID =rep(NA, length(grl))
+  if(length(annotations)>0) {
+    if(any(grepl('\\:', mcols(annotations)$GENEID)) & fusionMode) {
+      warning('GENEID contains ":" symbol, fusion transcript assignments might be incorrect')
+    }
+    mcols(grl)$GENEID[strandedRanges] <- assignGeneIdsByReference(grl[strandedRanges], annotations,
+                                          min.exonOverlap = min.exonOverlap,
+                                          fusionMode = fusionMode) 
+    #iteratively assign gene ids for stranded granges
+    newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
+    referenceGeneSet <- !is.na(mcols(grl)$GENEID) & strandedRanges
+    mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
+                                                                  min.exonOverlap = min.exonOverlap,
+                                                                  fusionMode = FALSE)  # fusion assignment is only done based on original annotations
+    while(any(!is.na(mcols(grl)$GENEID[newGeneSet]))) {
+      referenceGeneSet <- newGeneSet & !is.na(mcols(grl)$GENEID) & strandedRanges
+      newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
+      mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
+                                                                min.exonOverlap = min.exonOverlap,
+                                                                fusionMode = FALSE) 
+      }
+  }
+  newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
+  newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
+  mcols(grl)$GENEID[newGeneSet] <- newGeneIds
+  if(any(!strandedRanges)) {
+    mcols(grl)$GENEID[!strandedRanges] <- assignGeneIdsByReference(grl[!strandedRanges], 
+                                                                   grl[!is.na(mcols(grl)$GENEID)],
+                                                       min.exonOverlap = min.exonOverlap,
+                                                       fusionMode = FALSE) 
+  }
+  newGeneSet <- !(mcols(grl)$GENEID %in% mcols(annotations)$GENEID)
+  geneIdData <- data.frame(GENEID=mcols(grl)$GENEID, novelGene = newGeneSet)
+  if(fusionMode) geneIdData$fusionGene <- grepl('\\:', geneIdData$GENEID)
+  return(geneIdData)
 }
+
 
 #' Return gene ids for read classes which overlap
 #' with known annotations
