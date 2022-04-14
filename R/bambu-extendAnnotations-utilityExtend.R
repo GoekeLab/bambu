@@ -29,16 +29,15 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     exonRangesCombined <- SEnRng$exonRangesCombined
     countsCombined <- SEnRng$countsCombined
     # assign gene IDs based on exon match
-    rowDataCombined <- assignGeneIDexonMatch(
-      rowDataCombined, exonRangesCombined, annotationGrangesList,
-      min.exonOverlap, prefix, verbose)
+    geneIds <- assignGeneIds(grl = exonRangesCombined,
+                             annotations = annotationGrangesList,
+                             min.exonOverlap = min.exonOverlap,
+                             fusionMode = fusionMode)
+    rowDataCombined$GENEID <- geneIds[,1]
+    rowDataCombined$novelGene <- geneIds[,2]
+    if(fusionMode) rowDataCombined$readClassType[geneIds[,3]] <- 'fusionTranscript'
     
-    ## run fusion transcript mode (Todo: use assignGeneIds())
-    if(fusionMode) {
-      rowDataCombined <- assignFusionGene(rowDataCombined, exonRangesCombined,
-                                          annotationGrangesList, min.exonOverlap)
-    }
-    ## filter out transcripts
+    # ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
       remove.subsetTx, min.readFractionByEqClass, NDR, verbose)
@@ -536,52 +535,6 @@ addNewUnsplicedReadClasses <- function(rowDataFilteredUnspliced,  rowDataFiltere
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   return(list("rowDataCombined" = rowDataCombined, 
               "exonRangesCombined" = exonRangesCombined))
-}
-
-
-#' assigned read classes to annotated and new gene IDs
-#' @param seCombined seCombined
-#' @param exonRangesCombined exonRangesCombined
-#' @param annotationGrangesList annotationGrangesList
-#' @param min.exonOverlap min.exonOverlap
-#' @param prefix prefix
-#' @param verbose verbose
-#' @noRd
-assignGeneIDexonMatch <- function(rowDataCombined, exonRangesCombined,
-                                  annotationGrangesList,min.exonOverlap, prefix, verbose) {
-  start.ptm <- proc.time()
-  exonMatchGene <- findOverlaps(exonRangesCombined, annotationGrangesList,
-                                select = "arbitrary", minoverlap = min.exonOverlap)
-  geneIdByExon <- rep(NA, length(exonRangesCombined))
-  geneIdByExon[!is.na(exonMatchGene)] <- mcols(annotationGrangesList)$GENEID[
-    exonMatchGene[!is.na(exonMatchGene)]]
-  geneIdByExon[!is.na(rowDataCombined$GENEID)] <-
-    rowDataCombined$GENEID[!is.na(rowDataCombined$GENEID)]
-  exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
-                                exonRangesCombined[!is.na(geneIdByExon)],
-                                select = "arbitrary",minoverlap = min.exonOverlap)
-  while (any(!is.na(exonMatchGene))) {
-    geneIdByExon[is.na(geneIdByExon)][!is.na(exonMatchGene)] <-
-      geneIdByExon[!is.na(geneIdByExon)][
-        exonMatchGene[!is.na(exonMatchGene)]]
-    exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
-                                  exonRangesCombined[!is.na(geneIdByExon)],
-                                  select = "arbitrary", minoverlap = min.exonOverlap)
-  }
-  isNaGeneIdBefore <- is.na(rowDataCombined$GENEID)
-  rowDataCombined$GENEID[isNaGeneIdBefore] <-
-    geneIdByExon[isNaGeneIdBefore]
-  isNaGeneIdAfter <- is.na(rowDataCombined$GENEID)
-  if (any(isNaGeneIdAfter)) {
-    newGeneIds <- assignGeneIdsNoReference(exonRangesCombined[isNaGeneIdAfter],
-      prefix = prefix)
-    rowDataCombined$GENEID[isNaGeneIdAfter] <- 
-      newGeneIds 
-  }
-  end.ptm <- proc.time()
-  if (verbose) message("assigned read classes to annotated and
-        new gene IDs in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  return(rowDataCombined)
 }
 
 #' calculate distance between first and last exon matches
