@@ -66,25 +66,6 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
   return(combinedTranscripts)
 }
 
-#' transcripts which map to multiple genes are assigned multi-gene ID
-#' separated by ':', the readClassType is set to 'fusionTranscript' 
-#' alignment purely based on ranges does lead to false positives (so exon 
-#' overlap is required here, which can be controlled by min.exonOverlap)
-#' @noRd
-assignFusionGene <- function(rowDataCombined, exonRangesCombined, 
-                             annotationGrangesList, min.exonOverlap){
-  exonMatchGene <- findOverlaps(exonRangesCombined, annotationGrangesList,
-                                select = "all", minoverlap = min.exonOverlap)
-  txGeneTbl <- tibble(txId = queryHits(exonMatchGene), 
-                      GENEID = mcols(annotationGrangesList)$GENEID[subjectHits(exonMatchGene)]) %>%
-    distinct() %>% group_by(txId) %>% filter(n()>1) %>% summarise(GENEID = paste(GENEID, collapse=':'))
-  rowDataCombined$GENEID[txGeneTbl$txId] <- txGeneTbl$GENEID
-  rowDataCombined$readClassType[txGeneTbl$txId] <- 'fusionTranscript'
-  return(rowDataCombined)
-}
-
-
-
 #' calculate minimum equivalent classes for extended annotations
 #' @importFrom dplyr select as_tibble %>% mutate_at mutate group_by 
 #'     ungroup .funs .name_repair vars 
