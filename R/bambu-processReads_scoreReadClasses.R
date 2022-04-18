@@ -31,6 +31,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
+    model = NULL
     if (fit) model = bambu.train(se)
     if(returnModel) metadata(se)$model = model
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,

@@ -60,6 +60,7 @@ setEmParameters <- function(emParameters){
 updateParameters <- function(Parameters, Parameters.default) {
     if (!is.null(Parameters)) {
         for (i in names(Parameters)) {
+            if(!(i %in% names(Parameters.default))) message("Setting parameter that does not exist. Check the spelling - ", i)
             Parameters.default[[i]] <- Parameters[[i]]
         }
     }
