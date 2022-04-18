@@ -390,6 +390,9 @@ assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = 
                                                                    grl[!is.na(mcols(grl)$GENEID)],
                                                        min.exonOverlap = min.exonOverlap,
                                                        fusionMode = FALSE) 
+    if(any(is.na(mcols(grl)$GENEID))) {
+      mcols(grl)$GENEID[is.na(mcols(grl)$GENEID)] <- assignGeneIdsNoReference(grl[is.na(mcols(grl)$GENEID)])
+      }
   }
   newGeneSet <- !(mcols(grl)$GENEID %in% mcols(annotations)$GENEID)
   geneIdData <- data.frame(GENEID=mcols(grl)$GENEID, novelGene = newGeneSet)
