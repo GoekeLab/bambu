@@ -6,6 +6,9 @@ test_that("assignGeneIds",{
                                      package = "bambu"))
   seExpected = readRDS(system.file("extdata", "test_se_scored.rds", 
                                    package = "bambu"))
-  expect_equal(assignGeneIds(rowRanges(se), annotations)$geneIds,
+    geneIds = assignGeneIds(rowRanges(se), annotations)
+  expect_equal(geneIds$GENEID,
                rowData(seExpected)$GENEID)
+  expect_equal(geneIds$novelGene,
+               rowData(seExpected)$novelGene)
 })

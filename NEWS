@@ -1,4 +1,23 @@
-bambu v1.99.0 (Change date: 2021-10-18)
+bambu v2.0.4 (Change date: 2022-02-08)
+===========================================
+Minor fixes: 
+    * Fix out of bounds aligned reads bug
+    * Fix bsgenome strand bug
+    * Make error clear when in the de novo mode and threshold is too low
+    * Move NDR out of discovery parameters list
+    
+
+bambu v2.0.3 (Change date: 2022-01-30)
+===========================================
+Minor fixes: 
+    * Skip the errors when txScore is not calculated
+
+bambu v2.0.1 (Change date: 2022-11-23)
+===========================================
+Minor fixes: 
+    * Update saved objects using updated Bioc 3.14 packages 
+
+bambu v2.0.0 (Change date: 2021-10-18)
 =============
 Major Changes:
     * Implemented a machine learning model to estimate transcript-level novel discovery rate

@@ -50,10 +50,13 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
   filterSet = NULL
   if (nrow(combinedTranscripts) > 0){
     #filter by read counts
+    naTxscore <- is.na(combinedTranscripts$NSampleTxScore)
+    if(any(naTxscore)) 
+       combinedTranscripts$NSampleTxScore[naTxscore] <- 0
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
         combinedTranscripts$NSampleTxScore >= min.sampleNumber) & (
         combinedTranscripts$NSampleReadProp >= min.sampleNumber)
-  }  
+  }
   combinedTranscripts = combinedTranscripts[filterSet,]
   return(combinedTranscripts)
 }

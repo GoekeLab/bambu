@@ -7,7 +7,7 @@
 #' @importFrom GenomicAlignments grglist readGAlignments
 #' @importFrom GenomicRanges width
 #' @noRd
-prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
+prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.names = FALSE) {
     if (is(bamFile, "BamFile")) {
         if (!is.null(yieldSize)) {
             yieldSize(bamFile) <- yieldSize
@@ -30,7 +30,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE) {
             grglist(readGAlignments(bf,
             param = ScanBamParam(flag =
                 scanBamFlag(isSecondaryAlignment = FALSE)),
-            use.names = FALSE))
+            use.names = use.names))
         # readGrgList<-c(readGrgList,GenomicAlignments::grglist(reads))
         if (verbose) show(min(length(readGrgList),
             counter * yieldSize, na.rm = TRUE))
