@@ -358,7 +358,8 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' @param annotations a GrangesList object with annotations
 #' @param min.exonOverlap minimum length of overlap to be assigned to a gene
 #' @param fusionMode if TRUE will assign multiple GENEIDs to fusion transcripts, separated by ":"
-assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = FALSE) {
+#' @param maxChainIteration the number of intermediate novel transcripts which will be used to assign gene ids, default: 3
+assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = FALSE, maxChainIteration = 3) {
   strandedRanges <- as.logical(getStrandFromGrList(grl)!='*')
   mcols(grl)$GENEID =rep(NA, length(grl))
   if(length(annotations)>0) {
@@ -374,12 +375,14 @@ assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = 
     mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
                                                                   min.exonOverlap = min.exonOverlap,
                                                                   fusionMode = FALSE)  # fusion assignment is only done based on original annotations
-    while(any(!is.na(mcols(grl)$GENEID[newGeneSet]))) {
+    chainCount <- 1  # first iteration is outside of while loop
+    while(any(!is.na(mcols(grl)$GENEID[newGeneSet])) & chainCount < maxChainIteration) {
       referenceGeneSet <- newGeneSet & !is.na(mcols(grl)$GENEID) & strandedRanges
       newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
       mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
                                                                 min.exonOverlap = min.exonOverlap,
                                                                 fusionMode = FALSE) 
+      chainCount <- chainCount +1
       }
   }
   newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
