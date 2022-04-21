@@ -560,10 +560,10 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   # simplified classification, can be further improved for readibility
   rowDataCombinedFiltered$newTxClass <- rowDataCombinedFiltered$readClassType
   rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
-                                     == "unsplicedNew" & grepl("gene", rowDataCombinedFiltered$GENEID)] <-
+                                     == "unsplicedNew" & rowDataCombinedFiltered$novelGene] <-
     "newGene-unspliced"
   rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
-                                     == "allNew" & grepl("gene", rowDataCombinedFiltered$GENEID)] <-
+                                     == "allNew" & rowDataCombinedFiltered$novelGene] <-
     "newGene-spliced"
   extendedAnnotationRanges <- exonRangesCombinedFiltered
   mcols(extendedAnnotationRanges) <-
