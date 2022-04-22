@@ -5,7 +5,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     remove.subsetTx = TRUE,
                                     min.sampleNumber = 1, NDR = 0.1, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-                                    prefix = "", verbose = FALSE){
+                                    min.readFractionByEqClass = 0, fusionMode = FALSE, prefix = "", verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -29,13 +29,18 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     exonRangesCombined <- SEnRng$exonRangesCombined
     countsCombined <- SEnRng$countsCombined
     # assign gene IDs based on exon match
-    rowDataCombined <- assignGeneIDexonMatch(
-      rowDataCombined, exonRangesCombined, annotationGrangesList,
-      min.exonOverlap, prefix, verbose)
-    ## filter out transcripts
+    geneIds <- assignGeneIds(grl = exonRangesCombined,
+                             annotations = annotationGrangesList,
+                             min.exonOverlap = min.exonOverlap,
+                             fusionMode = fusionMode)
+    rowDataCombined$GENEID <- geneIds[,1]
+    rowDataCombined$novelGene <- geneIds[,2]
+    if(fusionMode) rowDataCombined$readClassType[geneIds[,3]] <- 'fusionTranscript'
+    
+    # ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, NDR, verbose)
+      remove.subsetTx, min.readFractionByEqClass, NDR, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -66,45 +71,51 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 #'     ungroup .funs .name_repair vars 
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
-                                          exonRangesCombined, prefix,  remove.subsetTx, NDR, verbose) {
+                                          exonRangesCombined, prefix, remove.subsetTx, 
+                                          min.readFractionByEqClass, NDR, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
-  if (remove.subsetTx) { # (1) based on compatiblity with annotations
+  
+  #calculate relative read count before any filtering
+  rowDataCombined <- group_by(rowDataCombined, GENEID) %>% mutate(relReadCount = readCount/sum(readCount))
+  if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
         rowDataCombined$readClassType == "equalcompatible") #keep equal for FDR calculation
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
-  #(2) remove transcripts below NDR threshold
+  #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
-  # remove equals to prevent duplicates when merging with anno
-  filterSet = (rowDataCombined$txNDR <= NDR) & !rowDataCombined$readClassType == "equalcompatible"
+
+  filterSet = (rowDataCombined$txNDR <= NDR)
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
+  
+  #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
+  mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
+  minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
+  rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
+  
+  #post extend annotation filters applied here (currently only subset filter)
+  if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
+    filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass
+    exonRangesCombined <- exonRangesCombined[filterSet]
+    rowDataCombined <- rowDataCombined[filterSet,]
+  }
+  # remove equals to prevent duplicates when merging with annotations
+  filterSet = rowDataCombined$readClassType != "equalcompatible"
+  exonRangesCombined <- exonRangesCombined[filterSet]
+  rowDataCombined <- rowDataCombined[filterSet,]
+  
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
-  # (3) remove transcripts with identical junctions to annotations
-  extendedAnnotationRanges <- removeTranscriptsWIdenJunct(
+  # (3) combine novel transcripts with annotations
+  extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
     annotationGrangesList, prefix)
   end.ptm <- proc.time()
   if (verbose) message("transcript filtering in ",
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  start.ptm <- proc.time()
-  geneListWithNewTx <- which(mcols(extendedAnnotationRanges)$GENEID %in%
-                               mcols(extendedAnnotationRanges)$GENEID[
-                                 which(mcols(extendedAnnotationRanges)$newTxClass != "annotation")])
-  minEqClasses <-
-    getMinimumEqClassByTx(extendedAnnotationRanges[geneListWithNewTx])
-  end.ptm <- proc.time()
-  if (verbose) message("calculated minimum equivalent classes for
-        extended annotations in ", round((end.ptm - start.ptm)[3] / 60, 1),
-                       " mins.")
-  mcols(extendedAnnotationRanges)$eqClass[geneListWithNewTx] <-
-    minEqClasses$eqClass[match(names(extendedAnnotationRanges[
-      geneListWithNewTx]), minEqClasses$queryTxId)]
-  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                                                                     c("TXNAME", "GENEID", "eqClass", "newTxClass","readCount", "txNDR")]
   return(extendedAnnotationRanges)
 }
 
@@ -519,52 +530,6 @@ addNewUnsplicedReadClasses <- function(rowDataFilteredUnspliced,  rowDataFiltere
               "exonRangesCombined" = exonRangesCombined))
 }
 
-
-#' assigned read classes to annotated and new gene IDs
-#' @param seCombined seCombined
-#' @param exonRangesCombined exonRangesCombined
-#' @param annotationGrangesList annotationGrangesList
-#' @param min.exonOverlap min.exonOverlap
-#' @param prefix prefix
-#' @param verbose verbose
-#' @noRd
-assignGeneIDexonMatch <- function(rowDataCombined, exonRangesCombined,
-                                  annotationGrangesList,min.exonOverlap, prefix, verbose) {
-  start.ptm <- proc.time()
-  exonMatchGene <- findOverlaps(exonRangesCombined, annotationGrangesList,
-                                select = "arbitrary", minoverlap = min.exonOverlap)
-  geneIdByExon <- rep(NA, length(exonRangesCombined))
-  geneIdByExon[!is.na(exonMatchGene)] <- mcols(annotationGrangesList)$GENEID[
-    exonMatchGene[!is.na(exonMatchGene)]]
-  geneIdByExon[!is.na(rowDataCombined$GENEID)] <-
-    rowDataCombined$GENEID[!is.na(rowDataCombined$GENEID)]
-  exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
-                                exonRangesCombined[!is.na(geneIdByExon)],
-                                select = "arbitrary",minoverlap = min.exonOverlap)
-  while (any(!is.na(exonMatchGene))) {
-    geneIdByExon[is.na(geneIdByExon)][!is.na(exonMatchGene)] <-
-      geneIdByExon[!is.na(geneIdByExon)][
-        exonMatchGene[!is.na(exonMatchGene)]]
-    exonMatchGene <- findOverlaps(exonRangesCombined[is.na(geneIdByExon)],
-                                  exonRangesCombined[!is.na(geneIdByExon)],
-                                  select = "arbitrary", minoverlap = min.exonOverlap)
-  }
-  isNaGeneIdBefore <- is.na(rowDataCombined$GENEID)
-  rowDataCombined$GENEID[isNaGeneIdBefore] <-
-    geneIdByExon[isNaGeneIdBefore]
-  isNaGeneIdAfter <- is.na(rowDataCombined$GENEID)
-  if (any(isNaGeneIdAfter)) {
-    newGeneIds <- assignGeneIdsNoReference(exonRangesCombined[isNaGeneIdAfter],
-      prefix = prefix)
-    rowDataCombined$GENEID[isNaGeneIdAfter] <- 
-      newGeneIds 
-  }
-  end.ptm <- proc.time()
-  if (verbose) message("assigned read classes to annotated and
-        new gene IDs in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  return(rowDataCombined)
-}
-
 #' calculate distance between first and last exon matches
 #' @param candidateList candidateList
 #' @param filteredOverlapList filteredOverlapList
@@ -583,9 +548,9 @@ includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
   return(temp)
 }
 
-#' remove transcripts with identical junctions to annotations
+#' combine annotations with predicted transcripts
 #' @noRd
-removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered, 
+combineWithAnnotations <- function(rowDataCombinedFiltered, 
                                         exonRangesCombinedFiltered,annotationGrangesList, prefix){
   # commented as notEqual is already filtered in the beginning
   # notEqual <- which(rowDataCombinedFiltered$readClassType != "equal")
@@ -595,14 +560,14 @@ removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered,
   # simplified classification, can be further improved for readibility
   rowDataCombinedFiltered$newTxClass <- rowDataCombinedFiltered$readClassType
   rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
-                                     == "unsplicedNew" & grepl("gene", rowDataCombinedFiltered$GENEID)] <-
+                                     == "unsplicedNew" & rowDataCombinedFiltered$novelGene] <-
     "newGene-unspliced"
   rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
-                                     == "allNew" & grepl("gene", rowDataCombinedFiltered$GENEID)] <-
+                                     == "allNew" & rowDataCombinedFiltered$novelGene] <-
     "newGene-spliced"
   extendedAnnotationRanges <- exonRangesCombinedFiltered
   mcols(extendedAnnotationRanges) <-
-    rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "txNDR")]
+    rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "txNDR","relReadCount", "relSubsetCount")]
   if (length(extendedAnnotationRanges)) 
     mcols(extendedAnnotationRanges)$TXNAME <- paste0(
       "tx",prefix, ".", seq_along(extendedAnnotationRanges))
@@ -612,8 +577,20 @@ removeTranscriptsWIdenJunct <- function(rowDataCombinedFiltered,
     rep(NA,length(annotationRangesToMerge))
   mcols(annotationRangesToMerge)$newTxClass <- 
     rep("annotation",length(annotationRangesToMerge))
+  mcols(annotationRangesToMerge)$txNDR <- 
+    rep(NA,length(annotationRangesToMerge))
+  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
   extendedAnnotationRanges <-
     c(extendedAnnotationRanges, annotationRangesToMerge)
+  mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
+  
+  minEqClasses <-
+    getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
+  if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
+  mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass
+  mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
+  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
+                 c("TXNAME", "GENEID", "eqClass", "txid", "eqClassById", "newTxClass","readCount", "txNDR","relReadCount", "relSubsetCount")]
   return(extendedAnnotationRanges)
 }
 

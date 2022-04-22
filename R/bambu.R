@@ -29,7 +29,7 @@
 #'     defaults to empty}
 #'     \item{remove.subsetTx}{indicating whether filter to remove read classes
 #'     which are a subset of known transcripts(), defaults to TRUE}
-#'     \item{min.readCount}{specifying minimun read count to consider a read
+#'     \item{min.readCount}{specifying minimum read count to consider a read
 #'     class valid in a sample, defaults to 2}
 #'     \item{min.readFractionByGene}{specifying minimum relative read count per
 #'     gene, highly expressed genes will have many high read count low relative
@@ -53,6 +53,12 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
+#'     \item{min.readFractionByEqClass}{indicating the minimum relative read
+#'     count of a subset transcript compared to all superset transcripts 
+#'     (ie the relative read count within the minimum equivalent class). This 
+#'     filter is applied on the set of annotations across all samples using the 
+#'     total read count, this is not a per-sample filter. Please use with 
+#'     caution. defaults to 0}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -125,8 +131,8 @@
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
-    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, verbose = FALSE, 
-    lowMemory = FALSE) {
+    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
+    verbose = FALSE, lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
     if(is.null(annotations)) { annotations = GRangesList()
@@ -155,13 +161,13 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             genomeSequence = genomeSequence, 
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
-            isoreParameters, trackReads = trackReads)
+            isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
     } else { 
         if(is.list(rcFile)) {readClassList <- rcFile}
         else {readClassList <- as.list(rcFile)}}
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-            isoreParameters, stranded, bpParameters, verbose = verbose)
+            isoreParameters, stranded, bpParameters, fusionMode, verbose)
         if (!verbose) message("Finished extending annotations.")
         if (!quant){
             return(annotations)

@@ -43,11 +43,11 @@ prepareAnnotations <- function(x) {
             names(exonsByTx),
             columns = c("TXNAME", "GENEID"),
             keytype = "TXNAME"))
+        mcols(exonsByTx)$txid <- seq_along(exonsByTx)
         minEqClasses <- getMinimumEqClassByTx(exonsByTx)
-        mcols(exonsByTx)$eqClass <- minEqClasses$eqClass[match(
-            names(exonsByTx),
-            minEqClasses$queryTxId
-        )]
+        if(!identical(names(exonsByTx),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
+        mcols(exonsByTx)$eqClass <- minEqClasses$eqClass
+        mcols(exonsByTx)$eqClassById <- minEqClasses$eqClassById
     } else {
         tryCatch({
             exonsByTx = prepareAnnotationsFromGTF(x)
