@@ -29,7 +29,7 @@
 #'     defaults to empty}
 #'     \item{remove.subsetTx}{indicating whether filter to remove read classes
 #'     which are a subset of known transcripts(), defaults to TRUE}
-#'     \item{min.readCount}{specifying minimun read count to consider a read
+#'     \item{min.readCount}{specifying minimum read count to consider a read
 #'     class valid in a sample, defaults to 2}
 #'     \item{min.readFractionByGene}{specifying minimum relative read count per
 #'     gene, highly expressed genes will have many high read count low relative
@@ -53,6 +53,12 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
+#'     \item{min.readFractionByEqClass}{indicating the minimum relative read
+#'     count of a subset transcript compared to all superset transcripts 
+#'     (ie the relative read count within the minimum equivalent class). This 
+#'     filter is applied on the set of annotations across all samples using the 
+#'     total read count, this is not a per-sample filter. Please use with 
+#'     caution. defaults to 0}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -65,6 +71,13 @@
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
 #' }
+#' @param trackReads When TRUE read names will be tracked and output as
+#' metadata in the final output as readToTranscriptMaps detailing. 
+#' the assignment of reads to transcripts. The output is a list with 
+#' an entry for each sample.
+#' @param outputDistTable When TRUE the calculated distance table between
+#' read classes and annotations will be output as metadata as 
+#' distTables. The output is a list with an entry for each sample.
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended
 #' @param quant A logical variable indicating whether quantification will 
@@ -116,24 +129,24 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
-    annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
-    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL,
-    discovery = TRUE, quant = TRUE, verbose = FALSE, 
-    lowMemory = FALSE) {
+                  annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
+                  yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
+                  returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
+                  verbose = FALSE, lowMemory = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
-    if(is.null(annotations)) annotations = GRangesList()
-    else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
-            readClass.outputDir = rcOutDir, genomeSequence = genome)
+    if(is.null(annotations)) { annotations = GRangesList()
+    } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
+                                      readClass.outputDir = rcOutDir, genomeSequence = genome)
     if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
-
+    
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
-
+    
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
-        ncore, verbose)
+                                              ncore, verbose)
     if (bpParameters$workers > 1) ncore <- 1
     rm.readClassSe <- FALSE
     if (!is.null(reads)) {
@@ -141,31 +154,39 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
             message("There are more than 10 samples, read class files
                 will be temporarily saved to ", rcOutDir,
-                " for more efficient processing")
+                    " for more efficient processing")
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-            genomeSequence = genomeSequence, readClass.outputDir = rcOutDir, 
-            yieldSize, bpParameters, stranded, verbose, isoreParameters)
-    } else {readClassList <- rcFile}
+                genomeSequence = genomeSequence, 
+                readClass.outputDir = rcOutDir, yieldSize, 
+                bpParameters, stranded, verbose,
+                isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
+    } else { 
+        if(is.list(rcFile)) {readClassList <- rcFile}
+        else {readClassList <- as.list(rcFile)}}
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-            isoreParameters, stranded, bpParameters, verbose = verbose)
+                isoreParameters, stranded, bpParameters, fusionMode)
         if (!verbose) message("Finished extending annotations.")
-        if (!quant){return(annotations)}
+        if (!quant){
+            return(annotations)
+        }
     }
     if (quant) {
         if (!verbose) message("Start isoform quantification")
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
-            annotations = annotations, isoreParameters = isoreParameters,
-            emParameters = emParameters, ncore = ncore,verbose = verbose, 
-            BPPARAM = bpParameters)
+                             annotations = annotations, isoreParameters = isoreParameters,
+                             emParameters = emParameters, trackReads = trackReads, 
+                             returnDistTable = returnDistTable, ncore = ncore, verbose = verbose, 
+                             BPPARAM = bpParameters)
         annotationsUpdated <- combineAnnotations(lapply(countsSe,"[[",2))
-        countsSeCombined <- combineCounts(countsSe, annotationsUpdated)
+        countsSeCombined <- combineCounts(countsSe, annotationsUpdated, trackReads, returnDistTable)
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
         return(countsSeCombined)
     }
 }
+

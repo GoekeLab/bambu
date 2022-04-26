@@ -521,8 +521,10 @@ combineAnnotations <- function(rowRangesList){
 
 #' combined counts with unidentified transcripts across samples
 #' @noRd
-combineCounts <- function(countsSe,annotationsUpdated){
+combineCounts <- function(countsSe,annotationsUpdated, trackReads, returnDistTable){
     countsList <- lapply(countsSe,"[[",1)
+    sampleNames = sapply(countsList, FUN = function(x){colnames(x)})
+ 
     rowRangesList <- lapply(countsSe, "[[",2)
     tx_nameDt <- data.table(tx_name = names(annotationsUpdated))
     countsList <- lapply(seq_along(countsList), function(k){
@@ -555,7 +557,23 @@ combineCounts <- function(countsSe,annotationsUpdated){
             colData = colDataRC)
         return(seOutput)
     })
+    if(trackReads){
+        readToTranscriptMaps = lapply(countsList, FUN = function(se){metadata(se)$readToTranscriptMap})
+        names(readToTranscriptMaps) = sampleNames
+        countsSe = lapply(countsList, FUN = function(se){
+            metadata(se)$readToTranscriptMap=NULL
+            return(se)})
+    }
+    if(returnDistTable){
+        distTables = lapply(countsList, FUN = function(se){metadata(se)$distTable})
+        names(distTables) = sampleNames
+        countsSe = lapply(countsSe, FUN = function(se){
+            metadata(se)$distTable=NULL
+            return(se)})
+    }
     countsSeUpdated <- do.call(SummarizedExperiment::cbind, countsList)
+    if(trackReads) metadata(countsSeUpdated)$readToTranscriptMaps = readToTranscriptMaps
+    if(returnDistTable) metadata(countsSeUpdated)$distTables = distTables
     rowRanges(countsSeUpdated) <- annotationsUpdated
     return(countsSeUpdated)
 }
