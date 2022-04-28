@@ -27,6 +27,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                          annotationGrangesList, min.exonOverlap, verbose)
     rowDataCombined <- SEnRng$rowDataCombined
     exonRangesCombined <- SEnRng$exonRangesCombined
+    countsCombined <- SEnRng$countsCombined
     # assign gene IDs based on exon match
     geneIds <- assignGeneIds(grl = exonRangesCombined,
                              annotations = annotationGrangesList,

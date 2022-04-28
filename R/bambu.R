@@ -140,13 +140,13 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
-    
+
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
-    
+
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
-                                              ncore, verbose)
+        ncore, verbose)
     if (bpParameters$workers > 1) ncore <- 1
     rm.readClassSe <- FALSE
     if (!is.null(reads)) {
@@ -154,7 +154,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
             message("There are more than 10 samples, read class files
                 will be temporarily saved to ", rcOutDir,
-                    " for more efficient processing")
+                " for more efficient processing")
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
@@ -178,15 +178,14 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
-                             annotations = annotations, isoreParameters = isoreParameters,
-                             emParameters = emParameters, trackReads = trackReads, 
-                             returnDistTable = returnDistTable, ncore = ncore, verbose = verbose, 
-                             BPPARAM = bpParameters)
-        annotationsUpdated <- combineAnnotations(lapply(countsSe,"[[",2))
-        countsSeCombined <- combineCounts(countsSe, annotationsUpdated, trackReads, returnDistTable)
+            annotations = annotations, isoreParameters = isoreParameters,
+            emParameters = emParameters, trackReads = trackReads, 
+            returnDistTable = returnDistTable, ncore = ncore, verbose = verbose, 
+            BPPARAM = bpParameters)
+        countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
+        rowRanges(countsSe) <- annotations
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
-        return(countsSeCombined)
+        return(countsSe)
     }
 }
-
