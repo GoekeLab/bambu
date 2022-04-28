@@ -43,6 +43,7 @@ Suggests:
     ExperimentHub (>= 1.15.3),
     DESeq2,
     NanoporeRNASeq,
+    purrr,
     apeglm,
     utils,
     DEXSeq
