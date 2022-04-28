@@ -29,7 +29,7 @@
 #'     defaults to empty}
 #'     \item{remove.subsetTx}{indicating whether filter to remove read classes
 #'     which are a subset of known transcripts(), defaults to TRUE}
-#'     \item{min.readCount}{specifying minimum read count to consider a read
+#'     \item{min.readCount}{specifying minimun read count to consider a read
 #'     class valid in a sample, defaults to 2}
 #'     \item{min.readFractionByGene}{specifying minimum relative read count per
 #'     gene, highly expressed genes will have many high read count low relative
@@ -53,12 +53,6 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
-#'     \item{min.readFractionByEqClass}{indicating the minimum relative read
-#'     count of a subset transcript compared to all superset transcripts 
-#'     (ie the relative read count within the minimum equivalent class). This 
-#'     filter is applied on the set of annotations across all samples using the 
-#'     total read count, this is not a per-sample filter. Please use with 
-#'     caution. defaults to 0}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -71,13 +65,6 @@
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
 #' }
-#' @param trackReads When TRUE read names will be tracked and output as
-#' metadata in the final output as readToTranscriptMaps detailing. 
-#' the assignment of reads to transcripts. The output is a list with 
-#' an entry for each sample.
-#' @param outputDistTable When TRUE the calculated distance table between
-#' read classes and annotations will be output as metadata as 
-#' distTables. The output is a list with an entry for each sample.
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended
 #' @param quant A logical variable indicating whether quantification will 
@@ -169,9 +156,7 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, fusionMode, verbose)
         if (!verbose) message("Finished extending annotations.")
-        if (!quant){
-            return(annotations)
-        }
+        if (!quant){return(annotations)}
     }
     if (quant) {
         if (!verbose) message("Start isoform quantification")

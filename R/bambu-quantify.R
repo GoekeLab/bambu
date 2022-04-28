@@ -148,3 +148,4 @@ combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALS
     if(returnDistTable) metadata(countsSe)$distTables = distTables
     return(countsSe)
 }
+
