@@ -111,7 +111,7 @@ seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 ## prior models to use for scoreReadClass()
 #se = readRDS("SGNex_HepG2_directRNA_replicate5_run1_genome.rds")
-#defaultModels = bambu.train(se)
+#defaultModels = trainBambu(se)
 defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
                                     package = "bambu"))
 

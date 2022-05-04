@@ -33,7 +33,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
     model = NULL
-    if (fit) model = bambu.train(se)
+    if (fit) model = trainBambu(se)
     if(returnModel) metadata(se)$model = model
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels, fit=fit)
@@ -167,7 +167,7 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels, nrounds = 50
 
 #' Function to train a model for use on other data
 #' @noRd
-bambu.train <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1) {
+trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1) {
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
