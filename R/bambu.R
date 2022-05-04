@@ -146,7 +146,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             genomeSequence = genomeSequence, 
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
-            isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
+            isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
+            lowMemory = lowMemory)
     } else { 
         if(is.list(rcFile)) {readClassList <- rcFile}
         else {readClassList <- as.list(rcFile)}}

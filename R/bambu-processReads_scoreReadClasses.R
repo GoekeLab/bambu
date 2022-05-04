@@ -4,7 +4,7 @@
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
                             fit = TRUE, returnModel = FALSE, 
-                            min.readCount = 2, , min.exonOverlap = 10,
+                            min.readCount = 2, min.exonOverlap = 10,
                             fusionMode = FALSE, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
