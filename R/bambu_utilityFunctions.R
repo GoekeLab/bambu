@@ -34,6 +34,7 @@ setIsoreParameters <- function(isoreParameters){
         defaultModels = defaultModels,
         returnModel = FALSE,
         txScoreBaseline = defaultModels$txScoreBaseline,
+        min.readFractionByEqClass = 0,
         prefix = "") 
     if("defaultModels" %in% names(isoreParameters) & !("txScoreBaseline" %in% names(isoreParameters))){
         isoreParameters["txScoreBaseline"]=isoreParameters$defaultModels$txScoreBaseline
@@ -84,9 +85,13 @@ checkInputs <- function(annotations, reads, readClass.file,
         } else if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
             if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
-                colnames(mcols(annotations)))) 
+                     colnames(mcols(annotations)))) 
                 stop("The annotations is not properly prepared.\nPlease 
                     prepareAnnnotations using prepareAnnotations function.")
+            if(anyDuplicated(mcols(annotations)$TXNAME)) {
+                warning('Annotations contain duplicated transcript/gene names
+                        Please re-create your annotation object')
+            }
         } else {
             stop("The annotations is not a GRangesList object.")
         }

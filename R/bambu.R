@@ -65,13 +65,6 @@
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
 #' }
-#' @param trackReads When TRUE read names will be tracked and output as
-#' metadata in the final output as readToTranscriptMaps detailing. 
-#' the assignment of reads to transcripts. The output is a list with 
-#' an entry for each sample.
-#' @param outputDistTable When TRUE the calculated distance table between
-#' read classes and annotations will be output as metadata as 
-#' distTables. The output is a list with an entry for each sample.
 #' @param discovery A logical variable indicating whether annotations
 #' are to be extended
 #' @param quant A logical variable indicating whether quantification will 
@@ -125,8 +118,8 @@
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
-    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, verbose = FALSE, 
-    lowMemory = FALSE) {
+    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
+    verbose = FALSE, lowMemory = FALSE) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -150,16 +143,17 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-            genomeSequence = genomeSequence, readClass.outputDir = rcOutDir, 
-            yieldSize, bpParameters, stranded, verbose, isoreParameters, 
-            trackReads = trackReads)
+            genomeSequence = genomeSequence, 
+            readClass.outputDir = rcOutDir, yieldSize, 
+            bpParameters, stranded, verbose,
+            isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
     } else { 
         if(is.list(rcFile)) {readClassList <- rcFile}
         else {readClassList <- as.list(rcFile)}}
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-            isoreParameters, stranded, bpParameters, verbose = verbose)
+            isoreParameters, stranded, bpParameters, fusionMode, verbose)
         if (!verbose) message("Finished extending annotations.")
         if (!quant){return(annotations)}
     }
