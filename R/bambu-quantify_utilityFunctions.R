@@ -419,7 +419,6 @@ createMultimappingBaseOnEmptyRC <- function(rcDt,
 #' @import data.table
 #' @noRd
 modifyUncompatibleAssignment <- function(readClassDist){
-    
     distTable <- data.table(as.data.frame(metadata(readClassDist)$distTable))
     distTable[,`:=`(anyCompatible = any(compatible), 
                     anyEqual = any(equal)),
@@ -439,8 +438,6 @@ modifyUncompatibleAssignment <- function(readClassDist){
     distTable[,`:=`(anyCompatible = NULL,
                     anyEqual = NULL)]
     metadata(readClassDist)$distTable <- as_tibble(unique(distTable, by = NULL))
-    end.ptm <- proc.time()
-    
     return(readClassDist)
 }
 
@@ -465,27 +462,19 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
     readCountTable <- unique(unidentified[,list(readCount = sum(readCount/nTx)),
                                           by = list(annotationTxId)], by = NULL)
 
-    un_ranges <- rowRanges(readClassMod)[unidentified$readClassId]
-    names(un_ranges) <- unidentified$annotationTxId
-    un_ranges <- unlist(un_ranges)
-    un_names <- names(un_ranges)
-    strand(un_ranges[strand(un_ranges) == "*"]) <- "+"
-    newList <- split(un_ranges, un_names)
-    unidentified_annotations <- reduce(newList)
-    # prune strand
-    strand(unidentified_annotations) <-
-        splitAsList(rep(unlist(lapply(as.list(unique(strand(unidentified_annotations))),"[",1)),
-                        elementNROWS(unidentified_annotations)),
-                    rep(names(unidentified_annotations),
-                        elementNROWS(unidentified_annotations)))
-    un_names <- names(unidentified_annotations)
-    mcols(unidentified_annotations) <- DataFrame(TXNAME = un_names,
-                                                 GENEID = gsub("_unidentified","",un_names),
-                                                 eqClass = eqClassTable[match(un_names, annotationTxId)]$eqClass,
+    unidentified_ranges <- rowRanges(readClassMod)[unidentified$readClassId]
+    names(unidentified_ranges) <- unidentified$annotationTxId
+    unidentified_ranges <- unlist(unidentified_ranges)
+    unidentified_names <- names(unidentified_ranges)
+    unidentified_annotations <- reduce(split(unidentified_ranges, unidentified_names))
+    unidentified_names <- names(unidentified_annotations)
+    mcols(unidentified_annotations) <- DataFrame(TXNAME = unidentified_names,
+                                                 GENEID = gsub("_unidentified","",unidentified_names),
+                                                 eqClass = eqClassTable[match(unidentified_names, annotationTxId)]$eqClass,
                                                  newTxClass = "unidentified",
-                                                 readCount = readCountTable[match(un_names, annotationTxId)]$readCount,
+                                                 readCount = readCountTable[match(unidentified_names, annotationTxId)]$readCount,
                                                  txNDR = NA)
-    suppressWarnings(annotations_combined <- c(annotations,unidentified_annotations))
+    annotations_combined <- c(annotations,unidentified_annotations)
     end.ptm <- proc.time()
     if (verbose)
         message("Finished updating annotations with unidentified reads in ",
