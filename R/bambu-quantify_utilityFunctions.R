@@ -444,25 +444,27 @@ modifyUncompatibleAssignment <- function(readClassDist){
     return(readClassDist)
 }
 
+
+ 
 #' update annotations to include unidentified read classes
 #' @import data.table
 #' @noRd
 updateAnnotations <- function(readClassMod, annotations, verbose){
     start.ptm <- proc.time()
     unidentified <- unique(data.table(metadata(readClassMod)$distTable)[,
-                                                                        .(annotationTxId,readClassId,dist,readCount)], 
+                                                                        .(annotationTxId,readClassId,dist,readCount)],
                            by = NULL)[grep("unidentified",annotationTxId)]
-    
+
     eqTable <- unique(unidentified[order(readClassId, annotationTxId),
                                    .(annotationTxId, readClassId)],by = NULL)
-    eqTable[, eqClass := paste(annotationTxId, 
+    eqTable[, eqClass := paste(annotationTxId,
                                collapse = "."),by = readClassId]
     eqClassTable <- unique(eqTable[,.(annotationTxId, eqClass)])
-    
+
     unidentified[, nTx := length(unique(annotationTxId)), by = readClassId]
-    readCountTable <- unique(unidentified[,list(readCount = sum(readCount/nTx)), 
+    readCountTable <- unique(unidentified[,list(readCount = sum(readCount/nTx)),
                                           by = list(annotationTxId)], by = NULL)
-    
+
     un_ranges <- rowRanges(readClassMod)[unidentified$readClassId]
     names(un_ranges) <- unidentified$annotationTxId
     un_ranges <- unlist(un_ranges)
@@ -471,7 +473,7 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
     newList <- split(un_ranges, un_names)
     unidentified_annotations <- reduce(newList)
     # prune strand
-    strand(unidentified_annotations) <- 
+    strand(unidentified_annotations) <-
         splitAsList(rep(unlist(lapply(as.list(unique(strand(unidentified_annotations))),"[",1)),
                         elementNROWS(unidentified_annotations)),
                     rep(names(unidentified_annotations),
@@ -485,97 +487,46 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
                                                  txNDR = NA)
     suppressWarnings(annotations_combined <- c(annotations,unidentified_annotations))
     end.ptm <- proc.time()
-    if (verbose) 
+    if (verbose)
         message("Finished updating annotations with unidentified reads in ",
                 round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(annotations_combined)
 }
 
-#' combine unidentified annotations across samples
-#' @noRd
-combineAnnotations <- function(rowRangesList){
-    rowRangesList <- do.call("c", rowRangesList)
-    mcolsList <- data.table(as.data.frame(mcols(rowRangesList)))
-    # update read count to be the sum 
-    mcolsList[grep("unidentified",TXNAME), 
-              readCount := sum(readCount), by = TXNAME]
-    # update eqClass to be the sum
-    mcolsList[grep("unidentified",TXNAME), 
-              eqClass := .SD[order(nchar(eqClass), 
-                                   decreasing = TRUE)]$eqClass[1], by = TXNAME]
-    mcolsList <- unique(mcolsList, by = setdiff(colnames(mcolsList), "eqClassById"))
-    
-    rowRangesNew <- split(unlist(rowRangesList), names(unlist(rowRangesList)))
-    rowRangesNew <- reduce(rowRangesNew)
-    # prune strand
-    strand(rowRangesNew) <- 
-        splitAsList(rep(unlist(lapply(as.list(unique(strand(rowRangesNew))),"[",1)),
-                        elementNROWS(rowRangesNew)),
-                    rep(names(rowRangesNew),
-                        elementNROWS(rowRangesNew)))
-    rowRangesNew <- rowRangesNew[mcolsList$TXNAME]
-    mcols(rowRangesNew) <- DataFrame(mcolsList)
-    return(rowRangesNew)
-}
 
-
-#' combined counts with unidentified transcripts across samples
-#' @noRd
-combineCounts <- function(countsSe,annotationsUpdated, trackReads, returnDistTable){
-    countsList <- lapply(countsSe,"[[",1)
-    sampleNames = sapply(countsList, FUN = function(x){colnames(x)})
-    
-    rowRangesList <- lapply(countsSe, "[[",2)
-    tx_nameDt <- data.table(tx_name = names(annotationsUpdated))
-    countsList <- lapply(seq_along(countsList), function(k){
-        countsK <- countsList[[k]]
-        assayK <- assays(countsK)
-        counts <- data.table(tx_name = names(rowRangesList[[k]]),
-                             counts = as.numeric(assayK$counts),
-                             CPM = as.numeric(assayK$CPM),
-                             fullLengthCounts = as.numeric(assayK$fullLengthCounts),
-                             partialLengthCounts = as.numeric(assayK$partialLengthCounts),
-                             uniqueCounts = as.numeric(assayK$uniqueCounts),
-                             theta = as.numeric(assayK$theta))
-        counts <- merge(tx_nameDt, counts, on ="tx_name",all = TRUE)
-        counts <- counts[match(names(annotationsUpdated), tx_name)]
-        counts[is.na(counts)] <- 0
-        colNameRC <- colnames(countsK)
-        colDataRC <- colData(countsK)
-        seOutput <- SummarizedExperiment(
-            assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
-                                                dimnames =  list(NULL, colNameRC)), CPM = matrix(counts$CPM,
-                                                                                                 ncol =  1, dimnames = list(NULL, colNameRC)),
-                                fullLengthCounts = matrix(counts$fullLengthCounts, ncol = 1,
-                                                          dimnames = list(NULL, colNameRC)),
-                                partialLengthCounts = matrix(counts$partialLengthCounts, 
-                                                             ncol = 1, dimnames = list(NULL, colNameRC)),
-                                uniqueCounts = matrix(counts$uniqueCounts, 
-                                                      ncol = 1, dimnames = list(NULL, colNameRC)),
-                                theta = matrix(counts$theta, 
-                                               ncol = 1, dimnames = list(NULL, colNameRC))),
-            colData = colDataRC)
-        return(seOutput)
-    })
+combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
+    sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
     if(trackReads){
-        readToTranscriptMaps = lapply(countsList, FUN = function(se){metadata(se)$readToTranscriptMap})
+        readToTranscriptMaps = lapply(countsSe, FUN = function(se){metadata(se)$readToTranscriptMap})
         names(readToTranscriptMaps) = sampleNames
-        countsSe = lapply(countsList, FUN = function(se){
+        countsSe = lapply(countsSe, FUN = function(se){
             metadata(se)$readToTranscriptMap=NULL
             return(se)})
     }
     if(returnDistTable){
-        distTables = lapply(countsList, FUN = function(se){metadata(se)$distTable})
+        distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
         names(distTables) = sampleNames
         countsSe = lapply(countsSe, FUN = function(se){
             metadata(se)$distTable=NULL
             return(se)})
     }
-    countsSeUpdated <- do.call(SummarizedExperiment::cbind, countsList)
-    if(trackReads) metadata(countsSeUpdated)$readToTranscriptMaps = readToTranscriptMaps
-    if(returnDistTable) metadata(countsSeUpdated)$distTables = distTables
-    rowRanges(countsSeUpdated) <- annotationsUpdated
-    return(countsSeUpdated)
+    # combine incompatible counts
+    IncompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$IncompatibleCounts}))
+    setnames(IncompatibleCounts, seq_len(length(sampleNames))+1, sampleNames)
+    countsSe = lapply(countsSe, FUN = function(se){
+        metadata(se)$IncompatibleCounts=NULL
+        return(se)})
+    countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
+    if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
+    if(returnDistTable) metadata(countsSe)$distTables = distTables
+    metadata(countsSe)$IncompatibleCounts = IncompatibleCounts
+    return(countsSe)
+}
+
+# Quick wrapper function (https://stackoverflow.com/questions/13273833/merging-multiple-data-tables)
+#' @noRd 
+merge_wrapper <- function(x,y){
+    merge.data.table(x,y,by = "GENEID",all=TRUE)
 }
 
 #' @useDynLib bambu, .registration = TRUE

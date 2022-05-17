@@ -31,9 +31,14 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     if(any(!(counts$tx_name %in% annoDt$tx_name))) 
         warning("For developer: transcript names in counts table not
     found in updated annotations, please check!")
-    counts <-counts[annoDt, on = "tx_name"]
-    counts[is.na(counts)] <- 0
-    counts <- counts[match(names(annotationsUpdated),tx_name)]
+    IncompatibleCounts <- data.table(GENEID = unique(mcols(annotations)$GENEID))
+    counts_incompatible <- counts[grepl("_unidentified",tx_name)]
+    counts_incompatible[, GENEID := gsub("_unidentified","",tx_name)]
+    
+    
+    IncompatibleCounts <- counts_incompatible[,.(GENEID, counts)][IncompatibleCounts, on = "GENEID"]
+    IncompatibleCounts[is.na(counts), counts := 0]
+    counts <- counts[match(names(annotations),tx_name)]
     colNameRC <- colnames(readClass)
     colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
                        nGeneFordRate = countsOut[[3]])
@@ -49,13 +54,14 @@ bambu.quantify <- function(readClass, annotations, emParameters,
                                                   ncol = 1, dimnames = list(NULL, colNameRC)),
                             theta = matrix(counts$theta, 
                                            ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-    
+    metadata(seOutput)$IncompatibleCounts = IncompatibleCounts
     if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassMod)$distTable
     if (trackReads) metadata(seOutput)$readToTranscriptMap = 
         generateReadToTranscriptMap(readClass, metadata(readClassMod)$distTable, 
-                                    annotationsUpdated)
-    return(list(seOutput,annotationsUpdated))
+                                    annotations)
+    return(seOutput)
 }
+
 
 
 
