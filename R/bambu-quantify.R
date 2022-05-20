@@ -37,7 +37,8 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     
     
     IncompatibleCounts <- counts_incompatible[,.(GENEID, counts)][IncompatibleCounts, on = "GENEID"]
-    IncompatibleCounts[is.na(counts), counts := 0]
+    IncompatibleCounts[is.na(counts), counts := 0]]
+    setnames(IncompatibleCounts, "counts", colnames(readClass))
     counts <- counts[match(names(annotations),tx_name)]
     colNameRC <- colnames(readClass)
     colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
