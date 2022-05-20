@@ -501,7 +501,6 @@ combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALS
     }
     # combine incompatible counts
     IncompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$IncompatibleCounts}))
-    setnames(IncompatibleCounts, seq_len(length(sampleNames))+1, sampleNames)
     countsSe = lapply(countsSe, FUN = function(se){
         metadata(se)$IncompatibleCounts=NULL
         return(se)})
