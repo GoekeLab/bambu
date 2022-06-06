@@ -61,7 +61,7 @@ test_that("txid is a subset of eqClassById", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     gr <- prepareAnnotations(x = gtf.file)
     check <- all(sapply(mcols(gr)$txid, function(x){
-      x %in% mcols(gr)$eqClassById[[x]]}))
+        x %in% mcols(gr)$eqClassById[[x]]}))
     expect_true(check)      
 })
 
@@ -70,18 +70,18 @@ test_that("eqClass and eqClassById matches", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     gr <- prepareAnnotations(x = gtf.file)    
     
-    IdListToTXNAMEMatch <- function(txid){
+    eqClassByIdToeqClassMatch <- function(txid){
         eq_class_by_id <- mcols(gr)$eqClassById[[txid]]
         # Convert the eqClassById to eqClass
         convert <- sapply(eq_class_by_id, function(id){
-          return(mcols(gr)$TXNAME[id])
+            return(mcols(gr)$TXNAME[id])
         })
         
         # Check the matching
         return(paste(convert, collapse = ".") == mcols(gr)$eqClass[txid])
     }
     
-    check <- all(sapply(seq_along(gr), IdListToTXNAMEMatch))
+    check <- all(sapply(seq_along(gr), eqClassByIdToeqClassMatch))
     
     expect_true(check)
 })
