@@ -24,7 +24,7 @@ test_that("prepareAnnotations of genome library is a GRangesList", {
 
 test_that("prepareAnnotations from gtf file is GRangesList", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-
+    
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
     gr <- prepareAnnotations(x = gtf.file)
@@ -51,3 +51,22 @@ test_that("positive/negative strand gives ascending/descending exon_rank and des
         }  
     }
 })
+
+
+test_that("txid is a subset of eqClassById", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+    gr <- prepareAnnotations(x = gtf.file)
+    check <- all(sapply(mcols(gr)$txid, function(x){
+      x %in% mcols(gr)$eqClassById[[x]]}))
+    expect_true(check)      
+})
+
+
+
+
+
+
+
+
+
+
