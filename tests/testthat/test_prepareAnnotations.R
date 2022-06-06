@@ -39,17 +39,21 @@ test_that("positive/negative strand gives ascending/descending exon_rank and des
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     gr <- prepareAnnotations(x = gtf.file)
 
-    for (i in seq_along(gr)){
+    check <- all(sapply(seq_along(gr), function(i){
         if (runValue(strand(gr[[i]])) == "-"){
-          expect_equal(mcols(gr[[i]])$exon_rank, 
-                       sort(seq_along(gr[[i]]), decreasing = TRUE))
-          expect_equal(mcols(gr[[i]])$exon_endRank, seq_along(gr[[i]]))
+            # Check whether the ranking follows the direction of strand
+            q1 <- all(mcols(gr[[i]])$exon_rank == sort(seq_along(gr[[i]]), decreasing=TRUE))
+            q2 <- all(mcols(gr[[i]])$exon_endRank == seq_along(gr[[i]]))
+            return(q1 & q2)
+
         } else {
-          expect_equal(mcols(gr[[i]])$exon_endRank, 
-                       sort(seq_along(gr[[i]]), decreasing = TRUE))
-          expect_equal(mcols(gr[[i]])$exon_rank, seq_along(gr[[i]]))      
-        }  
-    }
+            q1 <- all(mcols(gr[[i]])$exon_endRank == sort(seq_along(gr[[i]]), decreasing=TRUE))
+            q2 <- all(mcols(gr[[i]])$exon_rank == seq_along(gr[[i]]))
+            return(q1 & q2)
+        }
+    }))
+
+    expect_true(check)
 })
 
 
