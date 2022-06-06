@@ -33,3 +33,21 @@ test_that("prepareAnnotations from gtf file is GRangesList", {
     expect_s4_class(gr, class = "CompressedGRangesList")
     expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
 })
+
+
+test_that("positive/negative strand gives ascending/descending exon_rank and descending/ascending exon_endRank", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+    gr <- prepareAnnotations(x = gtf.file)
+
+    for (i in seq_along(gr)){
+        if (runValue(strand(gr[[i]])) == "-"){
+          expect_equal(mcols(gr[[i]])$exon_rank, 
+                       sort(seq_along(gr[[i]]), decreasing = TRUE))
+          expect_equal(mcols(gr[[i]])$exon_endRank, seq_along(gr[[i]]))
+        } else {
+          expect_equal(mcols(gr[[i]])$exon_endRank, 
+                       sort(seq_along(gr[[i]]), decreasing = TRUE))
+          expect_equal(mcols(gr[[i]])$exon_rank, seq_along(gr[[i]]))      
+        }  
+    }
+})
