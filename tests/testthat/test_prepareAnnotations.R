@@ -86,27 +86,3 @@ test_that("eqClass and eqClassById matches", {
     expect_true(check)
 })
 
-
-test_that("eqClassById is as it claims", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-    gr <- prepareAnnotations(x = gtf.file)
-    
-    # Store the gaps of each transcript
-    txgaps <- lapply(seq_along(gr), function(i){
-        gaps(gr[[i]])[-1]
-    })
-    
-    # Check whether a transcript is subset of a transcript list (eqClassById)
-    txIntx <- function(txid){
-        check <- sapply(mcols(gr)$eqClassById[[txid]], function(x){
-            overlap <- findOverlaps(txgaps[[txid]], txgaps[[x]], type = "within", maxgap = 0L)
-            return(queryLength(overlap) == length(txgaps[[txid]]))
-        })
-        return(all(check))
-    }
-    
-    check <- all(sapply(seq_along(gr), txIntx))
-    expect_true(check)
-    
-})
-
