@@ -7,19 +7,25 @@
 prepareAnnotations(x)
 }
 \arguments{
-\item{x}{A \code{TxDb} object or a gtf file}
+\item{x}{A gtf file or a \code{TxDb} object}
 }
 \value{
 A \code{GRangesList} object
 }
 \description{
-Function to prepare tables and genomic ranges for
-transript reconstruction using a txdb object
+This function takes a transcript annotation (gtf file/txdb object) and extends the metadata important for \code{bambu} for each transcript.
+}
+\details{
+For each transcript, the exons are ranked based on the strands and their positions. The metadata contains information about which gene each transcript (tx) belongs to and its transcript equivalence class. A transcript is said to be in the transcript equivalence class of tx if its set of gaps between exon junctions contains the set of gaps between exon junctions of tx.
 }
 \examples{
 gtf.file <- system.file("extdata",
     "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
     package = "bambu"
 )
-prepareAnnotations(x = gtf.file)
+gtf_annotated <- prepareAnnotations(x = gtf.file)
+gtf_annotated 
+
+metadata <- mcols(gtf_annotated)
+metadata
 }

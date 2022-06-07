@@ -1,7 +1,14 @@
-#' Function to prepare tables and genomic ranges for
-#' transript reconstruction using a txdb object
+#' This function takes a transcript annotation (gtf file/txdb
+#' object) and extends the metadata important for \code{bambu} for each transcript.
 #' @title prepare annotations from txdb object or gtf file
-#' @param x A \code{TxDb} object or a gtf file
+#' @param x A gtf file or a \code{TxDb} object
+#' @details For each transcript, the exons are ranked based on the 
+#' strands and their positions. The metadata contains 
+#' information about which gene each transcript (tx) 
+#' belongs to and its transcript equivalence class. A 
+#' transcript is said to be in the transcript equivalence 
+#' class of tx if its set of gaps between exon junctions 
+#' contains the set of gaps between exon junctions of tx.
 #' @return A \code{GRangesList} object
 #' @importFrom methods is
 #' @importFrom GenomicFeatures exonsBy
@@ -11,7 +18,11 @@
 #'     "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
 #'     package = "bambu"
 #' )
-#' prepareAnnotations(x = gtf.file)
+#' gtf_annotated <- prepareAnnotations(x = gtf.file)
+#' gtf_annotated
+#' 
+#' metadata <- mcols(gtf_annotated) 
+#' metadata
 prepareAnnotations <- function(x) {
     if (is(x, "TxDb")) {
         exonsByTx <- exonsBy(x, by = "tx", use.names = FALSE)
