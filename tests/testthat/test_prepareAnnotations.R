@@ -66,23 +66,36 @@ test_that("txid is a subset of eqClassById", {
 })
 
 
-test_that("eqClass and eqClassById matches", {
+test_that("eqClassById is as it claims", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-    gr <- prepareAnnotations(x = gtf.file)    
+    gr <- prepareAnnotations(x=gtf.file)
     
-    eqClassByIdToeqClassMatch <- function(txid){
-        eq_class_by_id <- mcols(gr)$eqClassById[[txid]]
-        # Convert the eqClassById to eqClass
-        convert <- sapply(eq_class_by_id, function(id){
-            return(mcols(gr)$TXNAME[id])
-        })
+    # Store the junction coordinates of each transcript
+    junc_coord <- lapply(seq_along(gr), function(i){
+        start_coord <- start(gr[[i]])
+        end_coord <- end(gr[[i]])
+        tx_coord <- c(rbind(start_coord, end_coord))
         
-        # Check the matching
-        return(paste(convert, collapse = ".") == mcols(gr)$eqClass[txid])
+        if (length(gr[[i]]) == 1){
+            return(tx_coord)
+        } else {
+            return(tx_coord[-c(1,length(tx_coord))])
+        }
+    })
+    
+    # Check whether eqClassById matches
+    txIntx <- function(txid){
+        txlist <- c()
+        for (i in seq_along(gr)){
+            if (grepl(paste(junc_coord[[txid]], collapse="."), paste(junc_coord[[i]], collapse="."))){
+                txlist <- c(txlist, i)
+            }
+        }
+        return(all(txlist == mcols(gr)$eqClassById[[txid]]))
     }
-    
-    check <- all(sapply(seq_along(gr), eqClassByIdToeqClassMatch))
-    
+  
+    check <- all(sapply(seq_along(gr), txIntx))
     expect_true(check)
 })
+
 
