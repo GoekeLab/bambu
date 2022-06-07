@@ -57,15 +57,6 @@ test_that("positive/negative strand gives ascending/descending exon_rank and des
 })
 
 
-test_that("txid is a subset of eqClassById", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-    gr <- prepareAnnotations(x = gtf.file)
-    check <- all(sapply(mcols(gr)$txid, function(x){
-        x %in% mcols(gr)$eqClassById[[x]]}))
-    expect_true(check)      
-})
-
-
 test_that("eqClassById is as it claims", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     gr <- prepareAnnotations(x=gtf.file)
