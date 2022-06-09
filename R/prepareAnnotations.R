@@ -1,7 +1,7 @@
-#' This function takes a transcript annotation (gtf file/txdb
+#' This function takes a transcript annotation (path to gtf file/txdb
 #' object) and extends the metadata important for \code{bambu} for each transcript.
 #' @title prepare annotations from txdb object or gtf file
-#' @param x A gtf file or a \code{TxDb} object
+#' @param x A path to gtf file or a \code{TxDb} object
 #' @details For each transcript, the exons are ranked based on the 
 #' strands and their positions. The metadata contains 
 #' information about which gene each transcript (tx) 
