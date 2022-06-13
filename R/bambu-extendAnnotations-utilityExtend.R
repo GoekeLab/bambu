@@ -88,7 +88,11 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
 
-  NDR = recommendNDR(rowDataCombined, txScoreBaseline, NDR)
+  if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
+      NDR = recommendNDR(rowDataCombined, txScoreBaseline, NDR)
+  } else {
+      if(is.null(NDR)) NDR = 0.1
+  }
   
   filterSet = (rowDataCombined$txNDR <= NDR)
   exonRangesCombined <- exonRangesCombined[filterSet]
