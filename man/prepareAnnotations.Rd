@@ -2,21 +2,21 @@
 % Please edit documentation in R/prepareAnnotations.R
 \name{prepareAnnotations}
 \alias{prepareAnnotations}
-\title{prepare annotations from txdb object or gtf file}
+\title{prepare annotations from path to gtf file or txdb object}
 \usage{
 prepareAnnotations(x)
 }
 \arguments{
-\item{x}{A gtf file or a \code{TxDb} object}
+\item{x}{A path to gtf file or a \code{TxDb} object}
 }
 \value{
 A \code{GRangesList} object
 }
 \description{
-This function takes a transcript annotation (gtf file/txdb object) and extends the metadata important for \code{bambu} for each transcript.
+This function takes a transcript annotation (path to gtf file/txdb object) and extends the metadata for each transcript.
 }
 \details{
-For each transcript, the exons are ranked based on the strands and their positions. The metadata contains information about which gene each transcript (tx) belongs to and its transcript equivalence class. A transcript is said to be in the transcript equivalence class of tx if its set of gaps between exon junctions contains the set of gaps between exon junctions of tx.
+For each transcript, the exons are ranked based on the strands and their positions. The metadata also tells which gene each transcript (tx) belongs to and its transcript equivalence class. A transcript is said to be in the transcript equivalence class of tx if its exon junctions contains, in a continuous way, the exon junctions of tx.
 }
 \examples{
 gtf.file <- system.file("extdata",
