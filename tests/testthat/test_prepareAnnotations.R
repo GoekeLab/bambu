@@ -1,113 +1,150 @@
 context("Prepare annotations")
 
-test_that("prepareAnnotations of txdb object is a GRangesList", {
+test_that("prepareAnnotations of txdb object (seqnames, ranges, strand) matches the expectation", {
     txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
-
+    
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
-
-    gr <- prepareAnnotations(x = txdb)
-
-    expect_equal(gr, expectedGR)
-    expect_s4_class(gr, class = "CompressedGRangesList")
-    expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
+    
+    gtf_annotated <- prepareAnnotations(x = txdb)
+    
+    expect_equal(lapply(gtf_annotated, granges), lapply(expectedGR, granges))
 })
 
 
-test_that("prepareAnnotations of genome library is a GRangesList", {
-    library(TxDb.Hsapiens.UCSC.hg38.knownGene)
-    gr <- prepareAnnotations(TxDb.Hsapiens.UCSC.hg38.knownGene)
-
-    expect_s4_class(gr, class = "CompressedGRangesList")
-    expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
-})
-
-
-test_that("prepareAnnotations from gtf file is GRangesList", {
+test_that("prepareAnnotations of a path to gtf file (seqnames, ranges, strand) matches the expectation", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-
-    gr <- prepareAnnotations(x = gtf.file)
-
-    expect_equal(gr[order(names(gr))], expectedGR[order(names(expectedGR))])
-    expect_s4_class(gr, class = "CompressedGRangesList")
-    expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
+    
+    gtf_annotated <- prepareAnnotations(x = gtf.file)
+    
+    expect_equal(lapply(gtf_annotated, granges), lapply(expectedGR, granges))
 })
 
 
-test_that("positive/negative strand gives ascending/descending exon_rank and descending/ascending exon_endRank", {
+test_that("prepareAnnotations of txdb object (metadata) matches the expectation", {
+    txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
+  
+    expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
+  
+    gtf_annotated <- prepareAnnotations(x = txdb)
+    
+    expect_named(mcols(gtf_annotated), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
+    expect_equal(mcols(gtf_annotated), mcols(expectedGR))
+})
+
+
+test_that("prepareAnnotations of a path to gtf file (metadata) matches the expectation", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-    gr <- prepareAnnotations(x = gtf.file)
+  
+    expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
+  
+    gtf_annotated <- prepareAnnotations(x = gtf.file)
+  
+    expect_named(mcols(gtf_annotated), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
+    expect_equal(mcols(gtf_annotated), mcols(expectedGR))
+})
 
-    check <- all(sapply(seq_along(gr), function(i){
-        if (runValue(strand(gr[[i]])) == "-"){
-            # Check whether the ranking follows the direction of strand
-            q1 <- all(mcols(gr[[i]])$exon_rank == sort(seq_along(gr[[i]]), decreasing=TRUE))
-            q2 <- all(mcols(gr[[i]])$exon_endRank == seq_along(gr[[i]]))
-            return(q1 & q2)
 
-        } else {
-            q1 <- all(mcols(gr[[i]])$exon_endRank == sort(seq_along(gr[[i]]), decreasing=TRUE))
-            q2 <- all(mcols(gr[[i]])$exon_rank == seq_along(gr[[i]]))
-            return(q1 & q2)
-        }
-    }))
+test_that("positive strand gives ascending exon_rank", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+  
+    gtf_annotated <- prepareAnnotations(x = gtf.file)
+  
+    positive_check <- data.frame(txname = names(unlist(gtf_annotated)), unlist(gtf_annotated)) %>% 
+        filter(strand == "+") %>% 
+        group_by(txname) %>% 
+        summarise(validate = all(exon_rank == seq(n())))
+    
+    expect_true(all(positive_check$validate))
+})
 
-    expect_true(check)
+
+test_that("positive strand gives descending exon_endRank", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+  
+    gtf_annotated <- prepareAnnotations(x = gtf.file)
+  
+    positive_check <- data.frame(txname = names(unlist(gtf_annotated)), unlist(gtf_annotated)) %>% 
+        filter(strand == "+") %>% 
+        group_by(txname) %>% 
+        summarise(validate = all(exon_endRank == seq(n(),1)))
+  
+    expect_true(all(positive_check$validate))
+})
+
+
+test_that("negative strand gives descending exon_rank", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+  
+    gtf_annotated <- prepareAnnotations(x = gtf.file)
+  
+    negative_check <- data.frame(txname = names(unlist(gtf_annotated)), unlist(gtf_annotated)) %>% 
+        filter(strand == "-") %>% 
+        group_by(txname) %>% 
+        summarise(validate = all(exon_rank == seq(n(),1)))
+  
+    expect_true(all(negative_check$validate))
+})
+
+
+test_that("negative strand gives ascending exon_endRank", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+
+    gtf_annotated <- prepareAnnotations(x = gtf.file)
+  
+    negative_check <- data.frame(txname = names(unlist(gtf_annotated)), unlist(gtf_annotated)) %>% 
+        filter(strand == "-") %>% 
+        group_by(txname) %>% 
+        summarise(validate = all(exon_endRank == seq(n())))
+  
+    expect_true(all(negative_check$validate))
+})
+
+
+test_that("txid must be in EqClassById", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+  
+    gtf_annotated <- prepareAnnotations(x = gtf.file)
+    
+    check <- data.frame(mcols(gtf_annotated)) %>% 
+        dplyr::select(txid, eqClassById) %>% 
+        rowwise() %>% 
+        mutate(validate = txid %in% eqClassById)
+    
+    expect_true(all(check$validate))
+})
+
+
+test_that("eqClassById is correct (tested for a few genes)", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+    
+    gtf_annotated <- prepareAnnotations(x = gtf.file)  
+    
+    set.seed(42) # Ensure the test is consistent
+    gene <- sample(na.omit(mcols(gtf_annotated)$GENEID), 10) # Pick a few genes 
+    startendremoved <- cutStartEndFromGrangesList(gtf_annotated)
+    transcript_to_test <- data.frame(mcols(gtf_annotated)) %>% 
+        filter(GENEID %in% gene) %>% # filter according to selected gene
+        dplyr::select(TXNAME, txid, eqClassById) %>% 
+        rowwise() %>% 
+        mutate(validate = list(all(sapply(eqClassById, # Check whether eqClassById is correct
+                            function(id){length(findOverlaps(startendremoved[[txid]], 
+                            startendremoved[[id]])) == length(startendremoved[[txid]])}))))
+    expect_true(all(unlist(transcript_to_test$validate)))
+  
 })
 
 
 test_that("eqClass and eqClassById matches", {
-  gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-  gr <- prepareAnnotations(x = gtf.file)    
-  
-  IdListToTXNAMEMatch <- function(txid){
-    eq_class_by_id <- mcols(gr)$eqClassById[[txid]]
-    # Convert the eqClassById to eqClass
-    convert <- sapply(eq_class_by_id, function(id){
-      return(mcols(gr)$TXNAME[id])
-    })
-    
-    # Check the matching
-    return(paste(convert, collapse = ".") == mcols(gr)$eqClass[txid])
-  }
-  
-  check <- all(sapply(seq_along(gr), IdListToTXNAMEMatch))
-  
-  expect_true(check)
-})
-
-
-test_that("eqClassById is as it claims", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-    gr <- prepareAnnotations(x=gtf.file)
     
-    # Store the junction coordinates of each transcript
-    junc_coord <- lapply(seq_along(gr), function(i){
-        start_coord <- start(gr[[i]])
-        end_coord <- end(gr[[i]])
-        tx_coord <- c(rbind(start_coord, end_coord))
-        
-        if (length(gr[[i]]) == 1){
-            return(tx_coord)
-        } else {
-            return(tx_coord[-c(1,length(tx_coord))])
-        }
-    })
-    
-    # Check whether eqClassById matches
-    txIntx <- function(txid){
-        txlist <- c()
-        for (i in seq_along(gr)){
-            if (grepl(paste(junc_coord[[txid]], collapse="."), paste(junc_coord[[i]], collapse="."))){
-                txlist <- c(txlist, i)
-            }
-        }
-        return(all(txlist == mcols(gr)$eqClassById[[txid]]))
-    }
-  
-    check <- all(sapply(seq_along(gr), txIntx))
-    expect_true(check)
+    gtf_annotated <- prepareAnnotations(x = gtf.file)    
+
+    # convert the eqClassById to eqClass
+    convert <- data.frame(mcols(gtf_annotated)) %>% 
+        dplyr::select(TXNAME, eqClass, eqClassById) %>% 
+        mutate(validate=sapply(eqClassById, function(idlist){paste(sort(TXNAME[idlist]), collapse=".")}))
+
+    expect_equal(convert$validate,convert$eqClass)
 })
-
-
