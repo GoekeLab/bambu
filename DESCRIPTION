@@ -86,7 +86,8 @@ Imports:
     methods,
     Rcpp,
     xgboost,
-    ROCit
+    ROCit,
+    MESS
 VignetteBuilder: 
     knitr
 LazyData: true
