@@ -3,9 +3,10 @@
 #' @title prepare annotations from path to gtf file or txdb object
 #' @param x A path to gtf file or a \code{TxDb} object
 #' @details For each transcript, the exons are ranked based on the strands and their 
-#' positions. The metadata also tells which gene each transcript (tx) belongs to and its 
-#' transcript equivalence class. A transcript is said to be in the transcript equivalence 
-#' class of tx if its exon junctions contains, in a continuous way, the exon junctions of tx.
+#' positions. The metadata also tells which gene each transcript (tx) belongs to 
+#' and its transcript equivalence class. A transcript equivalence class of a tx is
+#' a list of transcripts where their exon junctions contain, in a continuous way, 
+#' the exon junctions of the tx. 
 #' @return A \code{GRangesList} object
 #' @importFrom methods is
 #' @importFrom GenomicFeatures exonsBy

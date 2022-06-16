@@ -16,7 +16,7 @@ A \code{GRangesList} object
 This function takes a transcript annotation (path to gtf file/txdb object) and extends the metadata for each transcript.
 }
 \details{
-For each transcript, the exons are ranked based on the strands and their positions. The metadata also tells which gene each transcript (tx) belongs to and its transcript equivalence class. A transcript is said to be in the transcript equivalence class of tx if its exon junctions contains, in a continuous way, the exon junctions of tx.
+For each transcript, the exons are ranked based on the strands and their positions. The metadata also tells which gene each transcript (tx) belongs to and its transcript equivalence class. A transcript equivalence class of a tx is a list of transcripts where their exon junctions contain, in a continuous way, the exon junctions of the tx. 
 }
 \examples{
 gtf.file <- system.file("extdata",
