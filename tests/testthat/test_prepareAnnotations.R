@@ -1,11 +1,33 @@
 context("Prepare annotations")
 
+# This test additionally save the output of prepareAnnotations so other unit test can reuse them.
+test_that("prepareAnnotations works properly on a txdb object", {
+    txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
+    grTXDB <- prepareAnnotations(txdb) 
+  
+    expect_s4_class(grTXDB, class = "CompressedGRangesList")
+
+    saveRDS(grTXDB, test_path("fixtures", "grTXDB.rds"))
+})
+
+
+# This test additionally save the output of prepareAnnotations so other unit test can reuse them.
+test_that("prepareAnnotations works properly on a path to gtf file", {
+    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+    grGTF <- prepareAnnotations(gtf.file)
+  
+    expect_s4_class(grGTF, class = "CompressedGRangesList")
+  
+    saveRDS(grGTF, test_path("fixtures", "grGTF.rds"))
+})
+
+
 test_that("prepareAnnotations of txdb object (seqnames, ranges, strand) matches the expectation", {
     txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
     
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
     
-    gr <- prepareAnnotations(x = txdb)
+    gr <- readRDS(test_path("fixtures", "grTXDB.rds"))
     
     expect_equal(lapply(gr, granges), lapply(expectedGR, granges), 
                  info = "Test failed: prepareAnnotations of txdb object (seqnames, ranges, strand) does not match the expectation")
@@ -17,7 +39,7 @@ test_that("prepareAnnotations of a path to gtf file (seqnames, ranges, strand) m
     
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
     
-    gr <- prepareAnnotations(x = gtf.file)
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     expect_equal(lapply(gr, granges), lapply(expectedGR, granges), 
                  info="Test failed: prepareAnnotations of a path to gtf file (seqnames, ranges, strand) does not match the expectation")
@@ -29,7 +51,7 @@ test_that("prepareAnnotations of txdb object (metadata) matches the expectation"
   
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
   
-    gr <- prepareAnnotations(x = txdb)
+    gr <- readRDS(test_path("fixtures", "grTXDB.rds"))
     
     expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"), 
                  info="Test failed: prepareAnnotations of txdb object (metadata column name) does not match the expectation")
@@ -43,7 +65,7 @@ test_that("prepareAnnotations of a path to gtf file (metadata) matches the expec
   
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
   
-    gr <- prepareAnnotations(x = gtf.file)
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
   
     expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"), 
                  info="Test failed: prepareAnnotations of a path to gtf file (metadata column name) does not match the expectation")
@@ -55,7 +77,7 @@ test_that("prepareAnnotations of a path to gtf file (metadata) matches the expec
 test_that("positive strand gives ascending exon_rank", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
   
-    gr <- prepareAnnotations(x = gtf.file)
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     unlisted_gr <- unlist(gr)
     
@@ -72,7 +94,7 @@ test_that("positive strand gives ascending exon_rank", {
 test_that("positive strand gives descending exon_endRank", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
   
-    gr <- prepareAnnotations(x = gtf.file)
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     unlisted_gr <- unlist(gr)
     
@@ -89,7 +111,7 @@ test_that("positive strand gives descending exon_endRank", {
 test_that("negative strand gives descending exon_rank", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
   
-    gr <- prepareAnnotations(x = gtf.file)
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     unlisted_gr <- unlist(gr)
     
     negative_check <- data.frame(txname = names(unlisted_gr), unlisted_gr) %>% 
@@ -105,7 +127,7 @@ test_that("negative strand gives descending exon_rank", {
 test_that("negative strand gives ascending exon_endRank", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
 
-    gr <- prepareAnnotations(x = gtf.file)
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     unlisted_gr <- unlist(gr)
     
@@ -122,7 +144,7 @@ test_that("negative strand gives ascending exon_endRank", {
 test_that("txid must be in EqClassById", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
   
-    gr <- prepareAnnotations(x = gtf.file)
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     check <- data.frame(mcols(gr)) %>% 
         dplyr::select(txid, eqClassById) %>% 
@@ -139,7 +161,7 @@ test_that("txid must be in EqClassById", {
 test_that("eqClassById is correct (tested for a few genes)", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     
-    gr <- prepareAnnotations(x = gtf.file)  
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))  
     
     set.seed(42) # Ensure the test is consistent
     gene <- sample(na.omit(mcols(gr)$GENEID), 10) # Pick a few genes 
@@ -160,7 +182,7 @@ test_that("eqClassById is correct (tested for a few genes)", {
 test_that("eqClass and eqClassById matches", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     
-    gr <- prepareAnnotations(x = gtf.file)    
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))    
 
     # convert the eqClassById to eqClass
     convert <- data.frame(mcols(gr)) %>% 
