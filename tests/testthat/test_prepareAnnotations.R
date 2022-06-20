@@ -23,33 +23,27 @@ test_that("prepareAnnotations works properly on a path to gtf file", {
 
 
 test_that("prepareAnnotations of txdb object (seqnames, ranges, strand) matches the expectation", {
-    txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
+    gr <- readRDS(test_path("fixtures", "grTXDB.rds"))
     
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
-    
-    gr <- readRDS(test_path("fixtures", "grTXDB.rds"))
     
     expect_equal(lapply(gr, granges), lapply(expectedGR, granges))
 })
 
 
 test_that("prepareAnnotations of a path to gtf file (seqnames, ranges, strand) matches the expectation", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
+    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-    
-    gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     expect_equal(lapply(gr, granges), lapply(expectedGR, granges))
 })
 
 
 test_that("prepareAnnotations of txdb object (metadata) matches the expectation", {
-    txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
-  
-    expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
-  
     gr <- readRDS(test_path("fixtures", "grTXDB.rds"))
+    
+    expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
     
     expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
     expect_equal(mcols(gr), mcols(expectedGR))
@@ -57,11 +51,9 @@ test_that("prepareAnnotations of txdb object (metadata) matches the expectation"
 
 
 test_that("prepareAnnotations of a path to gtf file (metadata) matches the expectation", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-  
-    expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-  
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))
+    
+    expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
   
     expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
     expect_equal(mcols(gr), mcols(expectedGR))
@@ -69,8 +61,6 @@ test_that("prepareAnnotations of a path to gtf file (metadata) matches the expec
 
 
 test_that("positive strand gives ascending exon_rank", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-  
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     unlisted_gr <- unlist(gr)
@@ -85,8 +75,6 @@ test_that("positive strand gives ascending exon_rank", {
 
 
 test_that("positive strand gives descending exon_endRank", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-  
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     unlisted_gr <- unlist(gr)
@@ -101,9 +89,8 @@ test_that("positive strand gives descending exon_endRank", {
 
 
 test_that("negative strand gives descending exon_rank", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-  
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))
+    
     unlisted_gr <- unlist(gr)
     
     negative_check <- data.frame(txname = names(unlisted_gr), unlisted_gr) %>% 
@@ -116,8 +103,6 @@ test_that("negative strand gives descending exon_rank", {
 
 
 test_that("negative strand gives ascending exon_endRank", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     unlisted_gr <- unlist(gr)
@@ -132,8 +117,6 @@ test_that("negative strand gives ascending exon_endRank", {
 
 
 test_that("txid must be in EqClassById", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-  
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))
     
     check <- data.frame(mcols(gr)) %>% 
@@ -148,8 +131,6 @@ test_that("txid must be in EqClassById", {
 # This function will pick a few genes, get their transcripts, and verify the 
 # eqClassById (transcript equivalence class) for each selected transcript.
 test_that("eqClassById is correct (tested for a few genes)", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-    
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))  
     
     set.seed(42) # Ensure the test is consistent
@@ -168,8 +149,6 @@ test_that("eqClassById is correct (tested for a few genes)", {
 
 
 test_that("eqClass and eqClassById matches", {
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
-    
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))    
 
     # convert the eqClassById to eqClass
