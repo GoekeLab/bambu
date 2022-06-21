@@ -1,6 +1,6 @@
 context("Prepare annotations")
 
-# This test additionally save the output of prepareAnnotations so other unit test can reuse them.
+# This test additionally save the output of prepareAnnotations so other unit test can reuse it.
 test_that("prepareAnnotations works properly on a txdb object", {
     txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
     grTXDB <- prepareAnnotations(txdb) 
@@ -11,7 +11,7 @@ test_that("prepareAnnotations works properly on a txdb object", {
 })
 
 
-# This test additionally save the output of prepareAnnotations so other unit test can reuse them.
+# This test additionally save the output of prepareAnnotations so other unit test can reuse it.
 test_that("prepareAnnotations works properly on a path to gtf file", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     grGTF <- prepareAnnotations(gtf.file)
@@ -132,19 +132,26 @@ test_that("txid must be in EqClassById", {
 # eqClassById (transcript equivalence class) for each selected transcript.
 test_that("eqClassById is correct (tested for a few genes)", {
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))  
-    
+
     set.seed(42) # Ensure the test is consistent
-    gene <- sample(na.omit(mcols(gr)$GENEID), 10) # Pick a few genes 
+    noNaUniqueGENEID <- unique(na.omit(mcols(gr)$GENEID))
+    gene <- sample(noNaUniqueGENEID, 0.1 * length(noNaUniqueGENEID)) # Pick 10% of the genes to test 
+    
     startendremoved <- cutStartEndFromGrangesList(gr)
-    transcript_to_test <- data.frame(mcols(gr)) %>% 
-        filter(GENEID %in% gene) %>% # filter according to selected gene
-        dplyr::select(TXNAME, txid, eqClassById) %>% 
+    splitEqClassById <- data.frame(mcols(gr)) %>% 
+        filter(GENEID %in% gene) %>%
+        dplyr::select(txid, eqClassById) %>% 
+        tidyr::unnest(eqClassById)
+    
+    check <- compareTranscripts(startendremoved[splitEqClassById$txid,], 
+                                startendremoved[splitEqClassById$eqClassById,]) %>% 
         rowwise() %>% 
-        mutate(validate = list(all(sapply(eqClassById, # Check whether eqClassById is correct
-                            function(id){length(findOverlaps(startendremoved[[txid]], 
-                            startendremoved[[id]])) == length(startendremoved[[txid]])}))))
-    expect_true(all(unlist(transcript_to_test$validate)))
-  
+        mutate(validate = (alternativeFirstExon == FALSE | internalFirstExon.query == TRUE) 
+             & (alternativeLastExon == FALSE | internalLastExon.query == TRUE)
+             & (exonSkipping.query == 0)
+             & (exonSkipping.subject == 0))
+    
+    expect_true(all(check$validate))
 })
 
 
