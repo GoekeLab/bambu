@@ -128,30 +128,25 @@ test_that("txid must be in EqClassById", {
 })
 
 
-# This function will pick a few genes, get their transcripts, and verify the 
+# This function will get the transcripts, and verify the 
 # eqClassById (transcript equivalence class) for each selected transcript.
-test_that("eqClassById is correct (tested for a few genes)", {
-    gr <- readRDS(test_path("fixtures", "grGTF.rds"))  
-
-    set.seed(42) # Ensure the test is consistent
-    noNaUniqueGENEID <- unique(na.omit(mcols(gr)$GENEID))
-    gene <- sample(noNaUniqueGENEID, 0.1 * length(noNaUniqueGENEID)) # Pick 10% of the genes to test 
-    
-    startendremoved <- cutStartEndFromGrangesList(gr)
-    splitEqClassById <- data.frame(mcols(gr)) %>% 
-        filter(GENEID %in% gene) %>%
-        dplyr::select(txid, eqClassById) %>% 
-        tidyr::unnest(eqClassById)
-    
-    check <- compareTranscripts(startendremoved[splitEqClassById$txid,], 
-                                startendremoved[splitEqClassById$eqClassById,]) %>% 
-        rowwise() %>% 
-        mutate(validate = (alternativeFirstExon == FALSE | internalFirstExon.query == TRUE) 
-             & (alternativeLastExon == FALSE | internalLastExon.query == TRUE)
-             & (exonSkipping.query == 0)
-             & (exonSkipping.subject == 0))
-    
-    expect_true(all(check$validate))
+test_that("eqClassById is correct", {
+  gr <- readRDS(test_path("fixtures", "grGTF.rds"))  
+  splitEqClassById <- data.frame(mcols(gr)) %>% 
+    dplyr::select(txid, eqClassById) %>% 
+    tidyr::unnest(eqClassById)
+  
+  check <- compareTranscripts(gr[splitEqClassById$txid,], 
+                              gr[splitEqClassById$eqClassById,]) %>% 
+    rowwise() %>% 
+    mutate(validate = (alternativeFirstExon == FALSE | internalFirstExon.query == TRUE) 
+           & (alternativeLastExon == FALSE | internalLastExon.query == TRUE)
+           & (exonSkipping.query == 0)
+           & (exonSkipping.subject == 0)
+           & (exon5Prime == 0)
+           & (exon3Prime == 0))
+  
+  expect_true(all(check$validate))
 })
 
 
