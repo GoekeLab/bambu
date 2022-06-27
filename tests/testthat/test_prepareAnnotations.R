@@ -161,6 +161,8 @@ test_that("eqClass and eqClassById matches", {
     expect_equal(convert$validate,convert$eqClass)
     
     # delete the test file because unit test ends here 
-    unlink(test_path("fixtures", "grTXDB.rds"))
-    unlink(test_path("fixtures", "grGTF.rds"))
 })
+
+
+unlink(test_path("fixtures", "grTXDB.rds"))
+unlink(test_path("fixtures", "grGTF.rds"))
