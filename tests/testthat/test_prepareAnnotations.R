@@ -133,18 +133,20 @@ test_that("txid must be in EqClassById", {
 test_that("eqClassById is correct", {
   gr <- readRDS(test_path("fixtures", "grGTF.rds"))  
   splitEqClassById <- data.frame(mcols(gr)) %>% 
-    dplyr::select(txid, eqClassById) %>% 
-    tidyr::unnest(eqClassById)
+      dplyr::select(txid, eqClassById) %>% 
+      tidyr::unnest(eqClassById)
   
   check <- compareTranscripts(gr[splitEqClassById$txid,], 
                               gr[splitEqClassById$eqClassById,]) %>% 
-    rowwise() %>% 
-    mutate(validate = (alternativeFirstExon == FALSE | internalFirstExon.query == TRUE) 
+      filter(queryId != subjectId) # no need to compare identical transcript
+      rowwise() %>% 
+      mutate(validate = (alternativeFirstExon == FALSE | internalFirstExon.query == TRUE) 
            & (alternativeLastExon == FALSE | internalLastExon.query == TRUE)
            & (exonSkipping.query == 0)
            & (exonSkipping.subject == 0)
            & (exon5Prime == 0)
-           & (exon3Prime == 0))
+           & (exon3Prime == 0)
+           & (intronRetention.subject == 0))
   
   expect_true(all(check$validate))
 })
