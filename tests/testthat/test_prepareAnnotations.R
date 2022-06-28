@@ -138,7 +138,7 @@ test_that("eqClassById is correct", {
   
   check <- compareTranscripts(gr[splitEqClassById$txid,], 
                               gr[splitEqClassById$eqClassById,]) %>% 
-      filter(queryId != subjectId) # no need to compare identical transcript
+      filter(queryId != subjectId) %>% # no need to compare identical transcript
       rowwise() %>% 
       mutate(validate = (alternativeFirstExon == FALSE | internalFirstExon.query == TRUE) 
            & (alternativeLastExon == FALSE | internalLastExon.query == TRUE)
