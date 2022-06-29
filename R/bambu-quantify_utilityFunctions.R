@@ -451,7 +451,9 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
     unidentified <- unique(data.table(metadata(readClassMod)$distTable)[,
                                                                         .(annotationTxId,readClassId,dist,readCount)],
                            by = NULL)[grep("unidentified",annotationTxId)]
-
+    if(nrow(unidentified)==0){
+        return(annotations)
+    }
     eqTable <- unique(unidentified[order(readClassId, annotationTxId),
                                    .(annotationTxId, readClassId)],by = NULL)
     eqTable[, eqClass := paste(annotationTxId,
