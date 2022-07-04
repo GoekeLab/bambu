@@ -1,6 +1,6 @@
 context("Prepare annotations")
 
-# This test additionally save the output of prepareAnnotations so other unit test can reuse it.
+# This test additionally saves the output of prepareAnnotations so other unit test can reuse it.
 test_that("prepareAnnotations works properly on a txdb object", {
     txdb <- AnnotationDbi::loadDb(system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", package = "bambu"))
     grTXDB <- prepareAnnotations(txdb) 
@@ -11,7 +11,7 @@ test_that("prepareAnnotations works properly on a txdb object", {
 })
 
 
-# This test additionally save the output of prepareAnnotations so other unit test can reuse it.
+# This test additionally saves the output of prepareAnnotations so other unit test can reuse it.
 test_that("prepareAnnotations works properly on a path to gtf file", {
     gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     grGTF <- prepareAnnotations(gtf.file)
@@ -122,7 +122,7 @@ test_that("txid must be in EqClassById", {
     check <- data.frame(mcols(gr)) %>% 
         dplyr::select(txid, eqClassById) %>% 
         rowwise() %>% 
-        mutate(validate = txid %in% eqClassById)
+        mutate(validate = txid %in% unlist(eqClassById))
     
     expect_true(all(check$validate))
 })
@@ -134,12 +134,11 @@ test_that("eqClassById is correct", {
   gr <- readRDS(test_path("fixtures", "grGTF.rds"))  
   splitEqClassById <- data.frame(mcols(gr)) %>% 
       dplyr::select(txid, eqClassById) %>% 
-      tidyr::unnest(eqClassById)
+      tidyr::unnest_longer(eqClassById)
   
   check <- compareTranscripts(gr[splitEqClassById$txid,], 
                               gr[splitEqClassById$eqClassById,]) %>% 
       filter(queryId != subjectId) %>% # no need to compare identical transcript
-      rowwise() %>% 
       mutate(validate = (alternativeFirstExon == FALSE | internalFirstExon.query == TRUE) 
            & (alternativeLastExon == FALSE | internalLastExon.query == TRUE)
            & (exonSkipping.query == 0)
@@ -150,7 +149,8 @@ test_that("eqClassById is correct", {
   
   expect_true(all(check$validate))
 })
-
+#note: intronRetention.query == 0 is allowed as this might be due to longer first 
+#and last exons, which are not considered for the equivalent class calculation.
 
 test_that("eqClass and eqClassById matches", {
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))    
