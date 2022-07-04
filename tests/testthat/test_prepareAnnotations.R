@@ -122,7 +122,7 @@ test_that("txid must be in EqClassById", {
     check <- data.frame(mcols(gr)) %>% 
         dplyr::select(txid, eqClassById) %>% 
         rowwise() %>% 
-        mutate(validate = txid %in% unlist(eqClassById))
+        mutate(validate = txid %in% eqClassById)
     
     expect_true(all(check$validate))
 })
