@@ -1,27 +1,38 @@
-#' This function takes a transcript annotation (path to gtf file/txdb
-#' object) and extends the metadata for each transcript.
-#' @title prepare annotations from path to gtf file or txdb object
-#' @param x A path to gtf file or a \code{TxDb} object
-#' @details For each transcript, its exons are ranked in the\code{exon_rank} column
-#' according to the strandedness and the transcript coordinates of the transcript. 
-#' The metadata also tells which gene each transcript (tx) belongs to 
-#' and its transcript equivalence class. A transcript equivalence class of a tx is
-#' the collection of transcripts where their exon junctions contain, in a continuous way, 
-#' the exon junctions of the tx. 
-#' @return A \code{GRangesList} object
+#' @title prepare reference annotations for long read RNA-Seq analysis with Bambu
+#' @param x A path to gtf file or a \code{TxDb} object.
+#' @details This function creates a reference annotation object which is used for transcript 
+#' discovery and quantification in Bambu. prepareAnnotations can use a path to a gtf file
+#' or a TxDB object as input, and returns a annotation object that stores additional
+#' information about transcripts which is used in Bambu. For each transcript, exons
+#' are ranked from first to last exon in direction of transcription. 
+#' @return A \code{GRangesList} object with additional details for each exon and transcript 
+#' that are required by Bambu. Exons are ranked by the \code{exon_rank} column, corresponding 
+#' to the rank in direction of transcription (from first to last exon). In addition to exon rank, 
+#' gene id, transcript id, and the minimum transcript equivalent class is stored as well
+#' (a transcript equivalence class of a transcript x is the collection of transcripts 
+#' where their exon junctions contain, in a continuous way, the exon junctions of the transcript x). 
+#' The object is designed to be used by Bambu, and the direct access of the metadata is not recommended.
 #' @importFrom methods is
 #' @importFrom GenomicFeatures exonsBy
 #' @export
+#' @seealso [bambu()] for transcript discovery and quantification from long read RNA-Seq.
 #' @examples
 #' gtf.file <- system.file("extdata",
 #'     "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
 #'     package = "bambu"
 #' )
-#' gtf_annotated <- prepareAnnotations(x = gtf.file)
-#' gtf_annotated
+#' annotations <- prepareAnnotations(x = gtf.file)
 #' 
-#' metadata <- mcols(gtf_annotated) 
-#' metadata
+#' # run bambu
+#' test.bam <- system.file("extdata", 
+#'     "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", 
+#'     package = "bambu")
+#' fa.file <- system.file("extdata", 
+#'     "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", 
+#'     package = "bambu")
+#' se <- bambu(reads = test.bam, annotations = annotations, 
+#'     genome = fa.file, discovery = TRUE, quant = TRUE)
+
 prepareAnnotations <- function(x) {
     if (is(x, "TxDb")) {
         exonsByTx <- exonsBy(x, by = "tx", use.names = FALSE)
