@@ -146,11 +146,10 @@ test_that("eqClassById is correct", {
            & (exon5Prime == 0)
            & (exon3Prime == 0)
            & (intronRetention.subject == 0))
-  
+  #note: intronRetention.query == 0 is allowed as this might be due to longer first and last exons, which are not considered for the equivalent class calculation.
   expect_true(all(check$validate))
 })
-#note: intronRetention.query == 0 is allowed as this might be due to longer first 
-#and last exons, which are not considered for the equivalent class calculation.
+
 
 test_that("eqClass and eqClassById matches", {
     gr <- readRDS(test_path("fixtures", "grGTF.rds"))    
