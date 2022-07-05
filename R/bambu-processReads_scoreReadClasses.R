@@ -47,19 +47,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
 
-    defaultSuitabilityScore = mean(rowData(se)$txScore.noFit[rowData(se)$equal & rowData(se)$readCount
-                           >=min.readCount],na.rm = TRUE) - 
-        mean(rowData(se)$txScore[rowData(se)$equal & rowData(se)$readCount
-                           >=min.readCount],na.rm = TRUE)
-
-    if(!is.na(defaultSuitabilityScore)){
-        if(defaultSuitabilityScore > 0.1) {
-            message("Model agreement score: ", defaultSuitabilityScore)
-            message("Pre-trained model is performing better than the fitted model")
-            message("We recommend running it with fit=FALSE, or train a new model")
-        }
-    }
-
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
