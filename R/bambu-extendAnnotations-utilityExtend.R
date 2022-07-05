@@ -136,6 +136,7 @@ recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL){
     NDRscores = calculateNDR(combinedTranscripts$maxTxScore.noFit, equal)
     score = combinedTranscripts$maxTxScore.noFit
     NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
+    NDR.rec = round(NDR.rec,3)
     if (NDR.rec < 0) NDR.rec = 0
     message("Calculated NDR: ", NDR.rec)
     if(NDR.rec > 0.5){
