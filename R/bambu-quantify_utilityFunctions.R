@@ -63,11 +63,19 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
     aMatArrayNew <- array(NA,dim = c(length(rids), length(cids),4))
     aMatArrayNew <- aMatArray[rids,cids,, drop = FALSE]
     if (is(aMatArrayNew[,,1],"numeric")) {
-        aMatArrayUpdated <- K*n.obs*aMatArrayNew
+        aMatArrayUpdated <- K*n.obs*aMatArrayNew/nrow(aMatArrayNew)
+        if(nrow(aMatArrayNew)==1){
         out[rids, `:=`(counts = sum(aMatArrayUpdated[,,1]),
                        FullLengthCounts = sum(aMatArrayUpdated[,,2]),
                        PartialLengthCounts =sum(aMatArrayUpdated[,,3]),
                        UniqueCounts = sum(aMatArrayUpdated[,,4]))]
+        }else{
+        out[rids, `:=`(counts = aMatArrayUpdated[1],
+                           FullLengthCounts = aMatArrayUpdated[2],
+                           PartialLengthCounts = aMatArrayUpdated[3],
+                           UniqueCounts = aMatArrayUpdated[4])]
+        }
+
     }else{
         est_output <- emWithL1(A = aMatArrayNew, Y = n.obs, K = K,
                                lambda = lambda, maxiter = maxiter,
