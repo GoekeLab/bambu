@@ -109,10 +109,11 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
+  #deprecating because it is also done in combineWithAnnotations()
   # remove equals to prevent duplicates when merging with annotations
-  filterSet = rowDataCombined$readClassType != "equalcompatible"
-  exonRangesCombined <- exonRangesCombined[filterSet]
-  rowDataCombined <- rowDataCombined[filterSet,]
+  #filterSet = rowDataCombined$readClassType != "equalcompatible"
+  #exonRangesCombined <- exonRangesCombined[filterSet]
+  #rowDataCombined <- rowDataCombined[filterSet,]
   
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
@@ -638,6 +639,9 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   mcols(annotationRangesToMerge)$txNDR <- 
     rep(NA,length(annotationRangesToMerge))
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
+  #copy over stats to annotations from read classes
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$txNDR = equalRanges$txNDR
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
   extendedAnnotationRanges <-
     c(extendedAnnotationRanges, annotationRangesToMerge)
   mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
