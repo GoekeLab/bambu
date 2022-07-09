@@ -71,7 +71,11 @@ updateParameters <- function(Parameters, Parameters.default) {
 checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
-        if (is(annotations, "TxDb")) {
+        if (is(annotations, "TxDb") | grepl(".gtf$", annotations)) {
+            if (grepl(".gtf$", annotations)) 
+                message("If you are running bambu multiple times we recommend ",
+                "processing your annotation file first with ",
+                "annotations = prepareAnnotations(gtf.file)")
             annotations <- prepareAnnotations(annotations)
         } else if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
@@ -84,7 +88,7 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
                         Please re-create your annotation object')
             }
         } else {
-            stop("The annotations is not a GRangesList object.")
+            stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
         }
     } else {
         stop("Annotations is missing.")
@@ -95,7 +99,8 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
             stop("output folder does not exist")
     }
     # ===# Check whether provided read files are all in the same format (.bam or .rds) #===#
-    if (!all(sapply(reads, class)=="RangedSummarizedExperiment") & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
+    if (!all(sapply(reads, class)=="RangedSummarizedExperiment") 
+        & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
             stop("Reads should either be: a vector of paths to .bam files, ", 
             "a vector of paths to Bambu RCfile .rds files, ",
             "or a list of loaded in Bambu RCfiles")
