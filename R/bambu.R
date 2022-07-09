@@ -115,7 +115,7 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
-bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
+bambu <- function(reads, rcOutDir = NULL,
     annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
     yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
     returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
@@ -123,20 +123,19 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
     if(is.null(annotations)) { annotations = GRangesList()
-    } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
+    } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
-    if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
+    genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
 
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
 
     emParameters <- setEmParameters(emParameters = opt.em)
-    bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
-        ncore, verbose)
+    bpParameters <- setBiocParallelParameters(reads, ncore, verbose)
     if (bpParameters$workers > 1) ncore <- 1
     rm.readClassSe <- FALSE
-    if (!is.null(reads)) {
+    if (all(grepl(".bam$", reads))) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
             message("There are more than 10 samples, read class files
@@ -150,8 +149,8 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
     } else { 
-        if(is.list(rcFile)) {readClassList <- rcFile}
-        else {readClassList <- as.list(rcFile)}}
+        readClassList = loadReadClassFiles(reads)
+    }
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, fusionMode, verbose)

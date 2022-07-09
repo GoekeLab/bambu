@@ -3,11 +3,10 @@
 #' setBiocParallelParameters
 #' @importFrom BiocParallel bpparam
 #' @noRd
-setBiocParallelParameters <- function(reads, readClass.file, ncore, verbose){
+setBiocParallelParameters <- function(reads, ncore, verbose){
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
-    bpParameters$workers <- ifelse(max(length(reads),
-        length(readClass.file)) == 1, 1, ncore)
+    bpParameters$workers <- ifelse(length(reads) == 1, 1, ncore)
     bpParameters$progressbar <- (!verbose)
     return(bpParameters)
 }
@@ -69,8 +68,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.file,
-                        readClass.outputDir, genomeSequence){
+checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "TxDb")) {
@@ -91,19 +89,16 @@ checkInputs <- function(annotations, reads, readClass.file,
     } else {
         stop("Annotations is missing.")
     }
-    ## When SE object from bambu.quantISORE is provided ##
-    if (!is.null(reads) & (!is.null(readClass.file))) stop("At least bam file or
-        path to readClass file needs to be provided.")
     # ===# Check whether provided readClass.outputDir exists  #===#
     if (!is.null(readClass.outputDir)) {
         if (!dir.exists(readClass.outputDir)) 
             stop("output folder does not exist")
     }
-    # ===# Check whether provided readclass files are all in rds format #===#
-    if (!is.null(readClass.file)) {
-        if (!all(grepl(".rds", readClass.file))) 
-            stop("Read class files should be provided in rds format.")
-    }
+    # ===# Check whether provided read files are all in the same format (.bam or .rds) #===#
+    if (!all(sapply(reads, class)=="RangedSummarizedExperiment") & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
+            stop("Reads should either be: a vector of paths to .bam files, ", 
+            "a vector of paths to Bambu RCfile .rds files, ",
+            "or a list of loaded in Bambu RCfiles")
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
     if (.Platform$OS.type == "windows") {
@@ -125,10 +120,10 @@ checkInputSequence <- function(genomeSequence) {
     if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
         please provide fasta file or BSgenome name, see available.genomes()")
     if(is.character(genomeSequence)){
-    if (genomeSequence %in% BSgenome::available.genomes()) {
-        genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-        return(genomeSequence)
-    } 
+    # if (genomeSequence %in% BSgenome::available.genomes()) {
+    #     genomeSequence <- BSgenome::getBSgenome(genomeSequence)
+    #     return(genomeSequence)
+    # } 
     tryCatch(
     {
         if (.Platform$OS.type == "windows") {
@@ -148,4 +143,13 @@ checkInputSequence <- function(genomeSequence) {
     }
     )}
     return(genomeSequence)
+}
+
+#' Function to load in a vector of read class files paths
+#' @noRd
+loadReadClassFiles <- function(rcFiles){
+    #If vector of paths load in the files
+    if (all(grepl(".rds", rcFiles))) 
+        rcFiles = lapply(rcFiles, FUN = function(x){readRDS(x)})
+    return(rcFiles)
 }
