@@ -401,14 +401,16 @@ createMultimappingBaseOnEmptyRC <- function(rcDt,
                            txNumberExpected = length(unlist(strsplit(read_class_id, "\\&")))),
                     by = read_class_id]
     ## For those with txNumber less than txNumberExpected 
-    rcDtNew_remap <- rcDtNew[txNumber != txNumberExpected, 
-                             list(tx_id_new = unlist(strsplit(read_class_id, "\\&"))),
-                             by = read_class_id]
-    rcDt <- rcDtNew_remap[rcDt, on = "read_class_id"]
-    ## for those that with txNumber being equal to txNumberExpected
-    rcDt[is.na(tx_id_new), tx_id_new := tx_id]
-    rcDt[tx_id_new != tx_id, tx_id := tx_id_new]
-    rcDt[, tx_id_new := NULL]
+    if(nrow(rcDtNew[txNumber != txNumberExpected])>0){
+        rcDtNew_remap <- rcDtNew[txNumber != txNumberExpected, 
+                                 list(tx_id_new = unlist(strsplit(read_class_id, "\\&"))),
+                                 by = read_class_id]
+        rcDt <- rcDtNew_remap[rcDt, on = "read_class_id"]
+        ## for those that with txNumber being equal to txNumberExpected
+        rcDt[is.na(tx_id_new), tx_id_new := tx_id]
+        rcDt[tx_id_new != tx_id, tx_id := tx_id_new]
+        rcDt[, tx_id_new := NULL]
+    }
     if (!(from_symbol == "&"))
         rcDt$read_class_id <- changeSymbol(rcDt$read_class_id,
                                            rcDt$tx_id, from_symbol = to_symbol, to_symbol = from_symbol)
