@@ -98,13 +98,13 @@ List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last
 
   // post-process outputs
   arma::mat estMat(5,M);
-  estMat.row(0) = theta;
+  //estMat.row(0) = theta;
   arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
   baseSum.replace(arma::datum::nan, 0);
-  estMat.row(1) = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(2) = arma::sum(((A.slice(1).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(3) = arma::sum(((A.slice(2).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(4) = arma::sum(((A.slice(3).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(0) = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(1) = arma::sum(((A.slice(1).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(2) = arma::sum(((A.slice(2).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(3) = arma::sum(((A.slice(3).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
   // returns
   List ret ;
   ret["theta"] = estMat;

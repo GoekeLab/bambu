@@ -129,7 +129,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 initialiseOutput <- function(matNames, g, K, n.obs){
     return(data.table(tx_sid = matNames,counts = 0,
                 FullLengthCounts = 0, PartialLengthCounts = 0,
-                UniqueCounts = 0, theta = 0, gene_sid = g, 
+                UniqueCounts = 0, gene_sid = g, 
                 ntotal = as.numeric(K)))
 }
 
@@ -167,11 +167,11 @@ calculateDegradationRate <- function(readClassDt){
 #' @noRd
 modifyQuantOut <- function(est_output, rids, cids, out){
     est_out <- est_output[["theta"]]
-    out[rids, `:=`(theta = est_out[1,],
-        counts = est_out[2,],
-        FullLengthCounts = est_out[3,],
-        PartialLengthCounts = est_out[4,],
-        UniqueCounts = est_out[5,])]
+    out[rids, `:=`(
+        counts = est_out[1,],
+        FullLengthCounts = est_out[2,],
+        PartialLengthCounts = est_out[3,],
+        UniqueCounts = est_out[4,])]
     return(out)
 }
 
@@ -200,7 +200,7 @@ formatOutput <- function(theta_est, ori_txvec, geneVec){
         gene_name = geneVec[gene_sid])]
     theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
     theta_est <- theta_est[, .(tx_name, counts,FullLengthCounts,
-        PartialLengthCounts, UniqueCounts, theta)]
+        PartialLengthCounts, UniqueCounts)]
     totalCount <- sum(theta_est$counts)
     theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
     return(theta_est)
@@ -215,7 +215,6 @@ removeDuplicates <- function(counts){
                             FullLengthCounts = sum(FullLengthCounts),
                             PartialLengthCounts = sum(PartialLengthCounts),
                             UniqueCounts = sum(UniqueCounts),
-                            theta = sum(theta),
                             CPM = sum(CPM)), by = tx_name],by = NULL)
     return(counts_final)
 }
@@ -233,7 +232,6 @@ removeUnObservedGenes <- function(readClassDt){
             FullLengthCounts = 0,
             PartialLengthCounts = 0,
             UniqueCounts = 0,
-            theta = 0,
             gene_sid = uo_txGeneDt$gene_sid, ntotal = 0)
     }else{
         outList <- NULL
