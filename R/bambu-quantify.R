@@ -38,8 +38,6 @@ bambu.quantify <- function(readClass, annotations, emParameters,
         partialLengthCounts = matrix(counts$PartialLengthCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC)),
         uniqueCounts = matrix(counts$UniqueCounts, 
-            ncol = 1, dimnames = list(NULL, colNameRC)),
-        theta = matrix(counts$theta, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     if (returnDistTable) metadata(seOutput)$distTable = metadata(readClass.dist)$distTable
     if (trackReads) metadata(seOutput)$readToTranscriptMap = 
