@@ -31,12 +31,14 @@ writeBambuOutput <- function(se, path, prefix = "") {
         gtf <- writeToGTF(annotation = transcript_grList,
             file = transcript_gtffn)
         
-        for(d in names(assays(se))){
+        report_names <- names(assays(se))
+        report_names <- report_names[grepl("counts", tolower(report_names))] #report all counts outcomes
+        for(d in report_names){
             writeCountsOutput(se, varname=d,
                              feature='transcript',outdir, prefix)
         }
-        report_se <- transcriptToGeneExpression(se)
-        writeCountsOutput(report_se, varname='counts',
+        seGene <- transcriptToGeneExpression(se)
+        writeCountsOutput(seGene, varname='counts',
                              feature='gene',outdir, prefix)
     }
 }
@@ -45,11 +47,11 @@ writeBambuOutput <- function(se, path, prefix = "") {
 #' helper function to write counts 
 writeCountsOutput <- function(se, varname = "counts",
                               feature = "transcript", outdir, prefix){
-   estimates <- data.table(as.data.frame(assays(se)[[varname]]),
-                            keep.rownames = TRUE)
+    estimates <- data.table(as.data.frame(assays(se)[[varname]]),
+                            keep.rownames = TRUE) 
     if(feature == "transcript"){
         setnames(estimates, "rn", "TXNAME")
-        geneIDs <- data.table(as.data.frame(rowData(se)[,c("TXNAME","GENEID")]))
+        geneIDs <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
         estimates <- geneIDs[estimates, on = "TXNAME"]
     }else{
         setnames(estimates, "rn","GENEID")
