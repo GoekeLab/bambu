@@ -55,8 +55,7 @@ writeCountsOutput <- function(se,transcript_grList = NULL, varname = "counts",
                             keep.rownames = TRUE)
     if(feature == "transcript"){
         setnames(estimates, "rn", "TXNAME")
-        geneIDs <- data.table(as.data.frame(mcols(transcript_grList,
-            use.names = FALSE)[,c("TXNAME","GENEID")]))
+        geneIDs <- data.table(as.data.frame(rowData(se)[,c("TXNAME","GENEID")]))
         estimates <- geneIDs[estimates, on = "TXNAME"]
     }else{
         setnames(estimates, "rn","GENEID")
