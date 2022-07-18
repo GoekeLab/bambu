@@ -31,9 +31,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
         gtf <- writeToGTF(annotation = transcript_grList,
             file = transcript_gtffn)
         
-        report_names <- names(assays(se))
-        report_names <- report_names[grepl("counts", tolower(report_names))] #report all counts outcomes
-        for(d in report_names){
+        for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
                              feature='transcript',outdir, prefix)
         }
