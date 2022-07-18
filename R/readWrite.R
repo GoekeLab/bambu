@@ -31,19 +31,13 @@ writeBambuOutput <- function(se, path, prefix = "") {
         gtf <- writeToGTF(annotation = transcript_grList,
             file = transcript_gtffn)
         
-        report <- data.table(v = c("counts","fullLengthCounts",
-                      "partialLengthCounts","uniqueCounts","counts"),
-                      t = c(rep("transcript",4),"gene"))
-        for(d in seq_len(nrow(report))){
-            report_se <- se
-            report_feature <- report[d]$t
-            report_varname <- report[d]$v
-            if(report_feature == "gene"){
-                report_se <- transcriptToGeneExpression(se)
-            }
-            writeCountsOutput(report_se, transcript_grList, report_varname,
-                             report_feature,outdir, prefix)
+        for(d in names(assays(se))){
+            writeCountsOutput(se, varname=d,
+                             feature='transcript',outdir, prefix)
         }
+        report_se <- transcriptToGeneExpression(se)
+        writeCountsOutput(report_se, varname='counts',
+                             feature='gene',outdir, prefix)
     }
 }
 
