@@ -6,7 +6,7 @@
 #' @param prefix the prefix of the output files
 #' @details The function will write the output from Bambu to files. The 
 #' annotations will be written to a .gtf file, transcript counts (total counts, 
-#' CPM, full-length counts, partial counts, and unique counts) and gene counts
+#' CPM, full-length counts, partial-length counts, and unique counts) and gene counts
 #' will be written to .txt files.  
 #' @export
 #' @examples
