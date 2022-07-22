@@ -44,16 +44,13 @@ bambu.quantify <- function(readClass, annotations, emParameters,
                        nGeneFordRate = countsOut[[3]])
     seOutput <- SummarizedExperiment(
         assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
-                                            dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
-                                                                                            ncol =  1, dimnames = list(NULL, colNameRC)),
-                            fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
-                                                      dimnames = list(NULL, colNameRC)),
-                            uniqueCounts = matrix(counts$UniqueCounts, 
-                                                  ncol = 1, dimnames = list(NULL, colNameRC)),
-                            theta = matrix(counts$theta, 
-                                           ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-    metadata(seOutput)$IncompatibleCounts = IncompatibleCounts
-    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassMod)$distTable
+        dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
+        ncol =  1, dimnames = list(NULL, colNameRC)),
+        fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
+            dimnames = list(NULL, colNameRC)),
+        uniqueCounts = matrix(counts$UniqueCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
+    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClass.dist)$distTable
     if (trackReads) metadata(seOutput)$readToTranscriptMap = 
         generateReadToTranscriptMap(readClass, metadata(readClassMod)$distTable, 
                                     annotations)
