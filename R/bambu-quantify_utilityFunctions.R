@@ -66,8 +66,7 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
         aMatArrayUpdated <- K*n.obs*aMatArrayNew
         out[rids, `:=`(counts = sum(aMatArrayUpdated[,,1]),
                        FullLengthCounts = sum(aMatArrayUpdated[,,2]),
-                       PartialLengthCounts =sum(aMatArrayUpdated[,,3]),
-                       UniqueCounts = sum(aMatArrayUpdated[,,4]))]
+                       UniqueCounts = sum(aMatArrayUpdated[,,3]))]
     }else{
         est_output <- emWithL1(A = aMatArrayNew, Y = n.obs, K = K,
                                lambda = lambda, maxiter = maxiter,
@@ -92,10 +91,8 @@ formatAmat <- function(tmp, multiMap){
                          dimnames = list(unique(tmp$tx_ori), unique(tmp$read_class_sid), NULL))
     a_mat_array[,,2] <- 
         as.matrix(tmp_wide[which(fullTx)][,-seq_len(2),with = FALSE])
-    a_mat_array[,,3] <- 
-        as.matrix(tmp_wide[which(!fullTx)][,-seq_len(2),with = FALSE])
-    a_mat_array[,,4] <- a_mat_array[,,1] <- a_mat_array[,,2] + a_mat_array[,,3]
-    a_mat_array[, which(multiMap), 4] <- 0
+    a_mat_array[,,3] <- a_mat_array[,,1]
+    a_mat_array[, which(multiMap), 3] <- 0
     return(a_mat_array)
 }
 
@@ -131,7 +128,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 #' @noRd 
 initialiseOutput <- function(matNames, g, K, n.obs){
     return(data.table(tx_sid = matNames,counts = 0,
-                      FullLengthCounts = 0, PartialLengthCounts = 0,
+                      FullLengthCounts = 0,
                       UniqueCounts = 0, theta = 0, gene_sid = g, 
                       ntotal = as.numeric(K)))
 }
@@ -173,8 +170,7 @@ modifyQuantOut <- function(est_output, rids, cids, out){
     out[rids, `:=`(theta = est_out[1,],
                    counts = est_out[2,],
                    FullLengthCounts = est_out[3,],
-                   PartialLengthCounts = est_out[4,],
-                   UniqueCounts = est_out[5,])]
+                   UniqueCounts = est_out[4,])]
     return(out)
 }
 
@@ -203,7 +199,7 @@ formatOutput <- function(theta_est, ori_txvec, geneVec){
                      gene_name = geneVec[gene_sid])]
     theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
     theta_est <- theta_est[, .(tx_name, counts,FullLengthCounts,
-                               PartialLengthCounts, UniqueCounts, theta)]
+                               UniqueCounts, theta)]
     totalCount <- sum(theta_est$counts)
     theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
     return(theta_est)
@@ -216,7 +212,6 @@ formatOutput <- function(theta_est, ori_txvec, geneVec){
 removeDuplicates <- function(counts){
     counts_final <- unique(counts[, list(counts = sum(counts),
                                          FullLengthCounts = sum(FullLengthCounts),
-                                         PartialLengthCounts = sum(PartialLengthCounts),
                                          UniqueCounts = sum(UniqueCounts),
                                          theta = sum(theta),
                                          CPM = sum(CPM)), by = tx_name],by = NULL)
@@ -234,7 +229,6 @@ removeUnObservedGenes <- function(readClassDt){
         outList <- data.table(tx_sid = uo_txGeneDt$tx_ori,
                               counts = 0, 
                               FullLengthCounts = 0,
-                              PartialLengthCounts = 0,
                               UniqueCounts = 0,
                               theta = 0,
                               gene_sid = uo_txGeneDt$gene_sid, ntotal = 0)
