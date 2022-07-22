@@ -1,3 +1,18 @@
+bambu v2.2.0 (Change date: 2022-04-27)
+===========================================
+Major changes: 
+    * Implemented a de-novo mode where no annotation is provided
+    * Implemented trackReads to allow users to track read to transcript model map
+    * Implemented outputDistTable to output the distance metrics bedtween read class and transcript models
+    * Allow input files without specific extension for fasta and annotation gtf files (gff etc)
+    
+
+Minor fixes:
+    * Fix the bug when reads are aligned outside the supplied genome and 
+    * Provides a warning and issues with bsgenome and their strand.
+    * Provides a more informative error when running in denovo mode if no transcripts pass the threshold
+    * Fix bug in runs where annotation gene names had "gene" 
+
 bambu v2.0.4 (Change date: 2022-02-08)
 ===========================================
 Minor fixes: 

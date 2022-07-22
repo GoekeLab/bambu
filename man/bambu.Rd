@@ -20,6 +20,7 @@ bambu(
     returnDistTable = FALSE,
     discovery = TRUE,
     quant = TRUE,
+    fusionMode = TRUE,
     verbose = FALSE,
     lowMemory = FALSE
 )
@@ -109,6 +110,8 @@ are to be extended for quantification.}
 
 \item{quant}{A logical variable indicating whether quantification will 
 be performed}
+
+\item{fusionMode}{A logical variable indicating whether run in fusion mode}
 
 \item{verbose}{A logical variable indicating whether processing messages will
 be printed.}

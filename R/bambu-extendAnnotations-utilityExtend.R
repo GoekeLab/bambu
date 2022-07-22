@@ -28,7 +28,6 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                          annotationGrangesList, min.exonOverlap, verbose)
     rowDataCombined <- SEnRng$rowDataCombined
     exonRangesCombined <- SEnRng$exonRangesCombined
-    countsCombined <- SEnRng$countsCombined
     # assign gene IDs based on exon match
     geneIds <- assignGeneIds(grl = exonRangesCombined,
                              annotations = annotationGrangesList,
@@ -435,7 +434,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                              dropRangesByMinLength = TRUE, cutStartEnd = TRUE,
                                              ignore.strand = ignore.strand)
   txToAnTableFiltered <- genFilteredAnTable(spliceOverlaps,
-                                            primarySecondaryDist, DistCalculated = FALSE)
+      primarySecondaryDist, primarySecondaryDistStartEnd, DistCalculated = FALSE)
   # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
   setTMP <- unique(txToAnTableFiltered$queryHits)
 
@@ -445,7 +444,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                                     ignore.strand = ignore.strand)
   if(length(spliceOverlaps_rest) > 0){
     txToAnTableRest <-
-      genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,
+      genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,primarySecondaryDistStartEnd,
                         exByTx = exByTx, setTMP = setTMP, DistCalculated = FALSE)
     # (3) find overlaps for remaining reads 
     setTMPRest <- unique(c(txToAnTableRest$queryHits, setTMP))

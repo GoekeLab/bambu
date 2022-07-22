@@ -1,4 +1,3 @@
-
 #' process reads
 #' @param reads path to BAM file(s)
 #' @param annotations path to GTF file or TxDb object
@@ -76,36 +75,36 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
             sequence, reads without reference chromosome sequence are dropped")
         refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
         readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
-            pruning.mode = "coarse")
+                                     pruning.mode = "coarse")
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
     if (!all(seqlevels(annotations) %in% refSeqLevels)) {
-    message("not all chromosomes from annotations present in reference genome 
+        message("not all chromosomes from annotations present in reference genome 
     sequence, annotations without reference chrosomomse sequence are dropped")
-    annotations <- keepSeqlevels(annotations, value = refSeqLevels,
-        pruning.mode = "coarse")
+        annotations <- keepSeqlevels(annotations, value = refSeqLevels,
+                                     pruning.mode = "coarse")
     }
     #removes reads that are outside genome coordinates
     badReads = which(max(end(ranges(readGrgList)))>=
-        seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
+                         seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
     if(length(badReads) > 0 ){
         readGrgList = readGrgList[-badReads]
         warning(paste0(length(badReads), " reads are mapped outside the provided ",
-        "genomic regions. These reads will be dropped. Check you are using the ",
-        "same genome used for the alignment"))
+                       "genomic regions. These reads will be dropped. Check you are using the ",
+                       "same genome used for the alignment"))
     }
     # construct read classes for each chromosome seperately 
     if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-        annotations, stranded, verbose,bam.file)
+                                                      annotations, stranded, verbose,bam.file)
     else { 
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-                annotations,genomeSequence, stranded = stranded, verbose = verbose)
+                                                         annotations,genomeSequence, stranded = stranded, verbose = verbose)
         # create SE object with reconstructed readClasses
         se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
-            uniqueJunctions, runName = names(bam.file)[1],
-            annotations, stranded, verbose)
+                                         uniqueJunctions, runName = names(bam.file)[1],
+                                         annotations, stranded, verbose)
     }
     if(trackReads) metadata(se)$readNames = names(readGrgList)
     metadata(se)$readId = mcols(readGrgList)$id
@@ -122,7 +121,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              verbose = verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
-            "_readClassSe.rds")
+                                "_readClassSe.rds")
         if (file.exists(readClassFile)) {
             show(paste(readClassFile, "exists, will be overwritten"))
             warning(readClassFile, "exists, will be overwritten")
@@ -138,16 +137,16 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 }
 
 lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, 
-    annotations, stranded, verbose,bam.file){
+                                          annotations, stranded, verbose,bam.file){
     readGrgList = split(readGrgList, getChrFromGrList(readGrgList))
     se = lapply(names(readGrgList),FUN = function(i){
         # create error and strand corrected junction tables
         unlisted_junctions <- unlistIntrons(readGrgList[[i]], use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-            annotations,genomeSequence, stranded = stranded, verbose = verbose)
+                                                         annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se.temp <- isore.constructReadClasses(readGrgList[[i]], 
-            unlisted_junctions, uniqueJunctions, runName = names(bam.file)[1],
-            annotations, stranded, verbose)
+                                              unlisted_junctions, uniqueJunctions, runName = names(bam.file)[1],
+                                              annotations, stranded, verbose)
         return(se.temp)
     })
     se = do.call("rbind",se)
@@ -160,11 +159,11 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
 #' @noRd
 seqlevelCheckReadsAnnotation <- function(reads, annotations){
     if (length(intersect(seqlevels(reads),
-        seqlevels(annotations))) == 0)
+                         seqlevels(annotations))) == 0)
         warning("no annotations with matching seqlevel styles, 
         all missing chromosomes will use de-novo annotations")
     if (!all(seqlevels(reads) %in% 
-        seqlevels(annotations))) 
+             seqlevels(annotations))) 
         message("not all chromosomes present in reference annotations,
             annotations might be incomplete. Please compare objects
             on the same reference")
