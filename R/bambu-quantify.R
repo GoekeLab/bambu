@@ -50,7 +50,8 @@ bambu.quantify <- function(readClass, annotations, emParameters,
             dimnames = list(NULL, colNameRC)),
         uniqueCounts = matrix(counts$UniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClass.dist)$distTable
+    metadata(seOutput)$IncompatibleCounts = IncompatibleCounts
+    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassMod)$distTable
     if (trackReads) metadata(seOutput)$readToTranscriptMap = 
         generateReadToTranscriptMap(readClass, metadata(readClassMod)$distTable, 
                                     annotations)
