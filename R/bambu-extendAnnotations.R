@@ -33,6 +33,7 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
         isoreParameters[['min.readFractionByEqClass']],
         fusionMode = fusionMode,
         prefix = isoreParameters[["prefix"]],
+        txScoreBaseline = isoreParameters[["txScoreBaseline"]],
         verbose = verbose)
     end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",

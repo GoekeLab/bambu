@@ -31,8 +31,14 @@ setIsoreParameters <- function(isoreParameters){
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
         fitReadClassModel = TRUE,
+        defaultModels = defaultModels,
+        returnModel = FALSE,
+        txScoreBaseline = defaultModels$txScoreBaseline,
         min.readFractionByEqClass = 0,
         prefix = "") 
+    if("defaultModels" %in% names(isoreParameters) & !("txScoreBaseline" %in% names(isoreParameters))){
+        isoreParameters["txScoreBaseline"]=isoreParameters$defaultModels$txScoreBaseline
+    }
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
     return(isoreParameters)
@@ -55,6 +61,7 @@ setEmParameters <- function(emParameters){
 updateParameters <- function(Parameters, Parameters.default) {
     if (!is.null(Parameters)) {
         for (i in names(Parameters)) {
+            if(!(i %in% names(Parameters.default))) message("Setting parameter that does not exist. Check the spelling - ", i)
             Parameters.default[[i]] <- Parameters[[i]]
         }
     }

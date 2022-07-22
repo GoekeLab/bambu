@@ -13,9 +13,9 @@
 #' @importFrom BiocGenerics basename
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
-                               readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
-                               stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
-                               lowMemory=FALSE, trackReads = FALSE, fusionMode = FALSE) {
+    readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
+    stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
+    trackReads = trackReads, fusionMode = fusionMode, lowMemory=FALSE) {
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
@@ -40,16 +40,18 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     }
     min.readCount = isoreParameters[["min.readCount"]]
     fitReadClassModel = isoreParameters[["fitReadClassModel"]]
+    defaultModels = isoreParameters[["defaultModels"]]
+    returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
     if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
-                                 genomeSequence = genomeSequence,annotations = annotations,
-                                 readClass.outputDir = readClass.outputDir,
-                                 stranded = stranded, min.readCount = min.readCount, 
-                                 fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap,
-                                 verbose = verbose, lowMemory = lowMemory, trackReads = trackReads, 
-                                 fusionMode = fusionMode)},
+        genomeSequence = genomeSequence,annotations = annotations,
+        readClass.outputDir = readClass.outputDir,
+        stranded = stranded, min.readCount = min.readCount, 
+        fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
+        defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)},
         BPPARAM = bpParameters)
     if (!verbose)
         message("Finished generating read classes from genomic alignments.")
@@ -61,9 +63,9 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-                                     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
-                                     fitReadClassModel = TRUE, min.exonOverlap = 10, verbose = FALSE,
-                                     lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE) {
+    readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
+    fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     seqlevelCheckReadsAnnotation(readGrgList, annotations)
     #check seqlevels for consistency, drop ranges not present in genomeSequence
@@ -110,12 +112,13 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se,genomeSequence, annotations, 
-                           defaultModels = defaultModels,
-                           fit = fitReadClassModel,
-                           min.readCount = min.readCount,
-                           min.exonOverlap = min.exonOverlap,
-                           fusionMode = fusionMode,
-                           verbose = verbose)
+                             defaultModels = defaultModels,
+                             fit = fitReadClassModel,
+                             returnModel = returnModel,
+                             min.readCount = min.readCount,
+                             min.exonOverlap = min.exonOverlap,
+                             fusionMode = fusionMode,
+                             verbose = verbose)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
                                 "_readClassSe.rds")

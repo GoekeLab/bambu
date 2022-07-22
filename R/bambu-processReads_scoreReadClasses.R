@@ -3,7 +3,8 @@
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
 scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
-                            fit = TRUE, min.readCount = 2, min.exonOverlap = 10,
+                            fit = TRUE, returnModel = FALSE, 
+                            min.readCount = 2, min.exonOverlap = 10,
                             fusionMode = FALSE, verbose = FALSE){
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
@@ -31,10 +32,21 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
-    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
+    model = NULL
+    if (fit) model = trainBambu(se, verbose = verbose)
+    if(returnModel) metadata(se)$model = model
+    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels, fit=fit)
     rowData(se)$txScore = rep(NA,nrow(se))
-    if(!is.null(txScore)) rowData(se)$txScore[thresholdIndex] = txScore
+
+    if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
+
+    #calculate using the default model for NDR recommendation
+    txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
+                                model, defaultModels, fit=FALSE)
+    rowData(se)$txScore.noFit = rep(NA,nrow(se))
+    rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
@@ -107,38 +119,107 @@ countPolyATerminals = function(grl, genomeSequence){
 
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData, defaultModels, nrounds = 50, fit = TRUE){
+getTranscriptScore = function(rowData, model = NULL, defaultModels, nrounds = 50, fit = TRUE){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(checkFeatures(txFeatures) & fit){
+    if(fit & !is.null(model)){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
         if(length(indexME)>0){
-            transcriptModelME = fitXGBoostModel(
-                data.train=as.matrix(features[indexME,]),
-                labels.train=txFeatures$labels[indexME], 
-                nrounds = nrounds, show.cv=FALSE)
-            txScore = predict(transcriptModelME, as.matrix(features))
+            txScore = predict(model$transcriptModelME, as.matrix(features))
         } else txScore = NULL
         
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
         if(length(indexSE)>0){
-            transcriptModelSE = fitXGBoostModel(
-                data.train=as.matrix(features[indexSE,]),
-                labels.train=txFeatures$labels[indexSE], 
-                nrounds = nrounds, show.cv=FALSE)
-            txScoreSE = predict(transcriptModelSE, as.matrix(features))
+            txScoreSE = predict(model$transcriptModelSE, as.matrix(features))
         } else txScoreSE = NULL
         
     } else {
-        message("Transcript model not trained. Using pre-trained models")
-        txScore = predict(defaultModels$txModel.dcDNA.ME, as.matrix(features))
-        txScoreSE = predict(defaultModels$txModel.dcDNA.SE, as.matrix(features))
+        if (!is.null(defaultModels)){
+            txScore = predict(defaultModels$transcriptModelME, 
+                as.matrix(features))
+            txScoreSE = predict(defaultModels$transcriptModelSE, 
+                as.matrix(features))
+        } else {
+            warning("Transcript model not trained. ",
+                "No pre-trained models provided. ",
+                "Scores will not be calculated and ",
+                "transcript discovery will not happen")
+            txScore = rep(0, nrow(features))
+            txScoreSE = rep(0, nrow(features))
+        }
     }
     txScore[which(rowData$numExons==1)] =
         txScoreSE[which(rowData$numExons==1)]
     return(txScore)
+}
+
+#' Function to train a model for use on other data
+#' @noRd
+trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = TRUE) {
+    rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
+    txFeatures = prepareTranscriptModelFeatures(rowData)
+    features = dplyr::select(txFeatures,!c(labels))
+    if(!checkFeatures(txFeatures)){
+        message("Transcript model not trained. Using pre-trained models")
+        return(NULL)
+    }
+    ## Multi-Exon
+    indexME = which(!rowData$novelGene & rowData$numExons>1)
+    if(length(indexME)>0){
+        transcriptModelME = fitXGBoostModel(
+            data.train=as.matrix(features[indexME,]),
+            labels.train=txFeatures$labels[indexME], 
+            nrounds = nrounds, show.cv=FALSE)
+        txScore = predict(transcriptModelME, as.matrix(features))[indexME]
+    }
+    ## Single-Exon
+    indexSE = which(!rowData$novelGene & rowData$numExons==1)
+    if(length(indexSE)>0){
+        transcriptModelSE = fitXGBoostModel(
+            data.train=as.matrix(features[indexSE,]),
+            labels.train=txFeatures$labels[indexSE], 
+            nrounds = nrounds, show.cv=FALSE)
+        txScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
+    }
+    ##Calculate the txScore baseline
+    NDR = calculateNDR(txScore, txFeatures$labels[indexME])
+    NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
+    #lm of NDR vs txScore
+    lmNDR = lm(txScore~poly(NDR,3,raw=TRUE))
+    txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
+    lmNDR.SE = lm(txScoreSE~NDR.SE)
+    txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
+
+    ROC = NULL
+    ROC.default = NULL
+    ## Compare the trained model AUC to the default model AUC
+    ROC = rocit(score = txScore, class = txFeatures$labels[indexME])
+    ROC$PREC = measureit(score =txScore, class = txFeatures$labels[indexME], measure = c("PREC"))$PREC
+    ROC$PREC[1] = ROC$PREC[2]
+    ROC$PR.AUC = MESS::auc(ROC$TPR, ROC$PREC)
+
+    txScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
+    ROC.default = rocit(score = txScore.default, class = txFeatures$labels[indexME])
+    ROC.default$PREC = measureit(score =txScore.default, class = txFeatures$labels[indexME], measure = c("PREC"))$PREC
+    ROC.default$PREC[1] = ROC.default$PREC[2]
+    ROC.default$PR.AUC = MESS::auc(ROC.default$TPR, ROC.default$PREC)
+    if(verbose){
+        message("On the dataset the new trained model achieves a ROC AUC of ",
+            signif(ROC$AUC,3),  " and a Precision-Recall AUC of ", signif(ROC$PR.AUC,3), ".", 
+            "This is compared to the original default model which achiveves a ROC AUC of ",
+            signif(ROC.default$AUC,3), " and a Precision-Recall AUC of ", signif(ROC.default$PR.AUC,3))
+    }
+
+    return(list(transcriptModelME = transcriptModelME, 
+                transcriptModelSE = transcriptModelSE,
+                txScoreBaseline = txScoreBaseline,
+                txScoreBaselineSE = txScoreBaselineSE,
+                lmNDR = lmNDR,
+                lmNDR.SE = lmNDR.SE,
+                ROC = ROC, 
+                ROC.default = ROC.default))
 }
 
 #' calculate and format read class features for model training

@@ -130,12 +130,10 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
-                  annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
-                  yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
-                  returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
-                  verbose = FALSE, lowMemory = FALSE) {
-    if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
-    TRUE. Rerun with either 1 or both parameters as TRUE")
+    annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
+    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
+    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
+    verbose = FALSE, lowMemory = FALSE) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
                                       readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -159,13 +157,15 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-                                            genomeSequence = genomeSequence, 
-                                            readClass.outputDir = rcOutDir, yieldSize, 
-                                            bpParameters, stranded, verbose,
-                                            isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
+            genomeSequence = genomeSequence, 
+            readClass.outputDir = rcOutDir, yieldSize, 
+            bpParameters, stranded, verbose,
+            isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
+            lowMemory = lowMemory)
     } else { 
         if(is.list(rcFile)) {readClassList <- rcFile}
         else {readClassList <- as.list(rcFile)}}
+    if (!discovery & !quant) return(readClassList)
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                                isoreParameters, stranded, bpParameters, fusionMode, verbose)

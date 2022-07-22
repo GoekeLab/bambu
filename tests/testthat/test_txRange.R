@@ -73,7 +73,7 @@ test_that("getTranscriptScore() calculates the correct score", {
                                    package = "bambu"))
   se=seExpected
   thresholdIndex = which(rowData(se)$readCount >= 2)
-  txScore = getTranscriptScore(rowData(se)[thresholdIndex,], 
+  txScore = getTranscriptScore(rowData(se)[thresholdIndex,], NULL, 
                                defaultModels, fit=TRUE)
   rowData(se)$txScore = rep(NA,nrow(se))
   rowData(se)$txScore[thresholdIndex] = txScore
