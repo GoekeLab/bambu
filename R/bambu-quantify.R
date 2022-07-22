@@ -16,7 +16,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
                                                          min.primarySecondaryDist = min.primarySecondaryDist,
                                                          min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
                                                          verbose = verbose)
-    readClassMod <- modifyUncompatibleAssignment(readClassDist)
+    readClassMod <- modifyIncompatibleAssignment(readClassDist)
     annotationsUpdated <- updateAnnotations(readClassMod, annotations, verbose)
     readClassDt <- genEquiRCs(readClassMod, annotationsUpdated, verbose)
     tx_len <- rbind(data.table(tx_id = names(annotationsUpdated),
@@ -34,7 +34,6 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     IncompatibleCounts <- data.table(GENEID = unique(mcols(annotations)$GENEID))
     counts_incompatible <- counts[grepl("_unidentified",tx_name)]
     counts_incompatible[, GENEID := gsub("_unidentified","",tx_name)]
-    
     
     IncompatibleCounts <- counts_incompatible[,.(GENEID, counts)][IncompatibleCounts, on = "GENEID"]
     IncompatibleCounts[is.na(counts), counts := 0]
