@@ -3,7 +3,6 @@ context("Generate GTF file from summarizedExperiment object")
 # test for the function: writeBambuOutput
 test_that("the output files have correct prefix, file format and all of them are placed correctly in the given output path", {
     se <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-    gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
     path <- test_path("fixtures")
     prefix <- "replicate5_run1_"
     
