@@ -612,24 +612,20 @@ includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
                                         exonRangesCombinedFiltered,annotationGrangesList, prefix){
-  rowDataCombinedFiltered$newTxClass <- rowDataCombinedFiltered$readClassType
-  rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
-                                     == "unsplicedNew" & rowDataCombinedFiltered$novelGene] <-
-    "newGene-unspliced"
-  rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
-                                     == "allNew" & rowDataCombinedFiltered$novelGene] <-
-    "newGene-spliced"
-  extendedAnnotationRanges <- exonRangesCombinedFiltered
-  mcols(extendedAnnotationRanges) <-
-    rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "txNDR",
-        "relReadCount", "relSubsetCount")]
-  equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
+    rowDataCombinedFiltered$newTxClass <- rowDataCombinedFiltered$readClassType
+    rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
+                                       == "unsplicedNew" & rowDataCombinedFiltered$novelGene] <-
+      "newGene-unspliced"
+    rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
+                                       == "allNew" & rowDataCombinedFiltered$novelGene] <-
+      "newGene-spliced"
+    extendedAnnotationRanges <- exonRangesCombinedFiltered
+    mcols(extendedAnnotationRanges) <-
+      rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "txNDR",
+                                  "relReadCount", "relSubsetCount")]
+    equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
   #remove extended ranges that are already present in annotation
   extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
-  if (length(extendedAnnotationRanges)) 
-    mcols(extendedAnnotationRanges)$TXNAME <- paste0(
-      "tx",prefix, ".", seq_along(extendedAnnotationRanges))
-  names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
   annotationRangesToMerge <- annotationGrangesList
   mcols(annotationRangesToMerge)$readCount <- 
     rep(NA,length(annotationRangesToMerge))
@@ -638,12 +634,22 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   mcols(annotationRangesToMerge)$txNDR <- 
     rep(NA,length(annotationRangesToMerge))
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
+  
   #copy over stats to annotations from read classes
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$txNDR = equalRanges$txNDR
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
-  extendedAnnotationRanges <-
-    c(extendedAnnotationRanges, annotationRangesToMerge)
-  mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
+  mcols(annotationRangesToMerge[equalRanges$TXNAME])$txNDR = equalRanges$txNDR
+  mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
+  mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
+  mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
+    if (length(extendedAnnotationRanges)) {
+      mcols(extendedAnnotationRanges)$TXNAME <- paste0(
+      "tx",prefix, ".", seq_along(extendedAnnotationRanges))
+    names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
+    extendedAnnotationRanges <-
+      c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
+    mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
+    }else{
+      extendedAnnotationRanges <- annotationRangesToMerge
+    }
   
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
