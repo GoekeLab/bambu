@@ -13,11 +13,11 @@ test_that("the output files of writeBambuOutput have correct prefix, file format
                         "replicate5_run1_fullLengthCounts_transcript.txt", "replicate5_run1_partialLengthCounts_transcript.txt", 
                         "replicate5_run1_uniqueCounts_transcript.txt", "replicate5_run1_counts_gene.txt")
     
-    checkOutput <- outputFileName %in% list.files(test_path('fixtures'))
+    checkOutput <- outputFileName %in% list.files(path)
         
     expect_true(all(checkOutput)) # check prefix and file format 
     
-    expect_equal(length(list.files(test_path("fixtures"))), 8) # check number of output files at desired output path.
+    expect_equal(length(list.files(path)), 8) # check number of output files at desired output path.
     
     unlink(test_path("fixtures", "*"))
     
