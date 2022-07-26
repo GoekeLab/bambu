@@ -60,7 +60,7 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
     cids <- which(apply(t(a_mat),1,sum) != 0)
     if( is(a_mat, "vector")) cids <- which(a_mat != 0)
     n.obs <- n.obs[cids]
-    aMatArrayNew <- array(NA,dim = c(length(rids), length(cids),4))
+    aMatArrayNew <- array(NA,dim = c(length(rids), length(cids),3))
     aMatArrayNew <- aMatArray[rids,cids,, drop = FALSE]
     if (is(aMatArrayNew[,,1],"numeric")&(nrow(aMatArrayNew)==1)) {
         aMatArrayUpdated <- K*n.obs*aMatArrayNew
@@ -87,11 +87,11 @@ formatAmat <- function(tmp, multiMap){
                             fullTx = c(TRUE,FALSE)), on = c("tx_ori", "fullTx")]
     tmp_wide[is.na(tmp_wide)] <- 0
     a_mat_array <- array(NA,dim = c(nrow(tmp_wide)/2,
-                                    ncol(tmp_wide) - 2,4), 
+                                    ncol(tmp_wide) - 2,3), 
                          dimnames = list(unique(tmp$tx_ori), unique(tmp$read_class_sid), NULL))
     a_mat_array[,,2] <- 
         as.matrix(tmp_wide[which(fullTx)][,-seq_len(2),with = FALSE])
-    a_mat_array[,,3] <- a_mat_array[,,1]
+    a_mat_array[,,3] <- a_mat_array[,,1] <- a_mat_array[,,2] + as.matrix(tmp_wide[which(!fullTx)][,-seq_len(2),with = FALSE])
     a_mat_array[, which(multiMap), 3] <- 0
     return(a_mat_array)
 }
