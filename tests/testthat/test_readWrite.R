@@ -1,7 +1,7 @@
 context("Generate GTF file from summarizedExperiment object")
 
 # test for the function: writeBambuOutput
-test_that("the output files have correct prefix, file format and all of them are placed correctly in the given output path", {
+test_that("the output files of writeBambuOutput have correct prefix, file format and all of them are placed correctly in the given output path", {
     se <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
     path <- test_path("fixtures")
     prefix <- "replicate5_run1_"
@@ -13,8 +13,8 @@ test_that("the output files have correct prefix, file format and all of them are
                         "replicate5_run1_fullLengthCounts_transcript.txt", "replicate5_run1_partialLengthCounts_transcript.txt", 
                         "replicate5_run1_uniqueCounts_transcript.txt", "replicate5_run1_counts_gene.txt")
     
-    checkOutput <- sapply(outputFileName, function(name){return(file.exists(test_path("fixtures", name)))}) 
-    
+    checkOutput <- outputFileName %in% list.files(test_path('fixtures'))
+        
     expect_true(all(checkOutput)) # check prefix and file format 
     
     expect_equal(length(list.files(test_path("fixtures"))), 8) # check number of output files at desired output path.
@@ -22,7 +22,6 @@ test_that("the output files have correct prefix, file format and all of them are
     unlink(test_path("fixtures", "*"))
     
 })
-
 
 # test for the function: readFromGTF
 test_that("readGTF can generate a GRangesList from a GTF file", {
