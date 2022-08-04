@@ -104,6 +104,10 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
             stop("Reads should either be: a vector of paths to .bam files, ", 
             "a vector of paths to Bambu RCfile .rds files, ",
             "or a list of loaded in Bambu RCfiles")
+    # if bam files are loaded in check that a genome is provided
+    if (all(grepl(".bam$", reads)) & is.null(genomeSequence)){
+        stop("A genome must be provided when running bambu from bam files")
+    }
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
     if (.Platform$OS.type == "windows") {
