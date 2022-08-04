@@ -115,11 +115,11 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
-bambu <- function(reads, rcOutDir = NULL,
-    annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
-    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
-    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
-    verbose = FALSE, lowMemory = FALSE) {
+bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
+    opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
+    quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
+    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
+    fusionMode = FALSE, verbose = FALSE) {
     if (!(discovery+quant)) stop("At least 1 of discovery and quant must be 
     TRUE. Rerun with either 1 or both parameters as TRUE")
     if(is.null(annotations)) { annotations = GRangesList()
