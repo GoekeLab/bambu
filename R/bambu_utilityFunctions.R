@@ -103,7 +103,7 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
         & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
             stop("Reads should either be: a vector of paths to .bam files, ", 
             "a vector of paths to Bambu RCfile .rds files, ",
-            "or a list of loaded in Bambu RCfiles")
+            "or a list of loaded Bambu RCfiles")
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
     if (.Platform$OS.type == "windows") {
