@@ -154,12 +154,3 @@ checkInputSequence <- function(genomeSequence) {
     )}
     return(genomeSequence)
 }
-
-#' Function to load in a vector of read class files paths
-#' @noRd
-loadReadClassFiles <- function(rcFiles){
-    #If vector of paths load in the files
-    if (all(grepl(".rds", rcFiles))) 
-        rcFiles = lapply(rcFiles, FUN = function(x){readRDS(x)})
-    return(rcFiles)
-}

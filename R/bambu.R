@@ -149,8 +149,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
     } else { 
-        readClassList = loadReadClassFiles(reads)
-    }
+        readClassList = reads
+    } 
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, fusionMode, verbose)
