@@ -103,7 +103,7 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
         & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
             stop("Reads should either be: a vector of paths to .bam files, ", 
             "a vector of paths to Bambu RCfile .rds files, ",
-            "or a list of loaded in Bambu RCfiles")
+            "or a list of loaded Bambu RCfiles")
     # if bam files are loaded in check that a genome is provided
     if (all(grepl(".bam$", reads)) & is.null(genomeSequence)){
         stop("A genome must be provided when running bambu from bam files")
