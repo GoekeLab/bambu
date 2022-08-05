@@ -71,13 +71,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
-        if (is(annotations, "TxDb") | grepl(".gtf$", annotations)) {
-            if (grepl(".gtf$", annotations)) 
-                message("If you are running bambu multiple times we recommend ",
-                "processing your annotation file first with ",
-                "annotations = prepareAnnotations(gtf.file)")
-            annotations <- prepareAnnotations(annotations)
-        } else if (is(annotations, "CompressedGRangesList")) {
+        if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
             if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
                      colnames(mcols(annotations)))) 
@@ -87,6 +81,13 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
                 warning('Annotations contain duplicated transcript/gene names
                         Please re-create your annotation object')
             }
+        } 
+        else if (is(annotations, "TxDb") | grepl(".gtf$", annotations)) {
+            if (grepl(".gtf$", annotations)) 
+                message("If you are running bambu multiple times we recommend ",
+                "processing your annotation file first with ",
+                "annotations = prepareAnnotations(gtf.file)")
+            annotations <- prepareAnnotations(annotations)
         } else {
             stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
         }
