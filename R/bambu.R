@@ -134,8 +134,11 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose)
     if (bpParameters$workers > 1) ncore <- 1
+
     rm.readClassSe <- FALSE
-    if (all(grepl(".bam$", reads))) {
+    readClassList = reads
+    isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
+    if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
             message("There are more than 10 samples, read class files
@@ -148,9 +151,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
-    } else { 
-        readClassList = reads
-    } 
+    }
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
             isoreParameters, stranded, bpParameters, fusionMode, verbose)

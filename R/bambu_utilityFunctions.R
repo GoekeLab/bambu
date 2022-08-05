@@ -99,15 +99,22 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
         if (!dir.exists(readClass.outputDir)) 
             stop("output folder does not exist")
     }
+
+    if (is(reads, "BamFileList")){
+        if(!all(grepl(".bam$", names(reads)))){
+            stop("All files in BamFileList must be .bam files")
+        }
+    } else{
     # ===# Check whether provided read files are all in the same format (.bam or .rds) #===#
-    if (!all(sapply(reads, class)=="RangedSummarizedExperiment") 
-        & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
-            stop("Reads should either be: a vector of paths to .bam files, ", 
-            "a vector of paths to Bambu RCfile .rds files, ",
-            "or a list of loaded Bambu RCfiles")
-    # if bam files are loaded in check that a genome is provided
-    if (all(grepl(".bam$", reads)) & is.null(genomeSequence)){
-        stop("A genome must be provided when running bambu from bam files")
+        if (!all(sapply(reads, class)=="RangedSummarizedExperiment") 
+            & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
+                stop("Reads should either be: a vector of paths to .bam files, ", 
+                "a vector of paths to Bambu RCfile .rds files, ",
+                "or a list of loaded Bambu RCfiles")
+        # if bam files are loaded in check that a genome is provided
+        if (all(grepl(".bam$", reads)) & is.null(genomeSequence)){
+            stop("A genome must be provided when running bambu from bam files")
+        }
     }
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
