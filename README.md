@@ -88,7 +88,7 @@ NDR - Novel Discovery Rate threshold. A value between 0 and 1 representing the m
 For full parameter list see [Arguments](#Arguments)
 Transcript discovery only (no quantification)
 If you are only interested in identifying novel transcripts, the quantification module of bambu can be skipped by setting quant to FALSE. 
-Note that the output will be a GRangeslist object containing the reference and novel annotations (See rowRanges() in # Output). We recommend running transcript discovery only mode with NDR = 1, and doing filtering in the downstream analysis to allow flexibility in the analysis. See [Modulating the sensitivity of discovery (pre and post analysis)](#Modulating the sensitivity of discovery (pre and post analysis))
+Note that the output will be a GRangeslist object containing the reference and novel annotations (See rowRanges() in [Output](#Output)). We recommend running transcript discovery only mode with NDR = 1, and doing filtering in the downstream analysis to allow flexibility in the analysis. See [Modulating the sensitivity of discovery (pre and post analysis)](#Modulating-the-sensitivity-of-discovery-(pre-and-post-analysis))
 ```rscript
 se.discoveryOnly = bambu(reads = test.bam, annotations = gtf.file, genome = fa.file, quant = FALSE)
 ```
@@ -174,30 +174,34 @@ If both quant and discovery are set to FALSE, bambu will return an intermediate 
 ### Visualization
 You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running bambu on the three replicates of HepG2 cell line in the SGNEx project)
 
+```rscript
 plotBambu(se, type = "annotation", gene_id = "ENSG00000107104")
-
+```
 <img src="figures/plotTranscript.PNG" title="plotGene" alt="plotGene">
-
+```rscript
 plotBambu(se, type = "annotation", transcript_id = "tx.9")
-
+```
 <img src="figures/plotGene.PNG" title="plotTranscript" alt="plotTranscript">
 
 plotBambu can also be used to visualize the clustering of input samples on gene/transcript expressions. Only for multiple samples’ visualisation. See [Running multiple samples](#Running-multiple-samples)
+```rscript
 plotBambu(se, type = "heatmap") # heatmap 
-
+```
 <img src="figures/plotHeatMap.PNG" title="plotHeapmap" alt="plotHeapmap">
-
+```rscript
 plotBambu(se, type = "pca") # PCA visualization
-
+```
 <img src="figures/plotPCA.PNG" title="plotPCA" alt="plotPCA">
 
 plotBambu can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable
+```rscript
 plotBambu(se, type = "heatmap", group.var) # heatmap 
 
 plotBambu(se, type = "pca", group.var) # PCA visualization
+```
 
 ### Bambu Advanced Options
-Below we include several advanced options and use-cases for Bambu. We recommend reading and understanding the paper (LINK???) before attempting to use these features.
+Below we include several advanced options and use-cases for Bambu. We recommend reading and understanding the paper ***(LINK???)*** before attempting to use these features.
 ### Using a pretrained model
 
 Bambu requires at least 1000 transcripts from the annotations to be detected in a sample in order to train a sample specific model. In use cases where this is not possible Bambu will instead use a default pretrained model to calculate the transcript probability score (TPS) for each read class. Users can force this behavior if they believe their annotations are not sufficient for sample specific training (for example if they suspect a high proportion of real novel transcripts are present in their sample). This is advantageous when you want NDR calibration without the impacts of a model trained using low quality annotations. 
@@ -206,13 +210,13 @@ Bambu requires at least 1000 transcripts from the annotations to be detected in 
 se = bambu(reads = test.bam, annotations = annotations, genome = fa.file, opt.discovery = list(fitReadClassModel = FALSE))
 ```
 The default pretrained model was trained on SGNex_HepG2_directRNA_replicate5_run1 and has the following characteristics.
-Genome: Homo_sapiens.GRCh38.dna_sm.primary_assembly
-Annotations: Homo_sapiens.GRCh38.91
-Read count:  7,861,846
-Technology: Nanopore (ONT)
-Library preparation: directRNA
-Base Calling Accuracy: 79%
-Average Read Length: 1093
+Genome: Homo_sapiens.GRCh38.dna_sm.primary_assembly <br>
+Annotations: Homo_sapiens.GRCh38.91<br>
+Read count:  7,861,846<br>
+Technology: Nanopore (ONT)<br>
+Library preparation: directRNA<br>
+Base Calling Accuracy: 79%<br>
+Average Read Length: 1093<br>
 
 We have found the pretrained model works successfully across species borders (on Arabidopsis thaliana) and on different technologies (PacBio), with only small decreases in performance compared to using a sample specific model. The pretrained model is not always effective in samples with large differences in sequencing quality or if the library preparation results in biases in the overall structure of the transcriptome. In this case, we would recommend training a new model using similar data from a different sample that has quality reference annotations (See [Training a model on another species/dataset and applying it](#Training-a-model-on-another-species/dataset-and-applying-it)).
 
@@ -365,15 +369,13 @@ se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, opt
 | verbose | A logical variable indicating whether processing messages will be printed. |
 | lowMemory | Reads will be processed by chromosomes instead of all together when lowMemory is specified. This option provides an efficient way to process big samples. |
 
-
-```
-
 ### Output Description
 Access annotations that are matched to the transcript expression estimates by rowRanges()
 ```rscript
 rowRanges(se)
 ```
 |column|description|
+|---|---|
 |seqnames|The scaffold name the transcript is found on|
 |ranges|An iRanges object containing the start and end coordinates of the transcript (not stranded)|
 |strand|The strand of the transcript (+, -, *)|
