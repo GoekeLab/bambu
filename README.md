@@ -73,8 +73,6 @@ se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ```
 
-You should see the following output.
-
 
 ### General Usage
 The default mode to run *bambu* is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). bambu will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates.
