@@ -46,7 +46,10 @@ test_that("the transcript count output files from writeBambuOutput have TXNAME a
     outputFilesName <- list.files(path)
     transcriptCountOutputFilesPath <- test_path("fixtures", outputFilesName[!grepl("counts_gene.txt|extended_annotations.gtf", outputFilesName)])
     
-    check <- sapply(transcriptCountOutputFilesPath, function(transcriptCountOutputFilesPath){all(c("TXNAME", "GENEID") %in% colnames(read.table(transcriptCountOutputFilesPath, header = TRUE)))})
+    check <- sapply(seq_along(transcriptCountOutputFilesPath), function(i){
+      df <- read.table(transcriptCountOutputFilesPath[i], header = TRUE)
+      all(c("TXNAME", "GENEID") %in% colnames(df))
+    })
     
     expect_true(all(check))
     
