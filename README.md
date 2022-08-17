@@ -76,7 +76,7 @@ se <- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 
 ### General Usage
 The default mode to run *bambu* is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object that can be obtained from prepareAnnotations() function), and reference genome sequence (fasta file or BSgenome). bambu will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates.
-If you do not have any data yet or would like to test *bambu* with a full data-set that has been proven to work (the test data-set that comes with the package is too small to do proper analysis on), we recommend the SG-NEx data project. You can find this data and instructions on how to install it at [here](https://github.com/GoekeLab/sg-nex-data/blob/master/docs/SG-NEx_Bambu_tutorial.md)
+If you do not have any data yet or would like to test *bambu* with a full data-set that has been proven to work (the test data-set that comes with the package is too small to do proper analysis on), we recommend the SG-NEx data project. You can find this data and instructions on how to install it at [here](https://github.com/GoekeLab/sg-nex-data/blob/master/docs/SG-NEx_Bambu_tutorial.md).
 We highly recommend using the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run bambu with the following options:
 ```rscript
 se <- bambu(reads = sample, annotations = annotations, genome = fa.file)
@@ -87,12 +87,11 @@ se <- bambu(reads = sample, annotations = annotations, genome = fa.file)
 
 **annotations** - takes a path to a gtf file, a txdb object, or annotations prepared by prepareAnnotations() (see  [Use precalculated annotation objects](#Use-precalculated-annotation-objects)). When not provided, de novo transcript discovery is performed (see [De-novo transcript discovery](#De-novo-transcript-discovery))
 
-**NDR** - Novel Discovery Rate threshold. A value between 0 and 1 representing the maximum NDR threshold for candidate transcripts to be included in the analysis. By default, *bambu* will recommend a threshold for your analysis. For more information see [Modulating the sensitivity of discovery (pre and post analysis)]
+**NDR** - Novel Discovery Rate threshold. A value between 0 and 1 representing the maximum NDR threshold for candidate transcripts to be included in the analysis. By default, *bambu* will recommend a threshold for your analysis. For more information see [Modulating the sensitivity of discovery (pre and post analysis)](#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis).
 
-(#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis)
-For full parameter list see [Arguments](#Arguments)
+For the full parameter list see [Arguments](#Arguments)
 
-**Transcript discovery only (no quantification)**
+#### **Transcript discovery only (no quantification)**
 
 If you are only interested in identifying novel transcripts, the quantification module of bambu can be skipped by setting quant to FALSE. 
 Note that the output will be a GRangeslist object containing the reference and novel annotations (See rowRanges() in [Output](#Output)). We recommend running transcript discovery only mode with NDR = 1, and doing filtering in the downstream analysis to allow flexibility in the analysis. See [Modulating the sensitivity of discovery (pre and post analysis)](#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis)
@@ -110,11 +109,13 @@ se.quantOnly <- bambu(reads = test.bam, annotations = gtf.file, genome = fa.file
 ```
 ### Using precalculated annotation objects
 Depending on the size of your reference annotations the prepareAnnotations() step may take a few minutes. You can also use precalculated annotations and if you plan to run bambu more frequently with the same annotations, we recommend to save the bambuAnnotations object.
-The bambuAnnotation object can be calculated from a .gtf file:
+The bambuAnnotation object can be calculated from:
+
+a) a .gtf file:
 ```rscript
 annotations <- prepareAnnotation(gtf.file)
 ```
-From TxDb object
+b) a TxDb object
 ```rscript
 annotations <- prepareAnnotations(txdb)
 ```
@@ -137,7 +138,7 @@ se.multiSample <- bambu(reads = c(test1.bam, test2.bam, test3.bam), annotations 
 ```
 
 The advantage of running samples together include:
-Novel transcripts that are identified in multiple samples are assigned unified IDs, enabling comparative analysis between different samples. This is especially important for downstream differential expression analysis when looking at novel transcripts. Running multiple samples can be multithreaded (see ncore). While running multiple samples, By default, *bambu* will train a model separately on each sample and score novel transcripts in each sample separately.
+Novel transcripts that are identified in multiple samples are assigned unified IDs, enabling comparative analysis between different samples. This is especially important for downstream differential expression analysis when looking at novel transcripts. Running multiple samples can be multithreaded (see [ncore](#bambu-arguments)). While running multiple samples, By default, *bambu* will train a model separately on each sample and score novel transcripts in each sample separately.
 
 If you need to combine samples in multiple configurations (for example different pairwise comparisons) we would recommend using the intermediate rcFiles to save processing time (see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles))
  
@@ -152,7 +153,7 @@ To manually select an NDR value, use the NDR argument in bambu:
 ```rscript
 se.NDR_0.3 <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 0.3)
 ```
-Alternatively transcript discovery can be run without thresholds, producing a GRangesList annotation object with all transcripts scored with its NDR score. Note that this means turning quant = FALSE in running bambu (refer to “Transcript discovery only” section). The annotations can be filtered by their NDR score (see example below), read count and gene read proportion between the discovery and quantification steps or used for other types of analysis. 
+Alternatively transcript discovery can be run without thresholds, producing a GRangesList annotation object with all transcripts scored with its NDR score. Note that this means turning quant = FALSE in running bambu (refer to [“Transcript discovery only”](#transcript-discovery-only-no-quantification) section). The annotations can be filtered by their NDR score (see example below), read count and gene read proportion between the discovery and quantification steps or used for other types of analysis. 
 
 ```rscript
 newAnnotations <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 1, quant = FALSE)
@@ -164,20 +165,20 @@ Additionally there are other thresholds that advanced users can access through o
 ### Output
 bambu returns a SummarizedExperiment object which can be accessed as follows:
 
-assays(se) returns a list of transcript abundance estimates as counts or CPM
+**assays(se)** returns a list of transcript abundance estimates as counts or CPM
 
-rowRanges(se) returns a GRangesList with all annotated and newly discovered transcripts
+**rowRanges(se)** returns a GRangesList with all annotated and newly discovered transcripts
 
-rowData(se) returns additional information about each transcript
+**rowData(se)** returns additional information about each transcript
 
 Access transcript expression estimates by extracting a variable (such as counts or CPM) using assays() 
-assays(se)$counts - expression estimates
+**assays(se)$counts** - expression estimates
 
-assays(se)$CPM -sequencing depth normalized estimates
+**assays(se)$CPM** -sequencing depth normalized estimates
 
-assays(se)$fullLengthCounts - estimates of read counts mapped as full length reads for each transcript
+**assays(se)$fullLengthCounts** - estimates of read counts mapped as full length reads for each transcript
 
-assays(se)$uniqueCounts - counts of reads that are uniquely mapped to each transcript
+**assays(se)$uniqueCounts** - counts of reads that are uniquely mapped to each transcript
 
 
 For a full description of the other outputs see [Output Description](#Output-Description)
@@ -186,7 +187,7 @@ The full output can be written to a file using writeBambuOutput().  Using this f
 ```rscript
 writeBambuOutput(se, path = "./bambu/")
 ```
-If quant is set to FALSE i.e., only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols()
+If quant is set to FALSE i.e. only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols()
 If both quant and discovery are set to FALSE, bambu will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
  
 ### Visualization
@@ -195,13 +196,18 @@ You can visualize the novel genes/transcripts using plotBambu function. (Note th
 ```rscript
 plotBambu(se, type = "annotation", gene_id = "ENSG00000107104")
 ```
+
+<p align="center">
 <img src="figures/plotTranscript.PNG" title="plotGene" alt="plotGene" width = 500>
+</p>
 
 ```rscript
 plotBambu(se, type = "annotation", transcript_id = "tx.9")
 ```
 
+<p align="center">
 <img src="figures/plotGene.PNG" title="plotTranscript" alt="plotTranscript"  width = 500>
+</p>
 
 plotBambu can also be used to visualize the clustering of input samples on gene/transcript expressions. Only for multiple samples’ visualisation. See [Running multiple samples](#Running-multiple-samples)
 
@@ -209,12 +215,17 @@ plotBambu can also be used to visualize the clustering of input samples on gene/
 plotBambu(se, type = "heatmap") # heatmap 
 ```
 
+<p align="center">
 <img src="figures/plotHeatMap.PNG" title="plotHeapmap" alt="plotHeapmap"  width = 500>
+</p>
 
 ```rscript
 plotBambu(se, type = "pca") # PCA visualization
 ```
+
+<p align="center">
 <img src="figures/plotPCA.PNG" title="plotPCA" alt="plotPCA"  width = 500>
+</p>
 
 plotBambu can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable
 ```rscript
@@ -223,7 +234,7 @@ plotBambu(se, type = "heatmap", group.var) # heatmap
 plotBambu(se, type = "pca", group.var) # PCA visualization
 ```
 
-### Bambu Advanced Options
+### *Bambu* Advanced Options
 Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the paper ***(LINK???)*** before attempting to use these features.
 ### Using a pretrained model
 
@@ -357,7 +368,7 @@ rcFile <- NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = 
 
 |arguments|description|
 |---|---|
-|rcFile|A path to the intermediate rcFile sample or the loaded rcFile sample (see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles|
+|rcFile|A path to the intermediate rcFile sample or the loaded rcFile sample (see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles))|
 |min.readCount|The minimum read count threshold used for read classes during training|
 |nroundsoutput|The number of stumps used in the xgboost tree|
 |NDR.threshold|The NDR threshold that will be used for the recommended NDR calibration when using this model. |
@@ -371,11 +382,11 @@ By default *bambu* does not report single exon transcripts because they are know
 ```rscript
 se <- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, opt.discovery = list(min.txScore.singleExon = 0))
 ```
-### Bambu Arguments
+### *Bambu* Arguments
 
 |argument|description|
 |---|---|
-|reads|A string or a vector of strings specifying the paths of bam files for genomic alignments, or a BamFile object or a BamFileList object (see Rsamtools).|
+|reads|A string or a vector of strings specifying the paths of bam files for genomic alignments, or a BamFile object or a BamFileList object (from Rsamtools).|
 | rcFile | A string or a vector of strings specifying the read class files that are saved during previous run of bambu. |
 | rcOutDir | A string variable specifying the path to where read class files will be saved. |
 | annotations | A TxDb object, a path to a .gtf file, or a GRangesList object obtained by prepareAnnotations. |
@@ -384,7 +395,7 @@ se <- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, op
 | ncore | specifying number of cores used when parallel processing is used, defaults to 1. |
 | NDR | specifying the maximum NDR rate to novel transcript output among detected transcripts, defaults to 0.1 |
 | yieldSize | see Rsamtools. |
-| opt.discovery | A list of controlling parameters for isoform reconstruction process:  <br> **prefix** specifying prefix for new gene Ids (genePrefix.number), defaults to empty <br> **remove.subsetTx** indicating whether filter to remove read classes which are a subset of known transcripts(), defaults to TRUE <br> **min.readCount** specifying minimun read count to consider a read class valid in a sample, defaults to 2 <br> **min.readFractionByGene** specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05 <br> **min.sampleNumber** specifying minimum sample number with minimum read count, gene read proportion, and TPS, defaults to 1 <br> **min.exonDistance** specifying minimum distance to known transcript to be considered valid as new, defaults to 35bp <br> **min.exonOverlap** specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults to 10bp <br> **min.primarySecondaryDist** specifying the minimum number of distance threshold between a read class and the annotations internal exons. Read classes with distances less than the threshold are not annotated as novel and counted with the annotations for quantification, defaults to 5bp <br> **min.primarySecondaryDistStartEnd1** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are not annotated as novel, defaults to 5bp <br> **min.primarySecondaryDistStartEnd2** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are counted with the annotations, defaults to 5bp <br> **min.txScore.multiExon** specifying the minimum transcript probility score threshold for multi-exon transcripts for min.sampleNumber, defaults to 0 <br> **min.txScore.singleExon** specifying the minimum transcript probability score threshold for single-exon transcripts for min.sampleNumber <br> **fitReadClassModel** a boolean specifying if bambu should train a model on each sample. If set to false bambu will use the default model for ranking novel transcripts. defaults to TRUE <br> **defaultModels** a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the *bambu* package <br> **returnModel** a boolean specifying if bambu will output the model it trained on the data, defaults to FALSE <br> **txScoreBaseline** a value between 0-1 which is the transcript probability score used to recommend an NDR, defaults to the baseline calculated in the defaultModels object. In bambu's default model this baseline was calculated as the TPS when an NDR of 0.1 is observed. <br> **min.readFractionByEqClass** indicating the minimum relative read count of a subset transcript compared to all superset transcripts (ie the relative read count within the minimum equivalent class). This filter is applied on the set of annotations across all samples using the total read count, this is not a per-sample filter. Please use with  caution. defaults to 0 |
+| opt.discovery | A list of controlling parameters for isoform reconstruction process:  <br> **prefix** specifying prefix for new gene Ids (genePrefix.number), defaults to empty <br> **remove.subsetTx** indicating whether filter to remove read classes which are a subset of known transcripts, defaults to TRUE <br> **min.readCount** specifying minimun read count to consider a read class valid in a sample, defaults to 2 <br> **min.readFractionByGene** specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05 <br> **min.sampleNumber** specifying minimum sample number with minimum read count, gene read proportion, and TPS, defaults to 1 <br> **min.exonDistance** specifying minimum distance to known transcript to be considered valid as new, defaults to 35bp <br> **min.exonOverlap** specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults to 10bp <br> **min.primarySecondaryDist** specifying the minimum number of distance threshold between a read class and the annotations internal exons. Read classes with distances less than the threshold are not annotated as novel and counted with the annotations for quantification, defaults to 5bp <br> **min.primarySecondaryDistStartEnd1** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are not annotated as novel, defaults to 5bp <br> **min.primarySecondaryDistStartEnd2** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are counted with the annotations, defaults to 5bp <br> **min.txScore.multiExon** specifying the minimum transcript probility score threshold for multi-exon transcripts for min.sampleNumber, defaults to 0 <br> **min.txScore.singleExon** specifying the minimum transcript probability score threshold for single-exon transcripts for min.sampleNumber <br> **fitReadClassModel** a boolean specifying if bambu should train a model on each sample. If set to false bambu will use the default model for ranking novel transcripts. defaults to TRUE <br> **defaultModels** a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the *bambu* package <br> **returnModel** a boolean specifying if bambu will output the model it trained on the data, defaults to FALSE <br> **txScoreBaseline** a value between 0-1 which is the transcript probability score used to recommend an NDR, defaults to the baseline calculated in the defaultModels object. In bambu's default model this baseline was calculated as the TPS when an NDR of 0.1 is observed. <br> **min.readFractionByEqClass** indicating the minimum relative read count of a subset transcript compared to all superset transcripts (ie the relative read count within the minimum equivalent class). This filter is applied on the set of annotations across all samples using the total read count, this is not a per-sample filter. Please use with  caution. defaults to 0 |
 | opt.em | A list of controlling parameters for quantification algorithm estimation process: <br> **maxiter** specifying maximum number of run iterations, defaults to 10000 <br> **degradationBias** correcting for degradation bias, defaults to TRUE <br> **conv** specifying the covergence threshold control, defaults to 0.0001 <br> **minvalue** specifying the minvalue for convergence consideration, defaults to 0.00000001 |
 | trackReads | When TRUE read names will be tracked and output as metadata in the final output as readToTranscriptMaps detailing the assignment of reads to transcripts.The output is a list with an entry for each sample. |
 | returnDistTable | When TRUE the calculated distance table between read classes and annotations will be output as metadata as distTables. The output is a list with an entry for each sample. |
