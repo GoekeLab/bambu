@@ -56,19 +56,19 @@
 #'     subject transcript, -k if the query transcript ends the transcription k sites earlier than the 
 #'     subject transcript. 
 #'     \item internalLastExon.query: TRUE if the last exon of the query transcript is equivalent to one 
-#'     of the exon in the subject transcript (except the first exon). FALSE otherwise. 
+#'     of the exon in the subject transcript (except the last exon). FALSE otherwise. 
 #'     \item internalLastExon.subject: TRUE if the last exon of the subject transcript is equivalent to 
-#'     one of the exon in the query transcript (except the first exon). FALSE otherwise. 
-#'     \item intronRetention.subject: k if there is/are k introns in the subject transcript relative to the 
+#'     one of the exon in the query transcript (except the last exon). FALSE otherwise. 
+#'     \item intronRetention.subject: k if there is/are k intron(s) in the subject transcript relative to the 
 #'     query transcript. 
-#'     \item intronRetention.query: k if there is/are k introns in the query transcript relative to the 
+#'     \item intronRetention.query: k if there is/are k intron(s) in the query transcript relative to the 
 #'     subject transcript. 
-#'     \item exonSkipping.query: k if there is/are k equivalent exons in the subject transcript not in the
+#'     \item exonSkipping.query: k if there is/are k exon(s) in the subject transcript (except the first and last) not in the
 #'     query transcript. 
-#'     \item exonSkipping.subject: k if there is/are k equivalent exons in the query transcript not in the 
+#'     \item exonSkipping.subject: k if there is/are k exon(s) in the query transcript (except the first and last) not in the 
 #'     subject transcript. 
-#'     \item exon5prime (splicing): k if there is/are k equivalent exons having different 5' start site. 
-#'     \item exon3prime (splicing): k if there is/are k equivalent exons having different 3' end site.
+#'     \item exon5prime (splicing): k if there is/are k equivalent exon(s) having different 5' start site (except the 5' start site of first exon).
+#'     \item exon3prime (splicing): k if there is/are k equivalent exon(s) having different 3' end site (except the 3' end site of the last exon).
 #' }
 #' @importFrom dplyr tibble 
 #' @examples

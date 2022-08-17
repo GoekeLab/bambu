@@ -13,213 +13,187 @@ test_that("compareTranscripts between the query transcripts and subject transcri
 })
 
 # For the remaining of the test, we select a few test case to validate the output from the 
-# compareTranscripts function. These test cases are selected in a way to cover as
-# many scenarios as possible. 
+# compareTranscripts function. They are selected in a way to capture as many scenarios as possible.
+# These test cases are shown below. 
 
-test_that("compareTranscripts gives correct output about exon skipping (query) 
-          and alternative TSS for a transcript along positive strand", {
+### examples for test purposes
+## Expected annotations of transcripts used in test query
+# 'ENST00000344579', # exon skipping, alternative TSS (-35), +, ENSG00000158109
+# 'ENST00000270792', # intron retention subject 1(last exon),alt.TSS,alt.TES, +,
+# 'ENST00000410032', # alternative first exon, exon skipping query: 2, 
+#                    # exon skipping subject: 0, alternative TES (2bp only), 
+#                    # internalFirstExon.subject +
+# 'ENST00000468178', # alternative last exon +
+# 'ENST00000485956', # alternative first exon, alternative last exon,
+# #exon skipping subject = 1, internal first exon query, +
+# 'ENST00000530807', # exon skipping query 1, alternative TSS (-17),  -
+# 'ENST00000409894', # alternative 3' exon splice site, exon skipping query 2,
+# #alternative TSS, alterantive TES, +, ENSG00000125630
+# 'ENST00000524447',  # alternative TSS, alternative last exon (internal), 
+# #alternative exon 3' end,-, ENSG00000165916
+# 'ENST00000591696' # alternative TSS, alternative 3' exon (2), 
+# #alternative 5' exon (1) alternative TES, ,+,ENSG00000141349
+
+test_that("the strand column of compareTranscripts matches the expectations",{
     
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[1]
-    t2 <- subject[1]
-    
-    # check alternative TSS
-    expect_equal(tab[1,]$alternativeTSS, -(3625050 - 3625015)) 
-    
-    # check exon skipping (query)
-    expect_equal(tab[1,]$exonSkipping.query, 1) 
+    expect_equal(tab$strand, c("+", "+", "+", "+", "+", "-", "+", "-", "+"))
     
 })
 
 
-test_that("compareTranscripts gives correct output about intron retention (subject), 
-          alternative TSS and alternative TES for a transcript along positive strand", {
+test_that("the alternativeFirstExon column of compareTranscripts matches the expectations",{
+  
+    query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
+    subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
+    tab <- compareTranscripts(query, subject)
+    
+    expect_equal(tab$alternativeFirstExon, c(FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE))
+    
+})
+
+
+test_that("the alternativeTSS column of compareTranscripts matches the expectations",{
     
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[2]
-    t2 <- subject[2]
-    
-    # check alternative TSS
-    expect_equal(tab[2,]$alternativeTSS, -(26280086 - 26280122))
-    
-    # check alternative TES 
-    expect_equal(tab[2,]$alternativeTES, 26281522 - 26281450)
-    
-    # check intron retention (subject)
-    expect_equal(tab[2,]$intronRetention.subject, 1)
+    expect_equal(tab$alternativeTSS, c(-35, 36, 0, 0, 0, -17, -311, -41, -141))
     
 })
 
 
-test_that("compareTranscripts gives correct output about alternative first exon, exon skipping (query), 
-          exon skipping (subject), alternative TSS and internalFirstExon (subject) for a transcript along positive strand", {
+test_that("the internalFirstExon.query column of compareTranscripts matches the expectations",{
+    
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[3]
-    t2 <- subject[3]
-
-    # check alternative first exon 
-    expect_equal(tab[3,]$alternativeFirstExon, TRUE)
-    
-    # check alternative TES 
-    expect_equal(tab[3,]$alternativeTES, 237553996 - 237553994)
-    
-    # check internal first exon (subject)
-    expect_equal(tab[3,]$internalFirstExon.subject, TRUE)
-
-    # check exon skipping (query)
-    expect_equal(tab[3,]$exonSkipping.query, 2)
-    
-    # check exon skipping (subject)
-    expect_equal(tab[3,]$exonSkipping.subject, 0)
+    expect_equal(as.logical(tab$internalFirstExon.query), c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE))
     
 })
 
 
-test_that("compareTranscripts gives correct output about alternative last exons and intron retention (query) for a transcript along positive strand", {
+test_that("the internalFirstExon.subject column of compareTranscripts matches the expectations",{
+    
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[4]
-    t2 <- subject[4]
-    
-    # check alternative last exons 
-    expect_equal(tab[4,]$alternativeLastExon, TRUE)
-    
-    # check intron retention (query)
-    expect_equal(tab[4, ]$intronRetention.query, 0)
+    expect_equal(as.logical(tab$internalFirstExon.subject), c(FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
     
 })
 
 
-test_that("compareTranscripts gives correct output about alternative first exon, alternative last exon, 
-          exon skipping (subject) and internal first exon (query) for a transcript along positive strand", {
+test_that("the alternativeLastExon column of compareTranscripts matches the expectations",{
+    
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[5]
-    t2 <- subject[5]
-    
-    # check alternative first exon 
-    expect_equal(tab[5,]$alternativeFirstExon, TRUE)
-    
-    # check alternative last exon 
-    expect_equal(tab[5,]$alternativeLastExon, TRUE)
-    
-    # check exon skipping (subject)
-    expect_equal(tab[5,]$exonSkipping.subject, 1)
+    expect_equal(tab$alternativeLastExon, c(FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE))
     
 })
 
 
-test_that("compareTranscripts gives correct output about exon skipping (query) and 
-          alternative TSS for a transcript along negative strand", {
+test_that("the alternativeTES column of compareTranscripts matches the expectations",{
+    
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[6]
-    t2 <- subject[6]
-
-    # check exon skipping (query)
-    expect_equal(tab[6,]$exonSkipping.query, 1)
-    
-    # check alternative TSS
-    expect_equal(tab[6,]$alternativeTSS, 144413569 - 144413586)
+    expect_equal(tab$alternativeTES, c(0, 72, 2, 0, 0, 0, 759, 0, -459))
     
 })
 
 
-test_that("compareTranscripts gives correct output about alternative 3' exon splice site, exon skipping (query), 
-          alternative TSS and alternative TES for a transcript along positive strand", {
+test_that("the internalLastExon.query column of compareTranscripts matches the expectations",{
+    
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[7]
-    t2 <- subject[7]
-
-    # check exon skipping (query)
-    expect_equal(tab[7,]$exonSkipping.query, 2)
-    
-    # check alternative TSS 
-    expect_equal(tab[7,]$alternativeTSS, -(112542226 - 112541915))
-    
-    # check alternative TES
-    expect_equal(tab[7,]$alternativeTES, 112577058 - 112576299)
-    
-    # check alternative 3' exon splice site
-    expect_equal(tab[7,]$exon3Prime, 1)
+    expect_equal(as.logical(tab$internalLastExon.query), c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE))
     
 })
 
 
-test_that("compareTranscripts gives correct output about alternative TSS, alternative last exon, internal last exon (query), 
-          alternative exon 3' end and alternative exon 5' end for a transcript along negative strand", {
+test_that("the internalLastExon.subject column of compareTranscripts matches the expectations",{
+    
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[8]
-    t2 <- subject[8]
-    
-    # check alternative TSS
-    expect_equal(tab[8,]$alternativeTSS, 47426225 - 47426266)
-    
-    # check alternative last exon
-    expect_equal(tab[8,]$alternativeLastExon, TRUE)
-    
-    # check internal last exon
-    expect_equal(tab[8,]$internalLastExon.query, TRUE)
-    
-    # check alternative 3' exon splice site
-    expect_equal(tab[8,]$exon3Prime, 1)
-    
-    # check alternative 5' exon splice site
-    expect_equal(tab[8,]$exon5Prime, 0)
+    expect_equal(as.logical(tab$internalLastExon.subject), c(FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE))
     
 })
 
 
-test_that("compareTranscripts gives correct output about alternative TSS, alternative exon 3' end, 
-          alternative exon 5' end and alternative TES for a transcript along positive strand", {
+test_that("the intronRetention.subject column of compareTranscripts matches the expectations",{
+    
     query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
     subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
     tab <- compareTranscripts(query, subject)
     
-    # transcripts to inspect & compare
-    t1 <- query[9]
-    t2 <- subject[9]
-    
-    # check alternative TSS 
-    expect_equal(tab[9,]$alternativeTSS, -(44070892 - 44070751))
-    
-    # check alternative TES 
-    expect_equal(tab[9,]$alternativeTES, 44075841 - 44076300)
-    
-    # check alternative 3' exon splice site 
-    expect_equal(tab[9,]$exon3Prime, 2)
-    
-    # check alternative 5' exon splice site
-    expect_equal(tab[9,]$exon5Prime, 1)
+    expect_equal(as.numeric(tab$intronRetention.subject), c(0, 1, 0, 0, 0, 0, 0, 0, 0))
     
 })
+
+
+test_that("the intronRetention.query column of compareTranscripts matches the expectations",{
     
+    query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
+    subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
+    tab <- compareTranscripts(query, subject)
+    
+    expect_equal(as.numeric(tab$intronRetention.query), c(0, 0, 0, 0, 0, 0, 0, 0, 0))
+    
+})
+
+
+test_that("the exonSkipping.query column of compareTranscripts matches the expectations",{
+    
+    query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
+    subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
+    tab <- compareTranscripts(query, subject)
+    
+    expect_equal(tab$exonSkipping.query, c(1, 0, 2, 0, 0, 1, 2, 0, 0))
+    
+})
+
+
+test_that("the exonSkipping.subject column of compareTranscripts matches the expectations",{
+    
+    query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
+    subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
+    tab <- compareTranscripts(query, subject)
+    
+    expect_equal(tab$exonSkipping.subject, c(0, 0, 0, 0, 1, 0, 0, 0, 0))
+    
+})
+
+
+test_that("the exon5Prime column of compareTranscripts matches the expectations",{
+    
+    query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
+    subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
+    tab <- compareTranscripts(query, subject)
+    
+    expect_equal(as.numeric(tab$exon5Prime), c(0, 0, 0, 0, 0, 0, 0, 0, 1))
+    
+})
+
+
+test_that("the exon3Prime column of compareTranscripts matches the expectations",{
+    
+    query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
+    subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
+    tab <- compareTranscripts(query, subject)
+    
+    expect_equal(as.numeric(tab$exon3Prime), c(0, 0, 0, 0, 0, 0, 1, 1, 2))
+    
+})
