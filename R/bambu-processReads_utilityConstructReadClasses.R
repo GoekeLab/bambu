@@ -181,11 +181,11 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
-        summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
+        summarise(readCount = n(), starts = list(start), ends = list(end),
+                startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId), 
-                starts = list(start), ends = list(end),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = ".")) %>% 
@@ -311,8 +311,8 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(readId), starts = list(rep(readStart,counts)), 
-            ends = list(rep(readEnd,counts))) %>% 
+            readIds = list(readId), starts = list(readStart), 
+            ends = list(readEnd)) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
