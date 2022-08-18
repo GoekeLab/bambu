@@ -92,7 +92,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
-        confidenceType, readCount, readIds)
+        confidenceType, readCount, readIds, starts, ends)
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
     return(exonsByReadClass)
@@ -184,7 +184,8 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
-                readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
+                readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId), 
+                starts = list(start), ends = list(end),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = ".")) %>% 
@@ -310,7 +311,8 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(readId)) %>% 
+            readIds = list(readId), starts = list(rep(readStart,counts)), 
+            ends = list(rep(readEnd,counts))) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
@@ -329,7 +331,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
         intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, 
-        readCount.posStrand, readIds)
+        readCount.posStrand, readIds, starts, ends)
     mcols(exByReadClassUnspliced) <- hitsDF
     return(exByReadClassUnspliced)
 }
