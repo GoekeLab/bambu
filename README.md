@@ -40,7 +40,7 @@
 
 ### Installation
 
-bambu is available through GitHub and Bioconductor
+*bambu* is available through GitHub and Bioconductor
 
 Bioconductor:
 ```rscript
