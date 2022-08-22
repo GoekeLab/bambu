@@ -174,7 +174,7 @@ Additionally there are other thresholds that advanced users can access through o
 Access transcript expression estimates by extracting a variable (such as counts or CPM) using assays() 
 **assays(se)$counts** - expression estimates
 
-**assays(se)$CPM** -sequencing depth normalized estimates
+**assays(se)$CPM** - sequencing depth normalized estimates
 
 **assays(se)$fullLengthCounts** - estimates of read counts mapped as full length reads for each transcript
 
