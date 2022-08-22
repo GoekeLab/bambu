@@ -346,7 +346,7 @@ metadata(se)$readToTranscriptMaps[[1]]
 
 ### Training a model on another species/dataset and applying it
 
-In situations where training is not or cannot be performed, and the default model is also not suitable for the sample (the sample is generated from a different technology, species, condition, etc), bambu provides the option to train a new model, if well annotated similar data is available. For example one might train a model on arabidopsis to apply to an unannotated plant sample.
+In situations where training is not or cannot be performed, and the default model is also not suitable for the sample (the sample is generated from a different technology, species, condition, etc), *bambu* provides the option to train a new model, if well annotated similar data is available. For example one might train a model on arabidopsis to apply to an unannotated plant sample.
 
 ```rscript
 # first train the model using a related annotated dataset from .bam
