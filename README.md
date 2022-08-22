@@ -93,7 +93,7 @@ For the full parameter list see [Arguments](#Arguments)
 
 #### **Transcript discovery only (no quantification)**
 
-If you are only interested in identifying novel transcripts, the quantification module of bambu can be skipped by setting quant to FALSE. 
+If you are only interested in identifying novel transcripts, the quantification module of *bambu* can be skipped by setting quant to FALSE. 
 Note that the output will be a GRangeslist object containing the reference and novel annotations (See rowRanges() in [Output](#Output)). We recommend running transcript discovery only mode with NDR = 1, and doing filtering in the downstream analysis to allow flexibility in the analysis. See [Modulating the sensitivity of discovery (pre and post analysis)](#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis)
 
 ```rscript
