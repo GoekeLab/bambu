@@ -265,7 +265,7 @@ novelAnnotations <- bambu(reads = test.bam, annotations = NULL, genome = fa.file
 ```
 ### Storing and using preprocessed files (rcFiles)
 
-The first step of *bambu* involves the construction of read classes which is a large fraction of the running time. This could be time-consuming if we want to perform transcript discovery & quantification multiple times on the same dataset using different configurations (eg. NDR, or combinations of samples), especially when the sample is large. To mitigate this, we can store the read class information as read class files (rcFiles) during a bambu run. Then they can be used as an input argument in the  bambu main function for the subsequent bambu run.
+The first step of *bambu* involves the construction of read classes which is a large fraction of the running time. This could be time-consuming if we want to perform transcript discovery & quantification multiple times on the same dataset using different configurations (eg. NDR, or combinations of samples), especially when the sample is large. To mitigate this, we can store the read class information as read class files (rcFiles) during a *bambu* run. Then they can be used as an input argument in the  *bambu* main function for the subsequent *bambu* run.
 
 ```rscript 
 se <- bambu(reads = rcFiles, annotations = annotations, genome = fa.file)
