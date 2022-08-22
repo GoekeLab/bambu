@@ -53,7 +53,7 @@ First download *bambu* from github
 ```bash
 git clone https://github.com/GoekeLab/bambu.git
 ```
-Within R load the package (be sure to put the correct path to bambu below)
+Within R load the package (be sure to put the correct path to *bambu* below)
 ```rscript
 library(devtools)
 load_all("/path/to/bambu")
