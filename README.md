@@ -191,7 +191,7 @@ If quant is set to FALSE i.e. only transcript discovery is performed, only the r
 If both quant and discovery are set to FALSE, *bambu* will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
  
 ### Visualization
-You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running bambu on the three replicates of HepG2 cell line in the SGNEx project)
+You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running *bambu* on the three replicates of HepG2 cell line in the SG-NEx project)
 
 ```rscript
 plotBambu(se, type = "annotation", gene_id = "ENSG00000107104")
