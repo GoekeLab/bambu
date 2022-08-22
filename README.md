@@ -49,7 +49,7 @@ BiocManager::install("bambu")
 ```
 
 GitHub:
-First download bambu from github
+First download *bambu* from github
 ```bash
 git clone https://github.com/GoekeLab/bambu.git
 ```
