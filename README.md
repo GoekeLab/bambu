@@ -506,7 +506,7 @@ Release date: 2020-05-29
 A manuscript describing *bambu* is currently in preparation. If you use *bambu* for your research, please cite using the following doi: 10.18129/B9.bioc.bambu. Please specificy that you are using a pre-publication release.
 ### Contributors
 
-This package is developed and maintained by [Ying Chen](https://github.com/cying111), [Andre Sim](https://github.com/andredsim), [Yuk Kei Wan](https://github.com/yuukiiwa), and  [Jonathan Goeke](https://github.com/jonathangoeke) at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
+This package is developed and maintained by [Ying Chen](https://github.com/cying111), [Andre Sim](https://github.com/andredsim), [Yuk Kei Wan](https://github.com/yuukiiwa), [Keith Yeo](https://github.com/keithyjy), [Min Hao Ling](https://github.com/lingminhao) and  [Jonathan Goeke](https://github.com/jonathangoeke) at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
 
 <img src="figures/bambu_design_highres.png" title="Bambu" alt="Bambu">
 
