@@ -102,7 +102,7 @@ se.discoveryOnly <- bambu(reads = test.bam, annotations = gtf.file, genome = fa.
 
 **Quantification of annotated transcripts and genes only (no transcript/gene discovery)**
 
-If you are only interested in quantifying transcripts, the discovery module of bambu can be skipped by setting discovery to FALSE.
+If you are only interested in quantifying transcripts, the discovery module of *bambu* can be skipped by setting discovery to FALSE.
 
 ```rscript
 se.quantOnly <- bambu(reads = test.bam, annotations = gtf.file, genome = fa.file, discovery = FALSE)
