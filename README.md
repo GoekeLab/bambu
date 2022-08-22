@@ -171,7 +171,7 @@ Additionally there are other thresholds that advanced users can access through o
 
 **rowData(se)** returns additional information about each transcript
 
-Access transcript expression estimates by extracting a variable (such as counts or CPM) using assays() 
+Access transcript expression estimates by extracting a variable (such as counts or CPM) using assays(): 
 **assays(se)$counts** - expression estimates
 
 **assays(se)$CPM** - sequencing depth normalized estimates
@@ -460,7 +460,7 @@ Minor fixes:
 
 - remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) 
 and directly references the functions that should be used instead. 
-- bug fix when a fa file ois provdied as a string variable to non-windows system
+- bug fix when a fa file is provdied as a string variable to non-windows system
 - bug fix when no single exon read class in provided samples
 - bug fix when no splice overlaps found between read class and annotations
 
