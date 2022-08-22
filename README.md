@@ -108,7 +108,7 @@ If you are only interested in quantifying transcripts, the discovery module of *
 se.quantOnly <- bambu(reads = test.bam, annotations = gtf.file, genome = fa.file, discovery = FALSE)
 ```
 ### Using precalculated annotation objects
-Depending on the size of your reference annotations the prepareAnnotations() step may take a few minutes. You can also use precalculated annotations and if you plan to run bambu more frequently with the same annotations, we recommend to save the bambuAnnotations object.
+Depending on the size of your reference annotations the prepareAnnotations() step may take a few minutes. You can also use precalculated annotations and if you plan to run *bambu* more frequently with the same annotations, we recommend to save the bambuAnnotations object.
 The bambuAnnotation object can be calculated from:
 
 a) a .gtf file:
