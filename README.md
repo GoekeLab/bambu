@@ -153,7 +153,7 @@ To manually select an NDR value, use the NDR argument in *bambu*:
 ```rscript
 se.NDR_0.3 <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 0.3)
 ```
-Alternatively transcript discovery can be run without thresholds, producing a GRangesList annotation object with all transcripts scored with its NDR score. Note that this means turning quant = FALSE in running bambu (refer to [“Transcript discovery only”](#transcript-discovery-only-no-quantification) section). The annotations can be filtered by their NDR score (see example below), read count and gene read proportion between the discovery and quantification steps or used for other types of analysis. 
+Alternatively transcript discovery can be run without thresholds, producing a GRangesList annotation object with all transcripts scored with its NDR score. Note that this means turning quant = FALSE in running *bambu* (refer to [“Transcript discovery only”](#transcript-discovery-only-no-quantification) section). The annotations can be filtered by their NDR score (see example below), read count and gene read proportion between the discovery and quantification steps or used for other types of analysis. 
 
 ```rscript
 newAnnotations <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 1, quant = FALSE)
