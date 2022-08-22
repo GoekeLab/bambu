@@ -188,7 +188,7 @@ The full output can be written to a file using writeBambuOutput().  Using this f
 writeBambuOutput(se, path = "./bambu/")
 ```
 If quant is set to FALSE i.e. only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols()
-If both quant and discovery are set to FALSE, bambu will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
+If both quant and discovery are set to FALSE, *bambu* will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
  
 ### Visualization
 You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running bambu on the three replicates of HepG2 cell line in the SGNEx project)
