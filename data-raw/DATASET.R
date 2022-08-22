@@ -116,7 +116,7 @@ seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
                                     package = "bambu"))
 
-#standardJunctionModels_temp
+# How to get pre trained junction model standardJunctionModels_temp
 # added "saveRDS(junctionModel, "./inst/extdata/standardJunctionModels_temp.txt")" to junctionErrorCorrection
 # ran Bambu with GNex_HepG2_directRNA_replicate5_run1_genome
 standardJunctionModels_temp = readRDS(system.file(
