@@ -148,7 +148,7 @@ When doing transcript discovery there is a balance between sensitivity (the numb
 
 If you are using a genome where you expect a high amount of novel transcripts, a higher NDR is recommended so that these novel transcripts are not missed. Conversely if you are using a well annotated genome, we recommend a lower NDR threshold to reduce the presence of false positives. By default the NDR threshold is automatically chosen for the user based on predicted level of annotation completeness when compared to the default model trained on human reference annotations (Hg38). For more information see [Training a model on another species/dataset and applying it](#Training-a-model-on-another-speciesdataset-and-applying-it)
 
-To manually select an NDR value, use the NDR argument in bambu:
+To manually select an NDR value, use the NDR argument in *bambu*:
 
 ```rscript
 se.NDR_0.3 <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 0.3)
