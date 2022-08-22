@@ -163,7 +163,7 @@ se.NDR_1 <- bambu(reads = test.bam, annotations = annotations.filtered, genome =
 Additionally there are other thresholds that advanced users can access through opt.discovery when running *bambu* (see arguments).
 ```
 ### Output
-bambu returns a SummarizedExperiment object which can be accessed as follows:
+*bambu* returns a SummarizedExperiment object which can be accessed as follows:
 
 **assays(se)** returns a list of transcript abundance estimates as counts or CPM
 
