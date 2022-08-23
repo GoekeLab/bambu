@@ -71,19 +71,20 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
+        refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
+        if (!all(seqlevels(annotations) %in% refSeqLevels)) {
+            refSeqLevels <- intersect(refSeqLevels, seqlevels(annotations))
+            message("not all chromosomes from annotations present in reference genome 
+    sequence, annotations without reference chrosomomse sequence are dropped")
+            annotations <- keepSeqlevels(annotations, value = refSeqLevels,
+                                         pruning.mode = "coarse")
+        }
         message("not all chromosomes from reads present in reference genome 
             sequence, reads without reference chromosome sequence are dropped")
-        refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
         readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
                                      pruning.mode = "coarse")
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
-    }
-    if (!all(seqlevels(annotations) %in% refSeqLevels)) {
-        message("not all chromosomes from annotations present in reference genome 
-    sequence, annotations without reference chrosomomse sequence are dropped")
-        annotations <- keepSeqlevels(annotations, value = refSeqLevels,
-                                     pruning.mode = "coarse")
     }
     #removes reads that are outside genome coordinates
     badReads = which(max(end(ranges(readGrgList)))>=
