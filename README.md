@@ -350,8 +350,8 @@ In situations where training is not or cannot be performed, and the default mode
 
 ```rscript
 # first train the model using a related annotated dataset from .bam
-se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, opt.discovery = list(returnModel = FALSE))
-newDefaultModel = metadata(se)$model
+se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE ([see here](#Storing-and-using-preprocessed-files-rcFiles)).
+newDefaultModel = metadata(se[[1]])$model # [[1]] will select the model trained on the first sample
 
 # alternatively train the model using an rcFile
 rcFile <- readRDS(pathToRcFile)
