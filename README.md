@@ -91,6 +91,8 @@ se <- bambu(reads = sample, annotations = annotations, genome = fa.file)
 
 For the full parameter list see [Arguments](#Arguments)
 
+For information on the output and how to export it to a file see [Output](#Output).
+
 #### **Transcript discovery only (no quantification)**
 
 If you are only interested in identifying novel transcripts, the quantification module of *bambu* can be skipped by setting quant to FALSE. 
@@ -187,7 +189,24 @@ The full output can be written to a file using writeBambuOutput().  Using this f
 ```rscript
 writeBambuOutput(se, path = "./bambu/")
 ```
+If you are only interested in the novel transcripts, one can filter this 'se' object first to remove reference annotations.
+```rscript
+se.novel = se[mcols(se)$newTxClass != "annotation",]
+writeBambuOutput(se.novel, path = "./bambu/")
+```
+
 If quant is set to FALSE i.e. only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols()
+These annotations can be written to a .gtf file using writeToGTF(GRangesList_object, output_path).
+```rscript
+se.discoveryOnly <- bambu(reads = sample, annotations = annotations, genome = fa.file, quant = FALSE)
+writeToGTF(se.discoveryOnly, "./output.gtf")
+```
+As above, to output only the novel annotations, you need to filter out the reference annotations.
+```rscript
+se.discoveryOnly.novel = se.discoveryOnly[mcols(se.discoveryOnly)$newTxClass != "annotation",]
+writeToGTF(se.discoveryOnly.novel, "./output.gtf")
+```
+
 If both quant and discovery are set to FALSE, *bambu* will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
  
 ### Visualization
