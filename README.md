@@ -358,7 +358,7 @@ metadata(se)$readToTranscriptMaps[[1]]
 
 |column name|description|
 |---|---|
-|read_id|The read name as found in the bam file|
+|read_id|The read name as found in the bam file. If running from a rcFile where trackReads!=TRUE, bambu will not have stored the read names, this will instead be a unique bambu-assigned numerical ID (will not correlate with the bam file). |
 |equal_matches|A list of integers with the tx ids where the exon-junctions of the read match completely and contiguously. This matches the index of the transcript found in rowRanges()|
 |compatible_matches|A list of integers with the tx ids where the exon-junctions of the read are found contiguously within the transcript (a subset). This matches the index of the transcript found in rowRanges()|
 
