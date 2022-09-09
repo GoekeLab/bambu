@@ -72,7 +72,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     refSeqLevels <- seqlevels(genomeSequence)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
         refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
-        if (!all(seqlevels(annotations) %in% refSeqLevels)) {
+        if (!all(seqlevels(annotations) %in% refSeqLevels)&(!(length(annotations)==0))) {
             refSeqLevels <- intersect(refSeqLevels, seqlevels(annotations))
             message("not all chromosomes from annotations present in reference genome 
     sequence, annotations without reference chrosomomse sequence are dropped")
