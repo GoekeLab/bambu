@@ -32,6 +32,8 @@
   - [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
   - [Tracking read-to-transcript assignment](#Tracking-read-to-transcript-assignment)
   - [Training a model on another species/dataset and applying it](#Training-a-model-on-another-speciesdataset-and-applying-it)
+  - [Quantification of gene expression](#Quantification-of-gene-expression)
+  - [Including single exons](#Including-single-exons)
   - [*bambu* Arguments](#Bambu-Arguments)
   - [Output Description](#Output-Description)
 - [Release History](#Release-History)
@@ -167,20 +169,16 @@ Additionally there are other thresholds that advanced users can access through o
 ### Output
 *bambu* returns a SummarizedExperiment object which can be accessed as follows:
 
-**assays(se)** returns a list of transcript abundance estimates as counts or CPM
-
-**rowRanges(se)** returns a GRangesList with all annotated and newly discovered transcripts
-
-**rowData(se)** returns additional information about each transcript
+- **assays(se)** returns a list of transcript abundance estimates as counts or CPM
+- **rowRanges(se)** returns a GRangesList with all annotated and newly discovered transcripts
+- **rowData(se)** returns additional information about each transcript
 
 Access transcript expression estimates by extracting a variable (such as counts or CPM) using assays(): 
-**assays(se)$counts** - expression estimates
 
-**assays(se)$CPM** - sequencing depth normalized estimates
-
-**assays(se)$fullLengthCounts** - estimates of read counts mapped as full length reads for each transcript
-
-**assays(se)$uniqueCounts** - counts of reads that are uniquely mapped to each transcript
+- **assays(se)$counts** - expression estimates
+- **assays(se)$CPM** - sequencing depth normalized estimates
+- **assays(se)$fullLengthCounts** - estimates of read counts mapped as full length reads for each transcript
+- **assays(se)$uniqueCounts** - counts of reads that are uniquely mapped to each transcript
 
 
 For a full description of the other outputs see [Output Description](#Output-Description)
@@ -208,7 +206,8 @@ writeToGTF(se.discoveryOnly.novel, "./output.gtf")
 ```
 
 If both quant and discovery are set to FALSE, *bambu* will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
- 
+
+
 ### Visualization
 You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running *bambu* on the three replicates of HepG2 cell line in the SG-NEx project)
 
@@ -394,6 +393,23 @@ rcFile <- NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = 
 |verbose|A logical if more information should be printed whilst the function is running|
 
 
+### Quantification of gene expression
+
+To obtain gene expression, simply summing up over all annotated transcripts will likely underestimate it, as Bambu assign reads to transcripts if they are compatible to the transcripts.
+
+You will need to run the following step to obtain the accurate gene expression, which uses all reads that can be assigned to the transcripts of each gene, including reads that are incompatible with all existing annotations.
+```rscript
+SeGene <- transcriptToGeneExpression(se)
+```
+The output of this function is a *SummarizedExperiment* object, where
+
+- assays(seGene)$counts  returns the estimated expression counts for each gene
+- assays(seGene)$CPM returns the estimated CPM for each gene
+- rowData(seGene) returns the gene information
+- rowRanges(seGene) returns the gene genomic ranges 
+
+
+
 ### Including single exons
 
 By default *bambu* does not report single exon transcripts because they are known to have a high frequency of false positives and do not have splice junctions that are used by *bambu* to distinguish read classes. Nevertheless *bambu* trains a separate model on single-exon transcripts, and these predictions can be accessed and included in the annotations.
@@ -401,6 +417,7 @@ By default *bambu* does not report single exon transcripts because they are know
 ```rscript
 se <- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, opt.discovery = list(min.txScore.singleExon = 0))
 ```
+
 ### *Bambu* Arguments
 
 |argument|description|
