@@ -399,7 +399,7 @@ To obtain gene expression, simply summing up over all annotated transcripts will
 
 To obtain the accurate gene expression estimates which uses all reads that can be assigned to each gene (including reads that are incompatible with all existing annotations) you can run the following command:
 ```rscript
-SeGene <- transcriptToGeneExpression(se)
+seGene <- transcriptToGeneExpression(se)
 ```
 The output of this function is a *SummarizedExperiment* object, where
 
