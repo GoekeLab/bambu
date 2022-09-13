@@ -395,7 +395,7 @@ rcFile <- NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = 
 
 ### Quantification of gene expression
 
-To obtain gene expression, simply summing up over all annotated transcripts will likely underestimate it, as Bambu assign reads to transcripts if they are compatible to the transcripts.
+To obtain gene expression, simply summing up over all annotated transcripts will likely underestimate it, as Bambu assigns only reads to transcripts if they are compatible. Reads which are incompatible with transcripts, but which can be assigned to the gene are tracked by Bambu to obtain more accurate gene expression estimate.
 
 To obtain the accurate gene expression estimates which uses all reads that can be assigned to each gene (including reads that are incompatible with all existing annotations) you can run the following command:
 ```rscript
