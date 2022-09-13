@@ -397,7 +397,7 @@ rcFile <- NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = 
 
 To obtain gene expression, simply summing up over all annotated transcripts will likely underestimate it, as Bambu assign reads to transcripts if they are compatible to the transcripts.
 
-You will need to run the following step to obtain the accurate gene expression, which uses all reads that can be assigned to the transcripts of each gene, including reads that are incompatible with all existing annotations.
+To obtain the accurate gene expression estimates which uses all reads that can be assigned to each gene (including reads that are incompatible with all existing annotations) you can run the following command:
 ```rscript
 SeGene <- transcriptToGeneExpression(se)
 ```
