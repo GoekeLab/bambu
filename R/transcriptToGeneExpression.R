@@ -25,7 +25,7 @@ transcriptToGeneExpression <- function(se) {
     counts_incompatible <- melt(IncompatibleCounts, id.vars = c("GENEID","TXNAME"), 
         measure.vars = setdiff(colnames(IncompatibleCounts), c("GENEID","TXNAME")))
     # GENEID, TXNAME, variable, value
-    counts <- rbind(counts, counts_incompatible)
+    counts <- rbind(counts, counts_incompatible[variable %in% unique(counts$variable)])
     counts[, valueGene := sum(value), by = list(variable, GENEID)]
     counts[, valueGeneCPM := valueGene / max(sum(value), 1) * 10^6,
            by = list(variable)]
