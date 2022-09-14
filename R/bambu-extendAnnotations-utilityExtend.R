@@ -93,31 +93,34 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
       if(is.null(NDR)) NDR = 0.1
   }
   
+  print(1)
   filterSet = (rowDataCombined$txNDR <= NDR)
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
-  
+  print(2)
   #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
   minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
   rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
-  
+  print(3)
   #post extend annotation filters applied here (currently only subset filter)
   if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
     filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
+  print(4)
   #deprecating because it is also done in combineWithAnnotations()
   # remove equals to prevent duplicates when merging with annotations
   #filterSet = rowDataCombined$readClassType != "equalcompatible"
   #exonRangesCombined <- exonRangesCombined[filterSet]
   #rowDataCombined <- rowDataCombined[filterSet,]
-  
+  print(filterSet)
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
   # (3) combine novel transcripts with annotations
+  print(5)
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
     annotationGrangesList, prefix)
@@ -648,7 +651,9 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
     mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
     }else{
+        message("all detect novel transcripts are already present in the annotations, try a higher NDR")
       extendedAnnotationRanges <- annotationRangesToMerge
+      mcols(extendedAnnotationRanges)$txid = NA
     }
   
   minEqClasses <-
@@ -656,6 +661,8 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
   mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
+  print(extendedAnnotationRanges)
+  print(mcols(extendedAnnotationRanges))
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                  c("TXNAME", "GENEID", "eqClass", "txid", "eqClassById", "newTxClass","readCount", "txNDR","relReadCount", "relSubsetCount")]
   return(extendedAnnotationRanges)
