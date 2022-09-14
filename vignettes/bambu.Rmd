@@ -53,7 +53,7 @@ new transcripts and transcript expression estimates.
 We highly recommend to use the same annotations that were used for genome 
 alignment. If you have a gtf file and fasta file you can run bambu with the
 following options:
-```{r}
+```{r, results = "hide"}
 #remotes::install_github("GoekeLab/bambu", ref = "BambuManuscriptRevision")
 library(bambu)
 test.bam <- system.file("extdata",
