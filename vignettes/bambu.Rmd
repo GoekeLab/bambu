@@ -54,7 +54,6 @@ We highly recommend to use the same annotations that were used for genome
 alignment. If you have a gtf file and fasta file you can run bambu with the
 following options:
 ```{r, results = "hide"}
-#remotes::install_github("GoekeLab/bambu", ref = "BambuManuscriptRevision")
 library(bambu)
 test.bam <- system.file("extdata",
     "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam",
