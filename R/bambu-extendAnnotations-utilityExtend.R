@@ -92,35 +92,28 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   } else {
       if(is.null(NDR)) NDR = 0.1
   }
-  
-  print(1)
   filterSet = (rowDataCombined$txNDR <= NDR)
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
-  print(2)
   #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
   minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
   rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
-  print(3)
   #post extend annotation filters applied here (currently only subset filter)
   if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
     filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
-  print(4)
   #deprecating because it is also done in combineWithAnnotations()
   # remove equals to prevent duplicates when merging with annotations
   #filterSet = rowDataCombined$readClassType != "equalcompatible"
   #exonRangesCombined <- exonRangesCombined[filterSet]
   #rowDataCombined <- rowDataCombined[filterSet,]
-  print(filterSet)
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
   # (3) combine novel transcripts with annotations
-  print(5)
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
     annotationGrangesList, prefix)
