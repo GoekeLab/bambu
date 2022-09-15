@@ -302,7 +302,7 @@ For the example in this vignette, the data used is rather small, hence the pre-t
 
 ### De-novo transcript discovery {#de-novo}
 
-In cases where the organism does not yet have reference annotations, or unreliable annotations, *bambu* can be run in de-novo mode. In de-novo mode, *bambu* does not train a model, and instead uses the pre-trained model to classify novel transcripts (see [Using a pre-trained model](#use-pre-trained-model). To learn how to train a new model for a more closely related organism/sample see [Training a model on another species/dataset and applying it](#train-model). Without annotations *bambu* is unable to calibrate the NDR output, nor be able to recommend a threshold and will instead use the TPS as the thresholded value. Therefore you should supply a manual NDR threshold ([Modulating the sensitivity of discovery (pre and post analysis)](#modulating-the-sensitivity)) and note that the precision of the output is unlikely to linearly match an applied threshold.
+In cases where the organism does not yet have reference annotations, or unreliable annotations, *bambu* can be run in de-novo mode. In de-novo mode, *bambu* does not train a model, and instead uses the pre-trained model to classify novel transcripts (see [Using a pre-trained model](#use-pretrained-model). To learn how to train a new model for a more closely related organism/sample see [Training a model on another species/dataset and applying it](#train-model). Without annotations *bambu* is unable to calibrate the NDR output, nor be able to recommend a threshold and will instead use the TPS as the thresholded value. Therefore you should supply a manual NDR threshold ([Modulating the sensitivity of discovery (pre and post analysis)](#modulating-the-sensitivity)) and note that the precision of the output is unlikely to linearly match an applied threshold.
 The TPS threshold used is (> 1-NDR). If an NDR is not provided, a default NDR threshold of <0.1 is used (an effective TPS threshold of > 0.9). As in  [Modulating the sensitivity of discovery (pre and post analysis)](#modulating-the-sensitivity) an NDR of 1 can be provided to output all possible read classes with their TPS scores 
 
 ```{r, results = 'hide'}
@@ -420,8 +420,7 @@ log-fold change results will be affected by the noise associated with log2 fold
 changes from low count genes without requiring arbitrary filtering thresholds.
 As recommended in the
 [*DESeq2*tutorial]
-(http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/
-DESeq2.html#alternative-shrinkage-estimators). 
+(http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#alternative-shrinkage-estimators). 
 we applied the same shrinkage to effect sizes to 
 improve the visualization.
 ```{r, fig.width = 8, fig.height = 6}
