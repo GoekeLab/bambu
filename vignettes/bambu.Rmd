@@ -120,9 +120,7 @@ genomeSequenceBsgenome <- BSgenome.Hsapiens.NCBI.GRCh38
 
 ### Genome annotations (bambu annotations object/ gtf file / TxDb object)
 *bambu* also requires a reference transcript annotations object, which is used 
-to correct read alignments, to identify for transcripts and genes (and the type
-for novel transcripts), and for quantification. The annotation object can be
-created from a gtf file: 
+to correct read alignments, to train a model for transcript discovery, and for quantification. The annotation object can be created from a gtf file: 
 ```{r}
 gtf.file <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
     package = "bambu")
@@ -148,8 +146,8 @@ HsChr22BambuAnnotation
 ### Running bambu           
 Next we apply *bambu* on the input data (bam files, annotations,
 genomeSequence). Bambu will perform isoform discovery to extend the provided 
-annotation, and then quantify the transcript expression from these extended 
-annotation using an Expectation-Maximisation algorithm. Here we will use 1 core,
+annotations, and then quantify the transcript expression from these extended
+annotations using an Expectation-Maximisation algorithm. Here we will use 1 core,
 which can be changed to process multiple files in parallel.
 ```{r, results = "hide"}
 se <- bambu(reads = bamFile, annotations = HsChr22BambuAnnotation,
@@ -190,15 +188,15 @@ se.multiSample <- bambu(reads = bamFiles,  annotations = HsChr22BambuAnnotation,
 ```
 
 The advantage of running samples together include:
-Novel transcripts that are identified in multiple samples are assigned unified IDs, enabling comparative analysis between different samples. This is especially important for downstream differential expression analysis when looking at novel transcripts. Running multiple samples can be multithreaded. While running multiple samples, By default, *bambu* will train a model separately on each sample and score novel transcripts in each sample separately.
+novel transcripts that are identified in multiple samples are assigned unified IDs, enabling comparative analysis between different samples. This is especially important for downstream differential expression analysis when looking at novel transcripts. Running multiple samples can be multithreaded. While running multiple samples, by default, *bambu* will train a model separately on each sample and score novel transcripts in each sample separately.
 
-If you need to combine samples in multiple configurations (for example different pairwise comparisons) we would recommend using the intermediate rcFiles to save processing time (see [Storing and using preprocessed files (rcFiles)](#storing-rcFiles))
+If you need to combine samples in multiple configurations (for example different pairwise comparisons) we would recommend using the intermediate rcFiles to save processing time.
  
 ### Modulating the sensitivity of discovery (pre and post analysis) {#modulating-the-sensitivity}
 
 When doing transcript discovery there is a balance between sensitivity (the number of real novel transcripts that are detected) and the precision (how many of the novel transcripts are real). To control this balance, *bambu* uses the novel discovery rate (NDR) as the main parameter. The NDR threshold approximates the proportion of novel candidates output by bambu, relative to the number of known transcripts it found, i.e., an NDR of 0.1 would mean that 10% of all transcripts passing the threshold are classified as novel. 
 
-If you are using a genome where you expect a high amount of novel transcripts, a higher NDR is recommended so that these novel transcripts are not missed. Conversely if you are using a well annotated genome, we recommend a lower NDR threshold to reduce the presence of false positives. By default the NDR threshold is automatically chosen for the user based on predicted level of annotation completeness when compared to the default model trained on human reference annotations (Hg38). For more information see [Training a model on another species/dataset and applying it](#train-model)
+If you are using a genome where you expect a high amount of novel transcripts, a higher NDR is recommended so that these novel transcripts are not missed. Conversely if you are using a well annotated genome, we recommend a lower NDR threshold to reduce the presence of false positives. By default the NDR threshold is automatically chosen for the user based on predicted level of annotation completeness when compared to the default model trained on human reference annotations (Hg38).
 
 To manually select an NDR value, use the NDR argument in *bambu*:
 
@@ -280,15 +278,15 @@ save.file <- tempfile(fileext = ".gtf")
 writeToGTF(rowRanges(se.multiSample), file = save.file)
 ```
 ## Advanced usages for different use cases {#advanced-usages}
-### Using a pretrained model {#use-pretrained-model}
+### Using a pre-trained model {#use-pre-trained-model}
 
-By default, *bambu* requires at least 1000 transcripts from the annotations to be detected in a sample in order to train a sample specific model. In use cases where this is not possible *bambu* will instead use a default pretrained model to calculate the transcript probability score (TPS) for each read class. Users can force this behavior if they believe their annotations are not sufficient for sample specific training (for example if they suspect a high proportion of real novel transcripts are present in their sample). This is advantageous when you want NDR calibration without the impacts of a model trained using low quality annotations. 
+By default, *bambu* requires at least 1000 transcripts from the annotations to be detected in a sample in order to train a sample specific model. In use cases where this is not possible *bambu* will instead use a default pre-trained model to calculate the transcript probability score (TPS) for each read class. Users can force this behavior if they believe their annotations are not sufficient for sample specific training (for example if they suspect a high proportion of real novel transcripts are present in their sample). This is advantageous when you want NDR calibration without the impacts of a model trained using low quality annotations. 
 
 ```{r, results = 'hide'}
 se <- bambu(reads = bamFiles, annotations = HsChr22BambuAnnotation,
     genome = genomeSequence, opt.discovery = list(fitReadClassModel = FALSE))
 ```
-The default pretrained model was trained on SGNex_HepG2_directRNA_replicate5_run1 and has the following characteristics:
+The default pre-trained model was trained on SGNex_HepG2_directRNA_replicate5_run1 and has the following characteristics:
 
 Genome: Homo_sapiens.GRCh38.dna_sm.primary_assembly <br>
 Annotations: Homo_sapiens.GRCh38.91<br>
@@ -298,13 +296,13 @@ Library preparation: directRNA<br>
 Base Calling Accuracy: 79%<br>
 Average Read Length: 1093<br>
 
-We have found the pretrained model works successfully across species borders (on Arabidopsis thaliana) and on different technologies (PacBio), with only small decreases in performance compared to using a sample specific model. The pretrained model is not always effective in samples with large differences in sequencing quality or if the library preparation results in biases in the overall structure of the transcriptome. In this case, we would recommend training a new model using similar data from a different sample that has quality reference annotations (See [Training a model on another species/dataset and applying it](#train-model)).
+We have found the pre-trained model works successfully across species borders (on Arabidopsis thaliana) and on different technologies (PacBio), with only small decreases in performance compared to using a sample specific model. The pre-trained model is not always effective in samples with large differences in sequencing quality or if the library preparation results in biases in the overall structure of the transcriptome. In this case, we would recommend training a new model using similar data from a different sample that has quality reference annotations (See [Training a model on another species/dataset and applying it](#train-model)).
 
 For the example in this vignette, the data used is rather small, hence the pre-trained model is used by default. So you won't see differences in the output, but you may try it out with more data (see [SG-NEx data](https://github.com/GoekeLab/sg-nex-data))
 
 ### De-novo transcript discovery {#de-novo}
 
-In cases where the organism does not yet have reference annotations, or unreliable annotations, *bambu* can be run in de-novo mode. In de-novo mode, *bambu* does not train a model, and instead uses the pretrained model to classify novel transcripts (see [Using a pretrained model](#using-pretrained-model). To learn how to train a new model for a more closely related organism/sample see [Training a model on another species/dataset and applying it](#train-model). Without annotations *bambu* is unable to calibrate the NDR output, nor be able to recommend a threshold and will instead use the TPS as the thresholded value. Therefore you should supply a manual NDR threshold ([Modulating the sensitivity of discovery (pre and post analysis)](#modulating-the-sensitivity)) and note that the precision of the output is unlikely to linearly match an applied threshold.
+In cases where the organism does not yet have reference annotations, or unreliable annotations, *bambu* can be run in de-novo mode. In de-novo mode, *bambu* does not train a model, and instead uses the pre-trained model to classify novel transcripts (see [Using a pre-trained model](#use-pre-trained-model). To learn how to train a new model for a more closely related organism/sample see [Training a model on another species/dataset and applying it](#train-model). Without annotations *bambu* is unable to calibrate the NDR output, nor be able to recommend a threshold and will instead use the TPS as the thresholded value. Therefore you should supply a manual NDR threshold ([Modulating the sensitivity of discovery (pre and post analysis)](#modulating-the-sensitivity)) and note that the precision of the output is unlikely to linearly match an applied threshold.
 The TPS threshold used is (> 1-NDR). If an NDR is not provided, a default NDR threshold of <0.1 is used (an effective TPS threshold of > 0.9). As in  [Modulating the sensitivity of discovery (pre and post analysis)](#modulating-the-sensitivity) an NDR of 1 can be provided to output all possible read classes with their TPS scores 
 
 ```{r, results = 'hide'}
@@ -315,7 +313,7 @@ novelAnnotations <- bambu(reads = bamFiles, annotations = NULL, genome = genomeS
 The first step of *bambu* involves the construction of read classes which is a large fraction of the running time. This could be time-consuming if we want to perform transcript discovery & quantification multiple times on the same dataset using different configurations (eg. NDR, or combinations of samples), especially when the sample is large. To mitigate this, we can store the read class information as read class files (rcFiles) during a *bambu* run. Then they can be used as an input argument in the  *bambu* main function for the subsequent *bambu* run.
 
 ```{r, eval = FALSE} 
-se <- bambu(reads = rcFiles, annotations = annotations, genome = fa.file)
+#se <- bambu(rcFile = rcFiles, annotations = annotations, genome = fa.file)
 ```
 rcFiles can be generated in two ways, either as a direct output of the bambu() function when quant and discovery are FALSE, or as written outputs when a path is provided to the rcOutdir argument. When rcFiles are output using rcOutdir this is done using BiocFileCache. For more details on how to access, use, and identify these files see [here](https://bioconductor.org/packages/release/bioc/html/BiocFileCache.html). A short example is shown below.
 
@@ -348,6 +346,8 @@ As this is an intermediate object it will not be suitable to use for general use
 ```{r}
 rowData(se[[1]])
 ```
+
+
 ### Tracking read-to-transcript assignment {#track-read-assignment}
 
 Some use cases require knowing which individual reads support specific transcripts (novel and annotated). By default this feature is off due to the memory overhead it introduces but can be turned on using the trackReads argument. The output has three columns: read_id, a list of indices of equal matches, a list of indices of compatible matches.  These indices match the annotations found in rowRanges(se)
@@ -364,11 +364,12 @@ metadata(se)$readToTranscriptMaps[[1]]
 In situations where training is not or cannot be performed, and the default model is also not suitable for the sample (the sample is generated from a different technology, species, condition, etc), *bambu* provides the option to train a new model, if well annotated similar data is available. For example one might train a model on arabidopsis to apply to an unannotated plant sample.
 
 ```{r, eval = FALSE}
-# first train the model using a related annotated dataset from .bam
-se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE ([see here](#Storing-and-using-preprocessed-files-rcFiles)).
-newDefaultModel = metadata(se[[1]])$model # [[1]] will select the model trained on the first sample
+   # first train the model using a related annotated dataset from .bam
 
-# alternatively train the model using an rcFile
+se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE.
+# newDefaultModel = metadata(se[[1]])$model # [[1]] will select the model trained on the first sample
+
+  #alternatively train the model using an rcFile
 rcFile <- readRDS(pathToRcFile)
 newDefaultModel = trainBambu(rcFile)
 
@@ -447,55 +448,6 @@ We can visualize the MA-plot
 plotMA(dxr, cex = 0.8 )
 ```
 
-
-
-### Running bambu with large number of samples {#large-sample-num}
-For larger sample numbers we recommend to write the processed data to a file.
-This can be done by providing the readClass.outputDir:
-```{r, eval = FALSE}
-se <- bambu(reads = bamFiles, rcOutDir = "./bambu/",
-    annotations = annotaiton, 
-    genome = genomeSequence)
-```
-# Bambu parameters {#bambu-parameters}
-## Advanced Options
-For transcript discovery we recommend to adjust the parameters according to 
-the number of replicates and the sequencing throughput. The most relevant
-parameters are explained here. You can use any combination of these parameters.
-### More stringent filtering thresholds imposed on potential novel transcripts
-
-* Keep novel transcripts with min 5 read count in at least 1 sample:
-```{r, eval = FALSE}
-bambu(reads, annotations, genome,
-    opt.discovery = list(min.readCount = 5))
-```
-* Keep novel transcripts with min 5 samples having at least 2 counts:
-```{r, eval = FALSE}
-bambu(reads, annotations, genome, 
-    opt.discovery = list(min.sampleNumber = 5))
-```
-* Filter out transcripts with relative abundance within gene lower than 10%:
-```{r, eval = FALSE}
-bambu(reads, annotations, genome, 
-    opt.discovery = list(min.readFractionByGene = 0.1))
-```
-### Quantification without bias correction    
-
-The default estimation automatically does bias correction for expression
-estimates. However, you can choose to perform the quantification without
-bias correction.
-```{r, eval = FALSE}
-bambu(reads, annotations, genome, opt.em = list(bias = FALSE))
-```
-### Parallel computation
-
-bambu allows parallel computation.
-```{r, eval = FALSE}
-bambu(reads, annotations, genome, ncore = 8)
-```
-See *[our page
-](https://goekelab.github.io/bambu/)* 
-for details to customize other conditions.
 
 # Getting help {#get-help}
 
