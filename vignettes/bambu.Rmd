@@ -419,8 +419,7 @@ We can also visualise the MA-plot for differentially used isoforms using
 log-fold change results will be affected by the noise associated with log2 fold
 changes from low count genes without requiring arbitrary filtering thresholds.
 As recommended in the
-[*DESeq2*tutorial]
-(http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#alternative-shrinkage-estimators). 
+[*DESeq2*tutorial](http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#alternative-shrinkage-estimators). 
 we applied the same shrinkage to effect sizes to 
 improve the visualization.
 ```{r, fig.width = 8, fig.height = 6}
