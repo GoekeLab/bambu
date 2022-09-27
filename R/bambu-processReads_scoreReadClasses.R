@@ -221,9 +221,7 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
                 txScoreBaseline = txScoreBaseline,
                 txScoreBaselineSE = txScoreBaselineSE,
                 lmNDR = lmNDR,
-                lmNDR.SE = lmNDR.SE,
-                ROC = ROC, 
-                ROC.default = ROC.default))
+                lmNDR.SE = lmNDR.SE))
 }
 
 #reduces the size of a lm so it can be saved with a lower footprint for prediction
