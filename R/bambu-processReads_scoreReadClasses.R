@@ -231,6 +231,7 @@ trim_lm = function(lm){
     lm$fitted.values = c()
     lm$model = c()
     lm$qr$qr=c()
+    lm$terms = NULL
     return(lm)
 }
 
