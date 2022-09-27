@@ -104,6 +104,9 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
         if(!all(grepl(".bam$", names(reads)))){
             stop("All files in BamFileList must be .bam files")
         }
+        if(is.null(genomeSequence)){
+            stop("A genome must be provided when running bambu from bam files")
+        }
     } else{
     # ===# Check whether provided read files are all in the same format (.bam or .rds) #===#
         if (!all(sapply(reads, class)=="RangedSummarizedExperiment") 

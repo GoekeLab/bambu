@@ -125,7 +125,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
-    genomeSequence <- checkInputSequence(genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
 
     #below line is to be compatible with earlier version of running bambu
@@ -147,7 +146,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-            genomeSequence = genomeSequence, 
+            genomeSequence = genome, 
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode)
