@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>prepare annotations from txdb object or gtf file — prepareAnnotations • bambu</title>
+<title>prepare reference annotations for long read RNA-Seq analysis with Bambu — prepareAnnotations • bambu</title>
 
 
 <!-- jquery -->
@@ -39,9 +39,7 @@
 
 
 
-<meta property="og:title" content="prepare annotations from txdb object or gtf file — prepareAnnotations" />
-<meta property="og:description" content="Function to prepare tables and genomic ranges for
-transript reconstruction using a txdb object" />
+<meta property="og:title" content="prepare reference annotations for long read RNA-Seq analysis with Bambu — prepareAnnotations" />
 
 
 
@@ -73,7 +71,7 @@ transript reconstruction using a txdb object" />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.1.8</span>
       </span>
     </div>
 
@@ -112,14 +110,12 @@ transript reconstruction using a txdb object" />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>prepare annotations from txdb object or gtf file</h1>
+    <h1>prepare reference annotations for long read RNA-Seq analysis with Bambu</h1>
     <small class="dont-index">Source: <a href='https://github.com/GoekeLab/bambu/blob/master/R/prepareAnnotations.R'><code>R/prepareAnnotations.R</code></a></small>
     <div class="hidden name"><code>prepareAnnotations.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Function to prepare tables and genomic ranges for
-transript reconstruction using a txdb object</p>
     </div>
 
     <pre class="usage"><span class='fu'>prepareAnnotations</span><span class='op'>(</span><span class='va'>x</span><span class='op'>)</span></pre>
@@ -129,59 +125,159 @@ transript reconstruction using a txdb object</p>
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>x</th>
-      <td><p>A <code>TxDb</code> object or a gtf file</p></td>
+      <td><p>A path to gtf file or a <code>TxDb</code> object.</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>A <code>GRangesList</code> object</p>
+    <p>A <code>GRangesList</code> object with additional details for each exon and transcript that are required by Bambu. Exons are ranked by the <code>exon_rank</code> column, corresponding to the rank in direction of transcription (from first to last exon). In addition to exon rank, gene id, transcript id, and the minimum transcript equivalent class is stored as well (a transcript equivalence class of a transcript x is the collection of transcripts where their exon junctions contain, in a continuous way, the exon junctions of the transcript x). The object is designed to be used by Bambu, and the direct access of the metadata is not recommended.</p>
+    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
+
+    <p>This function creates a reference annotation object which is used for transcript discovery and quantification in Bambu. prepareAnnotations can use a path to a gtf file or a TxDB object as input, and returns a annotation object that stores additional information about transcripts which is used in Bambu. For each transcript, exons are ranked from first to last exon in direction of transcription.</p>
+    <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
+
+    <div class='dont-index'><p><code><a href='bambu.html'>bambu()</a></code> for transcript discovery and quantification from long read RNA-Seq.</p></div>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='va'>gtf.file</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,
-    <span class='st'>"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf"</span>,
-    package <span class='op'>=</span> <span class='st'>"bambu"</span>
-<span class='op'>)</span>
-<span class='fu'>prepareAnnotations</span><span class='op'>(</span>x <span class='op'>=</span> <span class='va'>gtf.file</span><span class='op'>)</span>
-</div><div class='output co'>#&gt; GRangesList object of length 105:
-#&gt; $ENST00000190165
-#&gt; GRanges object with 2 ranges and 2 metadata columns:
-#&gt;       seqnames        ranges strand | exon_rank exon_endRank
-#&gt;          &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;
-#&gt;   [1]        9 976964-977455      + |         1            2
-#&gt;   [2]        9 990041-991731      + |         2            1
-#&gt;   -------
-#&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths
-#&gt; 
-#&gt; $ENST00000305248
-#&gt; GRanges object with 2 ranges and 2 metadata columns:
-#&gt;       seqnames      ranges strand | exon_rank exon_endRank
-#&gt;          &lt;Rle&gt;   &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;
-#&gt;   [1]        9 34965-35264      - |         2            1
-#&gt;   [2]        9 35504-35871      - |         1            2
-#&gt;   -------
-#&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths
-#&gt; 
-#&gt; $ENST00000314367
-#&gt; GRanges object with 16 ranges and 2 metadata columns:
-#&gt;        seqnames        ranges strand | exon_rank exon_endRank
-#&gt;           &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;
-#&gt;    [1]        9 121060-121573      - |        16            1
-#&gt;    [2]        9 121961-122090      - |        15            2
-#&gt;    [3]        9 123217-123282      - |        14            3
-#&gt;    [4]        9 123386-123454      - |        13            4
-#&gt;    [5]        9 134979-135030      - |        12            5
-#&gt;    ...      ...           ...    ... .       ...          ...
-#&gt;   [12]        9 172081-172172      - |         5           12
-#&gt;   [13]        9 173270-173366      - |         4           13
-#&gt;   [14]        9 175698-175784      - |         3           14
-#&gt;   [15]        9 177723-177820      - |         2           15
-#&gt;   [16]        9 178816-179047      - |         1           16
-#&gt;   -------
-#&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths
-#&gt; 
-#&gt; ...
-#&gt; &lt;102 more elements&gt;</div></pre>
+    <pre class="examples"><span class='r-in'><span class='va'>gtf.file</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,</span>
+<span class='r-in'>    <span class='st'>"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf"</span>,</span>
+<span class='r-in'>    package <span class='op'>=</span> <span class='st'>"bambu"</span></span>
+<span class='r-in'><span class='op'>)</span></span>
+<span class='r-in'><span class='va'>annotations</span> <span class='op'>&lt;-</span> <span class='fu'>prepareAnnotations</span><span class='op'>(</span>x <span class='op'>=</span> <span class='va'>gtf.file</span><span class='op'>)</span></span>
+<span class='r-in'></span>
+<span class='r-in'><span class='co'># run bambu</span></span>
+<span class='r-in'><span class='va'>test.bam</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,</span>
+<span class='r-in'>    <span class='st'>"SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam"</span>, </span>
+<span class='r-in'>    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span></span>
+<span class='r-in'><span class='va'>fa.file</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>, </span>
+<span class='r-in'>    <span class='st'>"Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa"</span>, </span>
+<span class='r-in'>    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span></span>
+<span class='r-in'><span class='va'>se</span> <span class='op'>&lt;-</span> <span class='fu'><a href='bambu.html'>bambu</a></span><span class='op'>(</span>reads <span class='op'>=</span> <span class='va'>test.bam</span>, annotations <span class='op'>=</span> <span class='va'>annotations</span>, </span>
+<span class='r-in'>    genome <span class='op'>=</span> <span class='va'>fa.file</span>, discovery <span class='op'>=</span> <span class='cn'>TRUE</span>, quant <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 'getOption("repos")' replaces Bioconductor standard repositories, see</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> '?repositories' for details</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> replacement repositories:</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>     CRAN: https://cloud.r-project.org</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Start generating read class files</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> not all chromosomes present in reference annotations,</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             annotations might be incomplete. Please compare objects</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             on the same reference</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> not all chromosomes from reads present in reference genome </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             sequence, reads without reference chromosome sequence are dropped</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Junction correction with not enough data,</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             precalculated model is used</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Not enough data points</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Not enough TRUE/FALSE labels</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Transcript model not trained. Using pre-trained models</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Finished generating read classes from genomic alignments.</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Less than 50 TRUE or FALSE read classes for precision stabilization. </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>           Filtering by prediction score instead</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> -- Predicting annotation completeness to determine NDR threshold --</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Calculated NDR: 0.005</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> all detect novel transcripts are already present in the annotations, try a higher NDR</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRangesList object of length 105:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> $ENST00000190165</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>       seqnames        ranges strand | exon_rank exon_endRank</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>          &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [1]        9 976964-977455      + |         1            2</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [2]        9 990041-991731      + |         2            1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   -------</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> $ENST00000305248</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>       seqnames      ranges strand | exon_rank exon_endRank</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>          &lt;Rle&gt;   &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [1]        9 34965-35264      - |         2            1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [2]        9 35504-35871      - |         1            2</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   -------</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> $ENST00000314367</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRanges object with 16 ranges and 2 metadata columns:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>        seqnames        ranges strand | exon_rank exon_endRank</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>           &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [1]        9 121060-121573      - |        16            1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [2]        9 121961-122090      - |        15            2</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [3]        9 123217-123282      - |        14            3</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [4]        9 123386-123454      - |        13            4</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [5]        9 134979-135030      - |        12            5</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    ...      ...           ...    ... .       ...          ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [12]        9 172081-172172      - |         5           12</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [13]        9 173270-173366      - |         4           13</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [14]        9 175698-175784      - |         3           14</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [15]        9 177723-177820      - |         2           15</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [16]        9 178816-179047      - |         1           16</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   -------</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> &lt;102 more elements&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> DataFrame with 105 rows and 10 columns</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                          TXNAME          GENEID      txid</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                     &lt;character&gt;     &lt;character&gt; &lt;logical&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000190165 ENST00000190165 ENSG00000064218        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000305248 ENST00000305248 ENSG00000218839        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000314367 ENST00000314367 ENSG00000172785        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000354485 ENST00000354485 ENSG00000107104        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000356521 ENST00000356521 ENSG00000172785        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...                         ...             ...       ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620292 ENST00000620292 ENSG00000172785        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620326 ENST00000620326 ENSG00000277631        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000621255 ENST00000621255 ENSG00000277631        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000622412 ENST00000622412 ENSG00000277631        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000628764 ENST00000628764 ENSG00000227155        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                                eqClass eqClassById readCount  newTxClass</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                            &lt;character&gt;   &lt;logical&gt; &lt;integer&gt; &lt;character&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000190165        ENST00000190165          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000305248 ENST00000305248.ENST..          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000314367        ENST00000314367          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000354485 ENST00000354485.ENST..          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000356521 ENST00000356521.ENST..          NA        22  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...                                ...         ...       ...         ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620292 ENST00000498044.ENST..          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620326        ENST00000620326          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000621255        ENST00000621255          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000622412        ENST00000622412          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000628764        ENST00000628764          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                     txNDR relReadCount relSubsetCount</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                 &lt;numeric&gt;    &lt;numeric&gt;      &lt;numeric&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000190165        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000305248        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000314367        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000354485        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000356521 0.0654418     0.468085              1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...                   ...          ...            ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620292        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620326        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000621255        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000622412        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000628764        NA           NA             NA</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Finished extending annotations.</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Start isoform quantification</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Finished isoform quantification.</span>
+</pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

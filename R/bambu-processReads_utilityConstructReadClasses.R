@@ -252,17 +252,21 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
         confidenceType = "unsplicedWithin", stranded = stranded)
     reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
         unlist(mcols(rcUnsplicedAnnotation)$readIds)]
-    referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
-    #(2) reads do not fall within a annotated exon/high confidence read class 
-    # exon are summarised based on the union of overlapping unspliced reads
-    rcUnsplicedReduced <- getUnsplicedReadClassByReference(
+    if(length(reads.singleExon)==0){
+      exonsByReadClass <- rcUnsplicedAnnotation
+    }else{
+      referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
+      #(2) reads do not fall within a annotated exon/high confidence read class 
+      # exon are summarised based on the union of overlapping unspliced reads
+      rcUnsplicedReduced <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
+      exonsByReadClass <- c(rcUnsplicedAnnotation, 
+                            rcUnsplicedReduced)
+    }
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models
         (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- c(rcUnsplicedAnnotation, 
-        rcUnsplicedReduced)
     return(exonsByReadClass)
 }
 
