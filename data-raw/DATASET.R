@@ -112,8 +112,21 @@ seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 ## prior models to use for scoreReadClass()
 #se = readRDS("SGNex_HepG2_directRNA_replicate5_run1_genome.rds")
 #defaultModels = trainBambu(se)
+xgb.save(defaultModels$transcriptModelME, "./inst/extdata/read_class_ME.model")
+xgb.save(defaultModels$transcriptModelSE, "./inst/extdata/read_class_SE.model")
+defaultModels$transcriptModelME = NULL
+defaultModels$transcriptModelSE = NULL
+#saveRDS(defaultModels, "./inst/extdata/defaultModels.rds")
 defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
                                     package = "bambu"))
+defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.model")
+defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")                                    
+
+# How to get pre trained junction model standardJunctionModels_temp
+# added "saveRDS(junctionModel, "./inst/extdata/standardJunctionModels_temp.txt")" to junctionErrorCorrection
+# ran Bambu with GNex_HepG2_directRNA_replicate5_run1_genome
+standardJunctionModels_temp = readRDS(system.file(
+    "extdata", "standardJunctionModels_temp.txt", package = "bambu"))
 
 usethis::use_data(data1, data2, data3, data4, data5,
                   estOutput_woBC,

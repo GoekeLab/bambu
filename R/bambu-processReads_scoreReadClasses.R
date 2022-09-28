@@ -212,14 +212,27 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
             signif(ROC.default$AUC,3), " and a Precision-Recall AUC of ", signif(ROC.default$PR.AUC,3))
     }
 
+    #shrink size of lm
+    lmNDR = trim_lm(lmNDR)
+    lmNDR.SE = trim_lm(lmNDR.SE)
+
     return(list(transcriptModelME = transcriptModelME, 
                 transcriptModelSE = transcriptModelSE,
                 txScoreBaseline = txScoreBaseline,
                 txScoreBaselineSE = txScoreBaselineSE,
                 lmNDR = lmNDR,
-                lmNDR.SE = lmNDR.SE,
-                ROC = ROC, 
-                ROC.default = ROC.default))
+                lmNDR.SE = lmNDR.SE))
+}
+
+#reduces the size of a lm so it can be saved with a lower footprint for prediction
+trim_lm = function(lm){
+    lm$residuals = c()
+    lm$effects = c()
+    lm$fitted.values = c()
+    lm$model = c()
+    lm$qr$qr=c()
+    lm$terms = NULL
+    return(lm)
 }
 
 #' calculate and format read class features for model training
