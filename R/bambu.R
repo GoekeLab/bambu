@@ -129,26 +129,27 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
-bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
-    annotations = NULL, genome = NULL, stranded = FALSE, ncore = 1, NDR = 0.1,
-    yieldSize = NULL, opt.discovery = NULL, opt.em = NULL, trackReads = FALSE, 
-    returnDistTable = FALSE, discovery = TRUE, quant = TRUE, fusionMode = FALSE, 
-    verbose = FALSE, lowMemory = FALSE) {
+bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
+    opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
+    quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
+    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
+    fusionMode = FALSE, verbose = FALSE) {
     if(is.null(annotations)) { annotations = GRangesList()
-    } else annotations <- checkInputs(annotations, reads, readClass.file = rcFile,
-                                      readClass.outputDir = rcOutDir, genomeSequence = genome)
-    if(!is.null(reads)) genomeSequence <- checkInputSequence(genome)
+    } else annotations <- checkInputs(annotations, reads,
+            readClass.outputDir = rcOutDir, genomeSequence = genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
     
     emParameters <- setEmParameters(emParameters = opt.em)
-    bpParameters <- setBiocParallelParameters(reads, readClass.file = rcFile,
-                                              ncore, verbose)
+    bpParameters <- setBiocParallelParameters(reads, ncore, verbose)
     if (bpParameters$workers > 1) ncore <- 1
+
     rm.readClassSe <- FALSE
-    if (!is.null(reads)) {
+    readClassList = reads
+    isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
+    if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
             message("There are more than 10 samples, read class files
@@ -157,14 +158,12 @@ bambu <- function(reads = NULL, rcFile = NULL, rcOutDir = NULL,
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
         readClassList <- bambu.processReads(reads, annotations, 
-            genomeSequence = genomeSequence, 
+            genomeSequence = genome, 
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory)
-    } else { 
-        if(is.list(rcFile)) {readClassList <- rcFile}
-        else {readClassList <- as.list(rcFile)}}
+    }
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,

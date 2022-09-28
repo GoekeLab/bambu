@@ -3,11 +3,10 @@
 #' setBiocParallelParameters
 #' @importFrom BiocParallel bpparam
 #' @noRd
-setBiocParallelParameters <- function(reads, readClass.file, ncore, verbose){
+setBiocParallelParameters <- function(reads, ncore, verbose){
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
-    bpParameters$workers <- ifelse(max(length(reads),
-        length(readClass.file)) == 1, 1, ncore)
+    bpParameters$workers <- ifelse(length(reads) == 1, 1, ncore)
     bpParameters$progressbar <- (!verbose)
     return(bpParameters)
 }
@@ -76,13 +75,10 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.file,
-                        readClass.outputDir, genomeSequence){
+checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
-        if (is(annotations, "TxDb")) {
-            annotations <- prepareAnnotations(annotations)
-        } else if (is(annotations, "CompressedGRangesList")) {
+        if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
             if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
                      colnames(mcols(annotations)))) 
@@ -92,24 +88,43 @@ checkInputs <- function(annotations, reads, readClass.file,
                 warning('Annotations contain duplicated transcript/gene names
                         Please re-create your annotation object')
             }
+        } 
+        else if (is(annotations, "TxDb") | grepl(".gtf$", annotations)) {
+            if (grepl(".gtf$", annotations)) 
+                message("If you are running bambu multiple times we recommend ",
+                "processing your annotation file first with ",
+                "annotations = prepareAnnotations(gtf.file)")
+            annotations <- prepareAnnotations(annotations)
         } else {
-            stop("The annotations is not a GRangesList object.")
+            stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
         }
     } else {
         stop("Annotations is missing.")
     }
-    ## When SE object from bambu.quantISORE is provided ##
-    if (!is.null(reads) & (!is.null(readClass.file))) stop("At least bam file or
-        path to readClass file needs to be provided.")
     # ===# Check whether provided readClass.outputDir exists  #===#
     if (!is.null(readClass.outputDir)) {
         if (!dir.exists(readClass.outputDir)) 
             stop("output folder does not exist")
     }
-    # ===# Check whether provided readclass files are all in rds format #===#
-    if (!is.null(readClass.file)) {
-        if (!all(grepl(".rds", readClass.file))) 
-            stop("Read class files should be provided in rds format.")
+
+    if (is(reads, "BamFileList")){
+        if(!all(grepl(".bam$", names(reads)))){
+            stop("All files in BamFileList must be .bam files")
+        }
+        if(is.null(genomeSequence)){
+            stop("A genome must be provided when running bambu from bam files")
+        }
+    } else{
+    # ===# Check whether provided read files are all in the same format (.bam or .rds) #===#
+        if (!all(sapply(reads, class)=="RangedSummarizedExperiment") 
+            & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
+                stop("Reads should either be: a vector of paths to .bam files, ", 
+                "a vector of paths to Bambu RCfile .rds files, ",
+                "or a list of loaded Bambu RCfiles")
+        # if bam files are loaded in check that a genome is provided
+        if (all(grepl(".bam$", reads)) & is.null(genomeSequence)){
+            stop("A genome must be provided when running bambu from bam files")
+        }
     }
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
     ## strangely in windows system
