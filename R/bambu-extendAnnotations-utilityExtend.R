@@ -136,8 +136,11 @@ recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL, verbos
     if (NDR.rec < 0) NDR.rec = 0
     message("Calculated NDR: ", NDR.rec)
     if(NDR.rec > 0.5){
-        message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts")
-        message("We recommend running Bambu with the opt.discovery=list(fitReadClassModel=FALSE)")
+        message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
+        "limiting the performance of the trained model")
+        message("We recommend training a new model on similiar but well annotated dataset if available ",
+        "(https://github.com/GoekeLab/bambu/tree/master#Training-a-model-on-another-speciesdataset-and-applying-it)",
+        ", or alternatively running Bambu with opt.discovery=list(fitReadClassModel=FALSE)")
     }
     
     #if users are using an NDR let them know if the recommended NDR is different
