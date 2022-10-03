@@ -171,6 +171,7 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
 #'      txScoreBaselineSE - [DEPRECATED] the txScore used for NDR calibration for single-exon transcripts
 #'      lmNDR = lmNDR - the linear model of the reletionship between txScore and NDR used to calculate the baseline for multi-exon transcripts
 #'      lmNDR.SE = lmNDR.SE - the linear model of the reletionship between txScore and NDR used to calculate the baseline for single-exon transcripts
+#'      NDR.threshold - the NDR threshold usd to calculate the txScoreBaseline on the lmNDR 
 transcriptModelME = transcriptModelME, 
                 transcriptModelSE = transcriptModelSE,
                 txScoreBaseline = txScoreBaseline,
@@ -232,7 +233,8 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
                 txScoreBaseline = txScoreBaseline,
                 txScoreBaselineSE = txScoreBaselineSE,
                 lmNDR = lmNDR,
-                lmNDR.SE = lmNDR.SE))
+                lmNDR.SE = lmNDR.SE,
+                NDR.threshold = NDR.threshold))
 }
 
 #reduces the size of a lm so it can be saved with a lower footprint for prediction
