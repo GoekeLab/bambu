@@ -278,22 +278,21 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     compatibleQhits[!duplicated(compatibleQhits)]] <- "compatible"
   classificationTable$compatible[classificationTable$equal == "equal"] <- ""
   # annotate with transcript and gene Ids
-  equalShits <- subjectHits(ovExon[mcols(ovExon)$equal])
+  equalSubHits <- subjectHits(ovExon[mcols(ovExon)$equal])
   rowDataFilteredSpliced$TXNAME <- NA
   rowDataFilteredSpliced$TXNAME[
     equalQhits[!duplicated(equalQhits)]] <-
     mcols(annotationGrangesList)$TXNAME[
-      equalShits[!duplicated(equalQhits)]]
-  compatibleShits <- subjectHits(ovExon[mcols(ovExon)$compatible])
+      equalSubHits[!duplicated(equalQhits)]]
+  compatibleSubHits <- subjectHits(ovExon[mcols(ovExon)$compatible])
   rowDataFilteredSpliced$GENEID <- NA
   rowDataFilteredSpliced$GENEID[
     compatibleQhits[!duplicated(compatibleQhits)]] <-
     mcols(annotationGrangesList)$GENEID[
-      compatibleShits[!duplicated(compatibleQhits)]]
+      compatibleSubHits[!duplicated(compatibleQhits)]]
   # annotate with compatible gene id,
-  equalShits <- subjectHits(ovExon[mcols(ovExon)$equal])
   rowDataFilteredSpliced$GENEID[equalQhits[!duplicated(equalQhits)]] <-
-    mcols(annotationGrangesList[equalShits[!duplicated(equalQhits)]])$GENEID
+    mcols(annotationGrangesList[equalSubHits[!duplicated(equalQhits)]])$GENEID
   # annotate as identical, using intron matches
   unlistedIntrons <- unlist(intronsByReadClass, use.names = TRUE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)),
