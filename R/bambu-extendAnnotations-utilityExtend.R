@@ -88,7 +88,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
 
   if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
-      NDR = recommendNDR(rowDataCombined, txScoreBaseline, NDR)
+      NDR = recommendNDR(rowDataCombined, txScoreBaseline, NDR, verbose)
   } else {
       if(is.null(NDR)) NDR = 0.1
   }
@@ -124,8 +124,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 }
 
 #' calculates an expected NDR based on the annotations'
-recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL){
-    message("-- Predicting annotation completeness to determine NDR threshold --")
+recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL, verbose = FALSE){
+    if(verbose) message("-- Predicting annotation completeness to determine NDR threshold --")
     equal = combinedTranscripts$readClassType == "equalcompatible"
     equal[is.na(equal)] = FALSE
 
