@@ -105,11 +105,6 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
-  #deprecating because it is also done in combineWithAnnotations()
-  # remove equals to prevent duplicates when merging with annotations
-  #filterSet = rowDataCombined$readClassType != "equalcompatible"
-  #exonRangesCombined <- exonRangesCombined[filterSet]
-  #rowDataCombined <- rowDataCombined[filterSet,]
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")

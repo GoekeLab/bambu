@@ -36,14 +36,14 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     if (fit) model = trainBambu(se, verbose = verbose)
     if(returnModel) metadata(se)$model = model
     txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
-                                 defaultModels, fit=fit)
+                                 defaultModels)
     rowData(se)$txScore = rep(NA,nrow(se))
 
     if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
 
     #calculate using the default model for NDR recommendation
     txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
-                                model, defaultModels, fit=FALSE)
+                                model = NULL, defaultModels)
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
 
@@ -119,10 +119,10 @@ countPolyATerminals = function(grl, genomeSequence){
 
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData, model = NULL, defaultModels, nrounds = 50, fit = TRUE){
+getTranscriptScore = function(rowData, model = NULL, defaultModels){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(fit & !is.null(model)){
+    if(!is.null(model)){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
         if(length(indexME)>0){
@@ -199,7 +199,7 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
         if(verbose){
         message("On the dataset the new trained model achieves a ROC AUC of ",
             signif(newPerformance$AUC,3),  " and a Precision-Recall AUC of ", signif(newPerformance$PR.AUC,3), ".", 
-            "This is compared to the original default model which achiveves a ROC AUC of ",
+            "This is compared to the Bambu pretrained model trained on human ONT RNA-Seq data model which achiveves a ROC AUC of ",
             signif(currentPerformance$AUC,3), " and a Precision-Recall AUC of ", signif(currentPerformance$PR.AUC,3))
     }
 
