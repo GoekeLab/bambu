@@ -159,7 +159,24 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
 }
 
 #' Function to train a model for use on other data
-#' @noRd
+#' @param rcFile summerized experiment object with read classes/ranges produced from bambu(quant = FALSE, discovery = FALSE) or rcOutdir
+#' @param min.readCount the minimum number of reads a read class is required to be have to be used for training
+#' @param nrounds xgboost hyperparameter - the number of decision trees in the final mode
+#' @param NDR.threshold the effectiv NDR threshold that bambu will try and match on other samples when using this model
+#' @param verbose if additional messages should be output
+#' Output - A list containing 6 objects which is passed directly into bambu(opt.discovery=list(defaultModels=trainBambu()))
+#'      transcriptModelME - the model for multi-exon transcripts 
+#'      transcriptModelSE - the model for single-exon transcripts 
+#'      txScoreBaseline - the txScore used for NDR calibration for multi-exon transcripts
+#'      txScoreBaselineSE - [DEPRECATED] the txScore used for NDR calibration for single-exon transcripts
+#'      lmNDR = lmNDR - the linear model of the reletionship between txScore and NDR used to calculate the baseline for multi-exon transcripts
+#'      lmNDR.SE = lmNDR.SE - the linear model of the reletionship between txScore and NDR used to calculate the baseline for single-exon transcripts
+transcriptModelME = transcriptModelME, 
+                transcriptModelSE = transcriptModelSE,
+                txScoreBaseline = txScoreBaseline,
+                txScoreBaselineSE = txScoreBaselineSE,
+                lmNDR = lmNDR,
+                lmNDR.SE = lmNDR.SE)
 trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = TRUE) {
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
