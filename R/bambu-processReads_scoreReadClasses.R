@@ -32,20 +32,23 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
-    model = NULL
-    if (fit) model = trainBambu(se, verbose = verbose)
-    if(returnModel) metadata(se)$model = model
-    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
-                                 defaultModels)
-    rowData(se)$txScore = rep(NA,nrow(se))
-
-    if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
-
-    #calculate using the default model for NDR recommendation
+    #calculate using the pretrained model for NDR recommendation
     txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                 model = NULL, defaultModels)
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+
+    model = NULL
+    if (fit){ 
+        model = trainBambu(se, verbose = verbose)
+        if(returnModel) metadata(se)$model = model
+        txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
+                                 defaultModels)
+        rowData(se)$txScore = rep(NA,nrow(se))
+        if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
+    } else{
+        rowData(se)$txScore = rowData(se)$txScore.noFit
+    }
 
     end.ptm <- proc.time()
     if (verbose) 
