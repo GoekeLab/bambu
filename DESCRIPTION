@@ -86,9 +86,7 @@ Imports:
     Rsamtools,
     methods,
     Rcpp,
-    xgboost,
-    ROCit,
-    MESS
+    xgboost
 VignetteBuilder: 
     knitr
 LazyData: true

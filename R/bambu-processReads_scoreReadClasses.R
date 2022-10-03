@@ -192,24 +192,15 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
     lmNDR.SE = lm(txScoreSE~NDR.SE)
     txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
 
-    ROC = NULL
-    ROC.default = NULL
     ## Compare the trained model AUC to the default model AUC
-    ROC = rocit(score = txScore, class = txFeatures$labels[indexME])
-    ROC$PREC = measureit(score =txScore, class = txFeatures$labels[indexME], measure = c("PREC"))$PREC
-    ROC$PREC[1] = ROC$PREC[2]
-    ROC$PR.AUC = MESS::auc(ROC$TPR, ROC$PREC)
-
     txScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
-    ROC.default = rocit(score = txScore.default, class = txFeatures$labels[indexME])
-    ROC.default$PREC = measureit(score =txScore.default, class = txFeatures$labels[indexME], measure = c("PREC"))$PREC
-    ROC.default$PREC[1] = ROC.default$PREC[2]
-    ROC.default$PR.AUC = MESS::auc(ROC.default$TPR, ROC.default$PREC)
-    if(verbose){
+    newPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore)
+    currentPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore.default)
+        if(verbose){
         message("On the dataset the new trained model achieves a ROC AUC of ",
-            signif(ROC$AUC,3),  " and a Precision-Recall AUC of ", signif(ROC$PR.AUC,3), ".", 
+            signif(newPerformance$AUC,3),  " and a Precision-Recall AUC of ", signif(newPerformance$PR.AUC,3), ".", 
             "This is compared to the original default model which achiveves a ROC AUC of ",
-            signif(ROC.default$AUC,3), " and a Precision-Recall AUC of ", signif(ROC.default$PR.AUC,3))
+            signif(currentPerformance$AUC,3), " and a Precision-Recall AUC of ", signif(currentPerformance$PR.AUC,3))
     }
 
     #shrink size of lm
