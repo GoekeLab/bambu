@@ -140,18 +140,6 @@ recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL, verbos
         message("We recommend running Bambu with the opt.discovery=list(fitReadClassModel=FALSE)")
     }
     
-    #test if default model is appropriate to recommend NDR threshold
-    # defaultSuitabilityScore = mean(combinedTranscripts$maxTxScore.noFit[equal] - 
-    #     combinedTranscripts$maxTxScore[equal])
-    # if(defaultSuitabilityScore < -0.1) {
-    #     message("Unable to accurately predict annotation completeness")
-    #     message("Model agreement score: ", defaultSuitabilityScore)
-    #     #message("Calculated NDR: ", NDR.rec)
-    #     if(is.null(NDR)) message("Therefore, Bambu will use a default NDR of 0.1. To adjust this run Bambu with the NDR parameter")
-    #     message("To calculate annotation completeness in future runs, use a default model trained on more similiar data (see documentation)")
-    #     NDR.rec = 0.1
-    # }
-
     #if users are using an NDR let them know if the recommended NDR is different
     if(is.null(NDR)) 
     {
