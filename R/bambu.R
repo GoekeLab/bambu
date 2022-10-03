@@ -129,7 +129,7 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
-bambu <- function(reads, annotations = NULL, genome = NULL, NDR = 0.1,
+bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
