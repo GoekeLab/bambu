@@ -108,8 +108,10 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                          uniqueJunctions, runName = names(bam.file)[1],
                                          annotations, stranded, verbose)
     }
-    if(trackReads) metadata(se)$readNames = names(readGrgList)
-    metadata(se)$readId = mcols(readGrgList)$id
+    if(trackReads){
+        metadata(se)$readNames = names(readGrgList)
+        metadata(se)$readId = mcols(readGrgList)$id
+    }
     rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
