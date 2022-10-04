@@ -32,12 +32,9 @@ setIsoreParameters <- function(isoreParameters){
         fitReadClassModel = TRUE,
         defaultModels = defaultModels,
         returnModel = FALSE,
-        txScoreBaseline = defaultModels$txScoreBaseline,
+        baselineFDR = 0.1,
         min.readFractionByEqClass = 0,
         prefix = "") 
-    if("defaultModels" %in% names(isoreParameters) & !("txScoreBaseline" %in% names(isoreParameters))){
-        isoreParameters["txScoreBaseline"]=isoreParameters$defaultModels$txScoreBaseline
-    }
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
     return(isoreParameters)

@@ -225,7 +225,7 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
                                          labels.train.cv.test))
         show(testResults$estimate)
         show(testResults$p.value)
-        show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
+        show(evaluatePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
     
     cv.fit <- xgboost(data = data.train, 
@@ -371,7 +371,7 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
 
 #' Evaluate performance
 #' @noRd
-evalutePerformance <- function(labels, scores, decreasing = TRUE){
+evaluatePerformance <- function(labels, scores, decreasing = TRUE){
     labels <- labels[order(scores, decreasing = decreasing)]
     results <- list()
     # TP/(TP+FP); True Positive Rate;Sensitivity; recall
@@ -382,6 +382,9 @@ evalutePerformance <- function(labels, scores, decreasing = TRUE){
     results[['precision']] <- cumsum(labels)/(seq_along(labels))
     results[['AUC']] <- sum(results[['TPR']][!duplicated( results[['FPR']],
     fromLast = TRUE)] / sum(!duplicated( results[['FPR']],
+    fromLast = TRUE)))
+    results[['PR.AUC']] <-sum(results[['precision']][!duplicated( results[['TPR']],
+    fromLast = TRUE)] / sum(!duplicated( results[['TPR']],
     fromLast = TRUE)))
     return(results)
 }

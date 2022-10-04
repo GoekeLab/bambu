@@ -32,20 +32,23 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
-    model = NULL
-    if (fit) model = trainBambu(se, verbose = verbose)
-    if(returnModel) metadata(se)$model = model
-    txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
-                                 defaultModels, fit=fit)
-    rowData(se)$txScore = rep(NA,nrow(se))
-
-    if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
-
-    #calculate using the default model for NDR recommendation
+    #calculate using the pretrained model for NDR recommendation
     txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
-                                model, defaultModels, fit=FALSE)
+                                model = NULL, defaultModels)
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+
+    model = NULL
+    if (fit){ 
+        model = trainBambu(se, verbose = verbose)
+        if(returnModel) metadata(se)$model = model
+        txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
+                                 defaultModels)
+        rowData(se)$txScore = rep(NA,nrow(se))
+        if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
+    } else{
+        rowData(se)$txScore = rowData(se)$txScore.noFit
+    }
 
     end.ptm <- proc.time()
     if (verbose) 
@@ -119,10 +122,10 @@ countPolyATerminals = function(grl, genomeSequence){
 
 
 #' calculates a score based on how likely a read class is full length
-getTranscriptScore = function(rowData, model = NULL, defaultModels, nrounds = 50, fit = TRUE){
+getTranscriptScore = function(rowData, model = NULL, defaultModels){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(fit & !is.null(model)){
+    if(!is.null(model)){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
         if(length(indexME)>0){
@@ -156,7 +159,19 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels, nrounds = 50
 }
 
 #' Function to train a model for use on other data
-#' @noRd
+#' @param rcFile summerized experiment object with read classes/ranges produced from bambu(quant = FALSE, discovery = FALSE) or rcOutdir
+#' @param min.readCount the minimum number of reads a read class is required to be have to be used for training
+#' @param nrounds xgboost hyperparameter - the number of decision trees in the final mode
+#' @param NDR.threshold the effective NDR threshold that bambu will try and match on other samples when using this model
+#' @param verbose if additional messages should be output
+#' Output - A list containing 6 objects which is passed directly into bambu(opt.discovery=list(defaultModels=trainBambu()))
+#'      transcriptModelME - the model for multi-exon transcripts 
+#'      transcriptModelSE - the model for single-exon transcripts 
+#'      txScoreBaseline - the txScore used for NDR calibration for multi-exon transcripts
+#'      txScoreBaselineSE - [DEPRECATED] the txScore used for NDR calibration for single-exon transcripts
+#'      lmNDR = lmNDR - the linear model of the reletionship between txScore and NDR used to calculate the baseline for multi-exon transcripts
+#'      lmNDR.SE = lmNDR.SE - the linear model of the reletionship between txScore and NDR used to calculate the baseline for single-exon transcripts
+#'      NDR.threshold - the NDR threshold usd to calculate the txScoreBaseline on the lmNDR (baselineFDR)
 trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = TRUE) {
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
@@ -189,27 +204,18 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
     #lm of NDR vs txScore
     lmNDR = lm(txScore~poly(NDR,3,raw=TRUE))
     txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
-    lmNDR.SE = lm(txScoreSE~NDR.SE)
+    lmNDR.SE = glm(txScoreSE~NDR.SE)
     txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
 
-    ROC = NULL
-    ROC.default = NULL
     ## Compare the trained model AUC to the default model AUC
-    ROC = rocit(score = txScore, class = txFeatures$labels[indexME])
-    ROC$PREC = measureit(score =txScore, class = txFeatures$labels[indexME], measure = c("PREC"))$PREC
-    ROC$PREC[1] = ROC$PREC[2]
-    ROC$PR.AUC = MESS::auc(ROC$TPR, ROC$PREC)
-
     txScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
-    ROC.default = rocit(score = txScore.default, class = txFeatures$labels[indexME])
-    ROC.default$PREC = measureit(score =txScore.default, class = txFeatures$labels[indexME], measure = c("PREC"))$PREC
-    ROC.default$PREC[1] = ROC.default$PREC[2]
-    ROC.default$PR.AUC = MESS::auc(ROC.default$TPR, ROC.default$PREC)
-    if(verbose){
+    newPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore)
+    currentPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore.default)
+        if(verbose){
         message("On the dataset the new trained model achieves a ROC AUC of ",
-            signif(ROC$AUC,3),  " and a Precision-Recall AUC of ", signif(ROC$PR.AUC,3), ".", 
-            "This is compared to the original default model which achiveves a ROC AUC of ",
-            signif(ROC.default$AUC,3), " and a Precision-Recall AUC of ", signif(ROC.default$PR.AUC,3))
+            signif(newPerformance$AUC,3),  " and a Precision-Recall AUC of ", signif(newPerformance$PR.AUC,3), ".", 
+            "This is compared to the Bambu pretrained model trained on human ONT RNA-Seq data model which achiveves a ROC AUC of ",
+            signif(currentPerformance$AUC,3), " and a Precision-Recall AUC of ", signif(currentPerformance$PR.AUC,3))
     }
 
     #shrink size of lm
@@ -221,7 +227,8 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
                 txScoreBaseline = txScoreBaseline,
                 txScoreBaselineSE = txScoreBaselineSE,
                 lmNDR = lmNDR,
-                lmNDR.SE = lmNDR.SE))
+                lmNDR.SE = lmNDR.SE,
+                NDR.threshold = NDR.threshold))
 }
 
 #reduces the size of a lm so it can be saved with a lower footprint for prediction
@@ -231,7 +238,7 @@ trim_lm = function(lm){
     lm$fitted.values = c()
     lm$model = c()
     lm$qr$qr=c()
-    lm$terms = NULL
+    attr(lm$terms, ".Environment") = c()
     return(lm)
 }
 
