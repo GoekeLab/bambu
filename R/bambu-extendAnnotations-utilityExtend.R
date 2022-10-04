@@ -6,7 +6,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
-                                    prefix = "", txScoreBaseline = 0.8, verbose = FALSE){
+                                    prefix = "", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -40,7 +40,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     # ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, min.readFractionByEqClass, txScoreBaseline, NDR, verbose)
+      remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -72,8 +72,8 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
                                           exonRangesCombined, prefix,  remove.subsetTx, 
-                                          min.readFractionByEqClass, txScoreBaseline = 0.8, 
-                                          NDR = NULL, verbose) {
+                                          min.readFractionByEqClass, baselineFDR = 0.1, 
+                                          NDR = NULL, defaultModels = NULL, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   
   #calculate relative read count before any filtering
@@ -88,7 +88,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
 
   if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
-      NDR = recommendNDR(rowDataCombined, txScoreBaseline, NDR, verbose)
+      NDR = recommendNDR(rowDataCombined, baselineFDR, NDR, defaultModels, verbose)
   } else {
       if(is.null(NDR)) NDR = 0.1
   }
@@ -119,10 +119,15 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 }
 
 #' calculates an expected NDR based on the annotations'
-recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL, verbose = FALSE){
+recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, defaultModels = defauleModels, verbose = FALSE){
     if(verbose) message("-- Predicting annotation completeness to determine NDR threshold --")
     equal = combinedTranscripts$readClassType == "equalcompatible"
     equal[is.na(equal)] = FALSE
+
+    #add envirnment so poly() works
+    attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
+    baseline = predict(defaultModels$lmNDR, newdata=data.frame(NDR=baselineFDR))
+    attr(defaultModels$lmNDR[["terms"]], ".Environment") = c()
 
     NDRscores = calculateNDR(combinedTranscripts$maxTxScore.noFit, equal)
     score = combinedTranscripts$maxTxScore.noFit
@@ -629,9 +634,11 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
     mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
     }else{
-        message("all detect novel transcripts are already present in the annotations, try a higher NDR")
+        message("all detected novel transcripts are already present in the annotations, try a higher NDR")
       extendedAnnotationRanges <- annotationRangesToMerge
       mcols(extendedAnnotationRanges)$txid = NA
+      mcols(extendedAnnotationRanges)$relReadCount = NA
+      mcols(extendedAnnotationRanges)$relSubsetCount = NA
     }
   
   minEqClasses <-

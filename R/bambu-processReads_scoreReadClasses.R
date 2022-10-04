@@ -171,13 +171,7 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
 #'      txScoreBaselineSE - [DEPRECATED] the txScore used for NDR calibration for single-exon transcripts
 #'      lmNDR = lmNDR - the linear model of the reletionship between txScore and NDR used to calculate the baseline for multi-exon transcripts
 #'      lmNDR.SE = lmNDR.SE - the linear model of the reletionship between txScore and NDR used to calculate the baseline for single-exon transcripts
-#'      NDR.threshold - the NDR threshold usd to calculate the txScoreBaseline on the lmNDR 
-transcriptModelME = transcriptModelME, 
-                transcriptModelSE = transcriptModelSE,
-                txScoreBaseline = txScoreBaseline,
-                txScoreBaselineSE = txScoreBaselineSE,
-                lmNDR = lmNDR,
-                lmNDR.SE = lmNDR.SE)
+#'      NDR.threshold - the NDR threshold usd to calculate the txScoreBaseline on the lmNDR (baselineFDR)
 trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = TRUE) {
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
@@ -210,7 +204,7 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
     #lm of NDR vs txScore
     lmNDR = lm(txScore~poly(NDR,3,raw=TRUE))
     txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
-    lmNDR.SE = lm(txScoreSE~NDR.SE)
+    lmNDR.SE = glm(txScoreSE~NDR.SE)
     txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
 
     ## Compare the trained model AUC to the default model AUC
@@ -244,7 +238,7 @@ trim_lm = function(lm){
     lm$fitted.values = c()
     lm$model = c()
     lm$qr$qr=c()
-    lm$terms = NULL
+    attr(lm$terms, ".Environment") = c()
     return(lm)
 }
 
