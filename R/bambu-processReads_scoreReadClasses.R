@@ -162,7 +162,7 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
 #' @param rcFile summerized experiment object with read classes/ranges produced from bambu(quant = FALSE, discovery = FALSE) or rcOutdir
 #' @param min.readCount the minimum number of reads a read class is required to be have to be used for training
 #' @param nrounds xgboost hyperparameter - the number of decision trees in the final mode
-#' @param NDR.threshold the effectiv NDR threshold that bambu will try and match on other samples when using this model
+#' @param NDR.threshold the effective NDR threshold that bambu will try and match on other samples when using this model
 #' @param verbose if additional messages should be output
 #' Output - A list containing 6 objects which is passed directly into bambu(opt.discovery=list(defaultModels=trainBambu()))
 #'      transcriptModelME - the model for multi-exon transcripts 
