@@ -423,7 +423,6 @@ se <- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, op
 |argument|description|
 |---|---|
 |reads|A string or a vector of strings specifying the paths of bam files for genomic alignments, or a BamFile object or a BamFileList object (from Rsamtools).|
-| rcFile | A string or a vector of strings specifying the read class files that are saved during previous run of bambu. |
 | rcOutDir | A string variable specifying the path to where read class files will be saved. |
 | annotations | A TxDb object, a path to a .gtf file, or a GRangesList object obtained by prepareAnnotations. |
 | genome | A fasta file or a BSGenome object. |
