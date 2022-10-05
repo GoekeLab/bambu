@@ -6,7 +6,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
-                                    prefix = "", txScoreBaseline = 0.8, verbose = FALSE){
+                                    prefix = "", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -40,7 +40,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     # ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, min.readFractionByEqClass, txScoreBaseline, NDR, verbose)
+      remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose)
     return(extendedAnnotationRanges)
   } else {
     message("The current filtering criteria filters out all new read 
@@ -72,8 +72,8 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 #' @noRd
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
                                           exonRangesCombined, prefix,  remove.subsetTx, 
-                                          min.readFractionByEqClass, txScoreBaseline = 0.8, 
-                                          NDR = NULL, verbose) {
+                                          min.readFractionByEqClass, baselineFDR = 0.1, 
+                                          NDR = NULL, defaultModels = NULL, verbose) {
   start.ptm <- proc.time() # (1) based on transcript usage
   
   #calculate relative read count before any filtering
@@ -88,7 +88,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
 
   if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
-      NDR = recommendNDR(rowDataCombined, txScoreBaseline, NDR)
+      NDR = recommendNDR(rowDataCombined, baselineFDR, NDR, defaultModels, verbose)
   } else {
       if(is.null(NDR)) NDR = 0.1
   }
@@ -105,11 +105,6 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
-  #deprecating because it is also done in combineWithAnnotations()
-  # remove equals to prevent duplicates when merging with annotations
-  #filterSet = rowDataCombined$readClassType != "equalcompatible"
-  #exonRangesCombined <- exonRangesCombined[filterSet]
-  #rowDataCombined <- rowDataCombined[filterSet,]
   if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
@@ -124,10 +119,15 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 }
 
 #' calculates an expected NDR based on the annotations'
-recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL){
-    message("-- Predicting annotation completeness to determine NDR threshold --")
+recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, defaultModels = defaultModels, verbose = FALSE){
+    if(verbose) message("-- Predicting annotation completeness to determine NDR threshold --")
     equal = combinedTranscripts$readClassType == "equalcompatible"
     equal[is.na(equal)] = FALSE
+
+    #add envirnment so poly() works
+    attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
+    baseline = predict(defaultModels$lmNDR, newdata=data.frame(NDR=baselineFDR))
+    attr(defaultModels$lmNDR[["terms"]], ".Environment") = c()
 
     NDRscores = calculateNDR(combinedTranscripts$maxTxScore.noFit, equal)
     score = combinedTranscripts$maxTxScore.noFit
@@ -136,22 +136,13 @@ recommendNDR <- function(combinedTranscripts, baseline = 0.8, NDR = NULL){
     if (NDR.rec < 0) NDR.rec = 0
     message("Calculated NDR: ", NDR.rec)
     if(NDR.rec > 0.5){
-        message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts")
-        message("We recommend running Bambu with the opt.discovery=list(fitReadClassModel=FALSE)")
+        message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
+        "limiting the performance of the trained model")
+        message("We recommend training a new model on similiar but well annotated dataset if available ",
+        "(https://github.com/GoekeLab/bambu/tree/master#Training-a-model-on-another-speciesdataset-and-applying-it)",
+        ", or alternatively running Bambu with opt.discovery=list(fitReadClassModel=FALSE)")
     }
     
-    #test if default model is appropriate to recommend NDR threshold
-    # defaultSuitabilityScore = mean(combinedTranscripts$maxTxScore.noFit[equal] - 
-    #     combinedTranscripts$maxTxScore[equal])
-    # if(defaultSuitabilityScore < -0.1) {
-    #     message("Unable to accurately predict annotation completeness")
-    #     message("Model agreement score: ", defaultSuitabilityScore)
-    #     #message("Calculated NDR: ", NDR.rec)
-    #     if(is.null(NDR)) message("Therefore, Bambu will use a default NDR of 0.1. To adjust this run Bambu with the NDR parameter")
-    #     message("To calculate annotation completeness in future runs, use a default model trained on more similiar data (see documentation)")
-    #     NDR.rec = 0.1
-    # }
-
     #if users are using an NDR let them know if the recommended NDR is different
     if(is.null(NDR)) 
     {
@@ -278,22 +269,21 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     compatibleQhits[!duplicated(compatibleQhits)]] <- "compatible"
   classificationTable$compatible[classificationTable$equal == "equal"] <- ""
   # annotate with transcript and gene Ids
-  equalShits <- subjectHits(ovExon[mcols(ovExon)$equal])
+  equalSubHits <- subjectHits(ovExon[mcols(ovExon)$equal])
   rowDataFilteredSpliced$TXNAME <- NA
   rowDataFilteredSpliced$TXNAME[
     equalQhits[!duplicated(equalQhits)]] <-
     mcols(annotationGrangesList)$TXNAME[
-      equalShits[!duplicated(equalQhits)]]
-  compatibleShits <- subjectHits(ovExon[mcols(ovExon)$compatible])
+      equalSubHits[!duplicated(equalQhits)]]
+  compatibleSubHits <- subjectHits(ovExon[mcols(ovExon)$compatible])
   rowDataFilteredSpliced$GENEID <- NA
   rowDataFilteredSpliced$GENEID[
     compatibleQhits[!duplicated(compatibleQhits)]] <-
     mcols(annotationGrangesList)$GENEID[
-      compatibleShits[!duplicated(compatibleQhits)]]
+      compatibleSubHits[!duplicated(compatibleQhits)]]
   # annotate with compatible gene id,
-  equalShits <- subjectHits(ovExon[mcols(ovExon)$equal])
   rowDataFilteredSpliced$GENEID[equalQhits[!duplicated(equalQhits)]] <-
-    mcols(annotationGrangesList[equalShits[!duplicated(equalQhits)]])$GENEID
+    mcols(annotationGrangesList[equalSubHits[!duplicated(equalQhits)]])$GENEID
   # annotate as identical, using intron matches
   unlistedIntrons <- unlist(intronsByReadClass, use.names = TRUE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)),
@@ -644,9 +634,11 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
     mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
     }else{
-        message("all detect novel transcripts are already present in the annotations, try a higher NDR")
+        message("all detected novel transcripts are already present in the annotations, try a higher NDR")
       extendedAnnotationRanges <- annotationRangesToMerge
       mcols(extendedAnnotationRanges)$txid = NA
+      mcols(extendedAnnotationRanges)$relReadCount = NA
+      mcols(extendedAnnotationRanges)$relSubsetCount = NA
     }
   
   minEqClasses <-

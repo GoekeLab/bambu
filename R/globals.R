@@ -30,18 +30,18 @@ if (getRversion() >= "2.15.1") {
         "rc_width", "spliceMotif", "startScore", "theta", "totalWidth",
         "txNumber", "txNumberExpected", "tx_id_new", "tx_len", "tx_ori",
         "counts","intersectWidth", "newGeneId", "newTxId", 
-        "newGeneId.merge", "newTxId", "newGeneId","nTx","geneReadCount",
+        "newGeneId.merge","nTx","geneReadCount",
         "startSD","endSD","readCount.posStrand","alignmentStrand","newExonId",
-        "newExonId.merge","newGeneId","readStart","readEnd","novelGene",
+        "newExonId.merge","readStart","readEnd","novelGene",
         "numReads","numExons","numRCs","geneReadProp","numAstart", "numAend",
         "numTstart","numTend","tx_strand_bias", "maxTxScore", 
         "NSampleReadCount", "NSampleReadProp", "NSampleTxScore", 
         "NSampleReadCount.combined", "NSampleReadCount.new", 
         "NSampleReadProp.combined", "NSampleReadProp.new", 
         "NSampleTxScore.combined", "NSampleTxScore.new", "maxTxScore.combined",
-        "maxTxScore.new" ,"txScore" ,"row_id" ,"txScore", "sample_id", 
-        "sample_name", "txScore", "readCount_tmp", "group", "row_id", "rowID", 
-        "sumReadCount", "maxTxScore.noFit", "maxTxScore", "NSampleReadCount", "NSampleReadProp", 
-        "NSampleTxScore", "geneid", "readIds", "readId", "anyCompatible","seqname"
+        "maxTxScore.new" ,"txScore" ,"row_id", "sample_id", 
+        "sample_name", "readCount_tmp", "group", "rowID", 
+        "sumReadCount", "maxTxScore.noFit", "geneid", 
+        "readIds", "readId", "anyCompatible","seqname"
     ))
 }

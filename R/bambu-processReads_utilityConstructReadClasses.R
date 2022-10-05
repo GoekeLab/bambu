@@ -397,8 +397,16 @@ assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = 
                                                                    grl[!is.na(mcols(grl)$GENEID)],
                                                        min.exonOverlap = min.exonOverlap,
                                                        fusionMode = FALSE) 
+    if(any(is.na(mcols(grl)$GENEID)) & length(annotations)>0) {
+        newGeneSet <- is.na(mcols(grl)$GENEID)
+        mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], 
+                                                annotations,
+                                                min.exonOverlap = min.exonOverlap,
+                                                fusionMode = FALSE) 
+    }
+
     if(any(is.na(mcols(grl)$GENEID))) {
-      mcols(grl)$GENEID[is.na(mcols(grl)$GENEID)] <- assignGeneIdsNoReference(grl[is.na(mcols(grl)$GENEID)], prefix = 'unstranded.')
+        mcols(grl)$GENEID[is.na(mcols(grl)$GENEID)] <- assignGeneIdsNoReference(grl[is.na(mcols(grl)$GENEID)], prefix = 'unstranded.')
       }
   }
   newGeneSet <- !(mcols(grl)$GENEID %in% mcols(annotations)$GENEID)
