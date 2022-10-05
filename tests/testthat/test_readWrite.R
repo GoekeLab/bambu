@@ -10,7 +10,7 @@ test_that("the output files of writeBambuOutput have correct prefix, file format
     
     outputFileName <- c("replicate5_run1_extended_annotations.gtf", "replicate5_run1_counts_transcript.txt",
                         "replicate5_run1_counts_transcript.txt", "replicate5_run1_CPM_transcript.txt", 
-                        "replicate5_run1_fullLengthCounts_transcript.txt", "replicate5_run1_partialLengthCounts_transcript.txt", 
+                        "replicate5_run1_fullLengthCounts_transcript.txt", 
                         "replicate5_run1_uniqueCounts_transcript.txt", "replicate5_run1_counts_gene.txt")
     
     checkOutput <- outputFileName %in% list.files(path)
