@@ -3,7 +3,7 @@
 # 'ENST00000344579', # exon skipping, alternative TSS (-48), +, ENSG00000158109
 # 'ENST00000270792', # intron retention subject 1(last exon),alt.TSS,alt.TES, +,
 # 'ENST00000410032', # alternative first exon, exon skipping query: 2, 
-#                    # exon skipping subject: 0, alternative TSS (2bp only), 
+#                    # exon skipping subject: 0, alternative TES (2bp only), 
 #                    # internalFirstExon.subject +
 # 'ENST00000468178', # alternative last exon +
 # 'ENST00000485956', # alternative first exon, alternative last exon,
@@ -24,30 +24,51 @@
 #        package = "bambu"))
 ############################################################
 
-#' annotate splice overlap by distance
-#' @description This function takes in a GRangesList (query)
-#' and a target GRangesList (subject). The function creates
-#' an annotation table in tibble by comparing ranges entries
-#' from transcripts between the query and subject GRangesLists.
-#' @usage compareTranscripts(query, subject)
-#' @param query a GRangesList
-#' @param subject a GRangesList
-#' @return a tibble with the following annotations:
+#' @title compare alternatively-spliced transcripts
+#' @param query a GRangesList of transcripts
+#' @param subject a GRangesList of transcripts
+#' @details This function compares two alternatively-spliced transcripts and returns 
+#' a \code{tibble} object that determines the type of the alternative splicing between 
+#' the query and the subject transcript. Alternative splicing includes exons skipping, 
+#' intron retention, alternative 5' exon start site, alternative 3' exon end site, alternative
+#' first exon, alternative last exon, alternative transcription start site (TSS), 
+#' alternative transcription end site (TES), internal first exon, internal last exon, or a 
+#' mixed combination of them. 
+#' @seealso \code{Value} for more details about each of the alternative splicing events. 
+#' @return a \code{tibble} object with the following columns:
+#' 
+#' Remark: two exons, one each from query and subject transcript are defined to be equivalent if one of 
+#' the exons fully covers the another exon. 
+#' 
 #' \itemize{
-#'     \item alternativeFirstExon
-#'     \item alternativeTSS
-#'     \item internalFirstExon.query
-#'     \item internalFirstExon.subject
-#'     \item alternativeLastExon
-#'     \item alternativeTES
-#'     \item internalLastExon.query
-#'     \item internalLastExon.subject
-#'     \item intronRetention.subject
-#'     \item intronRetention.query
-#'     \item exonSkipping.query
-#'     \item exonSkipping.subject
-#'     \item exon5prime (splicing)
-#'     \item exon3prime (splicing)
+#'     \item alternativeFirstExon: FALSE if query transcript and subject transcript have equivalent
+#'     first exon. TRUE otherwise. 
+#'     \item alternativeTSS: +k if the query initiates the transcription k sites earlier 
+#'     than the subject transcript, -k if the query initiates the transcription k sites later 
+#'     than the subject transcript. 
+#'     \item internalFirstExon.query: TRUE if the first exon of the query transcript is equivalent to
+#'     one of the exon of the subject transcript (except the first exon). FALSE otherwise. 
+#'     \item internalFirstExon.subject: TRUE if the first exon of the subject transcript is equivalent to
+#'     one of the exon of the query transcript (except the first exon). FALSE otherwise. 
+#'     \item alternativeLastExon: FALSE if query transcript and subject transcript have equivalent last
+#'     exon. TRUE otherwise. 
+#'     \item alternativeTES: +k if the query transcript ends the transcription k sites later than the 
+#'     subject transcript, -k if the query transcript ends the transcription k sites earlier than the 
+#'     subject transcript. 
+#'     \item internalLastExon.query: TRUE if the last exon of the query transcript is equivalent to one 
+#'     of the exon in the subject transcript (except the last exon). FALSE otherwise. 
+#'     \item internalLastExon.subject: TRUE if the last exon of the subject transcript is equivalent to 
+#'     one of the exon in the query transcript (except the last exon). FALSE otherwise. 
+#'     \item intronRetention.subject: k if there is/are k intron(s) in the subject transcript relative to the 
+#'     query transcript. 
+#'     \item intronRetention.query: k if there is/are k intron(s) in the query transcript relative to the 
+#'     subject transcript. 
+#'     \item exonSkipping.query: k if there is/are k exon(s) in the subject transcript (except the first and last) not in the
+#'     query transcript. 
+#'     \item exonSkipping.subject: k if there is/are k exon(s) in the query transcript (except the first and last) not in the 
+#'     subject transcript. 
+#'     \item exon5prime (splicing): k if there is/are k equivalent exon(s) having different 5' start site (except the 5' start site of first exon).
+#'     \item exon3prime (splicing): k if there is/are k equivalent exon(s) having different 3' end site (except the 3' end site of the last exon).
 #' }
 #' @importFrom dplyr tibble 
 #' @examples
@@ -57,7 +78,9 @@
 #' subject <- readRDS(system.file("extdata", 
 #'     "annotateSpliceOverlapByDist_testSubject.rds",
 #'     package = "bambu"))
-#' annotationTable <- compareTranscripts(query, subject)
+#' compareTranscriptsTable <- compareTranscripts(query, subject)
+#' 
+#' compareTranscriptsTable
 #' @noRd
 compareTranscripts <- function(query, subject) {
     subjectFullRng <- ranges(subject)
