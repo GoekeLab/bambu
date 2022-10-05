@@ -38,10 +38,8 @@ test_that("bambu (isoform quantification of bam file) produces expected output",
         "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", 
         package = "bambu")
 
+    annotations <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
-    txdb <- AnnotationDbi::loadDb(system.file("extdata", 
-        "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", 
-        package = "bambu"))
     gr <- readRDS(system.file("extdata", 
         "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
         package = "bambu"))
@@ -56,17 +54,9 @@ test_that("bambu (isoform quantification of bam file) produces expected output",
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = txdb, genome = fa.file,
-        opt.em = list(degradationBias = FALSE), discovery = FALSE)
+    se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(assays(se), assays(seExpected))
-
-    set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, 
-        opt.em = list(degradationBias = FALSE), discovery = FALSE)
-    expect_s4_class(se, "SummarizedExperiment")
-    expect_equal(assays(se), assays(seExpected))
-
 
     # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
     set.seed(1234)
@@ -88,9 +78,6 @@ test_that("bambu (isoform quantification of bam file and save readClassFiles) pr
         "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", 
         package = "bambu")
 
-    txdb <- AnnotationDbi::loadDb(system.file("extdata", 
-        "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite", 
-        package = "bambu"))
     gr <- readRDS(system.file("extdata", 
         "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", 
         package = "bambu"))
@@ -106,9 +93,7 @@ test_that("bambu (isoform quantification of bam file and save readClassFiles) pr
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file,
-        opt.em = list(degradationBias = FALSE), discovery = FALSE,
-        rcOutDir = rcOutDir)
+    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, rcOutDir = rcOutDir)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(se, seExpected)
 
@@ -137,7 +122,7 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    seExtended <- bambu(rcFile = seReadClass1, annotations = gr, 
+    seExtended <- bambu(reads = seReadClass1, annotations = gr, 
         opt.em = list(degradationBias = FALSE), discovery = TRUE)
     expect_s4_class(seExtended, "SummarizedExperiment")
     expect_equal(seExtended, seExtendedExpected)
@@ -145,7 +130,7 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 
     # test case 2: bambu with multiple bam file, only using annotations (default option), yieldSize lower than read count
     set.seed(1234)
-    seCombined <- bambu(rcFile = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
+    seCombined <- bambu(reads = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
     expect_s4_class(seCombined, "SummarizedExperiment")
     expect_equal(seCombined, seCombinedExpected)
 })
