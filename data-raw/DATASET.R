@@ -5,7 +5,7 @@
 data_train <- matrix(seq(1:300000), nrow=100000)
 data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
 labels_train <- c(rep(1,50000), rep(0,50000))
-xgb_model <- fitXGBoostModel(labels_train, data_train, data_test, show.cv=TRUE)
+xgb_model <- fitXGBoostModel(labels_train, data_train, show.cv=TRUE)
 # Extract the predictions and results from the list
 xgb_predictions = predict(xgb_model, data_test)
 xgb.dump(xgb_model, './inst/extdata/xgb_model_splice_junction_correction.txt',
@@ -78,21 +78,6 @@ estOutput_woBC <- lapply(seq_len(5), function(s) {
 estOutput_wBC <- lapply(seq_len(5), function(s) {
     est <- bambu.quantDT(readClassDt = get(paste0("data", s)))
 })
-
-
-
-## expected output for test isore
-
-seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-extendedAnnotations <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-
-
-seWithDistExpected <- isore.estimateDistanceToAnnotations(
-    seReadClass = seReadClass1,
-    annotationGrangesList = extendedAnnotations,
-    min.exonDistance = 35
-)
 
 
 ## expected seGeneOutput
@@ -236,67 +221,50 @@ saveRDS(readGrgList, file = "./inst/extdata/readGrgList_SGNex_A549_directRNA_rep
 
 ## generate read class files
 
-readGrgList <- readRDS(system.file("extdata", "readGrgList_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 annotations <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 genome <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
-verbose = FALSE
-seqlevelCheckReadsAnnotation(readGrgList, annotations)
-genomeSequence <- checkInputSequence(genome)
-#check seqlevels for consistency, drop ranges not present in genomeSequence
-refSeqLevels <- seqlevels(genomeSequence)
-if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
-    message("not all chromosomes from reads present in reference genome 
-            sequence, reads without reference chromosome sequence are dropped")
-    refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
-    readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
-                                 pruning.mode = "coarse")
-    # reassign Ids after seqlevels are dropped
-    mcols(readGrgList)$id <- seq_along(readGrgList) 
-}
-if (!all(seqlevels(annotations) %in% refSeqLevels)) {
-    message("not all chromosomes from annotations present in reference genome 
-    sequence, annotations without reference chrosomomse sequence are dropped")
-    annotations <- keepSeqlevels(annotations, value = refSeqLevels,
-                                 pruning.mode = "coarse")
-}
-# create error and strand corrected junction tables
+se <- bambu(reads = test.bam, annotations = annotseOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rdstions, genome = genomeSequence, discovery = FALSE, quant = FALSE)[[1]]
+saveRDS(se, file = "./inst/extdata/seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, stranded = TRUE, discovery = FALSE, quant = FALSE)[[1]]
+saveRDS(se, file = "./inst/extdata/seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
+
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence)
+saveRDS(se, file = "./inst/extdata/seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
+
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, trackReads = TRUE)
+saveRDS(se, file = "./inst/extdata/seOutput_trackReads_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
+
+se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, returnDistTable = TRUE)
+saveRDS(se, file = "./inst/extdata/seOutput_distTable_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
+
+se <- bambu(reads = test.bam, annotations = NULL, genome = fa.file, NDR = 1)
+saveRDS(se, file = "./inst/extdata/seOutput_denovo_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
+
+
+##
+
+genomeSequence <- checkInputSequence(genomeSequence)
 unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
 uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-                                                 annotations,genomeSequence, stranded = FALSE, verbose = verbose)
+        annotations,genomeSequence, stranded = FALSE, verbose = FALSE)
 # create SE object with reconstructed readClasses
-se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
-                                 uniqueJunctions, runName =  "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000",
-                                 annotations, stranded = FALSE, verbose)
-GenomeInfoDb::seqlevels(se) <- refSeqLevels
-se <- scoreReadClasses(se,genomeSequence, annotations, 
-                       defaultModels = defaultModels, fit = TRUE,
-                       min.readCount = 2, verbose = verbose)
-saveRDS(se, file = "./inst/extdata/seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-
-
-
-
-
-se <- isore.constructReadClasses(readGrgList = readGrgList,
-                                 unlisted_junctions, 
-                                 uniqueJunctions,
-                                 runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_Stranded",
-                                 annotations,
-                                 stranded = TRUE,
-                                 verbose = FALSE)
-GenomeInfoDb::seqlevels(se) <- refSeqLevels
-se <- scoreReadClasses(se,genomeSequence, annotations, 
-                       defaultModels = defaultModels, fit = TRUE,
-                       min.readCount = 2, verbose = FALSE)
-saveRDS(se, file = "./inst/extdata/seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
+seReadClassUnstranded <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
+    uniqueJunctions, 
+    runName =  "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000",
+    annotations,  stranded = FALSE, verbose = FALSE)
+saveRDS(seReadClassUnstranded, file = "./inst/extdata/readClassesUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
+seReadClassStranded <- isore.constructReadClasses(readGrgList = readGrgList,
+                                    unlisted_junctions, uniqueJunctions,
+                                    runName = "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000_Stranded",
+                                    annotations, stranded = TRUE, verbose = FALSE)
+saveRDS(seReadClassStranded, file = "./inst/extdata/readClassesStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 
 ## generate seIsoReCombined
 seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 seReadClass2 <- readRDS(system.file("extdata", "seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-rcFileList <- system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
-bpParameters <- setBiocParallelParameters(reads = NULL, readClass.file = rcFileList,
-                                          ncore = 1, verbose = FALSE)
+#rcFileList <- system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
+bpParameters <- setBiocParallelParameters(reads = seReadClass1, ncore = 1, verbose = FALSE)
 seIsoReRef <- isore.combineTranscriptCandidates(readClassList = list(seReadClass1),
                                                 stranded = FALSE,min.readCount = 2,
                                                 min.txScore.multiExon = 0,
@@ -305,8 +273,7 @@ seIsoReRef <- isore.combineTranscriptCandidates(readClassList = list(seReadClass
                                                 verbose = FALSE, bpParameters = bpParameters)
 rcFileList <- c(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"),
                 system.file("extdata", "seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-bpParameters <- setBiocParallelParameters(reads = NULL, readClass.file = rcFileList,
-                                          ncore = 1, verbose = FALSE)
+bpParameters <- setBiocParallelParameters(reads = rcFileList, ncore = 1, verbose = FALSE)
 seIsoReCombined <- isore.combineTranscriptCandidates(readClassList = list(seReadClass1,seReadClass2),
                                                      stranded = FALSE,
                                                      min.readCount = 2,
@@ -316,7 +283,6 @@ seIsoReCombined <- isore.combineTranscriptCandidates(readClassList = list(seRead
                                                      verbose = FALSE, bpParameters = bpParameters)
 
 saveRDS(seIsoReRef, file = "./inst/extdata/seIsoReRef_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-
 saveRDS(seIsoReCombined, file = "./inst/extdata/seIsoReCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 
@@ -329,53 +295,39 @@ extendedAnnotations <- isore.extendAnnotations(combinedTranscripts=seIsoReCombin
                                                remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.1, 
                                                min.exonDistance = 35, min.exonOverlap = 10,
                                                min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-                                               prefix='',
-                                               verbose=FALSE)
+                                               prefix='', verbose=FALSE, defaultModels = defaultModels)
 saveRDS(extendedAnnotations, file = "./inst/extdata/extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", compress = "xz")
 
+## expected output for test isore
 
-## generate se output
-test.bam <- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
-fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+extendedAnnotations <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
-set.seed(1234)
-seOutput = bambu(reads = test.bam, annotations = gr, genome = fa.file, opt.em = list(degradationBias = FALSE), discovery = FALSE)
-saveRDS(seOutput, file = "./inst/extdata/seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-
-# set.seed(1234)
-# seOutputExtended = bambu(reads = test.bam,  annotations =  gr, genome = fa.file, opt.em = list(bias = FALSE), discovery = TRUE)
-# saveRDS(seOutputExtended, file = "./inst/extdata/seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-
+seWithDistExpected <- isore.estimateDistanceToAnnotations(
+    seReadClass = seReadClass1,
+    annotationGrangesList = extendedAnnotations,
+    min.exonDistance = 35
+)
+saveRDS(seWithDistExpected, file = "./inst/extdata/distanceToAnnotations_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 set.seed(1234)
 seOutputCombined = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = fa.file, discovery = FALSE)
 saveRDS(seOutputCombined, file = "./inst/extdata/seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
-
 set.seed(1234)
 seOutputCombinedExtended = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = fa.file, discovery = TRUE)
 saveRDS(seOutputCombinedExtended, file = "./inst/extdata/seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
-
 seReadClass1 <- system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
 gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 set.seed(1234)
-seOutputExtended <- bambu(rcFile = seReadClass1, annotations = gr, opt.em = list(degradationBias = FALSE), discovery = TRUE)
+seOutputExtended <- bambu(reads = seReadClass1, annotations = gr, opt.em = list(degradationBias = FALSE), discovery = TRUE)
 saveRDS(seOutputExtended, file = "./inst/extdata/seOutputExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
-
 set.seed(1234)
-seOutputCombined2 <- bambu(rcFile = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
+seOutputCombined2 <- bambu(reads = c(seReadClass1, seReadClass1), annotations = gr, discovery = FALSE)
 saveRDS(seOutputCombined2, file = "./inst/extdata/seOutputCombined2_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-
-# calculate results for test cases
-se <- system.file("extdata", "proto_seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
-se <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
-gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-genomeSequence <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
-genomeSequence <- checkInputSequence(genomeSequence)
-se = scoreReadClasses(se, genomeSequence, gr)
 
 query <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testQuery.rds", package = "bambu"))
 subject <- readRDS(system.file("extdata", "annotateSpliceOverlapByDist_testSubject.rds", package = "bambu"))
