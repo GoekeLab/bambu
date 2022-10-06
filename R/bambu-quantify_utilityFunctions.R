@@ -469,7 +469,7 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
                                                  eqClass = eqClassTable[match(unidentified_names, annotationTxId)]$eqClass,
                                                  newTxClass = "unidentified",
                                                  readCount = readCountTable[match(unidentified_names, annotationTxId)]$readCount,
-                                                 txNDR = NA)
+                                                 NDR = NA)
     annotations_combined <- c(annotations,unidentified_annotations)
     end.ptm <- proc.time()
     if (verbose)

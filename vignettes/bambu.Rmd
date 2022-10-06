@@ -209,7 +209,7 @@ Alternatively transcript discovery can be run without thresholds, producing a GR
 ```{r, results = 'hide'}
 newAnnotations <- bambu(reads = bamFiles, annotations = HsChr22BambuAnnotation,
     genome = genomeSequence, NDR = 1, quant = FALSE)
-annotations.filtered <- newAnnotations[(!is.na(mcols(newAnnotations)$txNDR) & mcols(newAnnotations)$txNDR<0.1) | is.na(mcols(newAnnotations)$txNDR)]
+annotations.filtered <- newAnnotations[(!is.na(mcols(newAnnotations)$NDR) & mcols(newAnnotations)$NDR<0.1) | is.na(mcols(newAnnotations)$NDR)]
 se.NDR_1 <- bambu(reads = bamFiles, annotations = annotations.filtered, genome = genomeSequence, NDR = 1, discovery = FALSE)
 ```
 Additionally there are other thresholds that advanced users can access through opt.discovery when running *bambu* (see arguments).
