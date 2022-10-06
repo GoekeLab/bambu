@@ -496,14 +496,14 @@ combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALS
             return(se)})
     }
     # combine incompatible counts
-    IncompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$IncompatibleCounts}))
+    incompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$incompatibleCounts}))
     countsSe = lapply(countsSe, FUN = function(se){
-        metadata(se)$IncompatibleCounts=NULL
+        metadata(se)$incompatibleCounts=NULL
         return(se)})
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
     if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
     if(returnDistTable) metadata(countsSe)$distTables = distTables
-    metadata(countsSe)$IncompatibleCounts = IncompatibleCounts
+    metadata(countsSe)$incompatibleCounts = incompatibleCounts
     return(countsSe)
 }
 
