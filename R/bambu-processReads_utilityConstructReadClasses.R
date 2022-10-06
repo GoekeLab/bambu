@@ -243,9 +243,9 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     # by their minimum read class coordinates
     #remove duplicate ranges
     counts = (as.data.table(reads.singleExon) %>% 
-         count(seqnames,start,end,strand))$n
+         count(seqnames,start,end,strand)) %>% as.data.frame()
     reads.singleExon = unique(reads.singleExon)
-    mcols(reads.singleExon)$counts <- counts
+    mcols(reads.singleExon)$counts <- counts$n
 
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
