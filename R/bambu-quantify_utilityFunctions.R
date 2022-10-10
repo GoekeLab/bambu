@@ -421,7 +421,11 @@ modifyIncompatibleAssignment <- function(distTable){
     distTable[which(!anyCompatible), 
               annotationTxId := paste0(GENEID, 
                                        "_unidentified")]
+    distTable[grep("unidentified",annotationTxId), txid := max(distTable$txid)+match(annotationTxId,unique(distTable[grep("unidentified",annotationTxId)]$annotationTxId))]
     
+    ##
+    unidentified <- distTable[grep("unidentified",annotationTxId), .(readClassId, txid)]
+    distTable[grep("unidentified",annotationTxId), eqClassById := as.list(txid)]
     ## multiple distances and rows might exist for the same annotationTxId and 
     ## readClassId matching, take the smallest one (does not matter here as 
     ## distance value is not used)
@@ -431,7 +435,7 @@ modifyIncompatibleAssignment <- function(distTable){
     
     distTable[,`:=`(anyCompatible = NULL,
                     anyEqual = NULL)]
-    distTable <- as_tibble(unique(distTable, by = NULL))
+    distTable <- unique(DataFrame(setDF(distTable)))
     return(distTable)
 }
 
@@ -440,10 +444,10 @@ modifyIncompatibleAssignment <- function(distTable){
 #' update annotations to include unidentified read classes
 #' @import data.table
 #' @noRd
-updateAnnotations <- function(readClassMod, annotations, verbose){
+updateAnnotations <- function(readClassDist, annotations, verbose){
     start.ptm <- proc.time()
-    unidentified <- unique(data.table(metadata(readClassMod)$distTable)[,
-                                                                        .(annotationTxId,readClassId,dist,readCount)],
+    unidentified <- unique(data.table(metadata(readClassDist)$distTable)[,
+                .(annotationTxId,readClassId,dist,readCount,txid)],
                            by = NULL)[grep("unidentified",annotationTxId)]
     if(nrow(unidentified)==0){
         return(annotations)

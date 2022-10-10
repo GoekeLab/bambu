@@ -16,9 +16,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,
                                                          min.primarySecondaryDist = min.primarySecondaryDist,
                                                          min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
                                                          verbose = verbose)
-    readClassMod <- modifyIncompatibleAssignment(readClassDist$distTable)
-    annotationsUpdated <- updateAnnotations(readClassMod, annotations, verbose)
-    readClassDt <- genEquiRCs(readClassMod, annotationsUpdated, verbose)
+    metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
+    annotationsUpdated <- updateAnnotations(readClassDist, annotations, verbose)
+    readClassDt <- genEquiRCs(readClassMod, annotationsUpdated, verbose) ## to be changed 
     tx_len <- rbind(data.table(tx_id = names(annotationsUpdated),
                                tx_len = sum(width(annotationsUpdated))),
                     data.table(tx_id = paste0(names(annotationsUpdated),"Start"),

@@ -684,6 +684,11 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   readClassTable <- addGeneIdsToReadClassTable(readClassTable, distTable, 
                                                seReadClass, verbose)
+  
+  distTable <- DataFrame(distTable)
+  matchIds <- match(distTable$annotationTxId,mcols(annotationGrangesList)$TXNAME)
+  distTable$txid <- mcols(annotationGrangesList)$txid[matchIds]
+  distTable$eqClassById <- mcols(annotationGrangesList)$eqClassById[matchIds]
   metadata(seReadClass) <- list(distTable = distTable)
   rowData(seReadClass) <- readClassTable
   return(seReadClass)
