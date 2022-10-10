@@ -636,7 +636,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     }else{
         message("all detected novel transcripts are already present in the annotations, try a higher NDR")
       extendedAnnotationRanges <- annotationRangesToMerge
-      mcols(extendedAnnotationRanges)$txid = NA
+      mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
       mcols(extendedAnnotationRanges)$relReadCount = NA
       mcols(extendedAnnotationRanges)$relSubsetCount = NA
     }
