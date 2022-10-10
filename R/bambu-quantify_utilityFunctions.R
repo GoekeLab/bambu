@@ -412,8 +412,8 @@ createMultimappingBaseOnEmptyRC <- function(rcDt,
 #' modifiy uncompatible read classes assignment
 #' @import data.table
 #' @noRd
-modifyIncompatibleAssignment <- function(readClassDist){
-    distTable <- data.table(as.data.frame(metadata(readClassDist)$distTable))
+modifyIncompatibleAssignment <- function(distTable){
+    distTable <- data.table(as.data.frame(distTable))
     distTable[,`:=`(anyCompatible = any(compatible), 
                     anyEqual = any(equal)),
               by = readClassId]
@@ -431,8 +431,8 @@ modifyIncompatibleAssignment <- function(readClassDist){
     
     distTable[,`:=`(anyCompatible = NULL,
                     anyEqual = NULL)]
-    metadata(readClassDist)$distTable <- as_tibble(unique(distTable, by = NULL))
-    return(readClassDist)
+    distTable <- as_tibble(unique(distTable, by = NULL))
+    return(distTable)
 }
 
 
