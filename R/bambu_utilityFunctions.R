@@ -7,7 +7,6 @@ setBiocParallelParameters <- function(reads, ncore, verbose){
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
     bpParameters$workers <- ifelse(length(reads) == 1, 1, ncore)
-    bpParameters$progressbar <- (!verbose)
     return(bpParameters)
 }
 
