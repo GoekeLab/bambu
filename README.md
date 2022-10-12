@@ -161,7 +161,7 @@ Alternatively transcript discovery can be run without thresholds, producing a GR
 
 ```rscript
 newAnnotations <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 1, quant = FALSE)
-annotations.filtered <- newAnnotations[(!is.na(mcols(newAnnotations)$txNDR) & mcols(newAnnotations)$txNDR<0.1) | is.na(mcols(newAnnotations)$txNDR)]
+annotations.filtered <- newAnnotations[(!is.na(mcols(newAnnotations)$NDR) & mcols(newAnnotations)$NDR<0.1) | is.na(mcols(newAnnotations)$NDR)]
 se.NDR_1 <- bambu(reads = test.bam, annotations = annotations.filtered, genome = fa.file, NDR = 1, discovery = FALSE)
 ```
 Additionally there are other thresholds that advanced users can access through opt.discovery when running *bambu* (see arguments).
@@ -471,7 +471,7 @@ rowData(se)
 |eqClassById|A integer list with the transcript ids of all equivalent transcripts
 |newTxClass|A concatenated string containing the classes the transcript falls under: <br> **annotation** - Transcript matches an annotation transcript <br> **allNew** - All the intron-junctions are novel <br> **newFirstJunction** - the first junction is novel and at least one other junction matches an annotated transcript <br> **newLastJunction** - the last junction is novel and at least one other junction matches an annotated transcript <br> **newJunction** - an internal junction is novel and at least one other internal junction matches an annotated transcript <br> **newWithin** -  A novel transcript with matching junctions but is not a subset of an annotation <br> **unsplicedNew** - A single exon transcript that doesn’t completely overlap with annotations <br> **compatible** - Is a subset of an annotated transcript <br> **newFirstExon** - The first exon is novel <br> **newLastExon** - The last exon is novel|
 |readCount|The number of full length reads associated with this transcript (filtered by min.readCount)|
-|txNDR|The NDR score calculated for the transcript|
+|NDR|The NDR score calculated for the transcript|
 |relReadCount|The proportion of reads this transcript has relative to all reads assigned to its gene|
 |relSubsetCount|The proportion of reads this transcript has relative to all reads that either fully or partially match this transcript|
 

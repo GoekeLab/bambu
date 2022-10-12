@@ -92,7 +92,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   } else {
       if(is.null(NDR)) NDR = 0.1
   }
-  filterSet = (rowDataCombined$txNDR <= NDR)
+  filterSet = (rowDataCombined$NDR <= NDR)
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
   #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
@@ -166,10 +166,10 @@ calculateNDROnTranscripts <- function(combinedTranscripts){
     equal[is.na(equal)] = FALSE
     if(sum(equal, na.rm = TRUE)<50 | 
         sum(!equal, na.rm = TRUE)<50){
-          combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
+          combinedTranscripts$NDR = 1 - combinedTranscripts$maxTxScore
           message("Less than 50 TRUE or FALSE read classes for precision stabilization. 
           Filtering by prediction score instead")
-    } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
+    } else combinedTranscripts$NDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     return(combinedTranscripts)
 }
 
@@ -607,7 +607,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       "newGene-spliced"
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "txNDR",
+      rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "NDR",
                                   "relReadCount", "relSubsetCount")]
     equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
   #remove extended ranges that are already present in annotation
@@ -617,12 +617,12 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     rep(NA,length(annotationRangesToMerge))
   mcols(annotationRangesToMerge)$newTxClass <- 
     rep("annotation",length(annotationRangesToMerge))
-  mcols(annotationRangesToMerge)$txNDR <- 
+  mcols(annotationRangesToMerge)$NDR <- 
     rep(NA,length(annotationRangesToMerge))
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
   
   #copy over stats to annotations from read classes
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$txNDR = equalRanges$txNDR
+  mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR = equalRanges$NDR
   mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
   mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
   mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
@@ -647,7 +647,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                 c("TXNAME", "GENEID", "eqClass", "txid", "eqClassById", "newTxClass","readCount", "txNDR","relReadCount", "relSubsetCount")]
+                 c("TXNAME", "GENEID", "eqClass", "txid", "eqClassById", "newTxClass","readCount", "NDR","relReadCount", "relSubsetCount")]
   return(extendedAnnotationRanges)
 }
 

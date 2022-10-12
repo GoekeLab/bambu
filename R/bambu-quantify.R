@@ -31,13 +31,13 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     if(any(!(counts$tx_name %in% annoDt$tx_name))) 
         warning("For developer: transcript names in counts table not
     found in updated annotations, please check!")
-    IncompatibleCounts <- data.table(GENEID = unique(mcols(annotations)$GENEID))
+    incompatibleCounts <- data.table(GENEID = unique(mcols(annotations)$GENEID))
     counts_incompatible <- counts[grepl("_unidentified",tx_name)]
     counts_incompatible[, GENEID := gsub("_unidentified","",tx_name)]
     
-    IncompatibleCounts <- counts_incompatible[,.(GENEID, counts)][IncompatibleCounts, on = "GENEID"]
-    IncompatibleCounts[is.na(counts), counts := 0]
-    setnames(IncompatibleCounts, "counts", colnames(readClass))
+    incompatibleCounts <- counts_incompatible[,.(GENEID, counts)][incompatibleCounts, on = "GENEID"]
+    incompatibleCounts[is.na(counts), counts := 0]
+    setnames(incompatibleCounts, "counts", colnames(readClass))
     counts <- counts[match(names(annotations),tx_name)]
     colNameRC <- colnames(readClass)
     colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
@@ -50,7 +50,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
             dimnames = list(NULL, colNameRC)),
         uniqueCounts = matrix(counts$UniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-    metadata(seOutput)$IncompatibleCounts = IncompatibleCounts
+    metadata(seOutput)$incompatibleCounts = incompatibleCounts
     if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassMod)$distTable
     if (trackReads) metadata(seOutput)$readToTranscriptMap = 
         generateReadToTranscriptMap(readClass, metadata(readClassMod)$distTable, 
@@ -125,15 +125,15 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
     distTable$annotationTxId = match(distTable$annotationTxId, names(annotations))
     #match read classes with transcripts
     readClass_id = rownames(readClass)[readToRC]
-    equal_matches = distTable %>% 
+    equalMatches = distTable %>% 
         filter(equal) %>% 
         group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
-    equal_matches = equal_matches$annotationTxIds[match(readClass_id, equal_matches$readClassId)]
-    compatible_matches = distTable %>% 
+    equalMatches = equalMatches$annotationTxIds[match(readClass_id, equalMatches$readClassId)]
+    compatibleMatches = distTable %>% 
         filter(!equal & compatible) %>% 
         group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
-    compatible_matches = compatible_matches$annotationTxIds[match(readClass_id, compatible_matches$readClassId)]
-    readToTranscriptMap = tibble(readId=read_id, equalMatches = equal_matches, compatibleMatches = compatible_matches)
+    compatibleMatches = compatibleMatches$annotationTxIds[match(readClass_id, compatibleMatches$readClassId)]
+    readToTranscriptMap = tibble(readId=read_id, equalMatches = equalMatches, compatibleMatches = compatibleMatches)
     
     return(readToTranscriptMap)
 }
