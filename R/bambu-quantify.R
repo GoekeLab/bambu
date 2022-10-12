@@ -40,8 +40,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     setnames(incompatibleCounts, "counts", colnames(readClass))
     counts <- counts[match(names(annotations),tx_name)]
     colNameRC <- colnames(readClass)
-    colDataRC <- cbind(colData(readClass), d_rate = countsOut[[2]],
-                       nGeneFordRate = countsOut[[3]])
+    colDataRC <- colData(readClass))
     seOutput <- SummarizedExperiment(
         assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
         dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
