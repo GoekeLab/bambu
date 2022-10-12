@@ -255,8 +255,8 @@ genEquiRCs <- function(readClass, annotations, verbose){
     ## merge distTable with eqClassTable 
     start.ptm <- proc.time()
     equiRCTable <- unique(unique(distTable[, .(tx_id, GENEID, 
-                                               read_class_id)], by = NULL)[eqClassTable, on = c("GENEID",
-                                                                                                "read_class_id"), allow.cartesian = TRUE], by = NULL)
+                                               equiRCId)], by = NULL)[eqClassTable, on = c("GENEID",
+                                                                                                "equiRCId"), allow.cartesian = TRUE], by = NULL)
     end.ptm <- proc.time()
     if (verbose) message("Finished update eqClass with annotations in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
@@ -287,8 +287,8 @@ splitReadClass <- function(readClass){
                           firstExonWidth =
                               width(unlisted_rowranges[unlisted_rowranges$exon_rank == 1,]),
                           totalWidth = sum(width(rowRanges(readClass))))
-    distTable <- data.table(metadata(readClass)$distTable)[, .(readClassId, 
-                                                               annotationTxId, readCount, GENEID, dist,equal)]
+    distTable <- data.table(as.data.frame(metadata(readClass)$distTable))[, .(readClassId, 
+        annotationTxId, readCount, GENEID, dist,equal, txid)]
     distTable <- rcWidth[distTable, on = "readClassId"]
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
     compatibleData <- as.data.table(as.data.frame(rowData(readClass)),
@@ -298,12 +298,31 @@ splitReadClass <- function(readClass){
     distTable <- distTable[compatibleData[ readClassId %in% 
                                                unique(distTable$readClassId), .(readClassId, GENEID)],
                            on = c("readClassId", "GENEID")]
-    distTable[, tx_id := paste0(annotationTxId, ifelse(equal,"Start",""))]
+    distTable[, magnifying_order := (-1)]
+    distTable[, txid_match := ifelse(equal,txid*(magnifying_order),txid)] # here by magnifying to 1 number super big to indicate it's a full length match
+    distTable[order(readClassId,GENEID,txid_match),
+              equiRCByTxId := .(list(sort(unique(txid_match)))),#paste(unique(tx_id), collapse = "."),
+              by = list(readClassId, GENEID)] # for the tested example, takes about 2.7 secs, I probably need to give it up here as the list column is not usable for further usage
+    
+    # equiList <- distTable$read_class_id
+    # names(equiList) <- seq_along(equiList)
+    # equiListDt <- lapply(equiList, function(x) {xt <- data.table(x, id = names(x)); return(xt)})
+    # equiListUnique <- rbindlist(equiListDt, idcol = "unique.id")
+    
+    # system.time(distTable[, read_class_id_char := sapply(distTable$read_class_id, paste, collapse = ".")]) # takes about 9.8 secs
+    # system.time(distTable[order(readClassId,GENEID,txid_match),
+    #                       read_class_id := paste(unique(txid_match), collapse = "."),
+    #                       by = list(readClassId, GENEID)]) # for the tested example takes about 6.2 secs
+    # distTable[, tx_id := paste0(annotationTxId, ifelse(equal,"Start",""))]
     
     ##this step is very slow, consider to use integers instead of tx_ids
-    distTable[order(readClassId,GENEID,tx_id), 
-              read_class_id := paste(unique(tx_id), collapse = "."),
-              by = list(readClassId, GENEID)]
+    # system.time(distTable[order(readClassId,GENEID,tx_id),
+    #           read_class_id := paste(unique(tx_id), collapse = "."),
+    #           by = list(readClassId, GENEID)]) # about 6 secs
+    grp <- distTable %>%
+        group_by(equiRCByTxId) %>%
+        mutate(group_id = cur_group_id())
+    distTable$equiRCId <- grp$group_id
     return(distTable)
 }
 
@@ -311,16 +330,15 @@ splitReadClass <- function(readClass){
 #' @import data.table
 #' @noRd
 getUniCountPerEquiRC <- function(distTable){
-    eqClassTable <- 
-        unique(distTable[,.(read_class_id,readClassId, readCount, GENEID,
+    eqClassTable <- unique(distTable[,.(equiRCId,readClassId, readCount, GENEID,
                             firstExonWidth,totalWidth, equal)], by = NULL)
     eqClassTable[, `:=`(rc_width = ifelse(all(!equal), max(totalWidth), 
                                           max(firstExonWidth))), 
-                 by = list(read_class_id, GENEID)]
-    eqClassTable <- unique(eqClassTable[, .(read_class_id,readClassId, 
+                 by = list(equiRCId, GENEID)]
+    eqClassTable <- unique(eqClassTable[, .(equiRCId,readClassId, 
                                             readCount, GENEID, rc_width)], by = NULL)
-    eqClassTable[, nobs := sum(readCount), by = list(read_class_id, GENEID)]
-    eqClassTable <- unique(eqClassTable[,.(read_class_id, GENEID, nobs,
+    eqClassTable[, nobs := sum(readCount), by = list(equiRCId, GENEID)]
+    eqClassTable <- unique(eqClassTable[,.(equiRCId, GENEID, nobs,
                                            rc_width)],by = NULL)
     return(eqClassTable)
 }
@@ -350,9 +368,9 @@ addEmptyRC <- function(annotations, equiRCTable){
     # full match will be assigned to Start
     rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"$"),
                                        paste0(TXNAME, "Start"), eqClass), 
-                  tx_id = paste0(TXNAME, "Start")), by = TXNAME]
+                  tx_id = paste0(TXNAME, "Start")), by = TXNAME] # replace transcript at the last position
     rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"\\."),
-                                       paste0(TXNAME, "Start\\."), read_class_id)), by = TXNAME]
+                                       paste0(TXNAME, "Start\\."), read_class_id)), by = TXNAME] # replace transcript in middle positions
     setnames(rcAnno_partial, "TXNAME", "tx_id")
     rcAnnoDt <-
         rbind(unique(rcAnno[, .(tx_id, GENEID, read_class_id)], by = NULL),
@@ -423,9 +441,8 @@ modifyIncompatibleAssignment <- function(distTable){
                                        "_unidentified")]
     distTable[grep("unidentified",annotationTxId), txid := max(distTable$txid)+match(annotationTxId,unique(distTable[grep("unidentified",annotationTxId)]$annotationTxId))]
     
-    ##
-    unidentified <- distTable[grep("unidentified",annotationTxId), .(readClassId, txid)]
-    distTable[grep("unidentified",annotationTxId), eqClassById := as.list(txid)]
+    distTable[grep("unidentified",annotationTxId),
+        eqClassById := .(list(sort(unique(.SD$txid)))), by = readClassId]
     ## multiple distances and rows might exist for the same annotationTxId and 
     ## readClassId matching, take the smallest one (does not matter here as 
     ## distance value is not used)
@@ -446,23 +463,14 @@ modifyIncompatibleAssignment <- function(distTable){
 #' @noRd
 updateAnnotations <- function(readClassDist, annotations, verbose){
     start.ptm <- proc.time()
-    unidentified <- unique(data.table(metadata(readClassDist)$distTable)[,
-                .(annotationTxId,readClassId,dist,readCount,txid)],
-                           by = NULL)[grep("unidentified",annotationTxId)]
-    if(nrow(unidentified)==0){
+    if(isEmpty(grep("unidentified",metadata(readClassDist)$distTable$annotationTxId)))
         return(annotations)
-    }
-    eqTable <- unique(unidentified[order(readClassId, annotationTxId),
-                                   .(annotationTxId, readClassId)],by = NULL)
-    eqTable[, eqClass := paste(annotationTxId,
-                               collapse = "."),by = readClassId]
-    eqClassTable <- unique(eqTable[,.(annotationTxId, eqClass)])
-
+    unidentified <- data.table(as.data.frame(metadata(readClassDist)$distTable))[grep("unidentified",annotationTxId),
+        .(annotationTxId,readClassId,dist,readCount,txid, eqClassById)]
     unidentified[, nTx := length(unique(annotationTxId)), by = readClassId]
     readCountTable <- unique(unidentified[,list(readCount = sum(readCount/nTx)),
                                           by = list(annotationTxId)], by = NULL)
-
-    unidentified_ranges <- rowRanges(readClassMod)[unidentified$readClassId]
+    unidentified_ranges <- rowRanges(readClassDist)[unidentified$readClassId]
     names(unidentified_ranges) <- unidentified$annotationTxId
     unidentified_ranges <- unlist(unidentified_ranges)
     unidentified_names <- names(unidentified_ranges)
@@ -470,9 +478,13 @@ updateAnnotations <- function(readClassDist, annotations, verbose){
     unidentified_names <- names(unidentified_annotations)
     mcols(unidentified_annotations) <- DataFrame(TXNAME = unidentified_names,
                                                  GENEID = gsub("_unidentified","",unidentified_names),
-                                                 eqClass = eqClassTable[match(unidentified_names, annotationTxId)]$eqClass,
+                                                 eqClass = NA, # for internal use, can ignore
+                                                 txid = unidentified[match(unidentified_names, annotationTxId)]$txid,
+                                                 eqClassById = unidentified[match(unidentified_names, annotationTxId)]$eqClassById,
                                                  newTxClass = "unidentified",
                                                  readCount = readCountTable[match(unidentified_names, annotationTxId)]$readCount,
+                                                 relReadCount = NA,
+                                                 relSubsetCount = NA, 
                                                  txNDR = NA)
     annotations_combined <- c(annotations,unidentified_annotations)
     end.ptm <- proc.time()
