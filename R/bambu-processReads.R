@@ -66,6 +66,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE) {
+    if(verbose) message(names(bam.file)[1])
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
