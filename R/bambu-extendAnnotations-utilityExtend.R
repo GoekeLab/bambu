@@ -121,7 +121,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 #' calculates an expected NDR based on the annotations'
 recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, defaultModels = defaultModels, verbose = FALSE){
     if(verbose) message("-- Predicting annotation completeness to determine NDR threshold --")
-    equal = combinedTranscripts$readClassType == "equalcompatible"
+    equal = combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] = FALSE
 
     #add envirnment so poly() works
@@ -133,6 +133,7 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     score = combinedTranscripts$maxTxScore.noFit
     NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
     NDR.rec = round(NDR.rec,3)
+    if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.rec)
     if (NDR.rec < 0) NDR.rec = 0
     if(NDR.rec > 0.5){
         message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
