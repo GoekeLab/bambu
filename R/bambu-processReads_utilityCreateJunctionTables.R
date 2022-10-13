@@ -15,8 +15,8 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
     uniqueJunctions <- createJunctionTable(unlisted_junctions,
         genomeSequence = genomeSequence)
     end.ptm <- proc.time()
-    if (verbose) message("Finished creating junction list with splice motif
-        in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    if (verbose) message("Finished creating junction list with splice motif ",
+        "in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
 
     uniqueAnnotatedIntrons <- unique(unlistIntrons(annotations, 
         use.ids = FALSE))
@@ -135,9 +135,8 @@ junctionStrandCorrection <- function(uniqueJunctions, unlisted_junctions,
     annotatedIntronNumber <- evalAnnotationOverlap(uniqueJunctions,
         uniqueAnnotatedIntrons,ignore.strand = FALSE)["TRUE"]
     if (verbose) {
-        message("before strand correction, annotated introns:")
-        message(annotatedIntronNumber)
-        message(annotatedIntronNumber / length(uniqueJunctions))
+        message("before strand correction, annotated introns: ", 
+        annotatedIntronNumber, " (", annotatedIntronNumber / length(uniqueJunctions),"%)")
     }
     # infer strand for each read based on strand of junctions
     strandStep <- TRUE

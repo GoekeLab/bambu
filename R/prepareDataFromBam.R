@@ -32,8 +32,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.n
                 scanBamFlag(isSecondaryAlignment = FALSE)),
             use.names = use.names))
         # readGrgList<-c(readGrgList,GenomicAlignments::grglist(reads))
-        if (verbose) show(min(length(readGrgList),
-            counter * yieldSize, na.rm = TRUE))
+        #if (verbose) show(min(length(readGrgList), counter * yieldSize, na.rm = TRUE))
         counter <- counter + 1
     }
     on.exit(close(bf))

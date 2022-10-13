@@ -105,9 +105,9 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
-  if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "No annotations were provided. Please increase NDR threshold to use novel transcripts")
+  if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds. Try a higher NDR.")
   # (3) combine novel transcripts with annotations
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
@@ -134,7 +134,6 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
     NDR.rec = round(NDR.rec,3)
     if (NDR.rec < 0) NDR.rec = 0
-    message("Calculated NDR: ", NDR.rec)
     if(NDR.rec > 0.5){
         message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
         "limiting the performance of the trained model")
@@ -167,8 +166,8 @@ calculateNDROnTranscripts <- function(combinedTranscripts){
     if(sum(equal, na.rm = TRUE)<50 | 
         sum(!equal, na.rm = TRUE)<50){
           combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
-          message("Less than 50 TRUE or FALSE read classes for precision stabilization. 
-          Filtering by prediction score instead")
+          message("Less than 50 TRUE or FALSE read classes for NDR precision stabilization. ",
+          "Filtering by prediction score instead")
     } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     return(combinedTranscripts)
 }
@@ -634,7 +633,6 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
     mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
     }else{
-        message("all detected novel transcripts are already present in the annotations, try a higher NDR")
       extendedAnnotationRanges <- annotationRangesToMerge
       mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
       mcols(extendedAnnotationRanges)$relReadCount = NA

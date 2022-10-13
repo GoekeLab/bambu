@@ -30,8 +30,8 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
-        message("Finished create transcript models (read classes) for reads with
-    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
+        message("Finished create transcript models (read classes) for reads with ",
+    "spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) { 
         exonsByRC.unspliced <- NULL
     } else {exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
@@ -265,8 +265,8 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
                             rcUnsplicedReduced)
     }
     end.ptm <- proc.time()
-    if (verbose) message("Finished create single exon transcript models
-        (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    if (verbose) message("Finished create single exon transcript models ",
+        "(read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(exonsByReadClass)
 }
 
