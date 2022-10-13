@@ -242,7 +242,7 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges
-    counts = (as.data.table(reads.singleExon) %>% 
+    counts = (as.data.frame(reads.singleExon) %>% 
          count(seqnames,start,end,strand)) %>% as.data.frame()
     reads.singleExon = unique(reads.singleExon)
     mcols(reads.singleExon)$counts <- counts$n
