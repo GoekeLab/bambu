@@ -34,7 +34,7 @@ setIsoreParameters <- function(isoreParameters){
         returnModel = FALSE,
         baselineFDR = 0.1,
         min.readFractionByEqClass = 0,
-        prefix = "") 
+        prefix = "Bambu") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
     return(isoreParameters)
@@ -94,6 +94,12 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
             annotations <- prepareAnnotations(annotations)
         } else {
             stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
+        }
+        if(any(grepl("^BambuGene", names(annotations))) | 
+            any(grepl("^BambuTx", mcols(annotations)$TXNAME))){
+                message("Detected Bambu derived annotations in the annotations. ", 
+                "Set a new prefix with opt.discovery(list(prefix='newPrefix')) ",
+                "to prevent ambigious id assignment.")
         }
     } else {
         stop("Annotations is missing.")
