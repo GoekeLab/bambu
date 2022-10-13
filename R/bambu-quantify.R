@@ -17,28 +17,18 @@ bambu.quantify <- function(readClass, annotations, emParameters,
                                                          min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
                                                          verbose = verbose)
     metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
-    annotationsUpdated <- updateAnnotations(readClassDist, annotations, verbose)
-    readClassDt <- genEquiRCs(readClassMod, annotationsUpdated, verbose) ## to be changed 
-    tx_len <- rbind(data.table(tx_id = names(annotationsUpdated),
-                               tx_len = sum(width(annotationsUpdated))),
-                    data.table(tx_id = paste0(names(annotationsUpdated),"Start"),
-                               tx_len = sum(width(annotationsUpdated))))
-    readClassDt <- unique(tx_len[readClassDt, on = "tx_id"])
-    countsOut <- bambu.quantDT(readClassDt, emParameters = emParameters,
+    incompatibleCounts <- processIncompatibleCounts(readClassDist)
+    readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
+    tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
+                               txlen = sum(width(annotations))))
+    readClassDt <- tx_len[readClassDt, on = "txid"] %>% distinct()
+    compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,
                                ncore = ncore, verbose = verbose)
-    counts <- countsOut[[1]]
-    annoDt <- data.table(tx_name = names(annotationsUpdated))
-    if(any(!(counts$tx_name %in% annoDt$tx_name))) 
-        warning("For developer: transcript names in counts table not
-    found in updated annotations, please check!")
-    incompatibleCounts <- data.table(GENEID = unique(mcols(annotations)$GENEID))
-    counts_incompatible <- counts[grepl("_unidentified",tx_name)]
-    counts_incompatible[, GENEID := gsub("_unidentified","",tx_name)]
-    
-    incompatibleCounts <- counts_incompatible[,.(GENEID, counts)][incompatibleCounts, on = "GENEID"]
+    compatibleCounts[, tx_name := names(annotations)[as.numeric(txid)]]
+    incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
     setnames(incompatibleCounts, "counts", colnames(readClass))
-    counts <- counts[match(names(annotations),tx_name)]
+    counts <- compatibleCounts[match(names(annotations),tx_name)]
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
     seOutput <- SummarizedExperiment(
@@ -50,9 +40,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,
         uniqueCounts = matrix(counts$UniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     metadata(seOutput)$incompatibleCounts = incompatibleCounts
-    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassMod)$distTable
+    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
     if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-        generateReadToTranscriptMap(readClass, metadata(readClassMod)$distTable, 
+        generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
                                     annotations)
     return(seOutput)
 }
@@ -70,18 +60,17 @@ bambu.quantDT <- function(readClassDt = readClassDt,
                                               minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
-    } else if (any(!(c("gene_id", "tx_id", "read_class_id","nobs") %in% 
+    } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
                      colnames(readClassDt)))) {
-        stop("Columns gene_id, tx_id, read_class_id, nobs,
+        stop("Columns GENEID, txid, eqClassId, nobs,
             are missing from object.")
     }
     ## ----step2: match to simple numbers to increase claculation efficiency
-    geneVec <- unique(readClassDt$gene_id)
-    ori_txvec <- unique(gsub("Start","",readClassDt$tx_id))
-    txVec <- unique(readClassDt$tx_id)
-    readclassVec <- unique(readClassDt$read_class_id)
+    geneVec <- unique(readClassDt$GENEID)
+    txVec <- unique(readClassDt$txid)
+    eqClassMap <- readClassDt[,.(eqClassById, eqClassId)] %>% distinct()
     readClassDt <- 
-        simplifyNames(readClassDt,txVec, geneVec,ori_txvec, readclassVec)
+        simplifyNames(readClassDt,geneVec)
     d_mode <- emParameters[["degradationBias"]]
     start.ptm <- proc.time()
     if (d_mode) {
@@ -105,11 +94,14 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     end.ptm <- proc.time()
     if (verbose) message("Finished EM estimation in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    theta_est <- formatOutput(rbind(outList,outListEst),ori_txvec,geneVec)
+    theta_est <- formatOutput(rbind(outList,outListEst),txVec,geneVec)
     theta_est <- removeDuplicates(theta_est)
-    return(list(theta_est, d_rateOut[1], d_rateOut[2]))
+    return(theta_est)
 }
 
+
+#' Generate read to transcript mapping
+#' @noRd
 generateReadToTranscriptMap <- function(readClass, distTable, annotations){
     if(!is.null(metadata(readClass)$readNames)) { 
         read_id = metadata(readClass)$readNames}
@@ -137,3 +129,23 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
     return(readToTranscriptMap)
 }
 
+
+#' Process incompatible counts
+#' @noRd
+processIncompatibleCounts <- function(readClassDist){
+    distTable <- data.table(as.data.frame(metadata(readClassDist)$distTable))[, 
+        .(readClassId, annotationTxId, readCount, GENEID, dist,equal)]
+    distTableIncompatible <- distTable[grep("unidentified", annotationTxId)]
+    # filter out multiple geneIDs mapped to the same readClass using rowData(se)
+    geneRCMap <- as.data.table(as.data.frame(rowData(readClassDist)),
+                                    keep.rownames = TRUE)
+    setnames(geneRCMap, old = c("rn", "geneId"),
+             new = c("readClassId", "GENEID"))
+    distTable <- distTable[geneRCMap[ readClassId %in% 
+                                               unique(distTableIncompatible$readClassId), .(readClassId, GENEID)],
+                           on = c("readClassId", "GENEID")]
+    counts <- distTable[,.(GENEID, readCount)]
+    setnames(counts, "readCount", "counts")
+    return(counts)
+    
+}

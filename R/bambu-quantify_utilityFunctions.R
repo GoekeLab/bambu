@@ -40,10 +40,10 @@ abundance_quantification <- function(readClassDt, ncore = 1,
 #' @noRd
 run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
     tmp <- unique(readClassDt[gene_sid == g])
-    multiMap <- unique(tmp[, .(read_class_sid, multi_align)], 
-                       by = NULL)[order(read_class_sid)]$multi_align
-    n.obs <- unique(tmp[, .(read_class_sid, nobs)], 
-                    by = NULL)[order(read_class_sid)]$nobs
+    multiMap <- unique(tmp[, .(eqClassId, multi_align)], 
+                       by = NULL)[order(eqClassId)]$multi_align
+    n.obs <- unique(tmp[, .(eqClassId, nobs)], 
+                    by = NULL)[order(eqClassId)]$nobs
     K <- as.numeric(sum(n.obs))
     n.obs <- as.numeric(n.obs)/K
     aMatArray <- formatAmat(tmp, multiMap)
@@ -81,17 +81,17 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
 #' @import data.table
 #' @noRd
 formatAmat <- function(tmp, multiMap){
-    tmp_wide <- dcast(tmp[order(nobs)],  tx_ori + 
-                          fullTx ~ read_class_sid, value.var = "aval")
-    tmp_wide <- tmp_wide[CJ(tx_ori = unique(tmp_wide$tx_ori),
-                            fullTx = c(TRUE,FALSE)), on = c("tx_ori", "fullTx")]
+    tmp_wide <- dcast(tmp[order(nobs)],  txid + 
+                          equal ~ eqClassId, value.var = "aval")
+    tmp_wide <- tmp_wide[CJ(txid = unique(tmp_wide$txid),
+                            equal = c(TRUE,FALSE)), on = c("txid", "equal")]
     tmp_wide[is.na(tmp_wide)] <- 0
     a_mat_array <- array(NA,dim = c(nrow(tmp_wide)/2,
                                     ncol(tmp_wide) - 2,3), 
-                         dimnames = list(unique(tmp$tx_ori), unique(tmp$read_class_sid), NULL))
+                         dimnames = list(unique(tmp$txid), unique(tmp$eqClassId), NULL))
     a_mat_array[,,2] <- 
-        as.matrix(tmp_wide[which(fullTx)][,-seq_len(2),with = FALSE])
-    a_mat_array[,,3] <- a_mat_array[,,1] <- a_mat_array[,,2] + as.matrix(tmp_wide[which(!fullTx)][,-seq_len(2),with = FALSE])
+        as.matrix(tmp_wide[which(equal)][,-seq_len(2),with = FALSE])
+    a_mat_array[,,3] <- a_mat_array[,,1] <- a_mat_array[,,2] + as.matrix(tmp_wide[which(!equal)][,-seq_len(2),with = FALSE])
     a_mat_array[, which(multiMap), 3] <- 0
     return(a_mat_array)
 }
@@ -100,23 +100,23 @@ formatAmat <- function(tmp, multiMap){
 #' @import data.table
 #' @noRd
 modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
-    tmp[, multi_align := (length(unique(tx_sid)) > 1),
-        by = list(read_class_sid, gene_sid)]
+    tmp[, multi_align := (length(unique(txid)) > 1),
+        by = list(eqClassId, gene_sid)]
     if (!d_mode) {
         tmp[, aval := 1]
         return(tmp)
     }
-    tmp[which(multi_align) , aval := ifelse(fullTx, 1 -
-                                                sum(.SD[which(!fullTx)]$rc_width*d_rate/1000),
-                                            rc_width*d_rate/1000), by = list(gene_sid,tx_ori)]
+    tmp[which(multi_align) , aval := ifelse(equal, 1 -
+        sum(.SD[which(!equal)]$rcWidth*d_rate/1000),
+                                            rcWidth*d_rate/1000), by = list(gene_sid,txid)]
     if (d_rate == 0) {
-        tmp[, par_status := all(!fullTx & multi_align),
-            by = list(read_class_sid, gene_sid)]
+        tmp[, par_status := all(!equal & multi_align),
+            by = list(eqClassById, gene_sid)]
         tmp[which(par_status), aval := 0.01]
     }
     tmp[, aval := pmax(pmin(aval,1),0)] #d_rate should be contained to 0-1
-    tmp[multi_align & fullTx,
-        aval := pmin(1,pmax(aval,rc_width*d_rate/1000))]
+    tmp[multi_align & equal,
+        aval := pmin(1,pmax(aval,rcWidth*d_rate/1000))]
     tmp[which(!multi_align), aval := 1]
     return(tmp)
 }
@@ -127,7 +127,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 #' @import data.table
 #' @noRd 
 initialiseOutput <- function(matNames, g, K, n.obs){
-    return(data.table(tx_sid = matNames,counts = 0,
+    return(data.table(txid = matNames,counts = 0,
                       FullLengthCounts = 0,
                       UniqueCounts = 0, gene_sid = g, 
                       ntotal = as.numeric(K)))
@@ -138,14 +138,14 @@ initialiseOutput <- function(matNames, g, K, n.obs){
 #' @import data.table
 #' @noRd
 calculateDegradationRate <- function(readClassDt){
-    rcCount <- unique(readClassDt[, .(gene_sid,read_class_sid, nobs)])
+    rcCount <- unique(readClassDt[, .(gene_sid,eqClassId, nobs)])
     rcCountPar <-
-        unique(readClassDt[which(!fullTx), .(gene_sid,read_class_sid, nobs)])
+        unique(readClassDt[which(!equal), .(gene_sid,eqClassId, nobs)])
     geneCount <- unique(rcCount[, list(nobs = sum(nobs)), by = gene_sid])
     geneCountPar <- unique(rcCountPar[, list(dObs = sum(nobs)), by = gene_sid])
-    txLength <- unique(readClassDt[, .(gene_sid, tx_ori, tx_len)])
+    txLength <- unique(readClassDt[, .(gene_sid, txid, txlen)])
     geneLength <- 
-        unique(txLength[, list(gene_len = max(tx_len)), by = gene_sid])
+        unique(txLength[, list(gene_len = max(txlen)), by = gene_sid])
     geneCountLength <- unique(geneLength[geneCount, on = "gene_sid"])
     geneCountLength <- unique(geneCountPar[geneCountLength, on = "gene_sid"])
     geneCountLength[, d_rate := dObs/nobs]
@@ -179,26 +179,20 @@ modifyQuantOut <- function(est_output, rids, cids, out){
 #' integers for more efficient computation
 #' @import data.table
 #' @noRd
-simplifyNames <- function(readClassDt, txVec, geneVec,ori_txvec, readclassVec){
+simplifyNames <- function(readClassDt, geneVec){
     readClassDt <- as.data.table(readClassDt)
-    readClassDt[, gene_sid := match(gene_id, geneVec)]
-    readClassDt[, tx_sid := match(tx_id, txVec)]
-    readClassDt[, tx_ori := match(gsub("Start","",tx_id),ori_txvec)]
-    readClassDt[, read_class_sid := match(read_class_id, readclassVec)]
-    readClassDt[, fullTx := grepl("Start",tx_id)]
-    readClassDt[, `:=`(tx_id = NULL, gene_id = NULL, read_class_id = NULL)]
+    readClassDt[, gene_sid := match(GENEID, geneVec)]
+    readClassDt[, `:=`(GENEID = NULL, eqClassById = NULL)]
     return(readClassDt)
 }
 
 #' This function converts transcript and gene ids back to transcript and gene 
 #' names 
-#' @import data.table
 #' @noRd
-formatOutput <- function(theta_est, ori_txvec, geneVec){
-    theta_est[, `:=`(tx_name = ori_txvec[as.numeric(tx_sid)],
-                     gene_name = geneVec[gene_sid])]
-    theta_est[, `:=`(tx_sid = NULL, gene_sid = NULL)]
-    theta_est <- theta_est[, .(tx_name, counts,FullLengthCounts,
+formatOutput <- function(theta_est, txVec, geneVec){
+    theta_est[, `:=`(gene_name = geneVec[gene_sid])]
+    theta_est[, `:=`(gene_sid = NULL)]
+    theta_est <- theta_est[, .(txid, counts,FullLengthCounts,
 UniqueCounts)]
     totalCount <- sum(theta_est$counts)
     theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
@@ -213,7 +207,7 @@ removeDuplicates <- function(counts){
     counts_final <- unique(counts[, list(counts = sum(counts),
                                          FullLengthCounts = sum(FullLengthCounts),
                                          UniqueCounts = sum(UniqueCounts),
-                                         CPM = sum(CPM)), by = tx_name],by = NULL)
+                                         CPM = sum(CPM)), by = txid],by = NULL)
     return(counts_final)
 }
 
@@ -223,9 +217,9 @@ removeUnObservedGenes <- function(readClassDt){
     uoGenes <- unique(readClassDt[,.I[sum(nobs) == 0], by = gene_sid]$gene_sid)
     if (length(uoGenes) > 0) {
         uo_txGeneDt <- 
-            unique(readClassDt[(gene_sid %in% uoGenes),.(tx_ori,gene_sid)])
+            unique(readClassDt[(gene_sid %in% uoGenes),.(txid,gene_sid)])
         readClassDt <- readClassDt[!(gene_sid %in% uoGenes)]
-        outList <- data.table(tx_sid = uo_txGeneDt$tx_ori,
+        outList <- data.table(txid = uo_txGeneDt$txid,
                               counts = 0, 
                               FullLengthCounts = 0,
                               UniqueCounts = 0,
@@ -243,37 +237,21 @@ removeUnObservedGenes <- function(readClassDt){
 #' eqClass from annotations
 #' @import data.table
 #' @noRd
-genEquiRCs <- function(readClass, annotations, verbose){
+genEquiRCs <- function(readClassDist, annotations, verbose){
     start.ptm <- proc.time()
     ## aggregate rc's based on their alignment to full or partial transcripts
-    distTable <- splitReadClass(readClass)
-    end.ptm <- proc.time()
-    if (verbose) message("Finished format full or partial alignments in ",
-                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    ## get total number of read count for each equi read class
-    eqClassTable <- getUniCountPerEquiRC(distTable)
-    ## merge distTable with eqClassTable 
-    start.ptm <- proc.time()
-    equiRCTable <- unique(unique(distTable[, .(tx_id, GENEID, 
-                                               equiRCId)], by = NULL)[eqClassTable, on = c("GENEID",
-                                                                                                "equiRCId"), allow.cartesian = TRUE], by = NULL)
-    end.ptm <- proc.time()
-    if (verbose) message("Finished update eqClass with annotations in ",
-                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    start.ptm <- proc.time()
-    unidentified_equiRCTable <- equiRCTable[grepl("unidentified",tx_id)]
-    unidentified_equiRCTable[, minEquiRC := 1]
-    equiRCTable_final <- 
-        unique(rbind(addEmptyRC(annotations[!grepl("unidentified",
-                                                   names(annotations))], 
-                                equiRCTable[!grepl("unidentified",tx_id)]),
-                     unidentified_equiRCTable),by = NULL)
-    
-    end.ptm <- proc.time()
-    if (verbose) message("Finished add empty equiRC in ",
-                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    setnames(equiRCTable_final, "GENEID", "gene_id")
-    return(equiRCTable_final)
+    distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
+    eqClassCount <- getUniCountPerEquiRC(distTable)
+    fullMatch <- getFullMatch(distTable)
+    eqClassTable <- addEmptyRC(eqClassCount, annotations)
+    eqClassTable <- createEqClassToTxMapping(eqClassTable)
+    eqClassTable <- left_join(eqClassTable, fullMatch, by = c("eqClassById","GENEID","txid")) %>%
+        mutate(equal = replace_na(equal, FALSE))
+    # create equiRC id 
+    eqClassTable <- eqClassTable %>% 
+        group_by(eqClassById) %>%
+        mutate(eqClassId = cur_group_id())
+    return(data.table(eqClassTable))
 }
 
 #' This function formats the distance table obtained from readClass by checking 
@@ -281,14 +259,14 @@ genEquiRCs <- function(readClass, annotations, verbose){
 #' classes
 #' @import data.table
 #' @noRd
-splitReadClass <- function(readClass){
+genEquiRCsBasedOnObservedReads <- function(readClass){
     unlisted_rowranges <- unlist(rowRanges(readClass))
     rcWidth <- data.table(readClassId = rownames(readClass),
                           firstExonWidth =
                               width(unlisted_rowranges[unlisted_rowranges$exon_rank == 1,]),
                           totalWidth = sum(width(rowRanges(readClass))))
     distTable <- data.table(as.data.frame(metadata(readClass)$distTable))[, .(readClassId, 
-        annotationTxId, readCount, GENEID, dist,equal, txid)]
+                                                               annotationTxId, readCount, GENEID, dist,equal,txid)]
     distTable <- rcWidth[distTable, on = "readClassId"]
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
     compatibleData <- as.data.table(as.data.frame(rowData(readClass)),
@@ -298,31 +276,10 @@ splitReadClass <- function(readClass){
     distTable <- distTable[compatibleData[ readClassId %in% 
                                                unique(distTable$readClassId), .(readClassId, GENEID)],
                            on = c("readClassId", "GENEID")]
-    distTable[, magnifying_order := (-1)]
-    distTable[, txid_match := ifelse(equal,txid*(magnifying_order),txid)] # here by magnifying to 1 number super big to indicate it's a full length match
-    distTable[order(readClassId,GENEID,txid_match),
-              equiRCByTxId := .(list(sort(unique(txid_match)))),#paste(unique(tx_id), collapse = "."),
-              by = list(readClassId, GENEID)] # for the tested example, takes about 2.7 secs, I probably need to give it up here as the list column is not usable for further usage
-    
-    # equiList <- distTable$read_class_id
-    # names(equiList) <- seq_along(equiList)
-    # equiListDt <- lapply(equiList, function(x) {xt <- data.table(x, id = names(x)); return(xt)})
-    # equiListUnique <- rbindlist(equiListDt, idcol = "unique.id")
-    
-    # system.time(distTable[, read_class_id_char := sapply(distTable$read_class_id, paste, collapse = ".")]) # takes about 9.8 secs
-    # system.time(distTable[order(readClassId,GENEID,txid_match),
-    #                       read_class_id := paste(unique(txid_match), collapse = "."),
-    #                       by = list(readClassId, GENEID)]) # for the tested example takes about 6.2 secs
-    # distTable[, tx_id := paste0(annotationTxId, ifelse(equal,"Start",""))]
-    
     ##this step is very slow, consider to use integers instead of tx_ids
-    # system.time(distTable[order(readClassId,GENEID,tx_id),
-    #           read_class_id := paste(unique(tx_id), collapse = "."),
-    #           by = list(readClassId, GENEID)]) # about 6 secs
-    grp <- distTable %>%
-        group_by(equiRCByTxId) %>%
-        mutate(group_id = cur_group_id())
-    distTable$equiRCId <- grp$group_id
+    distTable[order(readClassId,GENEID,txid), 
+              eqClassById :=.(list(sort(unique(txid)))),
+              by = list(readClassId, GENEID)]
     return(distTable)
 }
 
@@ -330,104 +287,69 @@ splitReadClass <- function(readClass){
 #' @import data.table
 #' @noRd
 getUniCountPerEquiRC <- function(distTable){
-    eqClassTable <- unique(distTable[,.(equiRCId,readClassId, readCount, GENEID,
-                            firstExonWidth,totalWidth, equal)], by = NULL)
-    eqClassTable[, `:=`(rc_width = ifelse(all(!equal), max(totalWidth), 
-                                          max(firstExonWidth))), 
-                 by = list(equiRCId, GENEID)]
-    eqClassTable <- unique(eqClassTable[, .(equiRCId,readClassId, 
-                                            readCount, GENEID, rc_width)], by = NULL)
-    eqClassTable[, nobs := sum(readCount), by = list(equiRCId, GENEID)]
-    eqClassTable <- unique(eqClassTable[,.(equiRCId, GENEID, nobs,
-                                           rc_width)],by = NULL)
-    return(eqClassTable)
+    eqClassCount <- distinct(distTable) %>% 
+        group_by(eqClassById) %>%
+        mutate(nobs = sum(readCount),
+               rcWidth = ifelse(all(!equal), max(totalWidth), 
+                               max(firstExonWidth))) %>%
+        ungroup() %>%
+        select(eqClassById,GENEID,nobs,rcWidth) %>%
+        distinct()
+    return(eqClassCount)
 }
 
+#' get full match
+#' @noRd
+getFullMatch <- function(distTable){
+    fullMatch <- distinct(distTable) %>% 
+        filter(equal == TRUE) %>%
+        select(eqClassById,GENEID,txid,equal) %>%
+        distinct() 
+    return(fullMatch)
+}
 
-#' This function adds the empty equiRCs to observed equiRcs to avoid
-#' over-estimation of transcripts with unique part but no unique support
-#' (Question: in fact, is this still necessary given the unique read support 
-#' and unique and partial read counts are estimated specifically for each 
-#' transcript?)
-#' I.e., consider the scenario where there are transcripts with only 
-#' shared read class observed, if just using the observed shared read class, we 
-#' probably will see each of the transcript being similarly distributed, but we 
-#' know that of the three transcripts, two of them are longer and have a unique 
-#' part, in that case, if we add two empty read class for these two transcripts,
-#' then we would know that given no unique read support found for these two 
-#' longer transcripts, then the read count from this shared read class shall 
-#' be more assigned to this smaller transcript. 
-#' From this angle of view, both the full and partial of the minimal eqRC should
-#' be added
+# add minimal equiRC 
 #' @import data.table
 #' @noRd
-addEmptyRC <- function(annotations, equiRCTable){
-    rcAnno <- data.table(as.data.frame(mcols(annotations)))
-    rcAnno_partial <- copy(rcAnno)
-    setnames(rcAnno_partial, "eqClass","read_class_id")
-    # full match will be assigned to Start
-    rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"$"),
-                                       paste0(TXNAME, "Start"), eqClass), 
-                  tx_id = paste0(TXNAME, "Start")), by = TXNAME] # replace transcript at the last position
-    rcAnno[, `:=`(read_class_id = gsub(paste0(TXNAME,"\\."),
-                                       paste0(TXNAME, "Start\\."), read_class_id)), by = TXNAME] # replace transcript in middle positions
-    setnames(rcAnno_partial, "TXNAME", "tx_id")
-    rcAnnoDt <-
-        rbind(unique(rcAnno[, .(tx_id, GENEID, read_class_id)], by = NULL),
-              unique(rcAnno_partial[, .(tx_id, GENEID, read_class_id)], by = NULL))
-    rcAnnoDt <- createMultimappingBaseOnEmptyRC(rcAnnoDt)
-    rcAnnoDt[, minEquiRC := 1] # this empty identifies read class observed only
-    equiRCTable_final <- merge(equiRCTable, rcAnnoDt, 
-                               on = c("tx_id","GENEID","read_class_id"), all = TRUE)
-    
-    ## for is.na(nobs) 
-    equiRCTable_final[is.na(nobs) ,`:=`(nobs = 0, rc_width = 0)]
-    return(equiRCTable_final)
+addEmptyRC <- function(eqClassCount, annotations){
+    minEquiRC <- as.data.frame(mcols(annotations)[,c("eqClassById","GENEID")])
+    minEquiRC$eqClassById <- unAsIs(minEquiRC$eqClassById)
+    minEquiRC$minRC <- 1
+    eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassById","GENEID"))
+    eqClassCountJoin[is.na(eqClassCountJoin)] <- 0
+    eqClassCount_final <- eqClassCountJoin %>% 
+        group_by(eqClassById) %>%
+        mutate(nobs = max(nobs),
+               rcWidth = max(rcWidth),
+               minRC = max(minRC)) %>%
+        ungroup() %>%
+        distinct()
+    return(eqClassCount_final)
 }
 
-
-
-
-#' This function changes the concatenating symbol
+#' Function to get rid of AsIs class so that group_by can be used on eqClassById column in mcols(annotations)
+#' credit to https://stackoverflow.com/questions/12865218/getting-rid-of-asis-class-attribute
 #' @noRd
-changeSymbol <- function(eqClass, txVec, from_symbol, to_symbol){
-    uni_charVec <- unique(substr(txVec,1,1))
-    for (uni_char in uni_charVec) {
-        eqClass = gsub(paste0("\\",from_symbol,uni_char,""),
-                       paste0("\\",to_symbol,uni_char,""), eqClass)
+unAsIs <- function(X) {
+    if("AsIs" %in% class(X)) {
+        class(X) <- class(X)[-match("AsIs", class(X))]
     }
-    return(eqClass)
+    X
 }
 
-#' This function creates the multi-mapping of read_class_id to tx_id
-#' @import data.table
-#' @noRd 
-createMultimappingBaseOnEmptyRC <- function(rcDt, 
-                                            from_symbol = ".", to_symbol = "&"){
-    if (!(from_symbol == "&"))
-        rcDt$read_class_id <- changeSymbol(rcDt$read_class_id,
-                                           rcDt$tx_id, from_symbol, to_symbol)
-    rcDtNew <- rcDt[, list(txNumber = length(unique(tx_id)),
-                           txNumberExpected = length(unlist(strsplit(read_class_id, "\\&")))),
-                    by = read_class_id]
-    ## For those with txNumber less than txNumberExpected 
-    if(nrow(rcDtNew[txNumber != txNumberExpected])>0){
-        rcDtNew_remap <- rcDtNew[txNumber != txNumberExpected, 
-                                 list(tx_id_new = unlist(strsplit(read_class_id, "\\&"))),
-                                 by = read_class_id]
-        rcDt <- rcDtNew_remap[rcDt, on = "read_class_id"]
-        ## for those that with txNumber being equal to txNumberExpected
-        rcDt[is.na(tx_id_new), tx_id_new := tx_id]
-        rcDt[tx_id_new != tx_id, tx_id := tx_id_new]
-        rcDt[, tx_id_new := NULL]
-    }
-    if (!(from_symbol == "&"))
-        rcDt$read_class_id <- changeSymbol(rcDt$read_class_id,
-                                           rcDt$tx_id, from_symbol = to_symbol, to_symbol = from_symbol)
-    return(rcDt)
+
+#' Create eqClass to tx mapping based on eqClassById
+#' @import tidyr 
+#' @noRd
+createEqClassToTxMapping <- function(eqClassTable){
+    eqClassTable_unnest <- eqClassTable %>% 
+        mutate(txid = eqClassById) %>% 
+        unnest(c(txid))
+    return(eqClassTable_unnest)
 }
 
-#' modifiy uncompatible read classes assignment
+
+#' modifiy incompatible read classes assignment
 #' @import data.table
 #' @noRd
 modifyIncompatibleAssignment <- function(distTable){
@@ -439,17 +361,6 @@ modifyIncompatibleAssignment <- function(distTable){
     distTable[which(!anyCompatible), 
               annotationTxId := paste0(GENEID, 
                                        "_unidentified")]
-    distTable[grep("unidentified",annotationTxId), txid := max(distTable$txid)+match(annotationTxId,unique(distTable[grep("unidentified",annotationTxId)]$annotationTxId))]
-    
-    distTable[grep("unidentified",annotationTxId),
-        eqClassById := .(list(sort(unique(.SD$txid)))), by = readClassId]
-    ## multiple distances and rows might exist for the same annotationTxId and 
-    ## readClassId matching, take the smallest one (does not matter here as 
-    ## distance value is not used)
-    distTable[grep("unidentified",annotationTxId), 
-              dist := min(dist), 
-              by = list(annotationTxId, readClassId)]
-    
     distTable[,`:=`(anyCompatible = NULL,
                     anyEqual = NULL)]
     distTable <- unique(DataFrame(setDF(distTable)))
@@ -458,41 +369,9 @@ modifyIncompatibleAssignment <- function(distTable){
 
 
  
-#' update annotations to include unidentified read classes
-#' @import data.table
+
+#' Combine count se object while preserving the metadata objects
 #' @noRd
-updateAnnotations <- function(readClassDist, annotations, verbose){
-    start.ptm <- proc.time()
-    if(isEmpty(grep("unidentified",metadata(readClassDist)$distTable$annotationTxId)))
-        return(annotations)
-    unidentified <- data.table(as.data.frame(metadata(readClassDist)$distTable))[grep("unidentified",annotationTxId),
-        .(annotationTxId,readClassId,dist,readCount,txid, eqClassById)]
-    unidentified[, nTx := length(unique(annotationTxId)), by = readClassId]
-    readCountTable <- unique(unidentified[,list(readCount = sum(readCount/nTx)),
-                                          by = list(annotationTxId)], by = NULL)
-    unidentified_ranges <- rowRanges(readClassDist)[unidentified$readClassId]
-    names(unidentified_ranges) <- unidentified$annotationTxId
-    unidentified_ranges <- unlist(unidentified_ranges)
-    unidentified_names <- names(unidentified_ranges)
-    unidentified_annotations <- reduce(split(unidentified_ranges, unidentified_names))
-    unidentified_names <- names(unidentified_annotations)
-    mcols(unidentified_annotations) <- DataFrame(TXNAME = unidentified_names,
-                                                 GENEID = gsub("_unidentified","",unidentified_names),
-                                                 eqClass = NA, # for internal use, can ignore
-                                                 txid = unidentified[match(unidentified_names, annotationTxId)]$txid,
-                                                 eqClassById = unidentified[match(unidentified_names, annotationTxId)]$eqClassById,
-                                                 newTxClass = "unidentified",
-                                                 readCount = readCountTable[match(unidentified_names, annotationTxId)]$readCount,
-                                                 NDR = NA)
-    annotations_combined <- c(annotations,unidentified_annotations)
-    end.ptm <- proc.time()
-    if (verbose)
-        message("Finished updating annotations with unidentified reads in ",
-                round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    return(annotations_combined)
-}
-
-
 combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
     sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
     if(trackReads){
