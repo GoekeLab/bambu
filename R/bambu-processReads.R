@@ -94,7 +94,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                          seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
     if(length(badReads) > 0 ){
         readGrgList = readGrgList[-badReads]
-        warning(paste0(length(badReads), " reads are mapped outside the provided ",
+        warnings = c(warnings, paste0(length(badReads), " reads are mapped outside the provided ",
                        "genomic regions. These reads will be dropped. Check you are using the ",
                        "same genome used for the alignment"))
     }
