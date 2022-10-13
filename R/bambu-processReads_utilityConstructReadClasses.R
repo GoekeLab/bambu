@@ -421,7 +421,7 @@ assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = 
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
 assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
-                                     fusionMode=FALSE, prefix = '') {
+                                     fusionMode=FALSE, prefix = 'Bambu') {
     # (1) assign gene Ids based on first intron match to annotations
     geneRanges <- reducedRangesByGenes(annotations)
     ov=findOverlaps(grl, geneRanges, minoverlap = min.exonOverlap)
@@ -461,7 +461,7 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
 #' Create new gene ids for groups of overlapping read classes which 
 #' don't overlap with known annotations. 
 #' @param grl a GrangesList object with read classes
-assignGeneIdsNoReference <- function(grl, prefix = '') {
+assignGeneIdsNoReference <- function(grl, prefix = 'Bambu') {
     newTxIds <- seq_len(length(grl))
     newGeneByNewTxId <- rep(NA, length(newTxIds))
     if(length(grl)==0){
@@ -484,12 +484,12 @@ assignGeneIdsNoReference <- function(grl, prefix = '') {
     exonGeneMap_filter1 <-  geneTxMap %>% group_by(newTxId) %>% 
         mutate(nTx=n()) %>% group_by(newGeneId) %>% filter(sum(nTx)==n()) 
     newGeneByNewTxId[exonGeneMap_filter1$newTxId] <- 
-        paste0("gene.", prefix, exonGeneMap_filter1$newGeneId)
+        paste0(prefix, "Gene", exonGeneMap_filter1$newGeneId)
     
     if(any(is.na(newGeneByNewTxId))) {
         refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, 
             geneExonMap, exonGeneMap_filter1, newExonId)
-        newGeneIds = paste0("gene.", prefix, refGeneTxMap$newGeneId)
+        newGeneIds = paste0(prefix, "Gene", refGeneTxMap$newGeneId)
         newGeneByNewTxId[refGeneTxMap$newTxId]<-newGeneIds
     }
     return(newGeneByNewTxId)

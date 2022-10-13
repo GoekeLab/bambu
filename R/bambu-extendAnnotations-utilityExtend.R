@@ -6,7 +6,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
-                                    prefix = "", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
+                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -629,7 +629,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
     if (length(extendedAnnotationRanges)) {
       mcols(extendedAnnotationRanges)$TXNAME <- paste0(
-      "tx",prefix, ".", seq_along(extendedAnnotationRanges))
+      prefix, "Tx", seq_along(extendedAnnotationRanges))
     names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
     extendedAnnotationRanges <-
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
