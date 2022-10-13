@@ -189,7 +189,7 @@ writeBambuOutput(se, path = "./bambu/")
 ```
 If you are only interested in the novel transcripts, one can filter this 'se' object first to remove reference annotations.
 ```rscript
-se.novel = se[mcols(se)$newTxClass != "annotation",]
+se.novel = se[mcols(se)$txClassDescription != "annotation",]
 writeBambuOutput(se.novel, path = "./bambu/")
 ```
 
@@ -201,7 +201,7 @@ writeToGTF(se.discoveryOnly, "./output.gtf")
 ```
 As above, to output only the novel annotations, you need to filter out the reference annotations.
 ```rscript
-se.discoveryOnly.novel = se.discoveryOnly[mcols(se.discoveryOnly)$newTxClass != "annotation",]
+se.discoveryOnly.novel = se.discoveryOnly[mcols(se.discoveryOnly)$txClassDescription != "annotation",]
 writeToGTF(se.discoveryOnly.novel, "./output.gtf")
 ```
 
@@ -469,7 +469,7 @@ rowData(se)
 |eqClass|A character vector with the transcript names of all the equivalent transcripts (those which have this transcripts contiguous exon junctions)|
 |txId|A bambu specific transcript id used for indexing purposes
 |eqClassById|A integer list with the transcript ids of all equivalent transcripts
-|newTxClass|A concatenated string containing the classes the transcript falls under: <br> **annotation** - Transcript matches an annotation transcript <br> **allNew** - All the intron-junctions are novel <br> **newFirstJunction** - the first junction is novel and at least one other junction matches an annotated transcript <br> **newLastJunction** - the last junction is novel and at least one other junction matches an annotated transcript <br> **newJunction** - an internal junction is novel and at least one other internal junction matches an annotated transcript <br> **newWithin** -  A novel transcript with matching junctions but is not a subset of an annotation <br> **unsplicedNew** - A single exon transcript that doesn’t completely overlap with annotations <br> **compatible** - Is a subset of an annotated transcript <br> **newFirstExon** - The first exon is novel <br> **newLastExon** - The last exon is novel|
+|txClassDescription|A concatenated string containing the classes the transcript falls under: <br> **annotation** - Transcript matches an annotation transcript <br> **allNew** - All the intron-junctions are novel <br> **newFirstJunction** - the first junction is novel and at least one other junction matches an annotated transcript <br> **newLastJunction** - the last junction is novel and at least one other junction matches an annotated transcript <br> **newJunction** - an internal junction is novel and at least one other internal junction matches an annotated transcript <br> **newWithin** -  A novel transcript with matching junctions but is not a subset of an annotation <br> **unsplicedNew** - A single exon transcript that doesn’t completely overlap with annotations <br> **compatible** - Is a subset of an annotated transcript <br> **newFirstExon** - The first exon is novel <br> **newLastExon** - The last exon is novel|
 |readCount|The number of full length reads associated with this transcript (filtered by min.readCount)|
 |txNDR|The NDR score calculated for the transcript|
 |relReadCount|The proportion of reads this transcript has relative to all reads assigned to its gene|

@@ -467,7 +467,7 @@ updateAnnotations <- function(readClassMod, annotations, verbose){
     mcols(unidentified_annotations) <- DataFrame(TXNAME = unidentified_names,
                                                  GENEID = gsub("_unidentified","",unidentified_names),
                                                  eqClass = eqClassTable[match(unidentified_names, annotationTxId)]$eqClass,
-                                                 newTxClass = "unidentified",
+                                                 txClassDescription = "unidentified",
                                                  readCount = readCountTable[match(unidentified_names, annotationTxId)]$readCount,
                                                  txNDR = NA)
     annotations_combined <- c(annotations,unidentified_annotations)
