@@ -174,3 +174,31 @@ checkInputSequence <- function(genomeSequence) {
     )}
     return(genomeSequence)
 }
+
+#Function that gathers warnings from several read class lists and outputs the counts
+handleWarnings <- function(readClassList, verbose){
+    warnings = list()
+    sampleNames = c()
+    for(i in seq_along(readClassList)){
+        readClassSe = readClassList[[i]]
+        if (is.character(readClassSe)) 
+            readClassSe <- readRDS(file = readClassSe)
+        warnings[[i]] = metadata(readClassSe)$warnings
+        sampleNames = c(sampleNames, colnames(se[[i]]))
+    }
+    names(warnings) = sampleNames
+
+    if(verbose & any(lengths(warnings)>0)){
+        message("--- per sample warnings during read class construction ---")
+        for(i in seq_along(warnings)){
+            if(lengths(warnings)[i]>0){
+                message("Warnings for: ", sampleNames[i])
+                sapply(warnings[[i]], message)
+            }
+        }
+    } else {
+        message("Detected ", sum(lengths(warnings)), " warnings across the samples during ",
+        "read class construction. Access warnings with metadata(bambuOutput)$warnings")
+    }
+    return(warnings)
+}

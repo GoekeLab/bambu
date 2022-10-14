@@ -49,7 +49,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     } else{
         rowData(se)$txScore = rowData(se)$txScore.noFit
     }
-    if(is.null(model) & fit) metadata(se)$warning = c(metadata(se)$warning,
+    if(is.null(model) & fit) metadata(se)$warnings = c(metadata(se)$warnings,
         "Bambu was unable to train a model on this sample, and is using a pretrained model")
     end.ptm <- proc.time()
     if (verbose) 

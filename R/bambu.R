@@ -164,10 +164,13 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory)
     }
+    warnings = handleWarnings(readClassList, verbose)
+    print(warnings)
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                                isoreParameters, stranded, bpParameters, fusionMode, verbose)
+        metadata(annotations)$warnings = warnings
         if (!verbose) message("Finished extending annotations.")
         if (!quant) return(annotations)
     }
@@ -182,6 +185,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                              BPPARAM = bpParameters)
         countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
         rowRanges(countsSe) <- annotations
+        metadata(countsSe)$warnings = warnings
         if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
         return(countsSe)
