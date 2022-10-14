@@ -127,7 +127,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 #' @import data.table
 #' @noRd 
 initialiseOutput <- function(matNames, g, K, n.obs){
-    return(data.table(txid = matNames,counts = 0,
+    return(data.table(txid = sort(matNames),counts = 0,
                       FullLengthCounts = 0,
                       UniqueCounts = 0, gene_sid = g, 
                       ntotal = as.numeric(K)))
@@ -265,7 +265,7 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
                           firstExonWidth =
                               width(unlisted_rowranges[unlisted_rowranges$exon_rank == 1,]),
                           totalWidth = sum(width(rowRanges(readClass))))
-    distTable <- data.table(as.data.frame(metadata(readClass)$distTable))[, .(readClassId, 
+    distTable <- data.table(as.data.frame(metadata(readClass)$distTable))[!grepl("unidentified", annotationTxId), .(readClassId, 
                                                                annotationTxId, readCount, GENEID, dist,equal,txid)]
     distTable <- rcWidth[distTable, on = "readClassId"]
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
