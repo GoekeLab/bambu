@@ -227,9 +227,8 @@ updateJunctionwimprove <- function(annotatedIntronNumber, uniqueJunctions,
         # update junctions object if strand prediction improves overlap
         # with annotations
         if (verbose) {
-            message("after strand correction, annotated introns:")
-            message(annotatedIntronNumberNew)
-            message(annotatedIntronNumberNew / length(uniqueJunctionsUpdate))
+            message("after strand correction, annotated introns: ", annotatedIntronNumberNew,
+            " (", annotatedIntronNumberNew / length(uniqueJunctionsUpdate), ")")
         }
         annotatedIntronNumber <- annotatedIntronNumberNew
         uniqueJunctions <- uniqueJunctionsUpdate

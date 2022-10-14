@@ -216,16 +216,16 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
             eval_metric = 'error',
             verbose = 0)
         predictions <- predict(cv.fit, data.train.cv.test)
-        message('prediction accuracy (CV) (higher for splice 
-                donor than splice acceptor)')
+        message('prediction accuracy (CV) (higher for splice ',
+                'donor than splice acceptor)')
         # Predictions is thresholded on 0.5 instead of 0 now to produce a 
         # proper confusion matrix and fix an error that occurred with the
         # argument to fisher.test()
         testResults <- fisher.test(table(predictions > 0.5,
                                          labels.train.cv.test))
-        show(testResults$estimate)
-        show(testResults$p.value)
-        show(evaluatePerformance(labels.train.cv.test == 1,predictions)$AUC)
+        message("estimate: ", testResults$estimate)
+        message("pValue: ", testResults$p.value)
+        message("AUC: ", evaluatePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
     
     cv.fit <- xgboost(data = data.train, 

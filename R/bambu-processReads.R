@@ -77,7 +77,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         if (!all(seqlevels(annotations) %in% refSeqLevels)&(!(length(annotations)==0))) {
             refSeqLevels <- intersect(refSeqLevels, seqlevels(annotations))
             warnings = c(warnings, paste0("not all chromosomes from annotations present in ", 
-            "reference genome sequence, annotations without reference chrosomomse sequence ",
+            "reference genome sequence, annotations without reference genomic sequence ",
             "are dropped"))
             annotations <- keepSeqlevels(annotations, value = refSeqLevels,
                                          pruning.mode = "coarse")
