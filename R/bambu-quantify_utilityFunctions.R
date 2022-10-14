@@ -276,6 +276,7 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
     distTable <- distTable[compatibleData[ readClassId %in% 
                                                unique(distTable$readClassId), .(readClassId, GENEID)],
                            on = c("readClassId", "GENEID")]
+    #here, each transcript should be assigned to one gene only based on isore.estimateDistanceToAnnotation function
     ##this step is very slow, consider to use integers instead of tx_ids
     distTable[order(readClassId,GENEID,txid), 
               eqClassById :=.(list(sort(unique(txid)))),
@@ -287,14 +288,17 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
 #' @import data.table
 #' @noRd
 getUniCountPerEquiRC <- function(distTable){
-    eqClassCount <- distinct(distTable) %>% 
+    eqClassCount <- distTable %>% 
         group_by(eqClassById) %>%
+        mutate(allEqual = all(!equal)) %>%
+        select(eqClassById, readClassId, firstExonWidth,totalWidth, readCount,GENEID,allEqual) %>%
+        distinct() %>%
         mutate(nobs = sum(readCount),
-               rcWidth = ifelse(all(!equal), max(totalWidth), 
+               rcWidth = ifelse(allEqual, max(totalWidth), 
                                max(firstExonWidth))) %>%
-        ungroup() %>%
         select(eqClassById,GENEID,nobs,rcWidth) %>%
-        distinct()
+        distinct() %>%
+        ungroup()
     return(eqClassCount)
 }
 
@@ -322,8 +326,8 @@ addEmptyRC <- function(eqClassCount, annotations){
         mutate(nobs = max(nobs),
                rcWidth = max(rcWidth),
                minRC = max(minRC)) %>%
-        ungroup() %>%
-        distinct()
+        distinct() %>%
+        ungroup()
     return(eqClassCount_final)
 }
 
