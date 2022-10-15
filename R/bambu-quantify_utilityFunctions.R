@@ -127,7 +127,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 #' @import data.table
 #' @noRd 
 initialiseOutput <- function(matNames, g, K, n.obs){
-    return(data.table(txid = sort(matNames),counts = 0,
+    return(data.table(txid = sort(as.numeric(matNames)),counts = 0,
                       FullLengthCounts = 0,
                       UniqueCounts = 0, gene_sid = g, 
                       ntotal = as.numeric(K)))
@@ -242,11 +242,8 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
     ## aggregate rc's based on their alignment to full or partial transcripts
     distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
     eqClassCount <- getUniCountPerEquiRC(distTable)
-    fullMatch <- getFullMatch(distTable)
     eqClassTable <- addEmptyRC(eqClassCount, annotations)
     eqClassTable <- createEqClassToTxMapping(eqClassTable)
-    eqClassTable <- left_join(eqClassTable, fullMatch, by = c("eqClassById","GENEID","txid")) %>%
-        mutate(equal = replace_na(equal, FALSE))
     # create equiRC id 
     eqClassTable <- eqClassTable %>% 
         group_by(eqClassById) %>%
@@ -279,7 +276,10 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
     #here, each transcript should be assigned to one gene only based on isore.estimateDistanceToAnnotation function
     ##this step is very slow, consider to use integers instead of tx_ids
     distTable[order(readClassId,GENEID,txid), 
-              eqClassById :=.(list(sort(unique(txid)))),
+              eqClassById :=.(list(sort(unique(ifelse(equal, -1*txid,txid))))),
+              by = list(readClassId, GENEID)]
+    distTable[order(readClassId,GENEID,txid), 
+              eqClassByIdTemp :=.(list(sort(unique(txid)))),
               by = list(readClassId, GENEID)]
     return(distTable)
 }
@@ -290,36 +290,29 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
 getUniCountPerEquiRC <- function(distTable){
     eqClassCount <- distTable %>% 
         group_by(eqClassById) %>%
-        mutate(allEqual = all(!equal)) %>%
-        select(eqClassById, readClassId, firstExonWidth,totalWidth, readCount,GENEID,allEqual) %>%
+        mutate(anyEqual = any(equal)) %>%
+        select(eqClassById, eqClassByIdTemp,firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>%
         distinct() %>%
         mutate(nobs = sum(readCount),
-               rcWidth = ifelse(allEqual, max(totalWidth), 
+               rcWidth = ifelse(anyEqual, max(totalWidth), 
                                max(firstExonWidth))) %>%
-        select(eqClassById,GENEID,nobs,rcWidth) %>%
+        select(eqClassById,eqClassByIdTemp,GENEID,nobs,rcWidth) %>%
         distinct() %>%
         ungroup()
     return(eqClassCount)
 }
 
-#' get full match
-#' @noRd
-getFullMatch <- function(distTable){
-    fullMatch <- distinct(distTable) %>% 
-        filter(equal == TRUE) %>%
-        select(eqClassById,GENEID,txid,equal) %>%
-        distinct() 
-    return(fullMatch)
-}
 
 # add minimal equiRC 
 #' @import data.table
 #' @noRd
 addEmptyRC <- function(eqClassCount, annotations){
-    minEquiRC <- as.data.frame(mcols(annotations)[,c("eqClassById","GENEID")])
+    minEquiRC <- as.data.frame(mcols(annotations)[,c("eqClassById","GENEID","txid")])
     minEquiRC$eqClassById <- unAsIs(minEquiRC$eqClassById)
+    colnames(minEquiRC)[1] <- "eqClassByIdTemp"
     minEquiRC$minRC <- 1
-    eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassById","GENEID"))
+    eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassByIdTemp","GENEID")) %>%
+        mutate(eqClassById = replace_na(eqClassByIdTemp))
     eqClassCountJoin[is.na(eqClassCountJoin)] <- 0
     eqClassCount_final <- eqClassCountJoin %>% 
         group_by(eqClassById) %>%
@@ -348,7 +341,9 @@ unAsIs <- function(X) {
 createEqClassToTxMapping <- function(eqClassTable){
     eqClassTable_unnest <- eqClassTable %>% 
         mutate(txid = eqClassById) %>% 
-        unnest(c(txid))
+        unnest(c(txid)) %>%
+        mutate(equal = ifelse(txid<0,TRUE,FALSE)) %>%
+        mutate(txid = abs(txid))
     return(eqClassTable_unnest)
 }
 
