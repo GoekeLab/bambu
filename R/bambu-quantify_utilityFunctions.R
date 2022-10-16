@@ -82,13 +82,13 @@ run_parallel <- function(g, conv, minvalue, maxiter, readClassDt) {
 #' @noRd
 formatAmat <- function(tmp, multiMap){
     tmp_wide <- dcast(tmp[order(nobs)],  txid + 
-                          equal ~ eqClassId, value.var = "aval")
+                          equal ~ eqClassId, value.var = "aval") # this step will automatically sort the table
     tmp_wide <- tmp_wide[CJ(txid = unique(tmp_wide$txid),
                             equal = c(TRUE,FALSE)), on = c("txid", "equal")]
     tmp_wide[is.na(tmp_wide)] <- 0
     a_mat_array <- array(NA,dim = c(nrow(tmp_wide)/2,
                                     ncol(tmp_wide) - 2,3), 
-                         dimnames = list(unique(tmp$txid), unique(tmp$eqClassId), NULL))
+                         dimnames = list(sort(unique(tmp$txid)), sort(unique(tmp$eqClassId)), NULL))
     a_mat_array[,,2] <- 
         as.matrix(tmp_wide[which(equal)][,-seq_len(2),with = FALSE])
     a_mat_array[,,3] <- a_mat_array[,,1] <- a_mat_array[,,2] + as.matrix(tmp_wide[which(!equal)][,-seq_len(2),with = FALSE])
@@ -243,7 +243,6 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
     distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
     eqClassCount <- getUniCountPerEquiRC(distTable)
     eqClassTable <- addEmptyRC(eqClassCount, annotations)
-    eqClassTable <- createEqClassToTxMapping(eqClassTable)
     # create equiRC id 
     eqClassTable <- eqClassTable %>% 
         group_by(eqClassById) %>%
@@ -297,8 +296,8 @@ getUniCountPerEquiRC <- function(distTable){
                rcWidth = ifelse(anyEqual, max(totalWidth), 
                                max(firstExonWidth))) %>%
         select(eqClassById,eqClassByIdTemp,GENEID,nobs,rcWidth) %>%
-        distinct() %>%
-        ungroup()
+        ungroup()  %>%
+        distinct()
     return(eqClassCount)
 }
 
@@ -311,16 +310,22 @@ addEmptyRC <- function(eqClassCount, annotations){
     minEquiRC$eqClassById <- unAsIs(minEquiRC$eqClassById)
     colnames(minEquiRC)[1] <- "eqClassByIdTemp"
     minEquiRC$minRC <- 1
-    eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassByIdTemp","GENEID")) %>%
-        mutate(eqClassById = replace_na(eqClassByIdTemp))
+    eqClassCount <- createEqClassToTxMapping(eqClassCount)
+    eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassByIdTemp","GENEID","txid")) %>%
+        group_by(txid, eqClassByIdTemp) %>%
+        mutate(eqClassById = ifelse(isEmpty(eqClassById),eqClassByIdTemp,eqClassById)) %>%
+        mutate(equal = replace_na(equal, FALSE)) %>%
+        ungroup() %>%
+        mutate(eqClassByIdTemp = NULL) %>%
+        distinct()
     eqClassCountJoin[is.na(eqClassCountJoin)] <- 0
     eqClassCount_final <- eqClassCountJoin %>% 
         group_by(eqClassById) %>%
         mutate(nobs = max(nobs),
                rcWidth = max(rcWidth),
                minRC = max(minRC)) %>%
-        distinct() %>%
-        ungroup()
+        ungroup() %>%
+        distinct()
     return(eqClassCount_final)
 }
 
