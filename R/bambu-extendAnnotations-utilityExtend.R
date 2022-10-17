@@ -644,10 +644,9 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
-  mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                 c("TXNAME", "GENEID", "eqClass", "txid", "eqClassById", "newTxClass","readCount", "NDR","relReadCount", "relSubsetCount")]
+                 c("TXNAME", "GENEID", "txid", "eqClassById", "newTxClass","readCount", "NDR","relReadCount", "relSubsetCount")]
   return(extendedAnnotationRanges)
 }
 

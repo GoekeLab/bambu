@@ -76,7 +76,6 @@ prepareAnnotationsFromGTF <- function(file) {
         mcols(grlist)$txid <- seq_along(grlist)
         minEqClasses <- getMinimumEqClassByTx(grlist)
         if(!identical(names(grlist),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
-        mcols(grlist)$eqClass <- minEqClasses$eqClass
         mcols(grlist)$eqClassById <- minEqClasses$eqClassById
     }
     return(grlist)
@@ -118,9 +117,6 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
         names(exByTxAnnotated_singleBpStartEnd)[subjectHits(spliceOverlaps)]
     subjectTxId <- subjectTxId[order(queryTxId, subjectTxId)]
     queryTxId <- sort(queryTxId)
-    eqClass <- unstrsplit(splitAsList(subjectTxId, queryTxId), sep = ".")
-    eqClass <- eqClass[match(names(exonsByTranscripts), names(eqClass))]
-
-    return(DataFrame(queryTxId = names(eqClass), eqClass = unname(eqClass), eqClassById=eqClassById))
+    return(DataFrame(queryTxId = names(exonsByTranscripts),  eqClassById=eqClassById))
 }
 

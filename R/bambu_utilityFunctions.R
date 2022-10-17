@@ -77,7 +77,7 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
-            if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
+            if (!all(c("TXNAME", "GENEID", "txid","eqClassById") %in% 
                      colnames(mcols(annotations)))) 
                 stop("The annotations is not properly prepared.\nPlease 
                     prepareAnnnotations using prepareAnnotations function.")
