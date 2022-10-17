@@ -277,9 +277,6 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
     distTable[order(readClassId,GENEID,txid), 
               eqClassById :=.(list(sort(unique(ifelse(equal, -1*txid,txid))))),
               by = list(readClassId, GENEID)]
-    # distTable[order(readClassId,GENEID,txid), 
-    #           eqClassByIdTemp :=.(list(sort(unique(txid)))),
-    #           by = list(readClassId, GENEID)]
     return(distTable)
 }
 
