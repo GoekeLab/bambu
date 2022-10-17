@@ -306,11 +306,7 @@ addEmptyRC <- function(eqClassCount, annotations){
     minEquiRC <- as.data.frame(mcols(annotations)[,c("eqClassById","GENEID","txid")])
     minEquiRC$eqClassById <- unAsIs(minEquiRC$eqClassById)
     #colnames(minEquiRC)[1] <- "eqClassByIdTemp"
-    minEquiRC <- minEquiRC %>% 
-        mutate(txidTemp = eqClassById) %>% 
-        unnest(c(txidTemp)) %>%
-        mutate(minRC = 1, equal = FALSE, txid = txidTemp, txidTemp = NULL)
-    
+   
     minEquiRCTemp <- minEquiRC  %>% 
         mutate(txidTemp = eqClassById) %>% 
         unnest(c(txidTemp)) %>%
@@ -321,6 +317,12 @@ addEmptyRC <- function(eqClassCount, annotations){
         ungroup() %>% 
         mutate(txid = abs(txidTemp), eqClassById = eqClassByIdTemp, eqClassByIdTemp = NULL, txidTemp = NULL) %>%
         distinct()
+    
+    minEquiRC <- minEquiRC %>% 
+        mutate(txidTemp = eqClassById) %>% 
+        unnest(c(txidTemp)) %>%
+        mutate(minRC = 1, equal = FALSE, txid = txidTemp, txidTemp = NULL)
+    
     minEquiRC <- bind_rows(minEquiRC, minEquiRCTemp)
     eqClassCount <- createEqClassToTxMapping(eqClassCount)
     eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassById","GENEID","txid","equal"))
