@@ -157,6 +157,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                     " for more efficient processing")
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
+        message("--- Start generating read class files ---")
         readClassList <- bambu.processReads(reads, annotations, 
             genomeSequence = genome, 
             readClass.outputDir = rcOutDir, yieldSize, 
@@ -167,14 +168,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     warnings = handleWarnings(readClassList, verbose)
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
+        message("--- Start extending annotations ---")
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                                isoreParameters, stranded, bpParameters, fusionMode, verbose)
         metadata(annotations)$warnings = warnings
-        if (!verbose) message("Finished extending annotations.")
         if (!quant) return(annotations)
     }
     if (quant) {
-        if (!verbose) message("Start isoform quantification")
+        message("--- Start isoform quantification ---")
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
@@ -185,8 +186,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
         rowRanges(countsSe) <- annotations
         metadata(countsSe)$warnings = warnings
-        if (!verbose) message("Finished isoform quantification.")
         if (rm.readClassSe) file.remove(unlist(readClassList))
+        message("--- Finished running Bambu ---")
         return(countsSe)
     }
 }

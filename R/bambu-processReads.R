@@ -44,7 +44,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     defaultModels = isoreParameters[["defaultModels"]]
     returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
-    message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
         genomeSequence = genomeSequence,annotations = annotations,
@@ -54,7 +53,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)},
         BPPARAM = bpParameters)
-    message("Finished generating read classes from genomic alignments.")
     return(readClassList)
 }
 
