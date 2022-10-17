@@ -277,9 +277,9 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
     distTable[order(readClassId,GENEID,txid), 
               eqClassById :=.(list(sort(unique(ifelse(equal, -1*txid,txid))))),
               by = list(readClassId, GENEID)]
-    distTable[order(readClassId,GENEID,txid), 
-              eqClassByIdTemp :=.(list(sort(unique(txid)))),
-              by = list(readClassId, GENEID)]
+    # distTable[order(readClassId,GENEID,txid), 
+    #           eqClassByIdTemp :=.(list(sort(unique(txid)))),
+    #           by = list(readClassId, GENEID)]
     return(distTable)
 }
 
@@ -290,12 +290,12 @@ getUniCountPerEquiRC <- function(distTable){
     eqClassCount <- distTable %>% 
         group_by(eqClassById) %>%
         mutate(anyEqual = any(equal)) %>%
-        select(eqClassById, eqClassByIdTemp,firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>%
+        select(eqClassById, firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
         distinct() %>%
         mutate(nobs = sum(readCount),
                rcWidth = ifelse(anyEqual, max(totalWidth), 
                                max(firstExonWidth))) %>%
-        select(eqClassById,eqClassByIdTemp,GENEID,nobs,rcWidth) %>%
+        select(eqClassById,GENEID,nobs,rcWidth) %>% #eqClassByIdTemp,
         ungroup()  %>%
         distinct()
     return(eqClassCount)
@@ -308,16 +308,24 @@ getUniCountPerEquiRC <- function(distTable){
 addEmptyRC <- function(eqClassCount, annotations){
     minEquiRC <- as.data.frame(mcols(annotations)[,c("eqClassById","GENEID","txid")])
     minEquiRC$eqClassById <- unAsIs(minEquiRC$eqClassById)
-    colnames(minEquiRC)[1] <- "eqClassByIdTemp"
+    #colnames(minEquiRC)[1] <- "eqClassByIdTemp"
     minEquiRC$minRC <- 1
-    eqClassCount <- createEqClassToTxMapping(eqClassCount)
-    eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassByIdTemp","GENEID","txid")) %>%
-        group_by(txid, eqClassByIdTemp) %>%
-        mutate(eqClassById = ifelse(isEmpty(eqClassById),eqClassByIdTemp,eqClassById)) %>%
-        mutate(equal = replace_na(equal, FALSE)) %>%
-        ungroup() %>%
-        mutate(eqClassByIdTemp = NULL) %>%
+    minEquiRC$equal <- FALSE
+    
+    minEquiRCTemp <- minEquiRC  %>% 
+        mutate(txidTemp = eqClassById) %>% 
+        unnest(c(txidTemp)) %>%
+        mutate(equal = ifelse(txid == txidTemp, TRUE, FALSE)) %>%
+        mutate(txidTemp = ifelse(txid == txidTemp, -1*as.numeric(txidTemp),txidTemp)) %>%
+        group_by(eqClassById, txid) %>%
+        mutate(eqClassByIdTemp = list(sort(unique(txidTemp)))) %>%
+        ungroup() %>% 
+        filter(equal == TRUE) %>%
+        mutate(txidTemp = NULL, eqClassById = eqClassByIdTemp, eqClassByIdTemp = NULL) %>%
         distinct()
+    minEquiRC <- bind_rows(minEquiRC, minEquiRCTemp)
+    eqClassCount <- createEqClassToTxMapping(eqClassCount)
+    eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassById","GENEID","txid","equal"))
     eqClassCountJoin[is.na(eqClassCountJoin)] <- 0
     eqClassCount_final <- eqClassCountJoin %>% 
         group_by(eqClassById) %>%
