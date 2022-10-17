@@ -126,7 +126,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              min.exonOverlap = min.exonOverlap,
                              fusionMode = fusionMode,
                              verbose = verbose)
-    if(length(warnings > 0)) metadata(se)$warnings = c(metadata(se)$warnings, warnings)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
                                 "_readClassSe.rds")
