@@ -184,7 +184,7 @@ handleWarnings <- function(readClassList, verbose){
         if (is.character(readClassSe)) 
             readClassSe <- readRDS(file = readClassSe)
         warnings[[i]] = metadata(readClassSe)$warnings
-        sampleNames = c(sampleNames, colnames(se[[i]]))
+        sampleNames = c(sampleNames, colnames(readClassList[[i]]))
     }
     names(warnings) = sampleNames
 

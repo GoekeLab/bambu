@@ -165,7 +165,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             lowMemory = lowMemory)
     }
     warnings = handleWarnings(readClassList, verbose)
-    print(warnings)
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
