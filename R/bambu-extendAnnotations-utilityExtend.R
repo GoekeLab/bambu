@@ -106,8 +106,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     rowDataCombined <- rowDataCombined[filterSet,]
   }
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
-    "No annotations were provided. Please increase NDR threshold to use novel transcripts")
-  if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds. Try a higher NDR.")
+    "WARNING - No annotations were provided. Please increase NDR threshold to use novel transcripts")
+  if(sum(filterSet)==0) message("WARNING - No novel transcripts meet the given thresholds. Try a higher NDR.")
   # (3) combine novel transcripts with annotations
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
@@ -167,7 +167,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts){
     if(sum(equal, na.rm = TRUE)<50 | 
         sum(!equal, na.rm = TRUE)<50){
           combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
-          message("Less than 50 TRUE or FALSE read classes for NDR precision stabilization. ",
+          message("WARNING - Less than 50 TRUE or FALSE read classes for NDR precision stabilization. ",
           "Filtering by prediction score instead")
     } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     return(combinedTranscripts)
