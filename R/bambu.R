@@ -62,12 +62,6 @@
 #'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
 #'     defaults to "Bambu"}
 #' }
-#' @param rcOutDir A string variable specifying the path to where
-#' read class files will be saved.
-#' @param stranded A boolean for strandedness, defaults to FALSE.
-#' @param ncore specifying number of cores used when parallel processing 
-#' is used, defaults to 1.
-#' @param yieldSize see \code{Rsamtools}.
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \describe{
@@ -79,22 +73,28 @@
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
 #' }
+#' @param rcOutDir A string variable specifying the path to where
+#' read class files will be saved.
+#' @param discovery A logical variable indicating whether annotations
+#' are to be extended. Defaults to TRUE
+#' @param quant A logical variable indicating whether quantification will 
+#' be performed. If false the output type will change. Defaults to TRUE
+#' @param stranded A boolean for strandedness, defaults to FALSE.
+#' @param ncore specifying number of cores used when parallel processing 
+#' is used, defaults to 1.
+#' @param yieldSize see \code{Rsamtools}.
 #' @param trackReads When TRUE read names will be tracked and output as
 #' metadata in the final output as readToTranscriptMaps detailing. 
 #' the assignment of reads to transcripts. The output is a list with 
 #' an entry for each sample.
-#' @param outputDistTable When TRUE the calculated distance table between
+#' @param returnDistTable When TRUE the calculated distance table between
 #' read classes and annotations will be output as metadata as 
 #' distTables. The output is a list with an entry for each sample.
-#' @param discovery A logical variable indicating whether annotations
-#' are to be extended
-#' @param quant A logical variable indicating whether quantification will 
-#' be performed
+#' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
+#' is specified. This option provides an efficient way to process big samples.
 #' @param fusionMode A logical variable indicating whether run in fusion mode
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
-#' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
-#' is specified. This option provides an efficient way to process big samples.
 #' @details
 #' @return \code{bambu} will output different results depending on whether
 #' \emph{quant} mode is on. By default, \emph{quant} is set to TRUE, so 

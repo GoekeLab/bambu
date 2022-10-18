@@ -68,7 +68,7 @@ biocViews:
     Transcriptomics
 bugReports: https://github.com/GoekeLab/bambu/issues
 URL: https://github.com/GoekeLab/bambu   
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.1
 LinkingTo: 
     Rcpp,
     RcppArmadillo
