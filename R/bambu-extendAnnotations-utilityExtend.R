@@ -166,7 +166,6 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
     equal = combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] = FALSE
     if(sum(equal, na.rm = TRUE)<50 | sum(!equal, na.rm = TRUE)<50 | useTxScore){
-        sum(!equal, na.rm = TRUE)<50){
           combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
           if(!useTxScore) message("WARNING - Less than 50 TRUE or FALSE read classes ",
             "for NDR precision stabilization.")
@@ -616,20 +615,22 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "txNDR",
                                   "relReadCount", "relSubsetCount")]
     equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
-  #remove extended ranges that are already present in annotation
-  extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
-  annotationRangesToMerge <- annotationGrangesList
-  mcols(annotationRangesToMerge)$readCount <- NA
-  mcols(annotationRangesToMerge)$txClassDescription <- "annotation"
-  mcols(annotationRangesToMerge)$novelTranscript <- FALSE
-  mcols(annotationRangesToMerge)$novelGene <- FALSE
-  mcols(annotationRangesToMerge)$txNDR <- NA
-  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
-  #copy over stats to annotations from read classes
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$txNDR = equalRanges$txNDR
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
+    #remove extended ranges that are already present in annotation
+    extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
+    annotationRangesToMerge <- annotationGrangesList
+    if(length(annotationGrangesList)){
+        mcols(annotationRangesToMerge)$readCount <- NA
+        mcols(annotationRangesToMerge)$txClassDescription <- "annotation"
+        mcols(annotationRangesToMerge)$novelTranscript <- FALSE
+        mcols(annotationRangesToMerge)$novelGene <- FALSE
+        mcols(annotationRangesToMerge)$txNDR <- NA
+        mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
+        #copy over stats to annotations from read classes
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$txNDR = equalRanges$txNDR
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
+    }
     if (length(extendedAnnotationRanges)) {
       mcols(extendedAnnotationRanges)$TXNAME <- paste0(
       prefix, "Tx", seq_along(extendedAnnotationRanges))
