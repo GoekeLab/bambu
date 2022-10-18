@@ -8,25 +8,17 @@
 #' allow comparison.
 #' @param reads A string or a vector of strings specifying the paths of bam
 #' files for genomic alignments, or a \code{BamFile} object or a
-#' \code{BamFileList}  object (see \code{Rsamtools}).
-#' @param rcFile A string or a vector of strings specifying the read
-#' class files that are saved during previous run of \code{\link{bambu}}.
-#' @param rcOutDir A string variable specifying the path to where
-#' read class files will be saved.
-#' @param annotations A \code{TxDb} object or A GRangesList object
-#' obtained by \code{\link{prepareAnnotations}}.
-#' @param genome A fasta file or a BSGenome object.
-#' @param stranded A boolean for strandedness, defaults to FALSE.
-#' @param ncore specifying number of cores used when parallel processing 
-#' is used, defaults to 1.
+#' \code{BamFileList}  object (see \code{Rsamtools}). Alternatively 
+#' string or a vector of strings specifying the read class files 
+#' that are saved during previous run of \code{\link{bambu}}.
+#' @param annotations A path to a .gtf file or a \code{TxDb} object 
+#' or a GRangesList object obtained by \code{\link{prepareAnnotations}}.
+#' @param genome A path to a fasta file or a BSGenome object.
 #' @param NDR specifying the maximum NDR rate to novel transcript
-#'     output from detected read classes, defaults to 0.1
-#' @param yieldSize see \code{Rsamtools}.
+#' output from detected read classes, defaults to an automatic recommendation
 #' @param opt.discovery A list of controlling parameters for isoform
 #' reconstruction process:
 #' \describe{
-#'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
-#'     defaults to empty}
 #'     \item{remove.subsetTx}{indicating whether filter to remove read classes
 #'     which are a subset of known transcripts(), defaults to TRUE}
 #'     \item{min.readCount}{specifying minimum read count to consider a read
@@ -53,13 +45,29 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
+#'     \item{fitReadClassModel}{ A boolean specifying if Bambu should attempt
+#'     to train a transcript discovery model for all samples. Defaults to TRUE}
+#'     \item{defaultModels}{A model object obtained by code{\link{trainBambu}}
+#'     or when returnModel is TRUE}
+#'     \item{returnModel}{A boolean specifying if the trained model is output
+#'     with the readclass files. Defaults to FALSE}
+#'     \item{baselineFDR}{A number between 0 - 1, specifying the false discovery
+#'     rate used during NDR recomendation. Defaults to 0.1}
 #'     \item{min.readFractionByEqClass}{indicating the minimum relative read
 #'     count of a subset transcript compared to all superset transcripts 
 #'     (ie the relative read count within the minimum equivalent class). This 
 #'     filter is applied on the set of annotations across all samples using the 
 #'     total read count, this is not a per-sample filter. Please use with 
 #'     caution. defaults to 0}
+#'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
+#'     defaults to "Bambu"}
 #' }
+#' @param rcOutDir A string variable specifying the path to where
+#' read class files will be saved.
+#' @param stranded A boolean for strandedness, defaults to FALSE.
+#' @param ncore specifying number of cores used when parallel processing 
+#' is used, defaults to 1.
+#' @param yieldSize see \code{Rsamtools}.
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \describe{
