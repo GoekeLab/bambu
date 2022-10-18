@@ -274,11 +274,22 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
                            on = c("readClassId", "GENEID")]
     #here, each transcript should be assigned to one gene only based on isore.estimateDistanceToAnnotation function
     ##this step is very slow, consider to use integers instead of tx_ids
-    distTable[order(readClassId,GENEID,txid), 
-              eqClassById :=.(list(sort(unique(ifelse(equal, -1*txid,txid))))),
-              by = list(readClassId, GENEID)]
+    eqClassByIdList <- createList(distTable$readClassId, distTable$txid*(-1)^(distTable$equal))
+    distTable[, eqClassById := as.list(eqClassByIdList)]
     return(distTable)
 }
+
+#' create list
+#' @import data.table
+#' @noRd
+createList <- function(query, subject){
+    eqDt <- data.table(query = query, subject = subject)
+    eqDt <- eqDt[order(query, subject)]
+    eqClassByIdList <- splitAsList(eqDt$subject, eqDt$query)
+    eqClassByIdList <- unname(eqClassByIdList[query])
+    return(eqClassByIdList)
+}
+
 
 #' get the count and rc_width for each equiRC
 #' @import data.table
@@ -303,27 +314,7 @@ getUniCountPerEquiRC <- function(distTable){
 #' @import data.table
 #' @noRd
 addEmptyRC <- function(eqClassCount, annotations){
-    minEquiRC <- as.data.frame(mcols(annotations)[,c("eqClassById","GENEID","txid")])
-    minEquiRC$eqClassById <- unAsIs(minEquiRC$eqClassById)
-    #colnames(minEquiRC)[1] <- "eqClassByIdTemp"
-   
-    minEquiRCTemp <- minEquiRC  %>% 
-        mutate(txidTemp = eqClassById) %>% 
-        unnest(c(txidTemp)) %>%
-        mutate(equal = ifelse(txid == txidTemp, TRUE, FALSE)) %>%
-        mutate(txidTemp = ifelse(txid == txidTemp, -1*as.numeric(txidTemp),txidTemp)) %>%
-        group_by(eqClassById, txid) %>%
-        mutate(eqClassByIdTemp = list(sort(unique(txidTemp)))) %>%
-        ungroup() %>% 
-        mutate(txid = abs(txidTemp), eqClassById = eqClassByIdTemp, eqClassByIdTemp = NULL, txidTemp = NULL) %>%
-        distinct()
-    
-    minEquiRC <- minEquiRC %>% 
-        mutate(txidTemp = eqClassById) %>% 
-        unnest(c(txidTemp)) %>%
-        mutate(minRC = 1, equal = FALSE, txid = txidTemp, txidTemp = NULL)
-    
-    minEquiRC <- bind_rows(minEquiRC, minEquiRCTemp)
+    minEquiRC <- processMinEquiRC(annotations)
     eqClassCount <- createEqClassToTxMapping(eqClassCount)
     eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassById","GENEID","txid","equal"))
     eqClassCountJoin[is.na(eqClassCountJoin)] <- 0
@@ -335,6 +326,36 @@ addEmptyRC <- function(eqClassCount, annotations){
         ungroup() %>%
         distinct()
     return(eqClassCount_final)
+}
+
+# process minEquiRC
+#' @import data.table
+#' @noRd
+processMinEquiRC <- function(annotations){
+    minEquiRC <- as.data.frame(mcols(annotations)[,c("eqClassById","GENEID","txid")])
+    minEquiRC$eqClassById <- unAsIs(minEquiRC$eqClassById)
+    
+    minEquiRCTemp <- minEquiRC  %>% 
+        mutate(txidTemp = eqClassById) %>% 
+        unnest(c(txidTemp)) %>% # split minequirc to txid
+        mutate(equal = ifelse(txid == txidTemp, TRUE, FALSE)) %>% # create equal variable 
+        group_by(eqClassById, txid) %>%
+        mutate(eqClassByIdTemp = cur_group_id())
+    eqClassByIdList <- createList(minEquiRCTemp$eqClassByIdTemp, minEquiRCTemp$txid*(-1)^minEquiRCTemp$equal)
+    minEquiRCTemp$eqClassById <- as.list(eqClassByIdList)
+    
+    minEquiRCTemp <- minEquiRCTemp %>%
+        ungroup() %>% 
+        mutate(txid = txidTemp, eqClassByIdTemp = NULL, txidTemp = NULL) %>%
+        distinct()
+    
+    minEquiRC <- minEquiRC %>% 
+        mutate(txidTemp = eqClassById) %>% 
+        unnest(c(txidTemp)) %>%
+        mutate(minRC = 1, equal = FALSE, txid = txidTemp, txidTemp = NULL)
+    
+    minEquiRC <- bind_rows(minEquiRC, minEquiRCTemp)
+    return(minEquiRC)
 }
 
 #' Function to get rid of AsIs class so that group_by can be used on eqClassById column in mcols(annotations)
