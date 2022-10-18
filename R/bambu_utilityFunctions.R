@@ -25,11 +25,10 @@ setIsoreParameters <- function(isoreParameters){
         min.readFractionByGene = 0.05,
         min.sampleNumber = 1,
         min.exonDistance = 35,
-        min.exonOverlap = 10, #
+        min.exonOverlap = 10, 
         min.primarySecondaryDist = 5,
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
-        min.exonOverlap = 10,
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
         fitReadClassModel = TRUE,
