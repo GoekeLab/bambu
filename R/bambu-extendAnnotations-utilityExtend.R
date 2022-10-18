@@ -85,12 +85,13 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
-  rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
+  rowDataCombined = calculateNDROnTranscripts(rowDataCombined, 
+                        useTxScore = length(annotationGrangesList)==0)
 
   if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
       NDR = recommendNDR(rowDataCombined, baselineFDR, NDR, defaultModels, verbose)
   } else {
-      if(is.null(NDR)) NDR = 0.1
+      if(is.null(NDR)) NDR = 0.5
   }
   filterSet = (rowDataCombined$txNDR <= NDR)
   exonRangesCombined <- exonRangesCombined[filterSet]
@@ -160,15 +161,16 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     return(NDR)
 }
 
-calculateNDROnTranscripts <- function(combinedTranscripts){
+calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
       # calculate and filter by NDR
     equal = combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] = FALSE
-    if(sum(equal, na.rm = TRUE)<50 | 
+    if(sum(equal, na.rm = TRUE)<50 | sum(!equal, na.rm = TRUE)<50 | useTxScore){
         sum(!equal, na.rm = TRUE)<50){
           combinedTranscripts$txNDR = 1 - combinedTranscripts$maxTxScore
-          message("WARNING - Less than 50 TRUE or FALSE read classes for NDR precision stabilization. ",
-          "Filtering by prediction score instead")
+          if(!useTxScore) message("WARNING - Less than 50 TRUE or FALSE read classes ",
+            "for NDR precision stabilization.")
+          message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else combinedTranscripts$txNDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     return(combinedTranscripts)
 }
