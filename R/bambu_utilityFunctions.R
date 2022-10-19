@@ -80,7 +80,7 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
             if (!all(c("TXNAME", "GENEID", "txid","eqClassById") %in% 
                      colnames(mcols(annotations)))) 
                 stop("The annotations is not properly prepared.\nPlease 
-                    prepareAnnnotations using prepareAnnotations function.")
+                    see ?prepareAnnotations for help")
             if(anyDuplicated(mcols(annotations)$TXNAME)) {
                 warning('Annotations contain duplicated transcript/gene names
                         Please re-create your annotation object')
