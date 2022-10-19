@@ -24,11 +24,10 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     readClassDt <- tx_len[readClassDt, on = "txid"] %>% distinct()
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,
                                ncore = ncore, verbose = verbose)
-    compatibleCounts[, tx_name := names(annotations)[as.numeric(txid)]]
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
     setnames(incompatibleCounts, "counts", colnames(readClass))
-    counts <- compatibleCounts[match(names(annotations),tx_name)]
+    counts <- compatibleCounts[match(seq_along(names(annotations)), txid)]
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
     seOutput <- SummarizedExperiment(
@@ -58,6 +57,57 @@ bambu.quantify <- function(readClass, annotations, emParameters,
 bambu.quantDT <- function(readClassDt = readClassDt, 
                           emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
                                               minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
+    rcPreOut <- addAval(readClassDt, emParameters)
+    readClassDt <- rcPreOut[[1]]
+    outIni <- initialiseOutput(readClassDt)
+    readClassDt <- formatAmat(filterTxRc(readClassDt))
+    inputRcDt <- getInputList(readClassDt)
+    start.ptm <- proc.time()
+    outEst <- abundance_quantification(inputRcDt,
+                                           ncore = ncore,
+                                           maxiter = emParameters[["maxiter"]],
+                                           conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
+    end.ptm <- proc.time()
+    if (verbose) message("Finished EM estimation in ",
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    out <- modifyQuantOut(outEst,outIni)
+    theta_est <- formatOutput(rbind(rcPreOut[[2]],outListEst))
+    theta_est <- removeDuplicates(theta_est)
+    return(theta_est)
+}
+
+#' 
+#' @noRd
+getInputList <- function(readClassDt){
+    nObsVec <- unique(readClassDt[,.(gene_sid, eqClassId, n.obs)])[order(gene_sid,eqClassId)]
+    nObsList <- splitAsList(nObsVec$n.obs,nObsVec$gene_sid)
+    readClassDt$nObs_list <- as.list(unname(nObsList[readClassDt$gene_sid]))
+    txidsVec <- unique(readClassDt[,.(gene_sid, txid)])[order(gene_sid,txid)]
+    txidsList <- splitAsList(txidsVec$txid,txidsVec$gene_sid)
+    readClassDt$txids_list <- as.list(unname(txidsList[readClassDt$gene_sid]))
+    readClassDt[, arr_list := .(list(getAMatArray(.SD,unique(.SD$txid),unique(.SD$eqClassId)))), by = gene_sid]
+    inputRCDt <- readClassDt %>% select(gene_sid, K, nObs_list, arr_list, txids_list) %>% distinct() %>% data.table()
+    inputRCDt <- split(inputRCDt, by = "gene_sid")
+    return(inputRCDt)
+}
+
+#' 
+#' @noRd
+filterTxRc <- function(readClassDt){
+    # step 1: remove transcripts without reads support 
+    readClassDt[, sum_n := sum(nobs), by = list(gene_sid, txid)]
+    readClassDt <- readClassDt %>% 
+        filter(sum_n>0) %>%
+        mutate(sum_n = NULL) %>%
+        data.table()
+    readClassDt <- readClassDt[order(gene_sid, txid, eqClassId)]
+    return(readClassDt)
+}
+
+
+#' Add A matrix for total, full-length, unique
+#' @noRd
+addAval <- function(readClassDt, emParameters){
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
     } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
@@ -66,11 +116,7 @@ bambu.quantDT <- function(readClassDt = readClassDt,
             are missing from object.")
     }
     ## ----step2: match to simple numbers to increase claculation efficiency
-    geneVec <- unique(readClassDt$GENEID)
-    txVec <- unique(readClassDt$txid)
-    eqClassMap <- readClassDt[,.(eqClassById, eqClassId)] %>% distinct()
-    readClassDt <- 
-        simplifyNames(readClassDt,geneVec)
+    readClassDt <- simplifyNames(readClassDt)
     d_mode <- emParameters[["degradationBias"]]
     start.ptm <- proc.time()
     if (d_mode) {
@@ -86,19 +132,15 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     removeList <- removeUnObservedGenes(readClassDt)
     readClassDt <- removeList[[1]] # keep only observed genes for estimation
     outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
-    start.ptm <- proc.time()
-    outListEst <- abundance_quantification(readClassDt,
-                                           ncore = ncore,
-                                           maxiter = emParameters[["maxiter"]],
-                                           conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
-    end.ptm <- proc.time()
-    if (verbose) message("Finished EM estimation in ",
-                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    theta_est <- formatOutput(rbind(outList,outListEst),txVec,geneVec)
-    theta_est <- removeDuplicates(theta_est)
-    return(theta_est)
+    readClassDt <- select(readClassDt, gene_sid, eqClassId, 
+                          multi_align, nobs, txid, equal, aval) %>% 
+        group_by(gene_sid) %>%
+        mutate(K = sum(nobs), n.obs=nobs/K) %>%
+        ungroup() %>%
+        distinct() %>%
+        data.table()
+    return(list(readClassDt, outList))
 }
-
 
 #' Generate read to transcript mapping
 #' @noRd
