@@ -189,7 +189,12 @@ writeBambuOutput(se, path = "./bambu/")
 ```
 If you are only interested in the novel transcripts, one can filter this 'se' object first to remove reference annotations.
 ```rscript
-se.novel = se[mcols(se)$txClassDescription != "annotation",]
+se.novel = se[mcols(se)$novelTranscript,]
+writeBambuOutput(se.novel, path = "./bambu/")
+```
+If you are only interested in full-length transcripts that were detected by Bambu.
+```rscript
+se.novel = se[assays(se)$fullLengthCounts >= 1,]
 writeBambuOutput(se.novel, path = "./bambu/")
 ```
 
@@ -201,8 +206,13 @@ writeToGTF(se.discoveryOnly, "./output.gtf")
 ```
 As above, to output only the novel annotations, you need to filter out the reference annotations.
 ```rscript
-se.discoveryOnly.novel = se.discoveryOnly[mcols(se.discoveryOnly)$txClassDescription != "annotation",]
+se.discoveryOnly.novel = se.discoveryOnly[mcols(se.discoveryOnly)$novelTranscript,]
 writeToGTF(se.discoveryOnly.novel, "./output.gtf")
+```
+If you are only interested in full-length transcripts that were detected by Bambu. If multiple transcripts share exon-junctions, only one will be displayed. To avoid this, do the filter after quantification as in the example above.
+```rscript
+se.novel = se[!is.na(mcols(se)$readCount) & mcols(se)$readCount >= 1,]
+writeBambuOutput(se.novel, path = "./bambu/")
 ```
 
 If both quant and discovery are set to FALSE, *bambu* will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
