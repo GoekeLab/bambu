@@ -8,14 +8,12 @@ using namespace Rcpp ;
 // [[Rcpp::export]]
 List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
                const arma::rowvec Y, // observed number of reads for each read class j
-               const double lambda,  // the tuning parameter for bias estimation, take as
                const int maxiter,
                const double minvalue,
                const double conv // , const int nThr = 1
 
 ) {
   int M = X.n_rows; //number of isoforms
-
   // omp_set_num_threads(nThr) ; // using multiple threads
 
   // containers
@@ -79,7 +77,6 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
 List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last dimension 1 is all, 2 is full, 3 is partial, 4 is unique
                const arma::rowvec Y, // observed number of reads for each read class j
                const double K, //total read count
-               const double lambda,  // the tuning parameter for bias estimation, take as
                const int maxiter,
                const double minvalue,
                const double conv  // , const int nThr = 1
@@ -93,7 +90,7 @@ List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last
   List theta_out(3); // create a empty list of size 3
   arma::rowvec theta(M);
   
-  theta_out = em_theta(X, Y, lambda, maxiter, minvalue, conv) ;
+  theta_out = em_theta(X, Y, maxiter, minvalue, conv) ; //lambda,
   theta = Rcpp::as<arma::rowvec>(theta_out[0]) ;
 
   // post-process outputs
