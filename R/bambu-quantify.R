@@ -19,9 +19,6 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
     incompatibleCounts <- processIncompatibleCounts(readClassDist)
     readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-    tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
-                               txlen = sum(width(annotations))))
-    readClassDt <- tx_len[readClassDt, on = "txid"] %>% distinct()
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,
                                ncore = ncore, verbose = verbose)
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
@@ -34,9 +31,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,
         assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
         dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
         ncol =  1, dimnames = list(NULL, colNameRC)),
-        fullLengthCounts = matrix(counts$FullLengthCounts, ncol = 1,
+        fullLengthCounts = matrix(counts$fullLengthCounts, ncol = 1,
             dimnames = list(NULL, colNameRC)),
-        uniqueCounts = matrix(counts$UniqueCounts, 
+        uniqueCounts = matrix(counts$uniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
     metadata(seOutput)$incompatibleCounts = incompatibleCounts
     if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
@@ -60,18 +57,19 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     rcPreOut <- addAval(readClassDt, emParameters)
     readClassDt <- rcPreOut[[1]]
     outIni <- initialiseOutput(readClassDt)
-    readClassDt <- formatAmat(filterTxRc(readClassDt))
+    readClassDt <- filterTxRc(readClassDt) 
     inputRcDt <- getInputList(readClassDt)
+    readClassDt <- split(readClassDt, by = "gene_sid")
     start.ptm <- proc.time()
-    outEst <- abundance_quantification(inputRcDt,
+    outEst <- abundance_quantification(inputRcDt, readClassDt,
                                            ncore = ncore,
                                            maxiter = emParameters[["maxiter"]],
                                            conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.ptm <- proc.time()
     if (verbose) message("Finished EM estimation in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    out <- modifyQuantOut(outEst,outIni)
-    theta_est <- formatOutput(rbind(rcPreOut[[2]],outListEst))
+    outEst <- modifyQuantOut(outEst,outIni)
+    theta_est <- formatOutput(rbind(rcPreOut[[2]],outEst))
     theta_est <- removeDuplicates(theta_est)
     return(theta_est)
 }
@@ -81,26 +79,26 @@ bambu.quantDT <- function(readClassDt = readClassDt,
 getInputList <- function(readClassDt){
     nObsVec <- unique(readClassDt[,.(gene_sid, eqClassId, n.obs)])[order(gene_sid,eqClassId)]
     nObsList <- splitAsList(nObsVec$n.obs,nObsVec$gene_sid)
-    readClassDt$nObs_list <- as.list(unname(nObsList[readClassDt$gene_sid]))
+    inputRcDt <- unique(readClassDt[,.(gene_sid, K)])
+    inputRcDt[, nObs_list := as.list(unname(nObsList))]
     txidsVec <- unique(readClassDt[,.(gene_sid, txid)])[order(gene_sid,txid)]
     txidsList <- splitAsList(txidsVec$txid,txidsVec$gene_sid)
-    readClassDt$txids_list <- as.list(unname(txidsList[readClassDt$gene_sid]))
-    readClassDt[, arr_list := .(list(getAMatArray(.SD,unique(.SD$txid),unique(.SD$eqClassId)))), by = gene_sid]
-    inputRCDt <- readClassDt %>% select(gene_sid, K, nObs_list, arr_list, txids_list) %>% distinct() %>% data.table()
-    inputRCDt <- split(inputRCDt, by = "gene_sid")
-    return(inputRCDt)
+    inputRcDt[, txids_list := as.list(unname(txidsList))]
+    inputRcDt <- split(inputRcDt, by = "gene_sid")
+    return(inputRcDt)
 }
 
 #' 
 #' @noRd
 filterTxRc <- function(readClassDt){
-    # step 1: remove transcripts without reads support 
-    readClassDt[, sum_n := sum(nobs), by = list(gene_sid, txid)]
-    readClassDt <- readClassDt %>% 
-        filter(sum_n>0) %>%
-        mutate(sum_n = NULL) %>%
+    readClassDt <- group_by(readClassDt,gene_sid, txid) %>% 
+        filter(sum(nobs)>0) %>% ungroup() %>%
+        arrange(gene_sid, txid, eqClassId) %>%
+        mutate(uniqueAval =  aval * (!multi_align),
+               fullAval = aval * equal,
+               multi_align = NULL,
+               equal = NULL) %>%
         data.table()
-    readClassDt <- readClassDt[order(gene_sid, txid, eqClassId)]
     return(readClassDt)
 }
 
@@ -132,14 +130,15 @@ addAval <- function(readClassDt, emParameters){
     removeList <- removeUnObservedGenes(readClassDt)
     readClassDt <- removeList[[1]] # keep only observed genes for estimation
     outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
-    readClassDt <- select(readClassDt, gene_sid, eqClassId, 
-                          multi_align, nobs, txid, equal, aval) %>% 
-        group_by(gene_sid) %>%
-        mutate(K = sum(nobs), n.obs=nobs/K) %>%
+    readClassDt_withGeneCount <- select(readClassDt, gene_sid, eqClassId, nobs) %>% 
+        unique() %>%
+        group_by(gene_sid) %>% 
+        mutate(K = sum(nobs), n.obs=nobs/K, nobs = NULL) %>% ## check if this is unique by eqClassId
         ungroup() %>%
         distinct() %>%
+        right_join(readClassDt, by = c("gene_sid","eqClassId")) %>%
         data.table()
-    return(list(readClassDt, outList))
+    return(list(readClassDt_withGeneCount, outList))
 }
 
 #' Generate read to transcript mapping

@@ -74,7 +74,9 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
 //' L1-penalized likelihood estimation
 //' @noRd
 // [[Rcpp::export]]
-List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last dimension 1 is all, 2 is full, 3 is partial, 4 is unique
+List emWithL1 (const arma::mat A, // alignment compatibility matrix for all 
+               const arma::mat A_full, // alignment compatibility matrix for full alignment
+               const arma::mat A_unique,// alignment compatibility matrix for unique alignment
                const arma::rowvec Y, // observed number of reads for each read class j
                const double K, //total read count
                const int maxiter,
@@ -83,7 +85,7 @@ List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last
 ){
 
   // initialization
-  arma::mat X = A.slice(0); 
+  arma::mat X = A; 
   int M = X.n_rows; //number of isoforms
 
 
@@ -98,9 +100,9 @@ List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last
   //estMat.row(0) = theta;
   arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
   baseSum.replace(arma::datum::nan, 0);
-  estMat.row(0) = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(1) = arma::sum(((A.slice(1).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(2) = arma::sum(((A.slice(2).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(0) = arma::sum(((A.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(1) = arma::sum(((A_full.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(2) = arma::sum(((A_unique.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
   // returns
   List ret ;
   ret["theta"] = estMat;

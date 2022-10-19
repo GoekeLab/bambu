@@ -27,25 +27,27 @@ BEGIN_RCPP
 END_RCPP
 }
 // emWithL1
-List emWithL1(const arma::cube A, const arma::rowvec Y, const double K, const int maxiter, const double minvalue, const double conv);
-RcppExport SEXP _bambu_emWithL1(SEXP ASEXP, SEXP YSEXP, SEXP KSEXP, SEXP maxiterSEXP, SEXP minvalueSEXP, SEXP convSEXP) {
+List emWithL1(const arma::mat A, const arma::mat A_full, const arma::mat A_unique, const arma::rowvec Y, const double K, const int maxiter, const double minvalue, const double conv);
+RcppExport SEXP _bambu_emWithL1(SEXP ASEXP, SEXP A_fullSEXP, SEXP A_uniqueSEXP, SEXP YSEXP, SEXP KSEXP, SEXP maxiterSEXP, SEXP minvalueSEXP, SEXP convSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::cube >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type A_full(A_fullSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type A_unique(A_uniqueSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec >::type Y(YSEXP);
     Rcpp::traits::input_parameter< const double >::type K(KSEXP);
     Rcpp::traits::input_parameter< const int >::type maxiter(maxiterSEXP);
     Rcpp::traits::input_parameter< const double >::type minvalue(minvalueSEXP);
     Rcpp::traits::input_parameter< const double >::type conv(convSEXP);
-    rcpp_result_gen = Rcpp::wrap(emWithL1(A, Y, K, maxiter, minvalue, conv));
+    rcpp_result_gen = Rcpp::wrap(emWithL1(A, A_full, A_unique, Y, K, maxiter, minvalue, conv));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_bambu_em_theta", (DL_FUNC) &_bambu_em_theta, 5},
-    {"_bambu_emWithL1", (DL_FUNC) &_bambu_emWithL1, 6},
+    {"_bambu_emWithL1", (DL_FUNC) &_bambu_emWithL1, 8},
     {NULL, NULL, 0}
 };
 

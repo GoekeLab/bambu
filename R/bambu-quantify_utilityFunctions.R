@@ -3,29 +3,27 @@
 #' @param readClassDt A \code{data.table} with columns
 #' @importFrom BiocParallel bpparam bplapply
 #' @noRd
-abundance_quantification <- function(inputRCDt, ncore = 1,
+abundance_quantification <- function(inputRCDt, readClassDt, ncore = 1,
                                      maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
       if (ncore == 1) {
-        emResultsList <- lapply(inputRCDt,
+        emResultsList <- lapply(as.numeric(names(inputRcDt)),
                                 run_parallel,
                                 conv = conv,
                                 minvalue = minvalue, 
-                                maxiter = maxiter
-                                # readClassDt = readClassDt, 
-                                # totalCount = totalCount,
-                                # nObsVec = nObsVec
+                                maxiter = maxiter,
+                                inputRcDt = inputRcDt,
+                                readClassDt = readClassDt
         )
     } else {
         bpParameters <- bpparam()
         bpParameters$workers <- ncore
-        emResultsList <- bplapply(inputRCDt,
+        emResultsList <- bplapply(as.numeric(names(inputRcDt)),
                                   run_parallel,
                                   conv = conv,
                                   minvalue = minvalue, 
                                   maxiter = maxiter,
-                                  # readClassDt = readClassDt,
-                                  # totalCount = totalCount,
-                                  # nObsVec = nObsVec,
+                                  inputRcDt = inputRcDt,
+                                  readClassDt = readClassDt,
                                   BPPARAM = bpParameters
         )
     }
@@ -41,19 +39,22 @@ abundance_quantification <- function(inputRCDt, ncore = 1,
 #' @importFrom methods is
 #' @import data.table
 #' @noRd
-run_parallel <- function(g, conv, minvalue, maxiter) {
-    K <- g$K
-    n.obs <- g$nObs_list[[1]]
-    aMatArray <- g$arr_list[[1]]
-    txids <- g$txids_list[[1]]
-    if (is(aMatArray[,,1],"numeric")&(nrow(aMatArray)==1)) {
-        aMatArrayUpdated <- K*n.obs*aMatArray
-        outEst <- cbind(sum(aMatArrayUpdated[,,1]),
-                       sum(aMatArrayUpdated[,,2]),
-                       sum(aMatArrayUpdated[,,3]),
+run_parallel <- function(g, conv, minvalue, maxiter, inputRcDt, readClassDt) {
+    input_g <- inputRcDt[[g]]  
+    K <- input_g$K
+    n.obs <- input_g$nObs_list[[1]]
+    txids <- input_g$txids_list[[1]]
+    rcMat <- readClassDt[[g]]
+    total_mat <- getAMat(rcMat, by = "aval")
+    full_mat <- getAMat(rcMat, by = "fullAval")
+    unique_mat <- getAMat(rcMat, by = "uniqueAval")
+     if (is(total_mat,"numeric")&(nrow(total_mat)==1)) {
+        outEst <- cbind(sum( K*n.obs*total_mat),
+                       sum(K*n.obs*full_mat),
+                       sum(K*n.obs*unique_mat),
                        unname(txids))
     }else{
-        est_output <- emWithL1(A = aMatArray, Y = n.obs, K = K,
+        est_output <- emWithL1(A = total_mat, A_full = full_mat, A_unique = unique_mat, Y = n.obs, K = K,
                                 maxiter = maxiter,
                                minvalue = minvalue, conv = conv)
         outEst <- cbind(t(est_output[["theta"]]),unname(txids))
@@ -61,25 +62,16 @@ run_parallel <- function(g, conv, minvalue, maxiter) {
     return(outEst)
 }
 
-getAMatArray <- function(rcMat,txids, eqids){
-    aMatArray <- array(NA,dim = c(length(txids),
-                                  length(eqids),3),
-                       dimnames = list(txids, eqids, NULL))
-    aMatArray[,,1] <- as.matrix(dcast(rcMat, txid ~ eqClassId, value.var = "aval")[,-1,with = FALSE])
-    aMatArray[,,2] <- as.matrix(dcast(rcMat, txid ~ eqClassId, value.var = "fullAval")[,-1,with = FALSE])
-    aMatArray[,,3] <- as.matrix(dcast(rcMat, txid ~ eqClassId, value.var = "uniqueAval")[,-1,with = FALSE])
-    aMatArray[is.na(aMatArray)] <- 0
-    return(aMatArray)
-}
-#' This function generates the wide-format a matrix
-#' @import data.table
-#' @noRd
-formatAmat <- function(readClassDt){
-    readClassDt <- as.data.table(readClassDt)
-    readClassDt[, `:=`(uniqueAval = aval * (!multi_align),
-                       fullAval = aval * equal)]
-    readClassDt[, `:=`(multi_align = NULL, equal = NULL)]
-    return(readClassDt)
+# total_mat <- as.matrix(rcMat[CJ(unique(txid), unique(eqClassId)), allow.cartesian = T][, as.list(setattr(aval, 'names', eqClassId)), by=list(txid)][, txid := NULL]),
+# full_mat <- as.matrix(rcMat[CJ(unique(txid), unique(eqClassId)), allow.cartesian = T][, as.list(setattr(fullAval, 'names', eqClassId)), by=list(txid)][, txid := NULL]),
+# unique_mat <- as.matrix(rcMat[CJ(unique(txid), unique(eqClassId)), allow.cartesian = T][, as.list(setattr(uniqueAval, 'names', eqClassId)), by=list(txid)][, txid := NULL]),
+
+
+getAMat <- function(rcMat, by = "aval"){
+    a_mat <- dcast(rcMat, txid ~ eqClassId, value.var = by)
+    a_mat[, txid := NULL]
+    a_mat[is.na(a_mat)] <- 0
+    return(as.matrix(a_mat))
 }
 
 #' This function generates a_mat values for all transcripts 
@@ -115,10 +107,8 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 initialiseOutput <- function(readClassDt){
     return(unique(data.table(txid = readClassDt$txid,
                       counts = 0,
-                      FullLengthCounts = 0,
-                      UniqueCounts = 0, 
-                      gene_sid = readClassDt$gene_sid, 
-                      ntotal = readClassDt$K),by = NULL))
+                      fullLengthCounts = 0,
+                      uniqueCounts = 0),by = NULL))
 }
 
 
@@ -154,11 +144,10 @@ calculateDegradationRate <- function(readClassDt){
 #' @import data.table
 #' @noRd
 modifyQuantOut <- function(outEst, outIni){
-    outReport <- data.table(txid = , 
-        counts = outEst[1,],
-        FullLengthCounts = outEst[2,],
-        UniqueCounts = outEst[3,])
-    return(out)
+    outIni[match(outEst[,4], txid),counts := outEst[,1]]
+    outIni[match(outEst[,4], txid), fullLengthCounts := outEst[,2]]
+    outIni[match(outEst[,4], txid), uniqueCounts := outEst[,3]]
+    return(outIni)
 }
 
 
@@ -177,8 +166,8 @@ simplifyNames <- function(readClassDt){
 #' names 
 #' @noRd
 formatOutput <- function(theta_est){
-    theta_est <- theta_est[, .(txid, counts,FullLengthCounts,
-UniqueCounts)]
+    theta_est <- theta_est[, .(txid, counts, fullLengthCounts,
+    uniqueCounts)]
     totalCount <- sum(theta_est$counts)
     theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
     return(theta_est)
@@ -190,8 +179,8 @@ UniqueCounts)]
 #' @noRd
 removeDuplicates <- function(counts){
     counts_final <- unique(counts[, list(counts = sum(counts),
-                                         FullLengthCounts = sum(FullLengthCounts),
-                                         UniqueCounts = sum(UniqueCounts),
+                                         fullLengthCounts = sum(fullLengthCounts),
+                                         uniqueCounts = sum(uniqueCounts),
                                          CPM = sum(CPM)), by = txid],by = NULL)
     return(counts_final)
 }
@@ -206,9 +195,8 @@ removeUnObservedGenes <- function(readClassDt){
         readClassDt <- readClassDt[!(gene_sid %in% uoGenes)]
         outList <- data.table(txid = uo_txGeneDt$txid,
                               counts = 0, 
-                              FullLengthCounts = 0,
-                              UniqueCounts = 0,
-                              gene_sid = uo_txGeneDt$gene_sid, ntotal = 0)
+                              fullLengthCounts = 0,
+                              uniqueCounts = 0)
     }else{
         outList <- NULL
     }
@@ -223,16 +211,19 @@ removeUnObservedGenes <- function(readClassDt){
 #' @import data.table
 #' @noRd
 genEquiRCs <- function(readClassDist, annotations, verbose){
-    start.ptm <- proc.time()
-    ## aggregate rc's based on their alignment to full or partial transcripts
     distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
     eqClassCount <- getUniCountPerEquiRC(distTable)
     eqClassTable <- addEmptyRC(eqClassCount, annotations)
     # create equiRC id 
     eqClassTable <- eqClassTable %>% 
         group_by(eqClassById) %>%
-        mutate(eqClassId = cur_group_id())
-    return(data.table(eqClassTable))
+        mutate(eqClassId = cur_group_id()) %>%
+        data.table()
+    
+    tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
+                               txlen = sum(width(annotations))))
+    eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
+    return(eqClassTable)
 }
 
 #' This function formats the distance table obtained from readClass by checking 

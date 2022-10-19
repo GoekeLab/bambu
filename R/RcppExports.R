@@ -9,7 +9,7 @@ em_theta <- function(X, Y, maxiter, minvalue, conv) {
 
 #' L1-penalized likelihood estimation
 #' @noRd
-emWithL1 <- function(A, Y, K, maxiter, minvalue, conv) {
-    .Call(`_bambu_emWithL1`, A, Y, K, maxiter, minvalue, conv)
+emWithL1 <- function(A, A_full, A_unique, Y, K, maxiter, minvalue, conv) {
+    .Call(`_bambu_emWithL1`, A, A_full, A_unique, Y, K, maxiter, minvalue, conv)
 }
 
