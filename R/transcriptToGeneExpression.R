@@ -37,10 +37,10 @@ transcriptToGeneExpression <- function(se) {
         valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
     ## geneRanges
     exByGene <- reducedRangesByGenes(rowRanges(se))
-    if ("newTxClass" %in% colnames(rowDataSe)) {
-        rowDataSe <- rowDataSe[, .(TXNAME, GENEID, newTxClass)]
+    if ("txClassDescription" %in% colnames(rowDataSe)) {
+        rowDataSe <- rowDataSe[, .(TXNAME, GENEID, txClassDescription)]
         rowDataSe[, newGeneClass := ifelse(grepl("ENSG", GENEID),
-            "annotation", unique(newTxClass)), by = GENEID]
+            "annotation", unique(txClassDescription)), by = GENEID]
         mcols(exByGene) <- unique(rowDataSe[, .(GENEID,
             newGeneClass)])[match(names(exByGene), GENEID)]
     }

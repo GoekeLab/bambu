@@ -9,7 +9,7 @@ if (getRversion() >= "2.15.1") {
         "estimates", "exon_rank", "feature",
         "geneCount", "geneId", "gene_id", "gene_sid",
         "groupVar", "group_name", "intronEnds",
-        "intronStarts", "newGeneClass", "newTxClass",
+        "intronStarts", "newGeneClass", "txClassDescription",
         "nobs_stored", "queryElementsOutsideMaxDist",
         "queryHits.x", "queryHits.y", "readClassId",
         "readCount", "read_class_id", "read_class_sid",

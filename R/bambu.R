@@ -8,25 +8,17 @@
 #' allow comparison.
 #' @param reads A string or a vector of strings specifying the paths of bam
 #' files for genomic alignments, or a \code{BamFile} object or a
-#' \code{BamFileList}  object (see \code{Rsamtools}).
-#' @param rcFile A string or a vector of strings specifying the read
-#' class files that are saved during previous run of \code{\link{bambu}}.
-#' @param rcOutDir A string variable specifying the path to where
-#' read class files will be saved.
-#' @param annotations A \code{TxDb} object or A GRangesList object
-#' obtained by \code{\link{prepareAnnotations}}.
-#' @param genome A fasta file or a BSGenome object.
-#' @param stranded A boolean for strandedness, defaults to FALSE.
-#' @param ncore specifying number of cores used when parallel processing 
-#' is used, defaults to 1.
+#' \code{BamFileList}  object (see \code{Rsamtools}). Alternatively 
+#' string or a vector of strings specifying the read class files 
+#' that are saved during previous run of \code{\link{bambu}}.
+#' @param annotations A path to a .gtf file or a \code{TxDb} object 
+#' or a GRangesList object obtained by \code{\link{prepareAnnotations}}.
+#' @param genome A path to a fasta file or a BSGenome object.
 #' @param NDR specifying the maximum NDR rate to novel transcript
-#'     output from detected read classes, defaults to 0.1
-#' @param yieldSize see \code{Rsamtools}.
+#' output from detected read classes, defaults to an automatic recommendation
 #' @param opt.discovery A list of controlling parameters for isoform
 #' reconstruction process:
 #' \describe{
-#'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
-#'     defaults to empty}
 #'     \item{remove.subsetTx}{indicating whether filter to remove read classes
 #'     which are a subset of known transcripts(), defaults to TRUE}
 #'     \item{min.readCount}{specifying minimum read count to consider a read
@@ -53,12 +45,22 @@
 #'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
+#'     \item{fitReadClassModel}{ A boolean specifying if Bambu should attempt
+#'     to train a transcript discovery model for all samples. Defaults to TRUE}
+#'     \item{defaultModels}{A model object obtained by code{\link{trainBambu}}
+#'     or when returnModel is TRUE}
+#'     \item{returnModel}{A boolean specifying if the trained model is output
+#'     with the readclass files. Defaults to FALSE}
+#'     \item{baselineFDR}{A number between 0 - 1, specifying the false discovery
+#'     rate used during NDR recomendation. Defaults to 0.1}
 #'     \item{min.readFractionByEqClass}{indicating the minimum relative read
 #'     count of a subset transcript compared to all superset transcripts 
 #'     (ie the relative read count within the minimum equivalent class). This 
 #'     filter is applied on the set of annotations across all samples using the 
 #'     total read count, this is not a per-sample filter. Please use with 
 #'     caution. defaults to 0}
+#'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
+#'     defaults to "Bambu"}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -71,22 +73,28 @@
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
 #' }
+#' @param rcOutDir A string variable specifying the path to where
+#' read class files will be saved.
+#' @param discovery A logical variable indicating whether annotations
+#' are to be extended. Defaults to TRUE
+#' @param quant A logical variable indicating whether quantification will 
+#' be performed. If false the output type will change. Defaults to TRUE
+#' @param stranded A boolean for strandedness, defaults to FALSE.
+#' @param ncore specifying number of cores used when parallel processing 
+#' is used, defaults to 1.
+#' @param yieldSize see \code{Rsamtools}.
 #' @param trackReads When TRUE read names will be tracked and output as
 #' metadata in the final output as readToTranscriptMaps detailing. 
 #' the assignment of reads to transcripts. The output is a list with 
 #' an entry for each sample.
-#' @param outputDistTable When TRUE the calculated distance table between
+#' @param returnDistTable When TRUE the calculated distance table between
 #' read classes and annotations will be output as metadata as 
 #' distTables. The output is a list with an entry for each sample.
-#' @param discovery A logical variable indicating whether annotations
-#' are to be extended
-#' @param quant A logical variable indicating whether quantification will 
-#' be performed
+#' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
+#' is specified. This option provides an efficient way to process big samples.
 #' @param fusionMode A logical variable indicating whether run in fusion mode
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
-#' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
-#' is specified. This option provides an efficient way to process big samples.
 #' @details
 #' @return \code{bambu} will output different results depending on whether
 #' \emph{quant} mode is on. By default, \emph{quant} is set to TRUE, so 
@@ -157,6 +165,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                     " for more efficient processing")
             rm.readClassSe <- TRUE # remove temporary read class files 
         }
+        message("--- Start generating read class files ---")
         readClassList <- bambu.processReads(reads, annotations, 
             genomeSequence = genome, 
             readClass.outputDir = rcOutDir, yieldSize, 
@@ -164,15 +173,17 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory)
     }
+    warnings = handleWarnings(readClassList, verbose)
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
+        message("--- Start extending annotations ---")
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                                isoreParameters, stranded, bpParameters, fusionMode, verbose)
-        if (!verbose) message("Finished extending annotations.")
+        metadata(annotations)$warnings = warnings
         if (!quant) return(annotations)
     }
     if (quant) {
-        if (!verbose) message("Start isoform quantification")
+        message("--- Start isoform quantification ---")
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
@@ -182,8 +193,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                              BPPARAM = bpParameters)
         countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
         rowRanges(countsSe) <- annotations
-        if (!verbose) message("Finished isoform quantification.")
+        metadata(countsSe)$warnings = warnings
         if (rm.readClassSe) file.remove(unlist(readClassList))
+        message("--- Finished running Bambu ---")
         return(countsSe)
     }
 }

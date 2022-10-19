@@ -21,7 +21,7 @@ grlist a \code{GRangesList} object, with two columns
         defaults to empty}
     \item{GENEID}{indicating whether filter to remove read classes which are
         a subset of known transcripts(), defaults to TRUE}
-}
+  }
 }
 \description{
 Outputs GRangesList object from reading a GTF file

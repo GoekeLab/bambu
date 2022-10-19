@@ -5,11 +5,11 @@
 \title{plot.bambu}
 \usage{
 plotBambu(
-    se,
-    group.variable = NULL,
-    type = c("annotation", "pca", "heatmap"),
-    gene_id = NULL,
-    transcript_id = NULL
+  se,
+  group.variable = NULL,
+  type = c("annotation", "pca", "heatmap"),
+  gene_id = NULL,
+  transcript_id = NULL
 )
 }
 \arguments{
