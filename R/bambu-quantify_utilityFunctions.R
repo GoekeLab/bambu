@@ -250,7 +250,7 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
                            on = c("readClassId", "GENEID")]
     #here, each transcript should be assigned to one gene only based on isore.estimateDistanceToAnnotation function
     ##this step is very slow, consider to use integers instead of tx_ids
-    eqClassByIdList <- createList(distTable$readClassId, distTable$txid*(-1)^(distTable$equal))
+    eqClassByIdList <- createList(distTable$readClassId, distTable$txid*(-1)^distTable$equal)
     distTable[, eqClassById := as.list(eqClassByIdList)]
     return(distTable)
 }
@@ -261,7 +261,7 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
 createList <- function(query, subject){
     eqDt <- data.table(query = query, subject = subject)
     eqDt <- eqDt[order(query, subject)]
-    eqClassByIdList <- splitAsList(eqDt$subject, eqDt$query)
+    eqClassByIdList <- splitAsList(as.integer(eqDt$subject), eqDt$query)
     eqClassByIdList <- unname(eqClassByIdList[query])
     return(eqClassByIdList)
 }
@@ -314,10 +314,7 @@ processMinEquiRC <- function(annotations){
     minEquiRCTemp <- minEquiRC  %>% 
         mutate(txidTemp = eqClassById) %>% 
         unnest(c(txidTemp)) %>% # split minequirc to txid
-        mutate(equal = ifelse(txid == txidTemp, TRUE, FALSE))# %>% # create equal variable 
-      # group_by(eqClassById, txid) %>%
-      # mutate(eqClassByIdTemp = cur_group_id()) %>%
-      # ungroup() %>%
+        mutate(equal = ifelse(txid == txidTemp, TRUE, FALSE))
         
     eqClassByIdList <- createList(minEquiRCTemp$txid, minEquiRCTemp$txidTemp*(-1)^minEquiRCTemp$equal)
     minEquiRCTemp$eqClassById <- as.list(eqClassByIdList)
@@ -329,9 +326,9 @@ processMinEquiRC <- function(annotations){
     minEquiRC <- minEquiRC %>% 
         mutate(txidTemp = eqClassById) %>% 
         unnest(c(txidTemp)) %>%
-        mutate(minRC = 1, equal = FALSE, txid = txidTemp, txidTemp = NULL)
+        mutate(minRC = 1, equal = FALSE,  txid = txidTemp, txidTemp = NULL)
     
-    minEquiRC <- bind_rows(minEquiRC, minEquiRCTemp)
+    minEquiRC <- bind_rows(minEquiRC, minEquiRCTemp) 
     return(minEquiRC)
 }
 
@@ -353,7 +350,7 @@ createEqClassToTxMapping <- function(eqClassTable){
     eqClassTable_unnest <- eqClassTable %>% 
         mutate(txid = eqClassById) %>% 
         unnest(c(txid)) %>%
-        mutate(equal = ifelse(txid<0,TRUE,FALSE)) %>%
+        mutate(equal = ifelse(txid < 0,TRUE,FALSE)) %>%
         mutate(txid = abs(txid))
     return(eqClassTable_unnest)
 }
