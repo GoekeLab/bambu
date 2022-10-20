@@ -6,7 +6,7 @@
 abundance_quantification <- function(inputRCDt, readClassDt, ncore = 1,
                                      maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
       if (ncore == 1) {
-        emResultsList <- lapply(as.numeric(names(inputRcDt)),
+        emResultsList <- lapply(as.list(names(inputRcDt)),
                                 run_parallel,
                                 conv = conv,
                                 minvalue = minvalue, 
@@ -17,7 +17,7 @@ abundance_quantification <- function(inputRCDt, readClassDt, ncore = 1,
     } else {
         bpParameters <- bpparam()
         bpParameters$workers <- ncore
-        emResultsList <- bplapply(as.numeric(names(inputRcDt)),
+        emResultsList <- bplapply(as.list(names(inputRcDt)),
                                   run_parallel,
                                   conv = conv,
                                   minvalue = minvalue, 
@@ -41,7 +41,7 @@ abundance_quantification <- function(inputRCDt, readClassDt, ncore = 1,
 #' @noRd
 run_parallel <- function(g, conv, minvalue, maxiter, inputRcDt, readClassDt) {
     input_g <- inputRcDt[[g]]  
-    K <- input_g$K
+    K <- input_g$K_list[[1]]
     n.obs <- input_g$nObs_list[[1]]
     txids <- input_g$txids_list[[1]]
     rcMat <- readClassDt[[g]]
@@ -49,9 +49,9 @@ run_parallel <- function(g, conv, minvalue, maxiter, inputRcDt, readClassDt) {
     full_mat <- getAMat(rcMat, by = "fullAval")
     unique_mat <- getAMat(rcMat, by = "uniqueAval")
      if (is(total_mat,"numeric")&(nrow(total_mat)==1)) {
-        outEst <- cbind(sum( K*n.obs*total_mat),
-                       sum(K*n.obs*full_mat),
-                       sum(K*n.obs*unique_mat),
+        outEst <- cbind(sum(K * n.obs * total_mat),
+                       sum(K * n.obs * full_mat),
+                       sum(K * n.obs * unique_mat),
                        unname(txids))
     }else{
         est_output <- emWithL1(A = total_mat, A_full = full_mat, A_unique = unique_mat, Y = n.obs, K = K,
@@ -68,9 +68,8 @@ run_parallel <- function(g, conv, minvalue, maxiter, inputRcDt, readClassDt) {
 
 
 getAMat <- function(rcMat, by = "aval"){
-    a_mat <- dcast(rcMat, txid ~ eqClassId, value.var = by)
-    a_mat[, txid := NULL]
-    a_mat[is.na(a_mat)] <- 0
+    a_mat <- dcast(rcMat, txid ~ eqClassId, value.var = by, fill = 0)
+    a_mat[, `:=`(txid = NULL)]
     return(as.matrix(a_mat))
 }
 
@@ -144,9 +143,9 @@ calculateDegradationRate <- function(readClassDt){
 #' @import data.table
 #' @noRd
 modifyQuantOut <- function(outEst, outIni){
-    outIni[match(outEst[,4], txid),counts := outEst[,1]]
-    outIni[match(outEst[,4], txid), fullLengthCounts := outEst[,2]]
-    outIni[match(outEst[,4], txid), uniqueCounts := outEst[,3]]
+    outIni[match(as.integer(outEst[,4]), txid),counts := outEst[,1]]
+    outIni[match(as.integer(outEst[,4]), txid), fullLengthCounts := outEst[,2]]
+    outIni[match(as.integer(outEst[,4]), txid), uniqueCounts := outEst[,3]]
     return(outIni)
 }
 

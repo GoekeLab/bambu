@@ -58,8 +58,9 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     readClassDt <- rcPreOut[[1]]
     outIni <- initialiseOutput(readClassDt)
     readClassDt <- filterTxRc(readClassDt) 
+    readClassDt <- assignGroups(readClassDt)
     inputRcDt <- getInputList(readClassDt)
-    readClassDt <- split(readClassDt, by = "gene_sid")
+    readClassDt <- split(readClassDt, by = "gene_grp_id")
     start.ptm <- proc.time()
     outEst <- abundance_quantification(inputRcDt, readClassDt,
                                            ncore = ncore,
@@ -74,17 +75,32 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     return(theta_est)
 }
 
+#' Assign internal groups for grouped fast processing
+#' @noRd
+assignGroups <- function(readClassDt){
+    # further devide genes into groups to improve process efficiency
+    readClassDt[, tr_dimension := length(unique(txid))*length(unique(eqClassId)), by = gene_sid]
+    trDimensionDt <- unique(readClassDt[,.(gene_sid, tr_dimension)])
+    trDimensionDt[order(tr_dimension), cumN := cumsum(tr_dimension)]
+    trDimensionDt[, gene_grp_id := cumN %/% 1000 + 1]
+    readClassDt <- trDimensionDt[readClassDt, on = c("gene_sid","tr_dimension")]
+    readClassDt[, `:=`(cumN = NULL, tr_dimension = NULL)]
+    return(readClassDt)
+}
 #' 
 #' @noRd
 getInputList <- function(readClassDt){
-    nObsVec <- unique(readClassDt[,.(gene_sid, eqClassId, n.obs)])[order(gene_sid,eqClassId)]
-    nObsList <- splitAsList(nObsVec$n.obs,nObsVec$gene_sid)
-    inputRcDt <- unique(readClassDt[,.(gene_sid, K)])
+    nObsVec <- unique(readClassDt[,.(gene_grp_id, eqClassId, n.obs)])[order(gene_grp_id,eqClassId)]
+    nObsList <- splitAsList(nObsVec$n.obs,nObsVec$gene_grp_id)
+    inputRcDt <- unique(readClassDt[,.(gene_grp_id)][order(gene_grp_id)])
     inputRcDt[, nObs_list := as.list(unname(nObsList))]
-    txidsVec <- unique(readClassDt[,.(gene_sid, txid)])[order(gene_sid,txid)]
-    txidsList <- splitAsList(txidsVec$txid,txidsVec$gene_sid)
+    KVec <- unique(readClassDt[,.(gene_grp_id,eqClassId, K)])[order(gene_grp_id,eqClassId)]
+    KList <- splitAsList(KVec$K,KVec$gene_grp_id)
+    inputRcDt[, K_list := as.list(unname(KList))]
+    txidsVec <- unique(readClassDt[,.(gene_grp_id, txid)])[order(gene_grp_id,txid)]
+    txidsList <- splitAsList(txidsVec$txid,txidsVec$gene_grp_id)
     inputRcDt[, txids_list := as.list(unname(txidsList))]
-    inputRcDt <- split(inputRcDt, by = "gene_sid")
+    inputRcDt <- split(inputRcDt, by = "gene_grp_id")
     return(inputRcDt)
 }
 
@@ -130,15 +146,15 @@ addAval <- function(readClassDt, emParameters){
     removeList <- removeUnObservedGenes(readClassDt)
     readClassDt <- removeList[[1]] # keep only observed genes for estimation
     outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
-    readClassDt_withGeneCount <- select(readClassDt, gene_sid, eqClassId, nobs) %>% 
+    readClassDt_withGeneCount <- select(readClassDt, gene_sid, eqClassId, nobs) %>%
         unique() %>%
-        group_by(gene_sid) %>% 
+        group_by(gene_sid) %>%
         mutate(K = sum(nobs), n.obs=nobs/K, nobs = NULL) %>% ## check if this is unique by eqClassId
         ungroup() %>%
         distinct() %>%
         right_join(readClassDt, by = c("gene_sid","eqClassId")) %>%
         data.table()
-    return(list(readClassDt_withGeneCount, outList))
+    return(list(readClassDt_withGeneCount,outList))
 }
 
 #' Generate read to transcript mapping

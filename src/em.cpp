@@ -78,7 +78,7 @@ List emWithL1 (const arma::mat A, // alignment compatibility matrix for all
                const arma::mat A_full, // alignment compatibility matrix for full alignment
                const arma::mat A_unique,// alignment compatibility matrix for unique alignment
                const arma::rowvec Y, // observed number of reads for each read class j
-               const double K, //total read count
+               const arma::rowvec K, // K total count, of the same length as Y
                const int maxiter,
                const double minvalue,
                const double conv  // , const int nThr = 1
@@ -88,7 +88,6 @@ List emWithL1 (const arma::mat A, // alignment compatibility matrix for all
   arma::mat X = A; 
   int M = X.n_rows; //number of isoforms
 
-
   List theta_out(3); // create a empty list of size 3
   arma::rowvec theta(M);
   
@@ -97,12 +96,11 @@ List emWithL1 (const arma::mat A, // alignment compatibility matrix for all
 
   // post-process outputs
   arma::mat estMat(3,M);
-  //estMat.row(0) = theta;
-  arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
+  arma::rowvec baseSum = K % Y / arma::sum((X.t()*diagmat(theta)).t(),0);
   baseSum.replace(arma::datum::nan, 0);
-  estMat.row(0) = arma::sum(((A.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(1) = arma::sum(((A_full.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(2) = arma::sum(((A_unique.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(0) = arma::sum(((A.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
+  estMat.row(1) = arma::sum(((A_full.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
+  estMat.row(2) = arma::sum(((A_unique.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
   // returns
   List ret ;
   ret["theta"] = estMat;
