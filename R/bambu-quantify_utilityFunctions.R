@@ -314,16 +314,17 @@ processMinEquiRC <- function(annotations){
     minEquiRCTemp <- minEquiRC  %>% 
         mutate(txidTemp = eqClassById) %>% 
         unnest(c(txidTemp)) %>% # split minequirc to txid
-        mutate(equal = ifelse(txid == txidTemp, TRUE, FALSE)) %>% # create equal variable 
-        group_by(eqClassById, txid) %>%
-        mutate(eqClassByIdTemp = cur_group_id())
-    eqClassByIdList <- createList(minEquiRCTemp$eqClassByIdTemp, minEquiRCTemp$txid*(-1)^minEquiRCTemp$equal)
+        mutate(equal = ifelse(txid == txidTemp, TRUE, FALSE))# %>% # create equal variable 
+      # group_by(eqClassById, txid) %>%
+      # mutate(eqClassByIdTemp = cur_group_id()) %>%
+      # ungroup() %>%
+        
+    eqClassByIdList <- createList(minEquiRCTemp$txid, minEquiRCTemp$txidTemp*(-1)^minEquiRCTemp$equal)
     minEquiRCTemp$eqClassById <- as.list(eqClassByIdList)
     
     minEquiRCTemp <- minEquiRCTemp %>%
-        ungroup() %>% 
-        mutate(txid = txidTemp, eqClassByIdTemp = NULL, txidTemp = NULL) %>%
-        distinct()
+      mutate(txid = txidTemp, eqClassByIdTemp = NULL, txidTemp = NULL) %>%
+      distinct()
     
     minEquiRC <- minEquiRC %>% 
         mutate(txidTemp = eqClassById) %>% 

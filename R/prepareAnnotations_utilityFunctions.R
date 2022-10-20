@@ -111,12 +111,6 @@ getMinimumEqClassByTx <- function(exonsByTranscripts) {
     } else {
         eqClassById <- rep(NA, length(exonsByTranscripts)) 
         }
-    queryTxId <-
-        names(exByTxAnnotated_singleBpStartEnd)[queryHits(spliceOverlaps)]
-    subjectTxId <-
-        names(exByTxAnnotated_singleBpStartEnd)[subjectHits(spliceOverlaps)]
-    subjectTxId <- subjectTxId[order(queryTxId, subjectTxId)]
-    queryTxId <- sort(queryTxId)
     return(DataFrame(queryTxId = names(exonsByTranscripts),  eqClassById=eqClassById))
 }
 
