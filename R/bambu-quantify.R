@@ -24,7 +24,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
     setnames(incompatibleCounts, "counts", colnames(readClass))
-    counts <- compatibleCounts[match(seq_along(names(annotations)), txid)]
+    counts <- compatibleCounts[match(mcols(annotations)$txid), txid)]
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
     seOutput <- SummarizedExperiment(
