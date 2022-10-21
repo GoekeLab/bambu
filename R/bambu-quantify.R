@@ -45,8 +45,6 @@ bambu.quantify <- function(readClass, annotations, emParameters,
 
 
 
-
-
 #' Process data.table object
 #' @param readClassDt A data.table object
 #' @inheritParams bambu
@@ -63,9 +61,9 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     readClassDt <- split(readClassDt, by = "gene_grp_id")
     start.ptm <- proc.time()
     outEst <- abundance_quantification(inputRcDt, readClassDt,
-                                           ncore = ncore,
-                                           maxiter = emParameters[["maxiter"]],
-                                           conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
+                                       ncore = ncore,
+                                       maxiter = emParameters[["maxiter"]],
+                                       conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.ptm <- proc.time()
     if (verbose) message("Finished EM estimation in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
@@ -75,134 +73,4 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     return(theta_est)
 }
 
-#' Assign internal groups for grouped fast processing
-#' @noRd
-assignGroups <- function(readClassDt){
-    # further devide genes into groups to improve process efficiency
-    readClassDt[, tr_dimension := length(unique(txid))*length(unique(eqClassId)), by = gene_sid]
-    trDimensionDt <- unique(readClassDt[,.(gene_sid, tr_dimension)])
-    trDimensionDt[order(tr_dimension), cumN := cumsum(tr_dimension)]
-    trDimensionDt[, gene_grp_id := cumN %/% 1000 + 1]
-    readClassDt <- trDimensionDt[readClassDt, on = c("gene_sid","tr_dimension")]
-    readClassDt[, `:=`(cumN = NULL, tr_dimension = NULL)]
-    return(readClassDt)
-}
-#' 
-#' @noRd
-getInputList <- function(readClassDt){
-    nObsVec <- unique(readClassDt[,.(gene_grp_id, eqClassId, n.obs)])[order(gene_grp_id,eqClassId)]
-    nObsList <- splitAsList(nObsVec$n.obs,nObsVec$gene_grp_id)
-    inputRcDt <- unique(readClassDt[,.(gene_grp_id)][order(gene_grp_id)])
-    inputRcDt[, nObs_list := as.list(unname(nObsList))]
-    KVec <- unique(readClassDt[,.(gene_grp_id,eqClassId, K)])[order(gene_grp_id,eqClassId)]
-    KList <- splitAsList(KVec$K,KVec$gene_grp_id)
-    inputRcDt[, K_list := as.list(unname(KList))]
-    txidsVec <- unique(readClassDt[,.(gene_grp_id, txid)])[order(gene_grp_id,txid)]
-    txidsList <- splitAsList(txidsVec$txid,txidsVec$gene_grp_id)
-    inputRcDt[, txids_list := as.list(unname(txidsList))]
-    inputRcDt <- split(inputRcDt, by = "gene_grp_id")
-    return(inputRcDt)
-}
 
-#' 
-#' @noRd
-filterTxRc <- function(readClassDt){
-    readClassDt <- group_by(readClassDt,gene_sid, txid) %>% 
-        filter(sum(nobs)>0) %>% ungroup() %>%
-        arrange(gene_sid, txid, eqClassId) %>%
-        mutate(uniqueAval =  aval * (!multi_align),
-               fullAval = aval * equal,
-               multi_align = NULL,
-               equal = NULL) %>%
-        data.table()
-    return(readClassDt)
-}
-
-
-#' Add A matrix for total, full-length, unique
-#' @noRd
-addAval <- function(readClassDt, emParameters, verbose){
-    if (is.null(readClassDt)) {
-        stop("Input object is missing.")
-    } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
-                     colnames(readClassDt)))) {
-        stop("Columns GENEID, txid, eqClassId, nobs,
-            are missing from object.")
-    }
-    ## ----step2: match to simple numbers to increase claculation efficiency
-    readClassDt <- simplifyNames(readClassDt)
-    d_mode <- emParameters[["degradationBias"]]
-    start.ptm <- proc.time()
-    if (d_mode) {
-        d_rateOut <- calculateDegradationRate(readClassDt)
-    }else{
-        d_rateOut <- rep(NA,2)
-    }
-    end.ptm <- proc.time()
-    if (verbose) message("Finished estimate degradation bias in ",
-                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
-                                                    d_rateOut[1], d_mode = d_mode)
-    removeList <- removeUnObservedGenes(readClassDt)
-    readClassDt <- removeList[[1]] # keep only observed genes for estimation
-    outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
-    readClassDt_withGeneCount <- select(readClassDt, gene_sid, eqClassId, nobs) %>%
-        unique() %>%
-        group_by(gene_sid) %>%
-        mutate(K = sum(nobs), n.obs=nobs/K, nobs = NULL) %>% ## check if this is unique by eqClassId
-        ungroup() %>%
-        distinct() %>%
-        right_join(readClassDt, by = c("gene_sid","eqClassId")) %>%
-        data.table()
-    return(list(readClassDt_withGeneCount,outList))
-}
-
-#' Generate read to transcript mapping
-#' @noRd
-generateReadToTranscriptMap <- function(readClass, distTable, annotations){
-    if(!is.null(metadata(readClass)$readNames)) { 
-        read_id = metadata(readClass)$readNames}
-    else { read_id = metadata(readClass)$readId}
-    #unpack and reverse the read class to read id relationship
-    readOrder = order(unlist(rowData(readClass)$readIds))
-    lens = lengths(rowData(readClass)$readIds)
-    rcIndex = seq_along(readClass)
-    readToRC = rep(rcIndex, lens)[readOrder]
-    read_id = read_id[(match(unlist(rowData(readClass)$readIds)[readOrder], metadata(readClass)$readId))]
-    #get annotation indexs
-    distTable$annotationTxId = match(distTable$annotationTxId, names(annotations))
-    #match read classes with transcripts
-    readClass_id = rownames(readClass)[readToRC]
-    equalMatches = distTable %>% 
-        filter(equal) %>% 
-        group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
-    equalMatches = equalMatches$annotationTxIds[match(readClass_id, equalMatches$readClassId)]
-    compatibleMatches = distTable %>% 
-        filter(!equal & compatible) %>% 
-        group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
-    compatibleMatches = compatibleMatches$annotationTxIds[match(readClass_id, compatibleMatches$readClassId)]
-    readToTranscriptMap = tibble(readId=read_id, equalMatches = equalMatches, compatibleMatches = compatibleMatches)
-    
-    return(readToTranscriptMap)
-}
-
-
-#' Process incompatible counts
-#' @noRd
-processIncompatibleCounts <- function(readClassDist){
-    distTable <- data.table(as.data.frame(metadata(readClassDist)$distTable))[, 
-        .(readClassId, annotationTxId, readCount, GENEID, dist,equal)]
-    distTableIncompatible <- distTable[grep("unidentified", annotationTxId)]
-    # filter out multiple geneIDs mapped to the same readClass using rowData(se)
-    geneRCMap <- as.data.table(as.data.frame(rowData(readClassDist)),
-                                    keep.rownames = TRUE)
-    setnames(geneRCMap, old = c("rn", "geneId"),
-             new = c("readClassId", "GENEID"))
-    distTable <- distTable[geneRCMap[ readClassId %in% 
-                                               unique(distTableIncompatible$readClassId), .(readClassId, GENEID)],
-                           on = c("readClassId", "GENEID")]
-    counts <- distTable[,.(GENEID, readCount)]
-    setnames(counts, "readCount", "counts")
-    return(counts)
-    
-}
