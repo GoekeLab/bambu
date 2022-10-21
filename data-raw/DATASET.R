@@ -222,8 +222,8 @@ saveRDS(readGrgList, file = "./inst/extdata/readGrgList_SGNex_A549_directRNA_rep
 ## generate read class files
 
 annotations <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-genome <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
-se <- bambu(reads = test.bam, annotations = annotseOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rdstions, genome = genomeSequence, discovery = FALSE, quant = FALSE)[[1]]
+genomeSequence <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, stranded = TRUE, discovery = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
@@ -234,10 +234,10 @@ saveRDS(se, file = "./inst/extdata/seOutput_SGNex_A549_directRNA_replicate5_run1
 se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, trackReads = TRUE)
 saveRDS(se, file = "./inst/extdata/seOutput_trackReads_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
-se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, returnDistTable = TRUE)
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, returnDistTable = TRUE)
 saveRDS(se, file = "./inst/extdata/seOutput_distTable_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
 
-se <- bambu(reads = test.bam, annotations = NULL, genome = fa.file, NDR = 1)
+se <- bambu(reads = test.bam, annotations = NULL, genome = genomeSequence, NDR = 1)
 saveRDS(se, file = "./inst/extdata/seOutput_denovo_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
 
 
@@ -312,11 +312,11 @@ seWithDistExpected <- isore.estimateDistanceToAnnotations(
 saveRDS(seWithDistExpected, file = "./inst/extdata/distanceToAnnotations_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 set.seed(1234)
-seOutputCombined = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = fa.file, discovery = FALSE)
+seOutputCombined = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = genomeSequence, discovery = FALSE)
 saveRDS(seOutputCombined, file = "./inst/extdata/seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 set.seed(1234)
-seOutputCombinedExtended = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = fa.file, discovery = TRUE)
+seOutputCombinedExtended = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = genomeSequence, discovery = TRUE)
 saveRDS(seOutputCombinedExtended, file = "./inst/extdata/seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 seReadClass1 <- system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
