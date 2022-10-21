@@ -14,62 +14,70 @@ writeLines(as.character(xgb_predictions),
            './inst/extdata/xgb_predictions_splice_junction_correction.txt')
 
 
-data1 <- data.frame(
-    tx_id = c( 1,"1Start", 2, "2Start"),
-    read_class_id = c(1,"1Start", 2,"2Start"),
+data1 <- data.table(
+    txid = c( 1,1, 2, 2),
+    equal = rep(FALSE,4),
+    eqClassId = c(1,2,3,4),
+    eqClassById = list(1,-1,2,-2),
     nobs = c(10, 50, 50,10),
-    tx_len = c(546,546,2356,2356),
-    rc_width = c(300,540,1800,2300),
-    minEquiRC = rep(1,4),
-    gene_id = 1
+    txlen = c(546,546,2356,2356),
+    rcWidth = c(300,540,1800,2300),
+    minRC = rep(1,4),
+    GENEID = 1
 )
 
-data2 <- data.frame(
-    tx_id = c( 1,"1Start", 2, "2Start", 1, 2),
-    read_class_id = c(1,"1Start", 2,"2Start", "1.2","1.2"),
+data2 <- data.table(
+    txid = c( 1,1, 2, 2, 1, 2),
+    equal = c(FALSE, TRUE, FALSE, TRUE, FALSE, FALSE),
+    eqClassId = c(1,2,3,4,5,5),
+    eqClassById = list(1,-1,2,-2,c(1,2),c(1,2)),
     nobs = c(10, 50, 50,10, 500,500),
-    tx_len = c(546,546,2356,2356, 546,2356),
-    rc_width = c(300,540,1800,2300, 200, 200),
-    minEquiRC = rep(1,6),
-    gene_id = 2
+    txlen = c(546,546,2356,2356, 546,2356),
+    rcWidth = c(300,540,1800,2300, 200, 200),
+    minRC = rep(1,6),
+    GENEID = 2
 )
 
-data3 <- data.frame(
-    tx_id = c("1Start",1,2, 2, "2Start", 1, 2),
-    read_class_id = c("1Start.1.2","1Start.1.2","1Start.1.2",
-                      2,"2Start", "1.2","1.2"),
+data3 <- data.table(
+    txid = c(1,2,3, 2, 2, 1, 2),
+    equal = c(TRUE,FALSE, FALSE, TRUE,FALSE, FALSE,FALSE),
+    eqClassId = c(1,1,1,2,3,4,4),
+    eqClassById = list(c(-1,2,3),c(-1,2,3),c(-1,1,2),-2,2,c(1,2),c(1,2)),
     nobs = c(500, 500, 500,10, 0,50,50),
-    tx_len = c(546,546,2356,2356,2356, 546,2356),
-    rc_width = c(540,540,540,1800,2300, 200, 200),
-    minEquiRC = c(NA,NA,1,1,1,NA,1),
-    gene_id = 3
+    txlen = c(546,546,2356,2356,2356, 546,2356),
+    rcWidth = c(540,540,540,1800,2300, 200, 200),
+    minRC = c(NA,NA,1,1,1,NA,1),
+    GENEID = 3
 )
 
-data4 <- data.frame(
-    tx_id = c("1Start",1,2, 2, "2Start", 1, 2),
-    read_class_id = c("1Start.1.2","1Start.1.2","1Start.1.2",
-                      2,"2Start", "1.2","1.2"),
+data4 <- data.table(
+    txid = c(1,2,3, 2, 2, 1, 2),
+    equal = c(TRUE, FALSE, FALSE,FALSE,TRUE,FALSE, FALSE),
+    eqClassId = c(1,1,1,2,3,4,4),
+    eqClassById = list(c(-1,2,3),c(-1,2,3),c(-1,2,3),2,-2, c(1,2),c(1,2)),
     nobs = c(50, 50, 50,100, 500,20,20),
-    tx_len = c(546,546,2356,2356,2356, 546,2356),
-    rc_width = c(540,540,540,1800,2300, 200, 200),
-    minEquiRC = c(NA,NA,1,1,1,NA,1),
-    gene_id = 4
+    txlen = c(546,546,2356,2356,2356, 546,2356),
+    rcWidth = c(540,540,540,1800,2300, 200, 200),
+    minRC = c(NA,NA,1,1,1,NA,1),
+    GENEID = 4
 )
 
-data5 <- data.frame(
-    tx_id = c(1,"1Start",2, "2Start", "1Start","2Start"),
-    read_class_id = c(1,"1Start",
-                      2,"2Start", "1Start.2Start","1Start.2Start"),
+data5 <- data.table(
+    txid = c(1,1,2, 2, 1,2),
+    equal = c(FALSE, TRUE, FALSE, TRUE, TRUE, TRUE),
+    eqClassId = c(1,2,3,4,5,5),
+    eqClassById = list(1,-1,2,-2,c(-1,-2),c(-1,-2)),
     nobs = c(5, 50, 10,60, 200,200),
-    tx_len = c(546,546,2356,2356, 546,2356),
-    rc_width = c(1700,2200,1800,2300, 2000, 2000),
-    minEquiRC = rep(1,6),
-    gene_id = 5
+    txlen = c(546,546,2356,2356, 546,2356),
+    rcWidth = c(1700,2200,1800,2300, 2000, 2000),
+    minRC = rep(1,6),
+    GENEID = 5
 )
 
 
 
 estOutput_woBC <- lapply(seq_len(5), function(s) {
+    print(s)
     est <- bambu.quantDT(readClassDt = get(paste0("data", s)), 
                          emParameters = list(degradationBias = FALSE, 
                                              maxiter = 10000, conv = 10^(-2), minvalue = 10^(-8)))
