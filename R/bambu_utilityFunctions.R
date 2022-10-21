@@ -79,10 +79,10 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
             ## check if annotations is as expected
-            if (!all(c("TXNAME", "GENEID", "eqClass") %in% 
+            if (!all(c("TXNAME", "GENEID", "txid","eqClassById") %in% 
                      colnames(mcols(annotations)))) 
                 stop("The annotations is not properly prepared.\nPlease 
-                    prepareAnnnotations using prepareAnnotations function.")
+                    see ?prepareAnnotations for help")
             if(anyDuplicated(mcols(annotations)$TXNAME)) {
                 warning('Annotations contain duplicated transcript/gene names
                         Please re-create your annotation object')
@@ -177,7 +177,9 @@ checkInputSequence <- function(genomeSequence) {
     return(genomeSequence)
 }
 
-#Function that gathers warnings from several read class lists and outputs the counts
+
+#' Function that gathers warnings from several read class lists and outputs the counts
+#' @noRd
 handleWarnings <- function(readClassList, verbose){
     warnings = list()
     sampleNames = c()
@@ -204,3 +206,41 @@ handleWarnings <- function(readClassList, verbose){
     }
     return(warnings)
 }
+
+
+#' Combine count se object while preserving the metadata objects
+#' @noRd
+combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
+    sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
+    if(trackReads){
+        readToTranscriptMaps = lapply(countsSe, FUN = function(se){metadata(se)$readToTranscriptMap})
+        names(readToTranscriptMaps) = sampleNames
+        countsSe = lapply(countsSe, FUN = function(se){
+            metadata(se)$readToTranscriptMap=NULL
+            return(se)})
+    }
+    if(returnDistTable){
+        distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
+        names(distTables) = sampleNames
+        countsSe = lapply(countsSe, FUN = function(se){
+            metadata(se)$distTable=NULL
+            return(se)})
+    }
+    # combine incompatible counts
+    incompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$incompatibleCounts}))
+    countsSe = lapply(countsSe, FUN = function(se){
+        metadata(se)$incompatibleCounts=NULL
+        return(se)})
+    countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
+    if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
+    if(returnDistTable) metadata(countsSe)$distTables = distTables
+    metadata(countsSe)$incompatibleCounts = incompatibleCounts
+    return(countsSe)
+}
+
+# Quick wrapper function (https://stackoverflow.com/questions/13273833/merging-multiple-data-tables)
+#' @noRd 
+merge_wrapper <- function(x,y){
+    merge.data.table(x,y,by = "GENEID",all=TRUE)
+}
+

@@ -8,14 +8,12 @@ using namespace Rcpp ;
 // [[Rcpp::export]]
 List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if read class j is potentially from transcript i, otherwise 0
                const arma::rowvec Y, // observed number of reads for each read class j
-               const double lambda,  // the tuning parameter for bias estimation, take as
                const int maxiter,
                const double minvalue,
                const double conv // , const int nThr = 1
 
 ) {
   int M = X.n_rows; //number of isoforms
-
   // omp_set_num_threads(nThr) ; // using multiple threads
 
   // containers
@@ -76,34 +74,32 @@ List em_theta (const arma::mat X, // sampling probability matrix, (i,j) = 1 if r
 //' L1-penalized likelihood estimation
 //' @noRd
 // [[Rcpp::export]]
-List emWithL1 (const arma::cube A, // alignment compatibility matrix array, last dimension 1 is all, 2 is full, 3 is partial, 4 is unique
+List emWithL1 (const arma::mat A, // alignment compatibility matrix for all 
+               const arma::mat A_full, // alignment compatibility matrix for full alignment
+               const arma::mat A_unique,// alignment compatibility matrix for unique alignment
                const arma::rowvec Y, // observed number of reads for each read class j
-               const double K, //total read count
-               const double lambda,  // the tuning parameter for bias estimation, take as
+               const arma::rowvec K, // K total count, of the same length as Y
                const int maxiter,
                const double minvalue,
                const double conv  // , const int nThr = 1
 ){
 
   // initialization
-  arma::mat X = A.slice(0); 
-  int M = X.n_rows; //number of isoforms
-
+  int M = A.n_rows; //number of isoforms
 
   List theta_out(3); // create a empty list of size 3
   arma::rowvec theta(M);
   
-  theta_out = em_theta(X, Y, lambda, maxiter, minvalue, conv) ;
+  theta_out = em_theta(A, Y, maxiter, minvalue, conv) ; //lambda,
   theta = Rcpp::as<arma::rowvec>(theta_out[0]) ;
 
   // post-process outputs
   arma::mat estMat(3,M);
-  //estMat.row(0) = theta;
-  arma::rowvec baseSum = Y / arma::sum((X.t()*diagmat(theta)).t(),0);
+  arma::rowvec baseSum = K % Y / arma::sum((A.t()*diagmat(theta)).t(),0);
   baseSum.replace(arma::datum::nan, 0);
-  estMat.row(0) = arma::sum(((X.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(1) = arma::sum(((A.slice(1).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
-  estMat.row(2) = arma::sum(((A.slice(2).t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0) * K;
+  estMat.row(0) = arma::sum(((A.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
+  estMat.row(1) = arma::sum(((A_full.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
+  estMat.row(2) = arma::sum(((A_unique.t()*diagmat(theta)).t() * diagmat(baseSum)).t(), 0);
   // returns
   List ret ;
   ret["theta"] = estMat;

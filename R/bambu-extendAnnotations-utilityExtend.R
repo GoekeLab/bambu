@@ -459,6 +459,8 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
     names(exByTx)[txToAnTableFiltered$queryHits]
   txToAnTableFiltered$annotationTxId <-
     names(exByTxRef)[txToAnTableFiltered$subjectHits]
+  txToAnTableFiltered$txid <-
+    mcols(exByTxRef)$txid[txToAnTableFiltered$subjectHits]
   return(txToAnTableFiltered)
 }
 
@@ -648,7 +650,6 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
-  mcols(extendedAnnotationRanges)$eqClass <- minEqClasses$eqClass
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                  c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", "txClassDescription","readCount","relReadCount", "relSubsetCount", "eqClass", "txid", "eqClassById")]
@@ -679,15 +680,19 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
     distTable <- left_join(distTable, select(readClassTable,
                                              readClassId, confidenceType), by = "readClassId") %>%
     mutate(relativeReadCount = readCount / txNumberFiltered)
-  distTable <- dplyr::select(distTable, annotationTxId, readClassId,
-                             readCount, compatible, equal,dist)
-  distTable <- left_join(distTable, as_tibble(mcols(annotationGrangesList)[,
-                                                                           c("TXNAME", "GENEID")]),by = c("annotationTxId" = "TXNAME"))
+  distTable <- dplyr::select(distTable, annotationTxId, txid, readClassId,
+      readCount, compatible, equal,dist)
+  distTable <- left_join(distTable, as_tibble(mcols(annotationGrangesList)[, c("txid", "GENEID")]),
+      by = c("txid" = "txid"))
+  
   end.ptm <- proc.time()
   if (verbose) message("calculated distance table in ",
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   readClassTable <- addGeneIdsToReadClassTable(readClassTable, distTable, 
                                                seReadClass, verbose)
+  distTable <- DataFrame(distTable)
+  distTable$eqClassById <- as.list(mcols(annotationGrangesList)$eqClassById)[distTable$txid]
+  
   metadata(seReadClass) <- list(distTable = distTable)
   rowData(seReadClass) <- readClassTable
   return(seReadClass)
