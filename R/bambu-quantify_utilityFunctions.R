@@ -3,7 +3,7 @@
 #' @param readClassDt A \code{data.table} with columns
 #' @importFrom BiocParallel bpparam bplapply
 #' @noRd
-abundance_quantification <- function(inputRCDt, readClassDt, ncore = 1,
+abundance_quantification <- function(inputRcDt, readClassDt, ncore = 1,
                                      maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
       if (ncore == 1) {
         emResultsList <- lapply(as.list(names(inputRcDt)),

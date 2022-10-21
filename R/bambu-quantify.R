@@ -54,7 +54,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
 bambu.quantDT <- function(readClassDt = readClassDt, 
                           emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
                                               minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
-    rcPreOut <- addAval(readClassDt, emParameters)
+    rcPreOut <- addAval(readClassDt, emParameters, verbose)
     readClassDt <- rcPreOut[[1]]
     outIni <- initialiseOutput(readClassDt)
     readClassDt <- filterTxRc(readClassDt) 
@@ -121,7 +121,7 @@ filterTxRc <- function(readClassDt){
 
 #' Add A matrix for total, full-length, unique
 #' @noRd
-addAval <- function(readClassDt, emParameters){
+addAval <- function(readClassDt, emParameters, verbose){
     if (is.null(readClassDt)) {
         stop("Input object is missing.")
     } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
