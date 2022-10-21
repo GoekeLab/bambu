@@ -31,7 +31,7 @@ processIncompatibleCounts <- function(readClassDist){
   distTable <- distTable[geneRCMap[ readClassId %in% 
                                       unique(distTableIncompatible$readClassId), .(readClassId, GENEID)],
                          on = c("readClassId", "GENEID")]
-  counts <- distTable[,.(GENEID, readCount)]
+  counts <- unique(distTable[,.(GENEID, readCount)])
   setnames(counts, "readCount", "counts")
   return(counts)
 }
