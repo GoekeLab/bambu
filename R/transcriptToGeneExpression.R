@@ -21,7 +21,7 @@ transcriptToGeneExpression <- function(se) {
     counts <- rowDataSe[, .(TXNAME, GENEID)][counts, on = "TXNAME"]
     
     incompatibleCounts <- metadata(se)$incompatibleCounts
-    incompatibleCounts[, TXNAME := "Incomaptible"]
+    incompatibleCounts[, TXNAME := "incompatible"]
     counts_incompatible <- melt(incompatibleCounts, id.vars = c("GENEID","TXNAME"), 
         measure.vars = setdiff(colnames(incompatibleCounts), c("GENEID","TXNAME")))
     # GENEID, TXNAME, variable, value
