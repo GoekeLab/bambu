@@ -49,7 +49,8 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     } else{
         rowData(se)$txScore = rowData(se)$txScore.noFit
     }
-
+    if(is.null(model) & fit) metadata(se)$warnings = c(metadata(se)$warnings,
+        "Bambu was unable to train a model on this sample, and is using a pretrained model")
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 
@@ -176,8 +177,8 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
-    if(!checkFeatures(txFeatures)){
-        message("Transcript model not trained. Using pre-trained models")
+    if(!checkFeatures(txFeatures, verbose)){
+        if(verbose) message("Transcript model not trained. Using pre-trained models")
         return(NULL)
     }
     ## Multi-Exon
@@ -257,19 +258,19 @@ prepareTranscriptModelFeatures = function(rowData){
 }
 
 #' ensures that the data is trainable after filtering
-checkFeatures = function(features){
+checkFeatures = function(features, verbose = FALSE){
     labels = features$labels
     trainable = TRUE
     if(sum(labels)==length(labels) | sum(labels)==0){
-        message("Missing presence of both TRUE and FALSE labels.")
+        if (verbose) message("Sample is missing presence of both TRUE and FALSE labels.")
         trainable = FALSE
     }
     if(length(labels)<1000){
-        message("Not enough data points")
+        if (verbose) message("Sample has less than 1000 labeled read classes")
         trainable = FALSE
     }
     if(sum(labels)<50 | sum(!labels)<50){
-        message("Not enough TRUE/FALSE labels")
+        if (verbose) message("Sample does not have more than 50 of both read class labels")
         trainable = FALSE
     }
     return(trainable)

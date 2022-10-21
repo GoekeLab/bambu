@@ -6,7 +6,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
-                                    prefix = "", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
+                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -80,17 +80,18 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   rowDataCombined <- group_by(rowDataCombined, GENEID) %>% mutate(relReadCount = readCount/sum(readCount))
   if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
-        rowDataCombined$readClassType == "equalcompatible") #keep equal for FDR calculation
+        rowDataCombined$readClassType == "equal:compatible") #keep equal for FDR calculation
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
-  rowDataCombined = calculateNDROnTranscripts(rowDataCombined)
+  rowDataCombined = calculateNDROnTranscripts(rowDataCombined, 
+                        useTxScore = length(annotationGrangesList)==0)
 
   if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
       NDR = recommendNDR(rowDataCombined, baselineFDR, NDR, defaultModels, verbose)
   } else {
-      if(is.null(NDR)) NDR = 0.1
+      if(is.null(NDR)) NDR = 0.5
   }
   filterSet = (rowDataCombined$NDR <= NDR)
   exonRangesCombined <- exonRangesCombined[filterSet]
@@ -105,9 +106,9 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
-  if(sum(filterSet)==0) message("No novel transcripts meet the given thresholds")
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
-    "No annotations were provided. Please increase NDR threshold to use novel transcripts")
+    "WARNING - No annotations were provided. Please increase NDR threshold to use novel transcripts")
+  if(sum(filterSet)==0) message("WARNING - No novel transcripts meet the given thresholds. Try a higher NDR.")
   # (3) combine novel transcripts with annotations
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
@@ -121,7 +122,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 #' calculates an expected NDR based on the annotations'
 recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, defaultModels = defaultModels, verbose = FALSE){
     if(verbose) message("-- Predicting annotation completeness to determine NDR threshold --")
-    equal = combinedTranscripts$readClassType == "equalcompatible"
+    equal = combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] = FALSE
 
     #add envirnment so poly() works
@@ -133,8 +134,8 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     score = combinedTranscripts$maxTxScore.noFit
     NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
     NDR.rec = round(NDR.rec,3)
+    if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.rec)
     if (NDR.rec < 0) NDR.rec = 0
-    message("Calculated NDR: ", NDR.rec)
     if(NDR.rec > 0.5){
         message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
         "limiting the performance of the trained model")
@@ -160,15 +161,15 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     return(NDR)
 }
 
-calculateNDROnTranscripts <- function(combinedTranscripts){
+calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
       # calculate and filter by NDR
-    equal = combinedTranscripts$readClassType == "equalcompatible"
+    equal = combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] = FALSE
-    if(sum(equal, na.rm = TRUE)<50 | 
-        sum(!equal, na.rm = TRUE)<50){
+    if(sum(equal, na.rm = TRUE)<50 | sum(!equal, na.rm = TRUE)<50 | useTxScore){
           combinedTranscripts$NDR = 1 - combinedTranscripts$maxTxScore
-          message("Less than 50 TRUE or FALSE read classes for precision stabilization. 
-          Filtering by prediction score instead")
+          if(!useTxScore) message("WARNING - Less than 50 TRUE or FALSE read classes ",
+            "for NDR precision stabilization.")
+          message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else combinedTranscripts$NDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
     return(combinedTranscripts)
 }
@@ -296,9 +297,11 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     updateWIntronMatches(unlistedIntrons, unlistedIntronsAnnotations,
                          partitioning, classificationTable, annotationGrangesList,
                          rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
-                         min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
+                         min.primarySecondaryDist, min.primarySecondaryDistStartEnd)             
   rowDataFilteredSpliced$readClassType <-
-    apply(classificationTable, 1, paste, collapse = "")
+    apply(classificationTable, 1, function(x){paste(x[x!=""], collapse = ":")})
+  rowDataFilteredSpliced$novelTranscript = TRUE
+  rowDataFilteredSpliced$novelTranscript[classificationTable$equal=="equal"] = FALSE
   end.ptm <- proc.time()
   if (verbose) message("extended annotations for spliced reads in ",
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
@@ -310,9 +313,9 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
 #' @importFrom GenomicRanges match
 #' @noRd
 updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
-                                 partitioning, classificationTable, annotationGrangesList,
-                                 rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
-                                 min.primarySecondaryDist, min.primarySecondaryDistStartEnd){
+                                partitioning, classificationTable, annotationGrangesList,
+                                rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
+                                min.primarySecondaryDist, min.primarySecondaryDistStartEnd){
   intronMatches <- match(
     unlistedIntrons,unique(unlistedIntronsAnnotations),nomatch = 0) > 0
   intronMatchesList <- relist(intronMatches, partitioning)
@@ -553,6 +556,8 @@ addNewUnsplicedReadClasses <- function(rowDataFilteredUnspliced,  rowDataFiltere
                seqlevels(annotationGrangesList)))
     rowDataFilteredUnspliced$GENEID <- NA
     rowDataFilteredUnspliced$readClassType <- "unsplicedNew"
+    rowDataFilteredUnspliced$novelGene <- TRUE
+    rowDataFilteredUnspliced$novelTranscript <- TRUE
     ## add filter to remove unspliced transcripts which overlap
     ## with known transcripts/high quality spliced transcripts
     overlapUnspliced <- findOverlaps(exonsByReadClassUnspliced,
@@ -600,43 +605,42 @@ includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
                                         exonRangesCombinedFiltered,annotationGrangesList, prefix){
-    rowDataCombinedFiltered$newTxClass <- rowDataCombinedFiltered$readClassType
-    rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
+    rowDataCombinedFiltered$txClassDescription <- rowDataCombinedFiltered$readClassType
+    rowDataCombinedFiltered$txClassDescription[rowDataCombinedFiltered$readClassType
                                        == "unsplicedNew" & rowDataCombinedFiltered$novelGene] <-
       "newGene-unspliced"
-    rowDataCombinedFiltered$newTxClass[rowDataCombinedFiltered$readClassType
+    rowDataCombinedFiltered$txClassDescription[rowDataCombinedFiltered$readClassType
                                        == "allNew" & rowDataCombinedFiltered$novelGene] <-
       "newGene-spliced"
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("GENEID", "newTxClass","readCount", "NDR",
+      rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
                                   "relReadCount", "relSubsetCount")]
     equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
-  #remove extended ranges that are already present in annotation
-  extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
-  annotationRangesToMerge <- annotationGrangesList
-  mcols(annotationRangesToMerge)$readCount <- 
-    rep(NA,length(annotationRangesToMerge))
-  mcols(annotationRangesToMerge)$newTxClass <- 
-    rep("annotation",length(annotationRangesToMerge))
-  mcols(annotationRangesToMerge)$NDR <- 
-    rep(NA,length(annotationRangesToMerge))
-  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
-  
-  #copy over stats to annotations from read classes
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR = equalRanges$NDR
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
-  mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
+    #remove extended ranges that are already present in annotation
+    extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
+    annotationRangesToMerge <- annotationGrangesList
+    if(length(annotationGrangesList)){
+        mcols(annotationRangesToMerge)$readCount <- NA
+        mcols(annotationRangesToMerge)$txClassDescription <- "annotation"
+        mcols(annotationRangesToMerge)$novelTranscript <- FALSE
+        mcols(annotationRangesToMerge)$novelGene <- FALSE
+        mcols(annotationRangesToMerge)$NDR <- NA
+        mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
+        #copy over stats to annotations from read classes
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR = equalRanges$NDR
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
+    }
     if (length(extendedAnnotationRanges)) {
       mcols(extendedAnnotationRanges)$TXNAME <- paste0(
-      "tx",prefix, ".", seq_along(extendedAnnotationRanges))
+      prefix, "Tx", seq_along(extendedAnnotationRanges))
     names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
     extendedAnnotationRanges <-
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
     mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
     }else{
-        message("all detected novel transcripts are already present in the annotations, try a higher NDR")
       extendedAnnotationRanges <- annotationRangesToMerge
       mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
       mcols(extendedAnnotationRanges)$relReadCount = NA
@@ -648,7 +652,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                 c("TXNAME", "GENEID", "txid", "eqClassById", "newTxClass","readCount", "NDR","relReadCount", "relSubsetCount")]
+                 c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", "txClassDescription","readCount","relReadCount", "relSubsetCount", "eqClass", "txid", "eqClassById")]
   return(extendedAnnotationRanges)
 }
 

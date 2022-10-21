@@ -111,7 +111,7 @@ plotPCA <- function(se, count.data, group.variable) {
 #' @param count.data a dataframe of log2CPM
 #' @param group.variable the sample groups
 #' @importFrom stats cor
-#' @impoprt data.table
+#' @import data.table
 #' @noRd
 plotHeatmap <- function(se, count.data, group.variable) {
     corData <- cor(count.data, method = "spearman")

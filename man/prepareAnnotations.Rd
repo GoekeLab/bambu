@@ -10,13 +10,23 @@ prepareAnnotations(x)
 \item{x}{A path to gtf file or a \code{TxDb} object.}
 }
 \value{
-A \code{GRangesList} object with additional details for each exon and transcript that are required by Bambu. Exons are ranked by the \code{exon_rank} column, corresponding to the rank in direction of transcription (from first to last exon). In addition to exon rank, gene id, transcript id, and the minimum transcript equivalent class is stored as well (a transcript equivalence class of a transcript x is the collection of transcripts where their exon junctions contain, in a continuous way, the exon junctions of the transcript x). The object is designed to be used by Bambu, and the direct access of the metadata is not recommended.
+A \code{GRangesList} object with additional details for each exon and transcript 
+that are required by Bambu. Exons are ranked by the \code{exon_rank} column, corresponding 
+to the rank in direction of transcription (from first to last exon). In addition to exon rank, 
+gene id, transcript id, and the minimum transcript equivalent class is stored as well
+(a transcript equivalence class of a transcript x is the collection of transcripts 
+where their exon junctions contain, in a continuous way, the exon junctions of the transcript x). 
+The object is designed to be used by Bambu, and the direct access of the metadata is not recommended.
+}
+\description{
+prepare reference annotations for long read RNA-Seq analysis with Bambu
 }
 \details{
-This function creates a reference annotation object which is used for transcript discovery and quantification in Bambu. prepareAnnotations can use a path to a gtf file or a TxDB object as input, and returns a annotation object that stores additional information about transcripts which is used in Bambu. For each transcript, exons are ranked from first to last exon in direction of transcription.
-}
-\seealso{
-\code{\link[=bambu]{bambu()}} for transcript discovery and quantification from long read RNA-Seq.
+This function creates a reference annotation object which is used for transcript 
+discovery and quantification in Bambu. prepareAnnotations can use a path to a gtf file
+or a TxDB object as input, and returns a annotation object that stores additional
+information about transcripts which is used in Bambu. For each transcript, exons
+are ranked from first to last exon in direction of transcription.
 }
 \examples{
 gtf.file <- system.file("extdata",
@@ -26,7 +36,7 @@ gtf.file <- system.file("extdata",
 annotations <- prepareAnnotations(x = gtf.file)
 
 # run bambu
-test.bam <- system.file("extdata",
+test.bam <- system.file("extdata", 
     "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", 
     package = "bambu")
 fa.file <- system.file("extdata", 
@@ -34,4 +44,7 @@ fa.file <- system.file("extdata",
     package = "bambu")
 se <- bambu(reads = test.bam, annotations = annotations, 
     genome = fa.file, discovery = TRUE, quant = TRUE)
+}
+\seealso{
+[bambu()] for transcript discovery and quantification from long read RNA-Seq.
 }

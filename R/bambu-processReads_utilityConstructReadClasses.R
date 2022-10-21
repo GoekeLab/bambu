@@ -30,8 +30,8 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
-        message("Finished create transcript models (read classes) for reads with
-    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
+        message("Finished create transcript models (read classes) for reads with ",
+    "spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) { 
         exonsByRC.unspliced <- NULL
     } else {exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
@@ -242,7 +242,7 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges
-    counts = (as.data.table(reads.singleExon) %>% 
+    counts = (as.data.frame(reads.singleExon) %>% 
          count(seqnames,start,end,strand)) %>% as.data.frame()
     reads.singleExon = unique(reads.singleExon)
     mcols(reads.singleExon)$counts <- counts$n
@@ -265,8 +265,8 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
                             rcUnsplicedReduced)
     }
     end.ptm <- proc.time()
-    if (verbose) message("Finished create single exon transcript models
-        (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    if (verbose) message("Finished create single exon transcript models ",
+        "(read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(exonsByReadClass)
 }
 
@@ -421,7 +421,7 @@ assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = 
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
 assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
-                                     fusionMode=FALSE, prefix = '') {
+                                     fusionMode=FALSE, prefix = 'Bambu') {
     # (1) assign gene Ids based on first intron match to annotations
     geneRanges <- reducedRangesByGenes(annotations)
     ov=findOverlaps(grl, geneRanges, minoverlap = min.exonOverlap)
@@ -461,7 +461,7 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
 #' Create new gene ids for groups of overlapping read classes which 
 #' don't overlap with known annotations. 
 #' @param grl a GrangesList object with read classes
-assignGeneIdsNoReference <- function(grl, prefix = '') {
+assignGeneIdsNoReference <- function(grl, prefix = 'Bambu') {
     newTxIds <- seq_len(length(grl))
     newGeneByNewTxId <- rep(NA, length(newTxIds))
     if(length(grl)==0){
@@ -484,12 +484,12 @@ assignGeneIdsNoReference <- function(grl, prefix = '') {
     exonGeneMap_filter1 <-  geneTxMap %>% group_by(newTxId) %>% 
         mutate(nTx=n()) %>% group_by(newGeneId) %>% filter(sum(nTx)==n()) 
     newGeneByNewTxId[exonGeneMap_filter1$newTxId] <- 
-        paste0("gene.", prefix, exonGeneMap_filter1$newGeneId)
+        paste0(prefix, "Gene", exonGeneMap_filter1$newGeneId)
     
     if(any(is.na(newGeneByNewTxId))) {
         refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, 
             geneExonMap, exonGeneMap_filter1, newExonId)
-        newGeneIds = paste0("gene.", prefix, refGeneTxMap$newGeneId)
+        newGeneIds = paste0(prefix, "Gene", refGeneTxMap$newGeneId)
         newGeneByNewTxId[refGeneTxMap$newTxId]<-newGeneIds
     }
     return(newGeneByNewTxId)

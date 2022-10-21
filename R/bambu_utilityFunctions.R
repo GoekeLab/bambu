@@ -4,10 +4,13 @@
 #' @importFrom BiocParallel bpparam
 #' @noRd
 setBiocParallelParameters <- function(reads, ncore, verbose){
+    if(ncore >= 2) message("WARNING - If you change the number of cores (ncore) ",
+    "between Bambu runs and there is no progress please restart your R session ",
+    "to resolve the issue that originates from the XGboost package.")
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
     bpParameters$workers <- ifelse(length(reads) == 1, 1, ncore)
-    bpParameters$progressbar <- (!verbose)
+    bpParameters$progressbar <- ifelse(length(reads) > 1 & !verbose, TRUE, FALSE)
     return(bpParameters)
 }
 
@@ -22,11 +25,10 @@ setIsoreParameters <- function(isoreParameters){
         min.readFractionByGene = 0.05,
         min.sampleNumber = 1,
         min.exonDistance = 35,
-        min.exonOverlap = 10, #
+        min.exonOverlap = 10, 
         min.primarySecondaryDist = 5,
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
-        min.exonOverlap = 10,
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
         fitReadClassModel = TRUE,
@@ -34,7 +36,7 @@ setIsoreParameters <- function(isoreParameters){
         returnModel = FALSE,
         baselineFDR = 0.1,
         min.readFractionByEqClass = 0,
-        prefix = "") 
+        prefix = "Bambu") 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
     return(isoreParameters)
@@ -94,6 +96,12 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
             annotations <- prepareAnnotations(annotations)
         } else {
             stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
+        }
+        if(any(grepl("^BambuGene", names(annotations))) | 
+            any(grepl("^BambuTx", mcols(annotations)$TXNAME))){
+                message("Detected Bambu derived annotations in the annotations. ", 
+                "Set a new prefix with opt.discovery(list(prefix='newPrefix')) ",
+                "to prevent ambigious id assignment.")
         }
     } else {
         stop("Annotations is missing.")
@@ -170,6 +178,36 @@ checkInputSequence <- function(genomeSequence) {
 }
 
 
+#' Function that gathers warnings from several read class lists and outputs the counts
+#' @noRd
+handleWarnings <- function(readClassList, verbose){
+    warnings = list()
+    sampleNames = c()
+    for(i in seq_along(readClassList)){
+        readClassSe = readClassList[[i]]
+        if (is.character(readClassSe)) 
+            readClassSe <- readRDS(file = readClassSe)
+        warnings[[i]] = metadata(readClassSe)$warnings
+        sampleNames = c(sampleNames, colnames(readClassList[[i]]))
+    }
+    names(warnings) = sampleNames
+
+    if(verbose & any(lengths(warnings)>0)){
+        message("--- per sample warnings during read class construction ---")
+        for(i in seq_along(warnings)){
+            if(lengths(warnings)[i]>0){
+                message("Warnings for: ", sampleNames[i])
+                sapply(warnings[[i]], message)
+            }
+        }
+    } else {
+        message("Detected ", sum(lengths(warnings)), " warnings across the samples during ",
+        "read class construction. Access warnings with metadata(bambuOutput)$warnings")
+    }
+    return(warnings)
+}
+
+
 #' Combine count se object while preserving the metadata objects
 #' @noRd
 combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
@@ -205,3 +243,4 @@ combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALS
 merge_wrapper <- function(x,y){
     merge.data.table(x,y,by = "GENEID",all=TRUE)
 }
+
