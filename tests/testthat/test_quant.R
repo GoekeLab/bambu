@@ -54,7 +54,7 @@ test_that("bambu (isoform quantification of bam file) produces expected output",
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file)
+    se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(assays(se), assays(seExpected))
 
@@ -93,7 +93,7 @@ test_that("bambu (isoform quantification of bam file and save readClassFiles) pr
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file)
+    se <- bambu(reads = test.bam, annotations = gr, genome = fa.file, discovery = FALSE)
     expect_s4_class(se, "SummarizedExperiment")
     expect_equal(se, seExpected)
 
@@ -122,8 +122,7 @@ test_that("bambu (isoform quantification of saved readClassFiles) produces expec
 
     # test case 1: bambu with single bam file, only using annotations (default option)
     set.seed(1234)
-    seExtended <- bambu(reads = seReadClass1, annotations = gr, 
-        opt.em = list(degradationBias = FALSE), discovery = TRUE)
+    seExtended <- bambu(reads = seReadClass1, annotations = gr, discovery = TRUE)
     expect_s4_class(seExtended, "SummarizedExperiment")
     expect_equal(seExtended, seExtendedExpected)
 

@@ -47,7 +47,7 @@ test_that("low Memory mode does not change results",{
     fa.file <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
     annotations <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 
-    seExpected <- readRDS(system.file("extdata", "seOutput_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
+    seExpected <- readRDS(system.file("extdata", "seOutput_lowMemoryMode_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
 
     se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, lowMemory = TRUE)
     expect_s4_class(se, "SummarizedExperiment")
