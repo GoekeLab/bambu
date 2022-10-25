@@ -95,6 +95,7 @@ from the *NanoporeRNASeq* package, which contains reads aligned to the first
 half of the human chromosome 22 using *minimap2*.
 ```{r}
 library(bambu)
+devtools::install_github("GoekeLab/NanoporeRNASeq")
 library(NanoporeRNASeq)
 data("SGNexSamples")
 SGNexSamples
@@ -334,7 +335,7 @@ The info object is a tibble which associates the filename (fpath) with the sampl
 ```{r}
 info
 # running bambu using the first file
-se <- bambu(rcFile = info$rpath[1:3], annotations = HsChr22BambuAnnotation, genome = genomeSequence)
+se <- bambu(reads = info$rpath[1:3], annotations = HsChr22BambuAnnotation, genome = genomeSequence)
 ```
 
 This output is also generated when both quant and discovery are set to false in a list form indexed by sample.
