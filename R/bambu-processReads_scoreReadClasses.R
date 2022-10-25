@@ -240,6 +240,12 @@ trim_lm = function(lm){
     lm$model = c()
     lm$qr$qr=c()
     attr(lm$terms, ".Environment") = c()
+    lm$linear.predictors = NULL
+    lm$weights = NULL
+    lm$prior.weights = NULL
+    lm$y = NULL
+    lm$data = NULL
+    lm$formula = NULL
     return(lm)
 }
 

@@ -45,7 +45,7 @@ test_that("prepareAnnotations of txdb object (metadata) matches the expectation"
     
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdb2Grch38_91_chr9_1_1000000.rds", package = "bambu"))
     
-    expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
+    expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClassById"))
     expect_equal(mcols(gr), mcols(expectedGR))
 })
 
@@ -55,7 +55,7 @@ test_that("prepareAnnotations of a path to gtf file (metadata) matches the expec
     
     expectedGR <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
   
-    expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClass", "eqClassById"))
+    expect_named(mcols(gr), c("TXNAME", "GENEID", "txid", "eqClassById"))
     expect_equal(mcols(gr), mcols(expectedGR))
 })
 
@@ -151,17 +151,17 @@ test_that("eqClassById is correct", {
 })
 
 
-test_that("eqClass and eqClassById matches", {
-    gr <- readRDS(test_path("fixtures", "grGTF.rds"))    
+# test_that("eqClass and eqClassById matches", {
+#     gr <- readRDS(test_path("fixtures", "grGTF.rds"))    
 
-    # convert the eqClassById to eqClass
-    convert <- data.frame(mcols(gr)) %>% 
-        dplyr::select(TXNAME, eqClass, eqClassById) %>% 
-        mutate(validate=sapply(eqClassById, function(idlist){paste(sort(TXNAME[idlist]), collapse=".")}))
+#     # convert the eqClassById to eqClass
+#     convert <- data.frame(mcols(gr)) %>% 
+#         dplyr::select(TXNAME, eqClass, eqClassById) %>% 
+#         mutate(validate=sapply(eqClassById, function(idlist){paste(sort(TXNAME[idlist]), collapse=".")}))
 
-    expect_equal(convert$validate,convert$eqClass)
+#     expect_equal(convert$validate,convert$eqClass)
 
-})
+# })
 
 # delete the test file
 unlink(test_path("fixtures", "grTXDB.rds"))

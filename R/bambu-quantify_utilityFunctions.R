@@ -31,7 +31,7 @@ processIncompatibleCounts <- function(readClassDist){
   distTable <- distTable[geneRCMap[ readClassId %in% 
                                       unique(distTableIncompatible$readClassId), .(readClassId, GENEID)],
                          on = c("readClassId", "GENEID")]
-  counts <- distTable[,.(GENEID, readCount)]
+  counts <- unique(distTable[,.(GENEID, readCount)])
   setnames(counts, "readCount", "counts")
   return(counts)
 }
@@ -497,16 +497,16 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
   distTable$annotationTxId = match(distTable$annotationTxId, names(annotations))
   #match read classes with transcripts
   readClass_id = rownames(readClass)[readToRC]
-  equalMatches = distTable %>% 
+  distTable$exClassById = NULL
+  equalMatches = as_tibble(distTable) %>%
     filter(equal) %>% 
     group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
   equalMatches = equalMatches$annotationTxIds[match(readClass_id, equalMatches$readClassId)]
-  compatibleMatches = distTable %>% 
+  compatibleMatches =  as_tibble(distTable) %>% 
     filter(!equal & compatible) %>% 
     group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
   compatibleMatches = compatibleMatches$annotationTxIds[match(readClass_id, compatibleMatches$readClassId)]
   readToTranscriptMap = tibble(readId=read_id, equalMatches = equalMatches, compatibleMatches = compatibleMatches)
-  
   return(readToTranscriptMap)
 }
 

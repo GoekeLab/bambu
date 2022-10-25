@@ -14,62 +14,70 @@ writeLines(as.character(xgb_predictions),
            './inst/extdata/xgb_predictions_splice_junction_correction.txt')
 
 
-data1 <- data.frame(
-    tx_id = c( 1,"1Start", 2, "2Start"),
-    read_class_id = c(1,"1Start", 2,"2Start"),
+data1 <- data.table(
+    txid = c( 1,1, 2, 2),
+    equal = rep(FALSE,4),
+    eqClassId = c(1,2,3,4),
+    eqClassById = list(1,-1,2,-2),
     nobs = c(10, 50, 50,10),
-    tx_len = c(546,546,2356,2356),
-    rc_width = c(300,540,1800,2300),
-    minEquiRC = rep(1,4),
-    gene_id = 1
+    txlen = c(546,546,2356,2356),
+    rcWidth = c(300,540,1800,2300),
+    minRC = rep(1,4),
+    GENEID = 1
 )
 
-data2 <- data.frame(
-    tx_id = c( 1,"1Start", 2, "2Start", 1, 2),
-    read_class_id = c(1,"1Start", 2,"2Start", "1.2","1.2"),
+data2 <- data.table(
+    txid = c( 1,1, 2, 2, 1, 2),
+    equal = c(FALSE, TRUE, FALSE, TRUE, FALSE, FALSE),
+    eqClassId = c(1,2,3,4,5,5),
+    eqClassById = list(1,-1,2,-2,c(1,2),c(1,2)),
     nobs = c(10, 50, 50,10, 500,500),
-    tx_len = c(546,546,2356,2356, 546,2356),
-    rc_width = c(300,540,1800,2300, 200, 200),
-    minEquiRC = rep(1,6),
-    gene_id = 2
+    txlen = c(546,546,2356,2356, 546,2356),
+    rcWidth = c(300,540,1800,2300, 200, 200),
+    minRC = rep(1,6),
+    GENEID = 2
 )
 
-data3 <- data.frame(
-    tx_id = c("1Start",1,2, 2, "2Start", 1, 2),
-    read_class_id = c("1Start.1.2","1Start.1.2","1Start.1.2",
-                      2,"2Start", "1.2","1.2"),
+data3 <- data.table(
+    txid = c(1,2,3, 2, 2, 1, 2),
+    equal = c(TRUE,FALSE, FALSE, TRUE,FALSE, FALSE,FALSE),
+    eqClassId = c(1,1,1,2,3,4,4),
+    eqClassById = list(c(-1,2,3),c(-1,2,3),c(-1,1,2),-2,2,c(1,2),c(1,2)),
     nobs = c(500, 500, 500,10, 0,50,50),
-    tx_len = c(546,546,2356,2356,2356, 546,2356),
-    rc_width = c(540,540,540,1800,2300, 200, 200),
-    minEquiRC = c(NA,NA,1,1,1,NA,1),
-    gene_id = 3
+    txlen = c(546,546,2356,2356,2356, 546,2356),
+    rcWidth = c(540,540,540,1800,2300, 200, 200),
+    minRC = c(NA,NA,1,1,1,NA,1),
+    GENEID = 3
 )
 
-data4 <- data.frame(
-    tx_id = c("1Start",1,2, 2, "2Start", 1, 2),
-    read_class_id = c("1Start.1.2","1Start.1.2","1Start.1.2",
-                      2,"2Start", "1.2","1.2"),
+data4 <- data.table(
+    txid = c(1,2,3, 2, 2, 1, 2),
+    equal = c(TRUE, FALSE, FALSE,FALSE,TRUE,FALSE, FALSE),
+    eqClassId = c(1,1,1,2,3,4,4),
+    eqClassById = list(c(-1,2,3),c(-1,2,3),c(-1,2,3),2,-2, c(1,2),c(1,2)),
     nobs = c(50, 50, 50,100, 500,20,20),
-    tx_len = c(546,546,2356,2356,2356, 546,2356),
-    rc_width = c(540,540,540,1800,2300, 200, 200),
-    minEquiRC = c(NA,NA,1,1,1,NA,1),
-    gene_id = 4
+    txlen = c(546,546,2356,2356,2356, 546,2356),
+    rcWidth = c(540,540,540,1800,2300, 200, 200),
+    minRC = c(NA,NA,1,1,1,NA,1),
+    GENEID = 4
 )
 
-data5 <- data.frame(
-    tx_id = c(1,"1Start",2, "2Start", "1Start","2Start"),
-    read_class_id = c(1,"1Start",
-                      2,"2Start", "1Start.2Start","1Start.2Start"),
+data5 <- data.table(
+    txid = c(1,1,2, 2, 1,2),
+    equal = c(FALSE, TRUE, FALSE, TRUE, TRUE, TRUE),
+    eqClassId = c(1,2,3,4,5,5),
+    eqClassById = list(1,-1,2,-2,c(-1,-2),c(-1,-2)),
     nobs = c(5, 50, 10,60, 200,200),
-    tx_len = c(546,546,2356,2356, 546,2356),
-    rc_width = c(1700,2200,1800,2300, 2000, 2000),
-    minEquiRC = rep(1,6),
-    gene_id = 5
+    txlen = c(546,546,2356,2356, 546,2356),
+    rcWidth = c(1700,2200,1800,2300, 2000, 2000),
+    minRC = rep(1,6),
+    GENEID = 5
 )
 
 
 
 estOutput_woBC <- lapply(seq_len(5), function(s) {
+    print(s)
     est <- bambu.quantDT(readClassDt = get(paste0("data", s)), 
                          emParameters = list(degradationBias = FALSE, 
                                              maxiter = 10000, conv = 10^(-2), minvalue = 10^(-8)))
@@ -222,8 +230,8 @@ saveRDS(readGrgList, file = "./inst/extdata/readGrgList_SGNex_A549_directRNA_rep
 ## generate read class files
 
 annotations <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
-genome <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
-se <- bambu(reads = test.bam, annotations = annotseOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rdstions, genome = genomeSequence, discovery = FALSE, quant = FALSE)[[1]]
+genomeSequence <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, stranded = TRUE, discovery = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
@@ -234,10 +242,10 @@ saveRDS(se, file = "./inst/extdata/seOutput_SGNex_A549_directRNA_replicate5_run1
 se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, trackReads = TRUE)
 saveRDS(se, file = "./inst/extdata/seOutput_trackReads_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
-se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, returnDistTable = TRUE)
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, returnDistTable = TRUE)
 saveRDS(se, file = "./inst/extdata/seOutput_distTable_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
 
-se <- bambu(reads = test.bam, annotations = NULL, genome = fa.file, NDR = 1)
+se <- bambu(reads = test.bam, annotations = NULL, genome = genomeSequence, NDR = 1)
 saveRDS(se, file = "./inst/extdata/seOutput_denovo_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
 
 
@@ -312,11 +320,11 @@ seWithDistExpected <- isore.estimateDistanceToAnnotations(
 saveRDS(seWithDistExpected, file = "./inst/extdata/distanceToAnnotations_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 set.seed(1234)
-seOutputCombined = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = fa.file, discovery = FALSE)
+seOutputCombined = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = genomeSequence, discovery = FALSE)
 saveRDS(seOutputCombined, file = "./inst/extdata/seOutputCombined_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 set.seed(1234)
-seOutputCombinedExtended = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = fa.file, discovery = TRUE)
+seOutputCombinedExtended = bambu(reads =  Rsamtools::BamFileList(c(test.bam, test.bam), yieldSize = 1000),  annotations =  gr, genome = genomeSequence, discovery = TRUE)
 saveRDS(seOutputCombinedExtended, file = "./inst/extdata/seOutputCombinedExtended_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 seReadClass1 <- system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu")
