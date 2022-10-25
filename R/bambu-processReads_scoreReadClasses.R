@@ -2,6 +2,7 @@
 #' @param se summerized experiment object with read classes/ranges
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
+#' @noRd
 scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
                             fit = TRUE, returnModel = FALSE, 
                             min.readCount = 2, min.exonOverlap = 10,
@@ -59,6 +60,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
 }
 
 #' % of a genes read counts assigned to each read class
+#' @noRd
 calculateGeneProportion = function(counts, geneIds){
     countsTBL <- tibble(counts, geneIds) %>%
         group_by(geneIds) %>% mutate(geneReadCount = sum(counts),
@@ -68,6 +70,7 @@ calculateGeneProportion = function(counts, geneIds){
 }
 
 #' returns number of ref anno each read class is a subset of
+#' @noRd
 isReadClassCompatible =  function(query, subject){
     outData <- data.frame(compatible=rep(0, length(query)), 
                           equal = rep(FALSE, length(query)))
@@ -104,6 +107,7 @@ isReadClassCompatible =  function(query, subject){
 }
 
 #' returns number of A/T's each read class aligned 5' and 3' end
+#' @noRd
 countPolyATerminals = function(grl, genomeSequence){
     start <- resize(granges(unlist(selectStartExonsFromGrangesList(grl, 
             exonNumber = 1),use.names = FALSE)), 
@@ -123,6 +127,7 @@ countPolyATerminals = function(grl, genomeSequence){
 
 
 #' calculates a score based on how likely a read class is full length
+#' @noRd
 getTranscriptScore = function(rowData, model = NULL, defaultModels){
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))
@@ -173,6 +178,7 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
 #'      lmNDR = lmNDR - the linear model of the reletionship between txScore and NDR used to calculate the baseline for multi-exon transcripts
 #'      lmNDR.SE = lmNDR.SE - the linear model of the reletionship between txScore and NDR used to calculate the baseline for single-exon transcripts
 #'      NDR.threshold - the NDR threshold usd to calculate the txScoreBaseline on the lmNDR (baselineFDR)
+#' @noRd
 trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = TRUE) {
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
@@ -232,7 +238,8 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
                 NDR.threshold = NDR.threshold))
 }
 
-#reduces the size of a lm so it can be saved with a lower footprint for prediction
+#' reduces the size of a lm so it can be saved with a lower footprint for prediction
+#' @noRd
 trim_lm = function(lm){
     lm$residuals = c()
     lm$effects = c()
@@ -250,6 +257,7 @@ trim_lm = function(lm){
 }
 
 #' calculate and format read class features for model training
+#' @noRd
 prepareTranscriptModelFeatures = function(rowData){
     scalingFactor = sum(rowData$readCount)/1000000
     outData <- as_tibble(rowData) %>%  
@@ -264,6 +272,7 @@ prepareTranscriptModelFeatures = function(rowData){
 }
 
 #' ensures that the data is trainable after filtering
+#' @noRd
 checkFeatures = function(features, verbose = FALSE){
     labels = features$labels
     trainable = TRUE

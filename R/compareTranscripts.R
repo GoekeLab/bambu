@@ -81,7 +81,6 @@
 #' compareTranscriptsTable <- compareTranscripts(query, subject)
 #' 
 #' compareTranscriptsTable
-#' @noRd
 compareTranscripts <- function(query, subject) {
     subjectFullRng <- ranges(subject)
     queryFullRng <- ranges(query)

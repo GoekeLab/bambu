@@ -287,6 +287,7 @@ reduceUnsplicedRanges <- function(rangesList, stranded){
 #' @importFrom tidyr separate_rows pivot_wider
 #' @importFrom dplyr as_tibble rename mutate select %>% group_by left_join
 #'              ungroup
+#' @noRd
 makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         colDataNames,min.readCount, min.readFractionByGene,
         min.txScore.multiExon, min.txScore.singleExon, bpParameters){

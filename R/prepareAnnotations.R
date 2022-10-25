@@ -32,7 +32,6 @@
 #'     package = "bambu")
 #' se <- bambu(reads = test.bam, annotations = annotations, 
 #'     genome = fa.file, discovery = TRUE, quant = TRUE)
-
 prepareAnnotations <- function(x) {
     if (is(x, "TxDb")) {
         exonsByTx <- exonsBy(x, by = "tx", use.names = FALSE)

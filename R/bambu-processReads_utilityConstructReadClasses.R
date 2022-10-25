@@ -363,6 +363,7 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' @param min.exonOverlap minimum length of overlap to be assigned to a gene
 #' @param fusionMode if TRUE will assign multiple GENEIDs to fusion transcripts, separated by ":"
 #' @param maxChainIteration the number of intermediate novel transcripts which will be used to assign gene ids, default: 3
+#' @noRd
 assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = FALSE, maxChainIteration = 3) {
   strandedRanges <- as.logical(getStrandFromGrList(grl)!='*')
   mcols(grl)$GENEID =rep(NA, length(grl))
@@ -420,6 +421,7 @@ assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = 
 #' with known annotations
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
+#' @noRd
 assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
                                      fusionMode=FALSE, prefix = 'Bambu') {
     # (1) assign gene Ids based on first intron match to annotations
@@ -461,6 +463,7 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
 #' Create new gene ids for groups of overlapping read classes which 
 #' don't overlap with known annotations. 
 #' @param grl a GrangesList object with read classes
+#' @noRd
 assignGeneIdsNoReference <- function(grl, prefix = 'Bambu') {
     newTxIds <- seq_len(length(grl))
     newGeneByNewTxId <- rep(NA, length(newTxIds))
@@ -496,6 +499,7 @@ assignGeneIdsNoReference <- function(grl, prefix = 'Bambu') {
 }
 
 #' Interal function which groups read classes that overlap
+#' @noRd
 assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap, 
                                     exonGeneMap_filter1, newExonId){
     # (3.1) second iteration: non assigned genes
@@ -540,6 +544,7 @@ assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap,
 }
 
 #' Small function to meet bioconductor formatting requirements
+#' @noRd
 getRefGeneExonList = function(exonTxMap, geneExonMap){
     refGeneExonList <- left_join(exonTxMap, 
         dplyr::rename(exonTxMap, newExonId.merge=newExonId), 
