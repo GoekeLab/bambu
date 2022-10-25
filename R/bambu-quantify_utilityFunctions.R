@@ -94,7 +94,7 @@ createList <- function(query, subject){
   eqDt <- data.table(query = query, subject = subject)
   eqDt <- eqDt[order(query, subject)]
   eqClassByIdList <- splitAsList(as.integer(eqDt$subject), eqDt$query)
-  eqClassByIdList <- unname(eqClassByIdList[query])
+  eqClassByIdList <- unname(eqClassByIdList[as.character(query)])
   return(eqClassByIdList)
 }
 
