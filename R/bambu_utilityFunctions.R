@@ -113,9 +113,6 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
     }
 
     if (is(reads, "BamFileList")){
-        if(!all(grepl(".bam$", names(reads)))){
-            stop("All files in BamFileList must be .bam files")
-        }
         if(is.null(genomeSequence)){
             stop("A genome must be provided when running bambu from bam files")
         }
