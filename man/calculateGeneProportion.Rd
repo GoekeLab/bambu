@@ -2,7 +2,7 @@
 % Please edit documentation in R/bambu-processReads_scoreReadClasses.R
 \name{calculateGeneProportion}
 \alias{calculateGeneProportion}
-\title{% of a genes read counts assigned to each read class}
+\title{Percentage of a genes read counts assigned to each read class}
 \usage{
 calculateGeneProportion(counts, geneIds)
 }
