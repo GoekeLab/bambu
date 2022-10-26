@@ -4,7 +4,7 @@ Major changes:
     * Updated the input parameters of Bambu to simplify the user experience
     * Introduced NDR threshold recommendation 
     * Implemented trainBambu(), allowing users to train and use models on their own data
-    * Reads that cannot be assigned to any transcript are grouped as incompatible counts
+    * Reads that cannot be assigned to any transcript are grouped as incompatible counts and used to calculate more accurate gene expression estimates
     * The fusion mode is now available, which assigns read classes that align to multiple genes to a new combined fusion gene
     * Improved quantification processing time by reorganising quantification steps 
 
