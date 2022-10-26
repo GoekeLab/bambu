@@ -30,7 +30,7 @@ reducedRangesByGenes <- function(annotations) {
     annotations <- annotations[order(mcols(annotations)$GENEID)]
     unlistData <- unlist(annotations)
     geneIds <- mcols(annotations)$GENEID[match(names(unlistData), 
-        mcols(annotations)$TXNAME)]
+        names(annotations))]
     partitioning <- PartitioningByEnd(cumsum(table(geneIds)),
                                     names = NULL)
     exonsByGene <- relist(unlistData, partitioning)

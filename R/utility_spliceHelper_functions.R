@@ -94,12 +94,12 @@ checkStartSequence <- function(olap, firstLastSeparate, queryStart,
         subjectStart, queryEnd,subjectEnd, subjectFull, subjectList){
     if (length(olap)) {
         qHits <- queryHits(olap)
-        sHits <- subjectHits(olap)
+        subHits <- subjectHits(olap)
         queryStart <- ranges(queryStart[qHits])
-        subjectStart <- ranges(subjectStart[sHits])
+        subjectStart <- ranges(subjectStart[subHits])
         queryEnd <- ranges(queryEnd[qHits])
-        subjectEnd <- ranges(subjectEnd[sHits])
-        subjectFull <- ranges(subjectFull[sHits])
+        subjectEnd <- ranges(subjectEnd[subHits])
+        subjectFull <- ranges(subjectFull[subHits])
         subjectList <- unlist(subjectFull)
         startList <- calculateFirstLastExonsDist(queryStart, subjectStart,
                                             subjectFull, subjectList)

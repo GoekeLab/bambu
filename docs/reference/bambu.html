@@ -77,7 +77,7 @@ allow comparison." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.1.8</span>
       </span>
     </div>
 
@@ -143,8 +143,10 @@ allow comparison.</p>
     opt.discovery <span class='op'>=</span> <span class='cn'>NULL</span>,
     opt.em <span class='op'>=</span> <span class='cn'>NULL</span>,
     trackReads <span class='op'>=</span> <span class='cn'>FALSE</span>,
+    returnDistTable <span class='op'>=</span> <span class='cn'>FALSE</span>,
     discovery <span class='op'>=</span> <span class='cn'>TRUE</span>,
     quant <span class='op'>=</span> <span class='cn'>TRUE</span>,
+    fusionMode <span class='op'>=</span> <span class='cn'>TRUE</span>,
     verbose <span class='op'>=</span> <span class='cn'>FALSE</span>,
     lowMemory <span class='op'>=</span> <span class='cn'>FALSE</span>
 <span class='op'>)</span></pre>
@@ -187,10 +189,10 @@ obtained by <code><a href='prepareAnnotations.html'>prepareAnnotations</a></code
 is used, defaults to 1.</p></td>
     </tr>
     <tr>
-        <th>NDR</th>
-        <td><p>specifying the approximated precision for included novel transcripts, 
-defaults to 0.1 (10% precision).</p></td>
-      </tr>
+      <th>NDR</th>
+      <td><p>specifying the maximum NDR rate to novel transcript
+output from detected read classes, defaults to 0.1</p></td>
+    </tr>
     <tr>
       <th>yieldSize</th>
       <td><p>see <code>Rsamtools</code>.</p></td>
@@ -227,8 +229,6 @@ reconstruction process:</p><dl>
     <dt>min.txScore.singleExon</dt><dd><p>specifying the minimum transcript level 
     threshold for single-exon transcripts during sample combining, defaults 
     to 1</p></dd>
-    <dt>NDR</dt><dd><p>specifying the maximum NDR rate to novel transcript
-    output from detected read classes, defaults to 0.1</p></dd>
 
 </dl></td>
     </tr>
@@ -247,18 +247,18 @@ algorithm estimation process:</p><dl>
 </dl></td>
     </tr>
     <tr>
-        <th>trackReads</th>
-        <td><p>When TRUE read names will be tracked and output as
-            metadata in the final output as readToTranscriptMaps detailing. 
-            the assignment of reads to transcripts. The output is a list with 
-            an entry for each sample.</p></td>
-      </tr>
-      <tr>
-        <th>outputDistTable</th>
-        <td><p>When TRUE the calculated distance table between
-            read classes and annotations will be output as metadata as 
-            distTables. The output is a list with an entry for each sample.</p></td>
-      </tr>
+      <th>trackReads</th>
+      <td><p>When TRUE read names will be tracked and output as
+    metadata in the final output as readToTranscriptMaps detailing. 
+    the assignment of reads to transcripts. The output is a list with 
+    an entry for each sample.</p></td>
+    </tr>
+    <tr>
+      <th>returnDistTable</th>
+      <td><p>When TRUE the calculated distance table between
+    read classes and annotations will be output as metadata as 
+    distTables. The output is a list with an entry for each sample.</p></td>
+    </tr>
     <tr>
       <th>discovery</th>
       <td><p>A logical variable indicating whether annotations
@@ -268,6 +268,10 @@ are to be extended for quantification.</p></td>
       <th>quant</th>
       <td><p>A logical variable indicating whether quantification will 
 be performed</p></td>
+    </tr>
+    <tr>
+      <th>fusionMode</th>
+      <td><p>A logical variable indicating whether run in fusion mode</p></td>
     </tr>
     <tr>
       <th>verbose</th>
@@ -311,57 +315,255 @@ the extended annotations.</p>
     <p>Main function</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='co'>## =====================</span>
-<span class='va'>test.bam</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,
-    <span class='st'>"SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam"</span>,
-    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span>
-<span class='va'>fa.file</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>, 
-    <span class='st'>"Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa"</span>, 
-    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span>
-<span class='va'>gr</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/readRDS.html'>readRDS</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>, 
-    <span class='st'>"annotationGranges_txdbGrch38_91_chr9_1_1000000.rds"</span>,
-    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span><span class='op'>)</span>
-<span class='va'>se</span> <span class='op'>&lt;-</span> <span class='fu'>bambu</span><span class='op'>(</span>reads <span class='op'>=</span> <span class='va'>test.bam</span>, annotations <span class='op'>=</span> <span class='va'>gr</span>, 
-    genome <span class='op'>=</span> <span class='va'>fa.file</span>, discovery <span class='op'>=</span> <span class='cn'>TRUE</span>, quant <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span>
-</div><div class='output co'>#&gt; <span class='message'>Start generating read class files</span></div><div class='output co'>#&gt; 
-  |                                                                            
-  |                                                                      |   0%</div><div class='output co'>#&gt; <span class='message'>not all chromosomes present in reference annotations,</span>
-#&gt; <span class='message'>            annotations might be incomplete. Please compare objects</span>
-#&gt; <span class='message'>            on the same reference</span></div><div class='output co'>#&gt; <span class='message'>not all chromosomes from reads present in reference genome </span>
-#&gt; <span class='message'>            sequence, reads without reference chromosome sequence are dropped</span></div><div class='output co'>#&gt; <span class='message'>Junction correction with not enough data,</span>
-#&gt; <span class='message'>            precalculated model is used</span></div><div class='output co'>#&gt; <span class='message'>Not enough data points</span></div><div class='output co'>#&gt; <span class='message'>Not enough TRUE/FALSE labels</span></div><div class='output co'>#&gt; <span class='warning'>Warning: Transcript model not trained. Using pre-trained models</span></div><div class='output co'>#&gt; 
-  |                                                                            
-  |======================================================================| 100%
-#&gt; </div><div class='output co'>#&gt; <span class='message'>Finished generating read classes from genomic alignments.</span></div><div class='output co'>#&gt; 
-  |                                                                            
-  |                                                                      |   0%
-  |                                                                            
-  |======================================================================| 100%
-#&gt; 
-#&gt; 
-  |                                                                            
-  |                                                                      |   0%
-  |                                                                            
-  |======================================================================| 100%
-#&gt; 
-#&gt; 
-  |                                                                            
-  |                                                                      |   0%
-  |                                                                            
-  |======================================================================| 100%
-#&gt; 
-#&gt; 
-  |                                                                            
-  |                                                                      |   0%
-  |                                                                            
-  |======================================================================| 100%
-#&gt; </div><div class='output co'>#&gt; <span class='warning'>Warning: Less than 50 TRUE or FALSE read classes for precision stabilization. </span>
-#&gt; <span class='warning'>          Filtering by prediction score instead</span></div><div class='output co'>#&gt; <span class='message'>Finished extending annotations.</span></div><div class='output co'>#&gt; <span class='message'>Start isoform quantification</span></div><div class='output co'>#&gt; 
-  |                                                                            
-  |                                                                      |   0%
-  |                                                                            
-  |======================================================================| 100%
-#&gt; </div><div class='output co'>#&gt; <span class='message'>Finished isoform quantification.</span></div></pre>
+    <pre class="examples"><span class='r-in'><span class='co'>## =====================</span></span>
+<span class='r-in'><span class='va'>test.bam</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>,</span>
+<span class='r-in'>    <span class='st'>"SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam"</span>,</span>
+<span class='r-in'>    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span></span>
+<span class='r-in'><span class='va'>fa.file</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>, </span>
+<span class='r-in'>    <span class='st'>"Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa"</span>, </span>
+<span class='r-in'>    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span></span>
+<span class='r-in'><span class='va'>gr</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/readRDS.html'>readRDS</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/system.file.html'>system.file</a></span><span class='op'>(</span><span class='st'>"extdata"</span>, </span>
+<span class='r-in'>    <span class='st'>"annotationGranges_txdbGrch38_91_chr9_1_1000000.rds"</span>,</span>
+<span class='r-in'>    package <span class='op'>=</span> <span class='st'>"bambu"</span><span class='op'>)</span><span class='op'>)</span></span>
+<span class='r-in'><span class='va'>se</span> <span class='op'>&lt;-</span> <span class='fu'>bambu</span><span class='op'>(</span>reads <span class='op'>=</span> <span class='va'>test.bam</span>, annotations <span class='op'>=</span> <span class='va'>gr</span>, </span>
+<span class='r-in'>    genome <span class='op'>=</span> <span class='va'>fa.file</span>, discovery <span class='op'>=</span> <span class='cn'>TRUE</span>, quant <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 'getOption("repos")' replaces Bioconductor standard repositories, see</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> '?repositories' for details</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> replacement repositories:</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>     CRAN: https://cloud.r-project.org</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Start generating read class files</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> not all chromosomes present in reference annotations,</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             annotations might be incomplete. Please compare objects</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             on the same reference</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> not all chromosomes from reads present in reference genome </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             sequence, reads without reference chromosome sequence are dropped</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:1040: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:749: Found JSON model saved before XGBoost 1.6, please save the model using current version again. The support for old JSON model will be discontinued in XGBoost 2.3.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:438: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:1040: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:749: Found JSON model saved before XGBoost 1.6, please save the model using current version again. The support for old JSON model will be discontinued in XGBoost 2.3.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:438: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:1040: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:749: Found JSON model saved before XGBoost 1.6, please save the model using current version again. The support for old JSON model will be discontinued in XGBoost 2.3.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:438: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:1040: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:749: Found JSON model saved before XGBoost 1.6, please save the model using current version again. The support for old JSON model will be discontinued in XGBoost 2.3.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:41] WARNING: amalgamation/../src/learner.cc:438: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Junction correction with not enough data,</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>             precalculated model is used</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Not enough data points</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Not enough TRUE/FALSE labels</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Transcript model not trained. Using pre-trained models</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:44] WARNING: amalgamation/../src/learner.cc:1040: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:44] WARNING: amalgamation/../src/learner.cc:749: Found JSON model saved before XGBoost 1.6, please save the model using current version again. The support for old JSON model will be discontinued in XGBoost 2.3.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:44] WARNING: amalgamation/../src/learner.cc:438: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:44] WARNING: amalgamation/../src/learner.cc:1040: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:44] WARNING: amalgamation/../src/learner.cc:749: Found JSON model saved before XGBoost 1.6, please save the model using current version again. The support for old JSON model will be discontinued in XGBoost 2.3.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> [16:20:44] WARNING: amalgamation/../src/learner.cc:438: </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   If you are loading a serialized model (like pickle in Python, RDS in R) generated by</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   older XGBoost, please export the model by calling `Booster.save_model` from that version</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   first, then load it back in current version. See:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>     https://xgboost.readthedocs.io/en/latest/tutorials/saving_model.html</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   for more details about differences between saving model and serializing.</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Finished generating read classes from genomic alignments.</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Less than 50 TRUE or FALSE read classes for precision stabilization. </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span>           Filtering by prediction score instead</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> -- Predicting annotation completeness to determine NDR threshold --</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Calculated NDR: 0.005</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> all detect novel transcripts are already present in the annotations, try a higher NDR</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRangesList object of length 105:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> $ENST00000190165</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>       seqnames        ranges strand | exon_rank exon_endRank</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>          &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [1]        9 976964-977455      + |         1            2</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [2]        9 990041-991731      + |         2            1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   -------</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> $ENST00000305248</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>       seqnames      ranges strand | exon_rank exon_endRank</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>          &lt;Rle&gt;   &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [1]        9 34965-35264      - |         2            1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [2]        9 35504-35871      - |         1            2</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   -------</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> $ENST00000314367</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> GRanges object with 16 ranges and 2 metadata columns:</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>        seqnames        ranges strand | exon_rank exon_endRank</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>           &lt;Rle&gt;     &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [1]        9 121060-121573      - |        16            1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [2]        9 121961-122090      - |        15            2</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [3]        9 123217-123282      - |        14            3</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [4]        9 123386-123454      - |        13            4</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    [5]        9 134979-135030      - |        12            5</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>    ...      ...           ...    ... .       ...          ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [12]        9 172081-172172      - |         5           12</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [13]        9 173270-173366      - |         4           13</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [14]        9 175698-175784      - |         3           14</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [15]        9 177723-177820      - |         2           15</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   [16]        9 178816-179047      - |         1           16</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   -------</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> &lt;102 more elements&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> DataFrame with 105 rows and 10 columns</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                          TXNAME          GENEID      txid</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                     &lt;character&gt;     &lt;character&gt; &lt;logical&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000190165 ENST00000190165 ENSG00000064218        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000305248 ENST00000305248 ENSG00000218839        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000314367 ENST00000314367 ENSG00000172785        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000354485 ENST00000354485 ENSG00000107104        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000356521 ENST00000356521 ENSG00000172785        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...                         ...             ...       ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620292 ENST00000620292 ENSG00000172785        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620326 ENST00000620326 ENSG00000277631        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000621255 ENST00000621255 ENSG00000277631        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000622412 ENST00000622412 ENSG00000277631        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000628764 ENST00000628764 ENSG00000227155        NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                                eqClass eqClassById readCount  newTxClass</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                            &lt;character&gt;   &lt;logical&gt; &lt;integer&gt; &lt;character&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000190165        ENST00000190165          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000305248 ENST00000305248.ENST..          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000314367        ENST00000314367          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000354485 ENST00000354485.ENST..          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000356521 ENST00000356521.ENST..          NA        22  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...                                ...         ...       ...         ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620292 ENST00000498044.ENST..          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620326        ENST00000620326          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000621255        ENST00000621255          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000622412        ENST00000622412          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000628764        ENST00000628764          NA        NA  annotation</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                     txNDR relReadCount relSubsetCount</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span>                 &lt;numeric&gt;    &lt;numeric&gt;      &lt;numeric&gt;</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000190165        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000305248        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000314367        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000354485        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000356521 0.0654418     0.468085              1</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ...                   ...          ...            ...</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620292        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000620326        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000621255        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000622412        NA           NA             NA</span>
+<span class='r-out co'><span class='r-pr'>#&gt;</span> ENST00000628764        NA           NA             NA</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Finished extending annotations.</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Start isoform quantification</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> iteration: </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> 1</span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> </span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Finished isoform quantification.</span>
+</pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

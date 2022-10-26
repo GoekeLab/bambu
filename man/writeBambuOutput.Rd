@@ -2,7 +2,7 @@
 % Please edit documentation in R/readWrite.R
 \name{writeBambuOutput}
 \alias{writeBambuOutput}
-\title{Write bambu results to GTF and transcript/gene-count files}
+\title{Write Bambu results to GTF and transcript/gene-count files}
 \usage{
 writeBambuOutput(se, path, prefix = "")
 }
@@ -15,13 +15,14 @@ from \code{\link{bambu}}.}
 
 \item{prefix}{the prefix of the output files}
 }
-\value{
-The function will generate three files, 
-a .gtf file for the annotations,
-two .txt files for transcript and gene counts respectively.
-}
 \description{
-Outputs a GTF file, transcript-count file, and gene-count file from bambu
+Write Bambu results to GTF and transcript/gene-count files
+}
+\details{
+The function will write the output from Bambu to files. The 
+annotations will be written to a .gtf file, transcript counts (total counts, 
+CPM, full-length counts, partial-length counts, and unique counts) and gene counts
+will be written to .txt files.
 }
 \examples{
 se <- readRDS(system.file("extdata",

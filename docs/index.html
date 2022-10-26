@@ -38,7 +38,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.1.8</span>
       </span>
     </div>
 
@@ -81,41 +81,57 @@
 <div id="bambu-reference-guided-transcript-discovery-and-quantification-for-long-read-rna-seq-data" class="section level1">
 <div class="page-header"><h1 class="hasAnchor">
 <a href="#bambu-reference-guided-transcript-discovery-and-quantification-for-long-read-rna-seq-data" class="anchor"></a>bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data</h1></div>
-<p><a href="https://www.tidyverse.org/lifecycle/#stable"><img src="https://img.shields.io/badge/lifecycle-stable-green.svg" alt="Lifecycle: maturing"></a> <a href="https://github.com/GoekeLab/bambu/graphs/contributors"><img src="https://img.shields.io/badge/Maintained%3F-Yes-brightgreen" alt="Maintained?"></a> <a href="#installation"><img src="https://img.shields.io/badge/Install-Github-brightgreen" alt="Install"></a> <a href="https://github.com/goekelab/bambu/actions"><img src="https://github.com/goekelab/bambu/workflows/R-CMD-check-bioc/badge.svg" alt="R build status"></a><br><a href="https://github.com/goekelab/bambu/issues"><img src="https://img.shields.io/github/issues/goekelab/bambu" alt="GitHub issues"></a> <a href="https://github.com/goekelab/bambu/pulls"><img src="https://img.shields.io/github/issues-pr/goekelab/bambu" alt="GitHub pulls"></a> <a href="http://bioconductor.org/checkResults/release/bioc-LATEST/bambu/"><img src="http://bioconductor.org/shields/build/release/bioc/bambu.svg" alt="BioC status"></a> <a href="https://bioconductor.org/checkResults/devel/bioc-LATEST/bambu"><img src="http://www.bioconductor.org/shields/build/devel/bioc/bambu.svg" alt="BioC dev status"></a> <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a> <a href="https://doi.org/10.5281/zenodo.3900025"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.3900025.svg" alt="DOI"></a> <a href="https://www.codefactor.io/repository/github/goekelab/bambu"><img src="https://www.codefactor.io/repository/github/goekelab/bambu/badge" alt="CodeFactor"></a> <a href="https://codecov.io/gh/GoekeLab/bambu"><img src="https://codecov.io/gh/GoekeLab/bambu/branch/master/graph/badge.svg?token=PMeRi0r1tj" alt="codecov"></a></p>
-<p><strong><em>bambu</em></strong> is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use <strong><em>bambu</em></strong> after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from <strong><em>bambu</em></strong> can directly be used for visualisation and downstream analysis such as differential gene expression or transcript usage.</p>
-<hr>
+<p><a href="https://www.tidyverse.org/lifecycle/#stable"><img src="https://img.shields.io/badge/lifecycle-stable-green.svg" alt="Lifecycle: maturing"></a> <a href="https://github.com/GoekeLab/bambu/graphs/contributors"><img src="https://img.shields.io/badge/Maintained%3F-Yes-brightgreen" alt="Maintained?"></a> <a href="#installation"><img src="https://img.shields.io/badge/Install-Github-brightgreen" alt="Install"></a> <a href="https://github.com/goekelab/bambu/actions"><img src="https://github.com/goekelab/bambu/workflows/R-CMD-check-bioc/badge.svg" alt="R build status"></a><br><a href="https://github.com/goekelab/bambu/issues"><img src="https://img.shields.io/github/issues/goekelab/bambu" alt="GitHub issues"></a> <a href="https://github.com/goekelab/bambu/pulls"><img src="https://img.shields.io/github/issues-pr/goekelab/bambu" alt="GitHub pulls"></a> <a href="http://bioconductor.org/checkResults/release/bioc-LATEST/bambu/"><img src="http://bioconductor.org/shields/build/release/bioc/bambu.svg" alt="BioC status"></a> <a href="https://bioconductor.org/checkResults/devel/bioc-LATEST/bambu"><img src="http://www.bioconductor.org/shields/build/devel/bioc/bambu.svg" alt="BioC dev status"></a> <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a> <a href="https://www.codefactor.io/repository/github/goekelab/bambu"><img src="https://www.codefactor.io/repository/github/goekelab/bambu/badge" alt="CodeFactor"></a> <a href="https://codecov.io/gh/GoekeLab/bambu"><img src="https://codecov.io/gh/GoekeLab/bambu/branch/master/graph/badge.svg?token=PMeRi0r1tj" alt="codecov"></a></p>
+<p><strong><em>bambu</em></strong> is a R package for multi-sample transcript discovery and quantification using long read RNA-Seq data. You can use <strong><em>bambu</em></strong> after read alignment to obtain expression estimates for known and novel transcripts and genes. The output from <strong><em>bambu</em></strong> can directly be used for visualization and downstream analysis such as differential gene expression or transcript usage.</p>
 <div id="content" class="section level3">
 <h3 class="hasAnchor">
 <a href="#content" class="anchor"></a>Content</h3>
 <ul>
 <li><a href="#installation">Installation</a></li>
-<li><a href="#general-usage">General usage</a></li>
-<li><a href="#use-precalculated-annotation-objects">Use precalculated annotation objects</a></li>
-<li><a href="#advanced-options">Advanced options</a></li>
-<li><a href="#details-on-the-output">Details on the output</a></li>
-<li><a href="#complementary-functions">Complementary functions</a></li>
-<li><a href="#release-history">Release History</a></li>
-<li><a href="#citation">Citation</a></li>
-<li><a href="#contributors">Contributors</a></li>
+<li>
+<a href="#General-Usage">General Usage</a>
+<ul>
+<li><a href="#Using-precalculated-annotation-objects">Using precalculated annotation objects</a></li>
+<li><a href="#Running-multiple-samples">Running multiple samples</a></li>
+<li><a href="#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis">Modulating the sensitivity of discovery (pre and post analysis)</a></li>
+<li><a href="#Output">Output</a></li>
+<li><a href="#Visualization">Visualization</a></li>
+</ul>
+</li>
+<li>
+<a href="#Bambu-Advanced-Options"><em>bambu</em> Advanced Options</a>
+<ul>
+<li><a href="#Using-a-pretrained-model">Using a pretrained model</a></li>
+<li><a href="#De-novo-transcript-discovery">De-novo transcript discovery</a></li>
+<li><a href="#Storing-and-using-preprocessed-files-rcFiles">Storing and using preprocessed files (rcFiles)</a></li>
+<li><a href="#Tracking-read-to-transcript-assignment">Tracking read-to-transcript assignment</a></li>
+<li><a href="#Training-a-model-on-another-speciesdataset-and-applying-it">Training a model on another species/dataset and applying it</a></li>
+<li><a href="#Quantification-of-gene-expression">Quantification of gene expression</a></li>
+<li><a href="#Including-single-exons">Including single exons</a></li>
+<li><a href="#Bambu-Arguments"><em>bambu</em> Arguments</a></li>
+<li><a href="#Output-Description">Output Description</a></li>
+</ul>
+</li>
+<li><a href="#Release-History">Release History</a></li>
+<li><a href="#Citation">Citation</a></li>
+<li><a href="#Contributors">Contributors</a></li>
 </ul>
 </div>
 <div id="installation" class="section level3">
 <h3 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h3>
-<p>You can install <strong><em>bambu</em></strong> from bioconductor:</p>
-<pre class="rscript"><code>if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-
+<p><em>bambu</em> is available through GitHub and Bioconductor</p>
+<p>Bioconductor:</p>
+<pre class="rscript"><code>if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 BiocManager::install("bambu")</code></pre>
-<hr>
-</div>
-<div id="general-usage" class="section level3">
-<h3 class="hasAnchor">
-<a href="#general-usage" class="anchor"></a>General Usage</h3>
-<p>The default mode to run <em><strong>bambu</strong> is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). </em><strong>bambu</strong>* will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates.</p>
-<p>We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run <strong><em>bambu</em></strong> with the following options:</p>
+<p>GitHub: First download <em>bambu</em> from github</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/GoekeLab/bambu.git</span></code></pre></div>
+<p>Within R load the package (be sure to put the correct path to <em>bambu</em> below)</p>
+<pre class="rscript"><code><a href="https://devtools.r-lib.org/">library(devtools)
+load_all("/path/to/bambu")
+library(bambu)</a></code></pre>
+<p>We can test if <em>bambu</em> is installed correctly and runs correctly by using a small test set that comes with the package.</p>
 <pre class="rscript"><code>test.bam &lt;- system.file("extdata", "SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam", package = "bambu")
-  
 fa.file &lt;- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
 
 gtf.file &lt;- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf", package = "bambu")
@@ -124,109 +140,548 @@ bambuAnnotations &lt;- prepareAnnotations(gtf.file)
 
 se &lt;- bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file)
 </code></pre>
-<p><strong>Transcript discovery only (no quantification)</strong></p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, annotations = txdb, genome = fa.file, quant = FALSE)</a></code></pre>
+</div>
+<div id="general-usage" class="section level3">
+<h3 class="hasAnchor">
+<a href="#general-usage" class="anchor"></a>General Usage</h3>
+<p>The default mode to run <em>bambu</em> is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object that can be obtained from prepareAnnotations() function), and reference genome sequence (fasta file or BSgenome). bambu will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates. If you do not have any data yet or would like to test <em>bambu</em> with a full data-set that has been proven to work (the test data-set that comes with the package is too small to do proper analysis on), we recommend the SG-NEx data project. You can find this data and instructions on how to install it at <a href="https://github.com/GoekeLab/sg-nex-data/blob/master/docs/SG-NEx_Bambu_tutorial.md">here</a>. We highly recommend using the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run bambu with the following options:</p>
+<pre class="rscript"><code>se &lt;- bambu(reads = sample, annotations = annotations, genome = fa.file)</code></pre>
+<p><strong>reads</strong> - is a path to one or more bam files aligned to the same genome used in the genome argument, or a path to intermediate read class files (see <a href="#Storing-and-using-preprocessed-files-rcFiles">Storing and using preprocessed files (rcFiles)</a>)</p>
+<p><strong>genome</strong> - is a path to the genome fasta file. This should be the same file used for read alignment. <em>Bambu</em> does not support alignment to the transcriptome as it requires the splice junctions from a genome alignment for transcript discovery.</p>
+<p><strong>annotations</strong> - takes a path to a gtf file, a txdb object, or annotations prepared by prepareAnnotations() (see <a href="#Use-precalculated-annotation-objects">Use precalculated annotation objects</a>). When not provided, de novo transcript discovery is performed (see <a href="#De-novo-transcript-discovery">De-novo transcript discovery</a>)</p>
+<p><strong>NDR</strong> - Novel Discovery Rate threshold. A value between 0 and 1 representing the maximum NDR threshold for candidate transcripts to be included in the analysis. By default, <em>bambu</em> will recommend a threshold for your analysis. For more information see <a href="#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis">Modulating the sensitivity of discovery (pre and post analysis)</a>.</p>
+<p>For the full parameter list see <a href="#Arguments">Arguments</a></p>
+<p>For information on the output and how to export it to a file see <a href="#Output">Output</a>.</p>
+<div id="transcript-discovery-only-no-quantification" class="section level4">
+<h4 class="hasAnchor">
+<a href="#transcript-discovery-only-no-quantification" class="anchor"></a><strong>Transcript discovery only (no quantification)</strong>
+</h4>
+<p>If you are only interested in identifying novel transcripts, the quantification module of <em>bambu</em> can be skipped by setting quant to FALSE. Note that the output will be a GRangeslist object containing the reference and novel annotations (See rowRanges() in <a href="#Output">Output</a>). We recommend running transcript discovery only mode with NDR = 1, and doing filtering in the downstream analysis to allow flexibility in the analysis. See <a href="#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis">Modulating the sensitivity of discovery (pre and post analysis)</a></p>
+<pre class="rscript"><code>se.discoveryOnly &lt;- bambu(reads = test.bam, annotations = gtf.file, genome = fa.file, quant = FALSE)</code></pre>
 <p><strong>Quantification of annotated transcripts and genes only (no transcript/gene discovery)</strong></p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, annotations = txdb, genome = fa.file, discovery = FALSE)</a></code></pre>
-<p><strong>Large sample number/ limited memory</strong><br>
-For larger sample numbers we recommend to write the processed data to a file:</p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, rcOutDir = "./bambu/", annotations = bambuAnnotations, genome = fa.file)</a></code></pre>
-<p>For very large samples (&gt;100 million reads) where memory is limiting we recommend running Bambu in lowMemory mode:</p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads = test.bam, annotations = bambuAnnotations, genome = fa.file, lowMemory = TRUE)</a></code></pre>
-<hr>
+<p>If you are only interested in quantifying transcripts, the discovery module of <em>bambu</em> can be skipped by setting discovery to FALSE.</p>
+<pre class="rscript"><code>se.quantOnly &lt;- bambu(reads = test.bam, annotations = gtf.file, genome = fa.file, discovery = FALSE)</code></pre>
 </div>
-<div id="use-precalculated-annotation-objects" class="section level3">
+</div>
+<div id="using-precalculated-annotation-objects" class="section level3">
 <h3 class="hasAnchor">
-<a href="#use-precalculated-annotation-objects" class="anchor"></a>Use precalculated annotation objects</h3>
-<p>You can also use precalculated annotations.</p>
-<p>If you plan to run <strong><em>bambu</em></strong> more frequently, we recommend to save the bambuAnnotations object.</p>
-<p>The bambuAnnotation object can be calculated from a <em>.gtf</em> file:</p>
+<a href="#using-precalculated-annotation-objects" class="anchor"></a>Using precalculated annotation objects</h3>
+<p>Depending on the size of your reference annotations the prepareAnnotations() step may take a few minutes. You can also use precalculated annotations and if you plan to run <em>bambu</em> more frequently with the same annotations, we recommend to save the bambuAnnotations object. The bambuAnnotation object can be calculated from:</p>
+<p>a) a .gtf file:</p>
 <pre class="rscript"><code>annotations &lt;- prepareAnnotation(gtf.file)</code></pre>
-<p>From <em>TxDb</em> object</p>
+<p>b) a TxDb object</p>
 <pre class="rscript"><code>annotations &lt;- prepareAnnotations(txdb)</code></pre>
-<hr>
+<p>Save the object</p>
+<pre class="rscript"><code>saveRDS(annotations, ”/path/to/annotations.rds” )</code></pre>
+<p>This object can then be used instead of a path to your reference annotations to the annotations argument.</p>
+<pre class="rscript"><code>annotations &lt;- readRDS("/path/to/annotations.rds")
+bambu(reads &lt;- test.bam, annotations = annotations, genome = fa.file)</code></pre>
 </div>
-<div id="advanced-options" class="section level3">
+<div id="running-multiple-samples" class="section level3">
 <h3 class="hasAnchor">
-<a href="#advanced-options" class="anchor"></a>Advanced Options</h3>
-<p><strong>More stringent filtering thresholds imposed on potential novel transcripts</strong></p>
-<ul>
-<li>Keep novel transcripts with min 5 read count in at least 1 sample:</li>
-</ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(min.readCount = 5))</a></code></pre>
-<ul>
-<li>Keep novel transcripts with min 5 samples having at least 2 counts:</li>
-</ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(min.sampleNumber = 5))</a></code></pre>
-<ul>
-<li>Filter out transcripts with relative abundance within gene lower than 10%:</li>
-</ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.discovery = list(min.readFractionByGene = 0.1))</a></code></pre>
-<ul>
-<li>Set novel transcript discovery rate to 50% of the detected transcripts (lower is more):</li>
-</ul>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, NDR = 0.5)</a></code></pre>
-<p><strong>Quantification without bias correction</strong></p>
-<p>The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.</p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, opt.em = list(bias = FALSE))</a></code></pre>
-<p><strong>Parallel computation</strong><br><strong><em>bambu</em></strong> allows parallel computation.</p>
-<pre class="rscript"><code><a href="reference/bambu.html">bambu(reads, annotations, genome, ncore = 8)</a></code></pre>
-<p>See <a href="https://goekelab.github.io/bambu/">our page</a> for a complete step-by-step workflow and manual on how to customize other condictions.</p>
-<hr>
+<a href="#running-multiple-samples" class="anchor"></a>Running multiple samples</h3>
+<p>If you have multiple replicates for a sample, or plan to do comparative analysis between conditions, it may be beneficial to run all samples together instead of individually. This can be done by providing a vector of paths to all the bam files you want to analyze together.</p>
+<pre class="rscript"><code>
+se.multiSample &lt;- bambu(reads = c(test1.bam, test2.bam, test3.bam), annotations = gtf.file, genome = fa.file)</code></pre>
+<p>The advantage of running samples together include: Novel transcripts that are identified in multiple samples are assigned unified IDs, enabling comparative analysis between different samples. This is especially important for downstream differential expression analysis when looking at novel transcripts. Running multiple samples can be multithreaded (see <a href="#bambu-arguments">ncore</a>). While running multiple samples, By default, <em>bambu</em> will train a model separately on each sample and score novel transcripts in each sample separately.</p>
+<p>If you need to combine samples in multiple configurations (for example different pairwise comparisons) we would recommend using the intermediate rcFiles to save processing time (see <a href="#Storing-and-using-preprocessed-files-rcFiles">Storing and using preprocessed files (rcFiles)</a>)</p>
 </div>
-<div id="details-on-the-output" class="section level3">
+<div id="modulating-the-sensitivity-of-discovery-pre-and-post-analysis" class="section level3">
 <h3 class="hasAnchor">
-<a href="#details-on-the-output" class="anchor"></a>Details on the output</h3>
-<p><strong><em>bambu</em></strong> will output different results depending on whether <em>quant</em> mode is on.</p>
-<p>By default, <em>quant</em> is set to TRUE, so <strong><em>bambu</em></strong> will generate a <em>SummarizedExperiment</em> object that contains the transcript expression estimates.</p>
-<ul>
-<li>access transcript expression estimates by <strong><em>counts()</em></strong>, including a list of variables: counts, CPM, fullLengthCount, partialLengthCounts, and uniqueCounts, and theta
-<ul>
-<li>counts: expression estimates</li>
-<li>CPM: sequencing depth normalized estimates</li>
-<li>fullLengthCounts: estimates of read counts mapped as full length reads for each transcript</li>
-<li>partialLengthCounts: estimates of read counts mapped as partial length reads for each transcript</li>
-<li>uniqueCounts: counts of reads that are uniquely mapped to each transcript</li>
-<li>theta: raw estimates</li>
-</ul>
-</li>
-<li>access annotations that are matched to the transcript expression estimates by <strong><em>rowRanges()</em></strong>
-</li>
-<li>access transcript to gene id map by <strong><em>rowData()</em></strong>, <em>eqClass</em> that defines the equivalent class transcripts is also reported</li>
-</ul>
-<p>In the case when <em>quant</em> is set to FALSE, i.e., only transcript discovery is performed, <strong><em>bambu</em></strong> will report the <em>grangeslist</em> of the extended annotations</p>
-</div>
-<div id="complementary-functions" class="section level3">
-<h3 class="hasAnchor">
-<a href="#complementary-functions" class="anchor"></a>Complementary functions</h3>
-<p><strong>Transcript expression to gene expression</strong></p>
-<pre class="rscript"><code><a href="reference/transcriptToGeneExpression.html">transcriptToGeneExpression(se)</a></code></pre>
-<p><strong>Visualization</strong></p>
-<p>You can visualize the novel genes/transcripts using <strong><em>plotBambu</em></strong> function</p>
-<pre class="rscript"><code><a href="reference/plotBambu.html">plotBambu(se, type = "annotation", gene_id)
+<a href="#modulating-the-sensitivity-of-discovery-pre-and-post-analysis" class="anchor"></a>Modulating the sensitivity of discovery (pre and post analysis)</h3>
+<p>When doing transcript discovery there is a balance between sensitivity (the number of real novel transcripts that are detected) and the precision (how many of the novel transcripts are real). To control this balance, <em>bambu</em> uses the novel discovery rate (NDR) as the main parameter. The NDR threshold approximates the proportion of novel candidates output by bambu, relative to the number of known transcripts it found, i.e., an NDR of 0.1 would mean that 10% of all transcripts passing the threshold are classified as novel.</p>
+<p>If you are using a genome where you expect a high amount of novel transcripts, a higher NDR is recommended so that these novel transcripts are not missed. Conversely if you are using a well annotated genome, we recommend a lower NDR threshold to reduce the presence of false positives. By default the NDR threshold is automatically chosen for the user based on predicted level of annotation completeness when compared to the default model trained on human reference annotations (Hg38). For more information see <a href="#Training-a-model-on-another-speciesdataset-and-applying-it">Training a model on another species/dataset and applying it</a></p>
+<p>To manually select an NDR value, use the NDR argument in <em>bambu</em>:</p>
+<pre class="rscript"><code>se.NDR_0.3 &lt;- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 0.3)</code></pre>
+<p>Alternatively transcript discovery can be run without thresholds, producing a GRangesList annotation object with all transcripts scored with its NDR score. Note that this means turning quant = FALSE in running <em>bambu</em> (refer to <a href="#transcript-discovery-only-no-quantification">“Transcript discovery only”</a> section). The annotations can be filtered by their NDR score (see example below), read count and gene read proportion between the discovery and quantification steps or used for other types of analysis.</p>
+<pre class="rscript"><code>newAnnotations &lt;- bambu(reads = test.bam, annotations = annotations, genome = fa.file, NDR = 1, quant = FALSE)
+annotations.filtered &lt;- newAnnotations[(!is.na(mcols(newAnnotations)$txNDR) &amp; mcols(newAnnotations)$txNDR&lt;0.1) | is.na(mcols(newAnnotations)$txNDR)]
+se.NDR_1 &lt;- bambu(reads = test.bam, annotations = annotations.filtered, genome = fa.file, NDR = 1, discovery = FALSE)
 
-plotBambu(se, type = "annotation", transcript_id)</a></code></pre>
+Additionally there are other thresholds that advanced users can access through opt.discovery when running *bambu* (see arguments).</code></pre>
+</div>
+<div id="output" class="section level3">
+<h3 class="hasAnchor">
+<a href="#output" class="anchor"></a>Output</h3>
+<p><em>bambu</em> returns a SummarizedExperiment object which can be accessed as follows:</p>
 <ul>
 <li>
-<strong><em>plotBambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions</li>
+<strong>assays(se)</strong> returns a list of transcript abundance estimates as counts or CPM</li>
+<li>
+<strong>rowRanges(se)</strong> returns a GRangesList with all annotated and newly discovered transcripts</li>
+<li>
+<strong>rowData(se)</strong> returns additional information about each transcript</li>
 </ul>
-<pre class="rscript"><code><a href="reference/plotBambu.html">plotBambu(se, type = "heatmap") # heatmap 
-
-plotBambu(se, type = "pca") # PCA visualization</a></code></pre>
+<p>Access transcript expression estimates by extracting a variable (such as counts or CPM) using assays():</p>
 <ul>
 <li>
-<strong><em>plotBambu</em></strong> can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable</li>
-</ul>
-<pre class="rscript"><code><a href="reference/plotBambu.html">plotBambu(se, type = "heatmap", group.var) # heatmap 
-
-plotBambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
-<p><strong>Write bambu outputs to files</strong></p>
-<ul>
+<strong>assays(se)$counts</strong> - expression estimates</li>
 <li>
-<strong><em>writeBambuOutput</em></strong> will generate three files, including a <em>.gtf</em> file for the extended annotations, and two <em>.txt</em> files for the expression counts at transcript and gene levels.</li>
+<strong>assays(se)$CPM</strong> - sequencing depth normalized estimates</li>
+<li>
+<strong>assays(se)$fullLengthCounts</strong> - estimates of read counts mapped as full length reads for each transcript</li>
+<li>
+<strong>assays(se)$uniqueCounts</strong> - counts of reads that are uniquely mapped to each transcript</li>
 </ul>
-<pre class="rscript"><code><a href="reference/writeBambuOutput.html">writeBambuOutput(se, path = "./bambu/")</a></code></pre>
-<hr>
+<p>For a full description of the other outputs see <a href="#Output-Description">Output Description</a></p>
+<p>The full output can be written to a file using writeBambuOutput(). Using this function will generate three files, including a .gtf file for the extended annotations, and two .txt files for the expression counts at transcript and gene levels.</p>
+<pre class="rscript"><code>writeBambuOutput(se, path = "./bambu/")</code></pre>
+<p>If you are only interested in the novel transcripts, one can filter this ‘se’ object first to remove reference annotations.</p>
+<pre class="rscript"><code>se.novel = se[mcols(se)$newTxClass != "annotation",]
+writeBambuOutput(se.novel, path = "./bambu/")</code></pre>
+<p>If quant is set to FALSE i.e. only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols() These annotations can be written to a .gtf file using writeToGTF(GRangesList_object, output_path).</p>
+<pre class="rscript"><code>se.discoveryOnly &lt;- bambu(reads = sample, annotations = annotations, genome = fa.file, quant = FALSE)
+writeToGTF(se.discoveryOnly, "./output.gtf")</code></pre>
+<p>As above, to output only the novel annotations, you need to filter out the reference annotations.</p>
+<pre class="rscript"><code>se.discoveryOnly.novel = se.discoveryOnly[mcols(se.discoveryOnly)$newTxClass != "annotation",]
+writeToGTF(se.discoveryOnly.novel, "./output.gtf")</code></pre>
+<p>If both quant and discovery are set to FALSE, <em>bambu</em> will return an intermediate object see <a href="#Storing-and-using-preprocessed-files-rcFiles">Storing and using preprocessed files (rcFiles)</a></p>
+</div>
+<div id="visualization" class="section level3">
+<h3 class="hasAnchor">
+<a href="#visualization" class="anchor"></a>Visualization</h3>
+<p>You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running <em>bambu</em> on the three replicates of HepG2 cell line in the SG-NEx project)</p>
+<pre class="rscript"><code>plotBambu(se, type = "annotation", gene_id = "ENSG00000107104")</code></pre>
+<p align="center">
+<img src="figures/plotTranscript.PNG" title="plotGene" alt="plotGene" width="500"></p>
+<pre class="rscript"><code>plotBambu(se, type = "annotation", transcript_id = "tx.9")</code></pre>
+<p align="center">
+<img src="figures/plotGene.PNG" title="plotTranscript" alt="plotTranscript" width="500"></p>
+<p>plotBambu can also be used to visualize the clustering of input samples on gene/transcript expressions. Only for multiple samples’ visualisation. See <a href="#Running-multiple-samples">Running multiple samples</a></p>
+<pre class="rscript"><code>plotBambu(se, type = "heatmap") # heatmap </code></pre>
+<p align="center">
+<img src="figures/plotHeatMap.PNG" title="plotHeapmap" alt="plotHeapmap" width="500"></p>
+<pre class="rscript"><code>plotBambu(se, type = "pca") # PCA visualization</code></pre>
+<p align="center">
+<img src="figures/plotPCA.PNG" title="plotPCA" alt="plotPCA" width="500"></p>
+<p>plotBambu can also be used to visualize the clustering of input samples on gene/transcript expressions with grouping variable</p>
+<pre class="rscript"><code>plotBambu(se, type = "heatmap", group.var) # heatmap 
+
+plotBambu(se, type = "pca", group.var) # PCA visualization</code></pre>
+</div>
+<div id="bambu-advanced-options" class="section level3">
+<h3 class="hasAnchor">
+<a href="#bambu-advanced-options" class="anchor"></a><em>Bambu</em> Advanced Options</h3>
+<p>Below we include several advanced options and use-cases for <em>bambu</em>. We recommend reading and understanding the paper <strong><em>(LINK???)</em></strong> before attempting to use these features.</p>
+</div>
+<div id="using-a-pretrained-model" class="section level3">
+<h3 class="hasAnchor">
+<a href="#using-a-pretrained-model" class="anchor"></a>Using a pretrained model</h3>
+<p><em>Bambu</em> requires at least 1000 transcripts from the annotations to be detected in a sample in order to train a sample specific model. In use cases where this is not possible <em>bambu</em> will instead use a default pretrained model to calculate the transcript probability score (TPS) for each read class. Users can force this behavior if they believe their annotations are not sufficient for sample specific training (for example if they suspect a high proportion of real novel transcripts are present in their sample). This is advantageous when you want NDR calibration without the impacts of a model trained using low quality annotations.</p>
+<pre class="rscript"><code>se &lt;- bambu(reads = test.bam, annotations = annotations, genome = fa.file, opt.discovery = list(fitReadClassModel = FALSE))</code></pre>
+<p>The default pretrained model was trained on SGNex_HepG2_directRNA_replicate5_run1 and has the following characteristics:</p>
+<p>Genome: Homo_sapiens.GRCh38.dna_sm.primary_assembly <br> Annotations: Homo_sapiens.GRCh38.91<br> Read count: 7,861,846<br> Technology: Nanopore (ONT)<br> Library preparation: directRNA<br> Base Calling Accuracy: 79%<br> Average Read Length: 1093<br></p>
+<p>We have found the pretrained model works successfully across species borders (on Arabidopsis thaliana) and on different technologies (PacBio), with only small decreases in performance compared to using a sample specific model. The pretrained model is not always effective in samples with large differences in sequencing quality or if the library preparation results in biases in the overall structure of the transcriptome. In this case, we would recommend training a new model using similar data from a different sample that has quality reference annotations (See <a href="#Training-a-model-on-another-speciesdataset-and-applying-it">Training a model on another species/dataset and applying it</a>).</p>
+</div>
+<div id="de-novo-transcript-discovery" class="section level3">
+<h3 class="hasAnchor">
+<a href="#de-novo-transcript-discovery" class="anchor"></a>De-novo transcript discovery</h3>
+<p>In cases where the organism does not yet have reference annotations, or unreliable annotations, <em>bambu</em> can be run in de-novo mode. In de-novo mode, <em>bambu</em> does not train a model, and instead uses the pretrained model to classify novel transcripts (see <a href="#Using-a-pretrained-model">Using a pretrained model</a>. To learn how to train a new model for a more closely related organism/sample see <a href="#Training-a-model-on-another-speciesdataset-and-applying-it">Training a model on another species/dataset and applying it</a>. Without annotations <em>bambu</em> is unable to calibrate the NDR output, nor be able to recommend a threshold and will instead use the TPS as the thresholded value. Therefore you should supply a manual NDR threshold (<a href="#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis">Modulating the sensitivity of discovery (pre and post analysis)</a>) and note that the precision of the output is unlikely to linearly match an applied threshold. The TPS threshold used is (&gt; 1-NDR). If an NDR is not provided, a default NDR threshold of &lt;0.1 is used (an effective TPS threshold of &gt; 0.9). As in <a href="#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis">Modulating the sensitivity of discovery (pre and post analysis)</a> an NDR of 1 can be provided to output all possible read classes with their TPS scores</p>
+<pre class="rscript"><code>novelAnnotations &lt;- bambu(reads = test.bam, annotations = NULL, genome = fa.file, NDR = 0.5, quant = FALSE)</code></pre>
+</div>
+<div id="storing-and-using-preprocessed-files-rcfiles" class="section level3">
+<h3 class="hasAnchor">
+<a href="#storing-and-using-preprocessed-files-rcfiles" class="anchor"></a>Storing and using preprocessed files (rcFiles)</h3>
+<p>The first step of <em>bambu</em> involves the construction of read classes which is a large fraction of the running time. This could be time-consuming if we want to perform transcript discovery &amp; quantification multiple times on the same dataset using different configurations (eg. NDR, or combinations of samples), especially when the sample is large. To mitigate this, we can store the read class information as read class files (rcFiles) during a <em>bambu</em> run. Then they can be used as an input argument in the <em>bambu</em> main function for the subsequent <em>bambu</em> run.</p>
+<pre class="rscript"><code>se &lt;- bambu(reads = rcFiles, annotations = annotations, genome = fa.file)</code></pre>
+<p>rcFiles can be generated in two ways, either as a direct output of the bambu() function when quant and discovery are FALSE, or as written outputs when a path is provided to the rcOutdir argument. When rcFiles are output using rcOutdir this is done using BiocFileCache. For more details on how to access, use, and identify these files see <a href="https://bioconductor.org/packages/release/bioc/html/BiocFileCache.html">here</a>. A short example is shown below.</p>
+<p>Example using rcOutDir to produce preprocessed files</p>
+<pre class="rscript"><code>se &lt;- bambu(reads = test.bam, rcOutDir = "path/to/rcOutput/", annotations = annotations, genome = fa.file)</code></pre>
+<p>This will store a preprocessed rcFile in the provided directory for each sample file provided to reads. To access these files for future use, we recommend using the BioCFileCache package which provides the metadata needed to identify the sample.</p>
+<pre class="rscript"><code><a href="https://rdrr.io/r/base/library.html">library(BiocFileCache)
+bfc &lt;- BiocFileCache("path/to/rcOutput/", ask = FALSE)
+info &lt;- bfcinfo(bfc)</a></code></pre>
+<p>The info object is a tibble which associates the filename (fpath) with the sample (rname) to help you identify which .rds file you need.</p>
+<pre class="rscript"><code>info
+# running bambu using the first file
+se &lt;- bambu(reads = info$rpath[1], annotations = annotations, genome = fa.file)</code></pre>
+<p>This output is also generated when both quant and discovery are set to false in a list form indexed by sample.</p>
+<pre class="rscript"><code>se &lt;- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE)</code></pre>
+<p>As this is an intermediate object it will not be suitable to use for general use cases. We will document the object below for any potential advanced use cases that may arise.</p>
+<pre class="rscript"><code>rowData(se[[1]])</code></pre>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>column name</th>
+<th>description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>chr.rc</td>
+<td>The chromosome name the read class is found on</td>
+</tr>
+<tr class="even">
+<td>strand.rc</td>
+<td>The strand of the read class</td>
+</tr>
+<tr class="odd">
+<td>startSD</td>
+<td>The standard deviation of the aligned genomic start positions of all reads assigned to the read class</td>
+</tr>
+<tr class="even">
+<td>readCount.posStrand</td>
+<td>The number of reads assigned to this read class that aligned to the positive strand</td>
+</tr>
+<tr class="odd">
+<td>intronStarts</td>
+<td>A comma separated character vector of intron start coordinates</td>
+</tr>
+<tr class="even">
+<td>intronEnds</td>
+<td>A comma separated character vector of intron end coordinates</td>
+</tr>
+<tr class="odd">
+<td>confidenceType</td>
+<td>Category of confidence: <br><strong>highConfidenceJunctionReads</strong> - the read class contain no low confidence junctions <br><strong>lowConfidenceJunctionReads</strong> - the read class contains low confidence junctions <br><strong>unsplicedWithin</strong> - single exon read class that is within the exon boundaries of an annotation <br><strong>unsplicedNew</strong> - single exon read class that does not fully overlap with annotated exons</td>
+</tr>
+<tr class="even">
+<td>readCount</td>
+<td>The number of reads assigned to this read class</td>
+</tr>
+<tr class="odd">
+<td>readId *only present when trackReads = TRUE</td>
+<td>An integer list of bambu internal read ids that belong to the read class. (See the metadata of the object for full read names)</td>
+</tr>
+<tr class="even">
+<td>GENEID</td>
+<td>The gene ID the transcript is associated with</td>
+</tr>
+<tr class="odd">
+<td>novelGene</td>
+<td>A logical that is true if the read class belongs to a novel gene (does not overlap with an annotated gene loci)</td>
+</tr>
+<tr class="even">
+<td>numExons</td>
+<td>The number of exons the read class has</td>
+</tr>
+<tr class="odd">
+<td>geneReadProp</td>
+<td>The proportion of reads assigned to this read class relative to all the reads assigned to all read classes from its gene</td>
+</tr>
+<tr class="even">
+<td>geneReadCount</td>
+<td>The number of reads assigned to the gene of this read class</td>
+</tr>
+<tr class="odd">
+<td>equal</td>
+<td>A logical that is true if the read classes exon-junctions perfectly and completely match the exon-junctions of a reference annotation</td>
+</tr>
+<tr class="even">
+<td>compatible</td>
+<td>An integer counting the number of reference annotations, where the read classes exon-junctions are contiguously present (a subset)</td>
+</tr>
+<tr class="odd">
+<td>numAstart</td>
+<td>An integer counting the number of A nucleotides found within a 20bp window centered on the read class genomic start position</td>
+</tr>
+<tr class="even">
+<td>numAend</td>
+<td>An integer counting the number of A nucleotides found within a 20bp window centered on the read class genomic end position</td>
+</tr>
+<tr class="odd">
+<td>numTstart</td>
+<td>An integer counting the number of T nucleotides found within a 20bp window centered on the read class genomic start position</td>
+</tr>
+<tr class="even">
+<td>numTend</td>
+<td>An integer counting the number of T nucleotides found within a 20bp window centered on the read class genomic end position</td>
+</tr>
+<tr class="odd">
+<td>txScore</td>
+<td>This is the TPS generated by the sample trained model</td>
+</tr>
+<tr class="even">
+<td>txScore.noFit</td>
+<td>This is the TPS generated by the pretrained model</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="tracking-read-to-transcript-assignment" class="section level3">
+<h3 class="hasAnchor">
+<a href="#tracking-read-to-transcript-assignment" class="anchor"></a>Tracking read-to-transcript assignment</h3>
+<p>Some use cases require knowing which individual reads support specific transcripts (novel and annotated). By default this feature is off due to the memory overhead it introduces but can be turned on using the trackReads argument. The output has three columns: read_id, a list of indices of equal matches, a list of indices of compatible matches. These indices match the annotations found in rowRanges(se)</p>
+<pre class="rscript"><code>se &lt;- bambu(reads = test.bam, annotations = annotations, genome = fa.file, trackReads = TRUE)
+metadata(se)$readToTranscriptMaps[[1]]</code></pre>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>column name</th>
+<th>description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>read_id</td>
+<td>The read name as found in the bam file. If running from a rcFile where trackReads!=TRUE, bambu will not have stored the read names, this will instead be a unique bambu-assigned numerical ID (will not correlate with the bam file).</td>
+</tr>
+<tr class="even">
+<td>equal_matches</td>
+<td>A list of integers with the tx ids where the exon-junctions of the read match completely and contiguously. This matches the index of the transcript found in rowRanges()</td>
+</tr>
+<tr class="odd">
+<td>compatible_matches</td>
+<td>A list of integers with the tx ids where the exon-junctions of the read are found contiguously within the transcript (a subset). This matches the index of the transcript found in rowRanges()</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="training-a-model-on-another-speciesdataset-and-applying-it" class="section level3">
+<h3 class="hasAnchor">
+<a href="#training-a-model-on-another-speciesdataset-and-applying-it" class="anchor"></a>Training a model on another species/dataset and applying it</h3>
+<p>In situations where training is not or cannot be performed, and the default model is also not suitable for the sample (the sample is generated from a different technology, species, condition, etc), <em>bambu</em> provides the option to train a new model, if well annotated similar data is available. For example one might train a model on arabidopsis to apply to an unannotated plant sample.</p>
+<pre class="rscript"><code># first train the model using a related annotated dataset from .bam
+se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE ([see here](#Storing-and-using-preprocessed-files-rcFiles)).
+newDefaultModel = metadata(se[[1]])$model # [[1]] will select the model trained on the first sample
+
+# alternatively train the model using an rcFile
+rcFile &lt;- readRDS(pathToRcFile)
+newDefaultModel = trainBambu(rcFile)
+
+# use the trained model on another sample
+# sample2.bam and fa.file2 represent the aligned reads and genome for the poorly annotated sample
+se &lt;- bambu(reads = sample2.bam, annotations = NULL, genome = fa.file2, opt.discovery = list(defaultModels = newDefaultModel, fitReadClassModel = FALSE))
+
+#trainBambu Arguments
+
+rcFile &lt;- NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = TRUE</code></pre>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>arguments</th>
+<th>description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>rcFile</td>
+<td>A path to the intermediate rcFile sample or the loaded rcFile sample (see <a href="#Storing-and-using-preprocessed-files-rcFiles">Storing and using preprocessed files (rcFiles)</a>)</td>
+</tr>
+<tr class="even">
+<td>min.readCount</td>
+<td>The minimum read count threshold used for read classes during training</td>
+</tr>
+<tr class="odd">
+<td>nroundsoutput</td>
+<td>The number of stumps used in the xgboost tree</td>
+</tr>
+<tr class="even">
+<td>NDR.threshold</td>
+<td>The NDR threshold that will be used for the recommended NDR calibration when using this model.</td>
+</tr>
+<tr class="odd">
+<td>verbose</td>
+<td>A logical if more information should be printed whilst the function is running</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="quantification-of-gene-expression" class="section level3">
+<h3 class="hasAnchor">
+<a href="#quantification-of-gene-expression" class="anchor"></a>Quantification of gene expression</h3>
+<p>To obtain gene expression, simply summing up over all annotated transcripts will likely underestimate it, as Bambu assigns only reads to transcripts if they are compatible. Reads which are incompatible with transcripts, but which can be assigned to the gene are tracked by Bambu to obtain more accurate gene expression estimate.</p>
+<p>To obtain the accurate gene expression estimates which uses all reads that can be assigned to each gene (including reads that are incompatible with all existing annotations) you can run the following command:</p>
+<pre class="rscript"><code>seGene &lt;- transcriptToGeneExpression(se)</code></pre>
+<p>The output of this function is a <em>SummarizedExperiment</em> object, where</p>
+<ul>
+<li>assays(seGene)$counts returns the estimated expression counts for each gene</li>
+<li>assays(seGene)$CPM returns the estimated CPM for each gene</li>
+<li>rowData(seGene) returns the gene information</li>
+<li>rowRanges(seGene) returns the gene genomic ranges</li>
+</ul>
+</div>
+<div id="including-single-exons" class="section level3">
+<h3 class="hasAnchor">
+<a href="#including-single-exons" class="anchor"></a>Including single exons</h3>
+<p>By default <em>bambu</em> does not report single exon transcripts because they are known to have a high frequency of false positives and do not have splice junctions that are used by <em>bambu</em> to distinguish read classes. Nevertheless <em>bambu</em> trains a separate model on single-exon transcripts, and these predictions can be accessed and included in the annotations.</p>
+<pre class="rscript"><code>se &lt;- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, opt.discovery = list(min.txScore.singleExon = 0))</code></pre>
+</div>
+<div id="bambu-arguments" class="section level3">
+<h3 class="hasAnchor">
+<a href="#bambu-arguments" class="anchor"></a><em>Bambu</em> Arguments</h3>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>argument</th>
+<th>description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>reads</td>
+<td>A string or a vector of strings specifying the paths of bam files for genomic alignments, or a BamFile object or a BamFileList object (from Rsamtools).</td>
+</tr>
+<tr class="even">
+<td>rcFile</td>
+<td>A string or a vector of strings specifying the read class files that are saved during previous run of bambu.</td>
+</tr>
+<tr class="odd">
+<td>rcOutDir</td>
+<td>A string variable specifying the path to where read class files will be saved.</td>
+</tr>
+<tr class="even">
+<td>annotations</td>
+<td>A TxDb object, a path to a .gtf file, or a GRangesList object obtained by prepareAnnotations.</td>
+</tr>
+<tr class="odd">
+<td>genome</td>
+<td>A fasta file or a BSGenome object.</td>
+</tr>
+<tr class="even">
+<td>stranded</td>
+<td>A boolean for strandedness, defaults to FALSE.</td>
+</tr>
+<tr class="odd">
+<td>ncore</td>
+<td>specifying number of cores used when parallel processing is used, defaults to 1.</td>
+</tr>
+<tr class="even">
+<td>NDR</td>
+<td>specifying the maximum NDR rate to novel transcript output among detected transcripts, defaults to 0.1</td>
+</tr>
+<tr class="odd">
+<td>yieldSize</td>
+<td>see Rsamtools.</td>
+</tr>
+<tr class="even">
+<td>opt.discovery</td>
+<td>A list of controlling parameters for isoform reconstruction process: <br><strong>prefix</strong> specifying prefix for new gene Ids (genePrefix.number), defaults to empty <br><strong>remove.subsetTx</strong> indicating whether filter to remove read classes which are a subset of known transcripts, defaults to TRUE <br><strong>min.readCount</strong> specifying minimun read count to consider a read class valid in a sample, defaults to 2 <br><strong>min.readFractionByGene</strong> specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05 <br><strong>min.sampleNumber</strong> specifying minimum sample number with minimum read count, gene read proportion, and TPS, defaults to 1 <br><strong>min.exonDistance</strong> specifying minimum distance to known transcript to be considered valid as new, defaults to 35bp <br><strong>min.exonOverlap</strong> specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults to 10bp <br><strong>min.primarySecondaryDist</strong> specifying the minimum number of distance threshold between a read class and the annotations internal exons. Read classes with distances less than the threshold are not annotated as novel and counted with the annotations for quantification, defaults to 5bp <br><strong>min.primarySecondaryDistStartEnd1</strong> specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are not annotated as novel, defaults to 5bp <br><strong>min.primarySecondaryDistStartEnd2</strong> specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are counted with the annotations, defaults to 5bp <br><strong>min.txScore.multiExon</strong> specifying the minimum transcript probility score threshold for multi-exon transcripts for min.sampleNumber, defaults to 0 <br><strong>min.txScore.singleExon</strong> specifying the minimum transcript probability score threshold for single-exon transcripts for min.sampleNumber <br><strong>fitReadClassModel</strong> a boolean specifying if bambu should train a model on each sample. If set to false bambu will use the default model for ranking novel transcripts. defaults to TRUE <br><strong>defaultModels</strong> a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the <em>bambu</em> package <br><strong>returnModel</strong> a boolean specifying if bambu will output the model it trained on the data, defaults to FALSE <br><strong>txScoreBaseline</strong> a value between 0-1 which is the transcript probability score used to recommend an NDR, defaults to the baseline calculated in the defaultModels object. In bambu’s default model this baseline was calculated as the TPS when an NDR of 0.1 is observed. <br><strong>min.readFractionByEqClass</strong> indicating the minimum relative read count of a subset transcript compared to all superset transcripts (ie the relative read count within the minimum equivalent class). This filter is applied on the set of annotations across all samples using the total read count, this is not a per-sample filter. Please use with caution. defaults to 0</td>
+</tr>
+<tr class="odd">
+<td>opt.em</td>
+<td>A list of controlling parameters for quantification algorithm estimation process: <br><strong>maxiter</strong> specifying maximum number of run iterations, defaults to 10000 <br><strong>degradationBias</strong> correcting for degradation bias, defaults to TRUE <br><strong>conv</strong> specifying the covergence threshold control, defaults to 0.0001 <br><strong>minvalue</strong> specifying the minvalue for convergence consideration, defaults to 0.00000001</td>
+</tr>
+<tr class="even">
+<td>trackReads</td>
+<td>When TRUE read names will be tracked and output as metadata in the final output as readToTranscriptMaps detailing the assignment of reads to transcripts.The output is a list with an entry for each sample.</td>
+</tr>
+<tr class="odd">
+<td>returnDistTable</td>
+<td>When TRUE the calculated distance table between read classes and annotations will be output as metadata as distTables. The output is a list with an entry for each sample.</td>
+</tr>
+<tr class="even">
+<td>discovery</td>
+<td>A logical variable indicating whether annotations are to be extended for quantification, defaults to TRUE.</td>
+</tr>
+<tr class="odd">
+<td>quant</td>
+<td>A logical variable indicating whether quantification will be performed, defaults to TRUE.</td>
+</tr>
+<tr class="even">
+<td>verbose</td>
+<td>A logical variable indicating whether processing messages will be printed.</td>
+</tr>
+<tr class="odd">
+<td>lowMemory</td>
+<td>Reads will be processed by chromosomes instead of all together when lowMemory is specified. This option provides an efficient way to process big samples.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="output-description" class="section level3">
+<h3 class="hasAnchor">
+<a href="#output-description" class="anchor"></a>Output Description</h3>
+<p>Access annotations that are matched to the transcript expression estimates by rowRanges()</p>
+<pre class="rscript"><code>rowRanges(se)</code></pre>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>column</th>
+<th>description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>seqnames</td>
+<td>The scaffold name the transcript is found on</td>
+</tr>
+<tr class="even">
+<td>ranges</td>
+<td>An iRanges object containing the start and end coordinates of the transcript (not stranded)</td>
+</tr>
+<tr class="odd">
+<td>strand</td>
+<td>The strand of the transcript (+, -, *)</td>
+</tr>
+<tr class="even">
+<td>exon_rank</td>
+<td>The exon index of the exons in the transcript starting from the 5’ end of the transcript</td>
+</tr>
+<tr class="odd">
+<td>exon_endRank</td>
+<td>The exon index of the exons in the transcript starting from the 3’ end of the transcript</td>
+</tr>
+</tbody>
+</table>
+<p>Access transcript level data which is matched to transcript expression estimates using rowData()</p>
+<pre class="rscript"><code>mcols(rowRanges(se)) 
+#or
+mcols(se) 
+#or 
+rowData(se)</code></pre>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>column</th>
+<th>description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>TXNAME</td>
+<td>The transcript name for the transcript. Will use either the transcript name from the provided annotations or tx.X if it is a novel transcript where X is a unique integer.</td>
+</tr>
+<tr class="even">
+<td>GENEID</td>
+<td>The gene name for the transcript. Will use either the gene name from the provided annotations or gene.X if it is a novel transcript where X is a unique integer.</td>
+</tr>
+<tr class="odd">
+<td>eqClass</td>
+<td>A character vector with the transcript names of all the equivalent transcripts (those which have this transcripts contiguous exon junctions)</td>
+</tr>
+<tr class="even">
+<td>txId</td>
+<td>A bambu specific transcript id used for indexing purposes</td>
+</tr>
+<tr class="odd">
+<td>eqClassById</td>
+<td>A integer list with the transcript ids of all equivalent transcripts</td>
+</tr>
+<tr class="even">
+<td>newTxClass</td>
+<td>A concatenated string containing the classes the transcript falls under: <br><strong>annotation</strong> - Transcript matches an annotation transcript <br><strong>allNew</strong> - All the intron-junctions are novel <br><strong>newFirstJunction</strong> - the first junction is novel and at least one other junction matches an annotated transcript <br><strong>newLastJunction</strong> - the last junction is novel and at least one other junction matches an annotated transcript <br><strong>newJunction</strong> - an internal junction is novel and at least one other internal junction matches an annotated transcript <br><strong>newWithin</strong> - A novel transcript with matching junctions but is not a subset of an annotation <br><strong>unsplicedNew</strong> - A single exon transcript that doesn’t completely overlap with annotations <br><strong>compatible</strong> - Is a subset of an annotated transcript <br><strong>newFirstExon</strong> - The first exon is novel <br><strong>newLastExon</strong> - The last exon is novel</td>
+</tr>
+<tr class="odd">
+<td>readCount</td>
+<td>The number of full length reads associated with this transcript (filtered by min.readCount)</td>
+</tr>
+<tr class="even">
+<td>txNDR</td>
+<td>The NDR score calculated for the transcript</td>
+</tr>
+<tr class="odd">
+<td>relReadCount</td>
+<td>The proportion of reads this transcript has relative to all reads assigned to its gene</td>
+</tr>
+<tr class="even">
+<td>relSubsetCount</td>
+<td>The proportion of reads this transcript has relative to all reads that either fully or partially match this transcript</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="release-history" class="section level3">
 <h3 class="hasAnchor">
@@ -244,9 +699,9 @@ plotBambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 <p>Minor fixes:</p>
 <ul>
 <li>remove the use of get() which looks into environment variables (prone to crashes if a variable of the same name exists) and directly references the functions that should be used instead.</li>
-<li>bug fix when a fa file ois provdied as a string variable to non-windows system</li>
+<li>bug fix when a fa file is provdied as a string variable to non-windows system</li>
 <li>bug fix when no single exon read class in provided samples</li>
-<li>nug fix when no splice overlaps found between read class and annotations</li>
+<li>bug fix when no splice overlaps found between read class and annotations</li>
 </ul>
 <p><strong>bambu version 1.0.2</strong></p>
 <p>Release date: 2020-11-10</p>
@@ -282,12 +737,12 @@ plotBambu(se, type = "pca", group.var) # PCA visualization</a></code></pre>
 <div id="citation" class="section level3">
 <h3 class="hasAnchor">
 <a href="#citation" class="anchor"></a>Citation</h3>
-<p>A manuscript describing bambu is currently in preparation. If you use bambu for your research, please cite using the following doi: 10.18129/B9.bioc.bambu. Please specificy that you are using a pre-publication release.</p>
+<p>A manuscript describing <em>bambu</em> is currently in preparation. If you use <em>bambu</em> for your research, please cite using the following doi: 10.18129/B9.bioc.bambu. Please specificy that you are using a pre-publication release.</p>
 </div>
 <div id="contributors" class="section level3">
 <h3 class="hasAnchor">
 <a href="#contributors" class="anchor"></a>Contributors</h3>
-<p>This package is developed and maintained by <a href="https://github.com/cying111">Ying Chen</a>, <a href="https://github.com/andredsim">Andre Sim</a>, <a href="https://github.com/yuukiiwa">Yuk Kei Wan</a>, and <a href="https://github.com/jonathangoeke">Jonathan Goeke</a> at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.</p>
+<p>This package is developed and maintained by <a href="https://github.com/cying111">Ying Chen</a>, <a href="https://github.com/andredsim">Andre Sim</a>, <a href="https://github.com/yuukiiwa">Yuk Kei Wan</a>, <a href="https://github.com/keithyjy">Keith Yeo</a>, <a href="https://github.com/lingminhao">Min Hao Ling</a> and <a href="https://github.com/jonathangoeke">Jonathan Goeke</a> at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.</p>
 <p><img src="figures/bambu_design_highres.png" title="Bambu" alt="Bambu"></p>
 </div>
 </div>

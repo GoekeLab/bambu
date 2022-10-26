@@ -30,8 +30,8 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
-        message("Finished create transcript models (read classes) for reads with
-    spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
+        message("Finished create transcript models (read classes) for reads with ",
+    "spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) { 
         exonsByRC.unspliced <- NULL
     } else {exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
@@ -242,27 +242,31 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges
-    counts = (as.data.table(reads.singleExon) %>% 
-         count(seqnames,start,end,strand))$n
+    counts = (as.data.frame(reads.singleExon) %>% 
+         count(seqnames,start,end,strand)) %>% as.data.frame()
     reads.singleExon = unique(reads.singleExon)
-    mcols(reads.singleExon)$counts <- counts
+    mcols(reads.singleExon)$counts <- counts$n
 
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
     reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
         unlist(mcols(rcUnsplicedAnnotation)$readIds)]
-    referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
-    #(2) reads do not fall within a annotated exon/high confidence read class 
-    # exon are summarised based on the union of overlapping unspliced reads
-    rcUnsplicedReduced <- getUnsplicedReadClassByReference(
+    if(length(reads.singleExon)==0){
+      exonsByReadClass <- rcUnsplicedAnnotation
+    }else{
+      referenceExons <- reduce(reads.singleExon, ignore.strand = !stranded)
+      #(2) reads do not fall within a annotated exon/high confidence read class 
+      # exon are summarised based on the union of overlapping unspliced reads
+      rcUnsplicedReduced <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedNew", stranded = stranded)
+      exonsByReadClass <- c(rcUnsplicedAnnotation, 
+                            rcUnsplicedReduced)
+    }
     end.ptm <- proc.time()
-    if (verbose) message("Finished create single exon transcript models
-        (read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    exonsByReadClass <- c(rcUnsplicedAnnotation, 
-        rcUnsplicedReduced)
+    if (verbose) message("Finished create single exon transcript models ",
+        "(read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(exonsByReadClass)
 }
 
@@ -356,23 +360,73 @@ initiateHitsDF <- function(hitsWithin, grangesReference, stranded) {
 #' index of which genes are novel
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
-assignGeneIds <- function(grl, annotations) {
-    if(length(annotations)==0) GENEID =rep(NA, length(grl))
-    else GENEID <- assignGeneIdsByReference(grl, annotations) 
-    newGeneSet <- is.na(GENEID)
-    newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
-    GENEID[newGeneSet] <- newGeneIds
-    return(data.frame(GENEID=GENEID, novelGene = newGeneSet))
+#' @param min.exonOverlap minimum length of overlap to be assigned to a gene
+#' @param fusionMode if TRUE will assign multiple GENEIDs to fusion transcripts, separated by ":"
+#' @param maxChainIteration the number of intermediate novel transcripts which will be used to assign gene ids, default: 3
+#' @noRd
+assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = FALSE, maxChainIteration = 3) {
+  strandedRanges <- as.logical(getStrandFromGrList(grl)!='*')
+  mcols(grl)$GENEID =rep(NA, length(grl))
+  if(length(annotations)>0) {
+    if(any(grepl('\\:', mcols(annotations)$GENEID)) & fusionMode) {
+      warning('GENEID contains ":" symbol, fusion transcript assignments might be incorrect')
+    }
+    mcols(grl)$GENEID[strandedRanges] <- assignGeneIdsByReference(grl[strandedRanges], annotations,
+                                          min.exonOverlap = min.exonOverlap,
+                                          fusionMode = fusionMode) 
+    #iteratively assign gene ids for stranded granges
+    newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
+    referenceGeneSet <- !is.na(mcols(grl)$GENEID) & strandedRanges
+    mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
+                                                                  min.exonOverlap = min.exonOverlap,
+                                                                  fusionMode = FALSE)  # fusion assignment is only done based on original annotations
+    chainCount <- 1  # first iteration is outside of while loop
+    while(any(!is.na(mcols(grl)$GENEID[newGeneSet])) & chainCount < maxChainIteration) {
+      referenceGeneSet <- newGeneSet & !is.na(mcols(grl)$GENEID) & strandedRanges
+      newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
+      mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
+                                                                min.exonOverlap = min.exonOverlap,
+                                                                fusionMode = FALSE) 
+      chainCount <- chainCount +1
+      }
+  }
+  newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
+  newGeneIds <- assignGeneIdsNoReference(grl[newGeneSet])
+  mcols(grl)$GENEID[newGeneSet] <- newGeneIds
+  if(any(!strandedRanges)) {
+    mcols(grl)$GENEID[!strandedRanges] <- assignGeneIdsByReference(grl[!strandedRanges], 
+                                                                   grl[!is.na(mcols(grl)$GENEID)],
+                                                       min.exonOverlap = min.exonOverlap,
+                                                       fusionMode = FALSE) 
+    if(any(is.na(mcols(grl)$GENEID)) & length(annotations)>0) {
+        newGeneSet <- is.na(mcols(grl)$GENEID)
+        mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], 
+                                                annotations,
+                                                min.exonOverlap = min.exonOverlap,
+                                                fusionMode = FALSE) 
+    }
+
+    if(any(is.na(mcols(grl)$GENEID))) {
+        mcols(grl)$GENEID[is.na(mcols(grl)$GENEID)] <- assignGeneIdsNoReference(grl[is.na(mcols(grl)$GENEID)], prefix = 'unstranded.')
+      }
+  }
+  newGeneSet <- !(mcols(grl)$GENEID %in% mcols(annotations)$GENEID)
+  geneIdData <- data.frame(GENEID=mcols(grl)$GENEID, novelGene = newGeneSet)
+  if(fusionMode) geneIdData$fusionGene <- grepl('\\:', geneIdData$GENEID)
+  return(geneIdData)
 }
+
 
 #' Return gene ids for read classes which overlap
 #' with known annotations
 #' @param grl a GrangesList object with read classes
 #' @param annotations a GrangesList object with annotations
-assignGeneIdsByReference <- function(grl, annotations, prefix = '') {
+#' @noRd
+assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
+                                     fusionMode=FALSE, prefix = 'Bambu') {
     # (1) assign gene Ids based on first intron match to annotations
     geneRanges <- reducedRangesByGenes(annotations)
-    ov=findOverlaps(grl, geneRanges)
+    ov=findOverlaps(grl, geneRanges, minoverlap = min.exonOverlap)
     geneIds <- rep(NA, length(grl))
     uniqueHits <- which(queryHits(ov) %in% which(countQueryHits(ov)==1))
     geneIds[queryHits(ov)[uniqueHits]] <- 
@@ -388,19 +442,29 @@ assignGeneIdsByReference <- function(grl, annotations, prefix = '') {
                             mcols(expandedRanges)$IdMap, sum)
     
     filteredMultiHits <- as_tibble(ov[multiHits]) %>% 
-        mutate(intersectWidth = intersectById) %>% 
+        mutate(intersectWidth = intersectById)
+    if(fusionMode) {
+      filteredMultiHits <- filteredMultiHits %>%  
+        filter(intersectWidth>min.exonOverlap) %>%  
+        mutate(geneid = names(geneRanges)[subjectHits]) %>%  distinct() %>% 
+        group_by(queryHits) %>% summarise(geneid = paste(geneid, collapse=':'))
+      geneIds[filteredMultiHits$queryHits] <- filteredMultiHits$geneid
+      
+    } else {
+    filteredMultiHits <- filteredMultiHits %>% 
         group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% 
         dplyr::slice(1)
     geneIds[filteredMultiHits$queryHits] <- 
         names(geneRanges)[filteredMultiHits$subjectHits]
-    
+    } 
     return(geneIds)
 }
 
 #' Create new gene ids for groups of overlapping read classes which 
 #' don't overlap with known annotations. 
 #' @param grl a GrangesList object with read classes
-assignGeneIdsNoReference <- function(grl, prefix = '') {
+#' @noRd
+assignGeneIdsNoReference <- function(grl, prefix = 'Bambu') {
     newTxIds <- seq_len(length(grl))
     newGeneByNewTxId <- rep(NA, length(newTxIds))
     if(length(grl)==0){
@@ -423,18 +487,19 @@ assignGeneIdsNoReference <- function(grl, prefix = '') {
     exonGeneMap_filter1 <-  geneTxMap %>% group_by(newTxId) %>% 
         mutate(nTx=n()) %>% group_by(newGeneId) %>% filter(sum(nTx)==n()) 
     newGeneByNewTxId[exonGeneMap_filter1$newTxId] <- 
-        paste0("gene.", prefix, exonGeneMap_filter1$newGeneId)
+        paste0(prefix, "Gene", exonGeneMap_filter1$newGeneId)
     
     if(any(is.na(newGeneByNewTxId))) {
         refGeneTxMap = assignGeneIdsNonAssigned(geneTxMap, exonTxMap, 
             geneExonMap, exonGeneMap_filter1, newExonId)
-        newGeneIds = paste0("gene.", prefix, refGeneTxMap$newGeneId)
+        newGeneIds = paste0(prefix, "Gene", refGeneTxMap$newGeneId)
         newGeneByNewTxId[refGeneTxMap$newTxId]<-newGeneIds
     }
     return(newGeneByNewTxId)
 }
 
 #' Interal function which groups read classes that overlap
+#' @noRd
 assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap, 
                                     exonGeneMap_filter1, newExonId){
     # (3.1) second iteration: non assigned genes
@@ -479,6 +544,7 @@ assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap,
 }
 
 #' Small function to meet bioconductor formatting requirements
+#' @noRd
 getRefGeneExonList = function(exonTxMap, geneExonMap){
     refGeneExonList <- left_join(exonTxMap, 
         dplyr::rename(exonTxMap, newExonId.merge=newExonId), 

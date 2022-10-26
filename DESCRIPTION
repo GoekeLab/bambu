@@ -2,7 +2,7 @@ Package: bambu
 Type: Package
 Title: Reference-guided isoform reconstruction and quantification for long read 
     RNA-Seq data
-Version: 2.1.8
+Version: 2.99.0
 Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
              email = "chen_ying@gis.a-star.edu.sg"),
              person("Andre", "Sim", role = "aut",
@@ -43,6 +43,7 @@ Suggests:
     ExperimentHub (>= 1.15.3),
     DESeq2,
     NanoporeRNASeq,
+    purrr,
     apeglm,
     utils,
     DEXSeq
@@ -67,7 +68,7 @@ biocViews:
     Transcriptomics
 bugReports: https://github.com/GoekeLab/bambu/issues
 URL: https://github.com/GoekeLab/bambu   
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.1
 LinkingTo: 
     Rcpp,
     RcppArmadillo
@@ -88,3 +89,4 @@ Imports:
     xgboost
 VignetteBuilder: 
     knitr
+LazyData: true

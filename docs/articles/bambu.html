@@ -31,7 +31,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">bambu</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.99.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.1.8</span>
       </span>
     </div>
 
@@ -67,7 +67,7 @@
 
       
 
-      </header><script src="bambu_files/header-attrs-2.10/header-attrs.js"></script><div class="row">
+      </header><script src="bambu_files/header-attrs-2.11/header-attrs.js"></script><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Analysing Long Read RNA-Seq data with bambu</h1>
@@ -86,9 +86,9 @@
 <a href="#introduction" class="anchor"></a>Introduction</h1>
 <p><em><a href="https://github.com/GoekeLab/bambu">Bambu</a></em> is a method for transcript discovery and quantification from long read RNA-Seq data. Bambu uses aligned reads and genome reference annotations as input, and will return abundance estimates for all known transcripts and for newly discovered transcripts. Bambu uses the information from the reference annotations to correct misalignment at splice junctions, then reduces the aligned reads to read equivalent classes, and uses this information to identify novel transcripts across all samples of interest. Reads are then assigned to transcripts, and expression estimates are obtained using an expectation maximisation algorithm. Here, we present an example workflow for analysing Nanopore long read RNA-Sequencing data from two human cancer cell lines from the Singapore Nanopore Expression Project (SG-NEx).</p>
 </div>
-<div id="quick-start" class="section level1">
+<div id="quick-start-transcript-discovery-and-quantification-with-bambu" class="section level1">
 <h1 class="hasAnchor">
-<a href="#quick-start" class="anchor"></a>Quick start: Transcript discovery and quantification with bambu</h1>
+<a href="#quick-start-transcript-discovery-and-quantification-with-bambu" class="anchor"></a>Quick start: Transcript discovery and quantification with bambu</h1>
 <div id="installation" class="section level2">
 <h2 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h2>
@@ -102,69 +102,34 @@
 <h2 class="hasAnchor">
 <a href="#general-usage" class="anchor"></a>General Usage</h2>
 <p>The default mode to run <em>bambu</em> is using a set of aligned reads (bam files), reference genome annotations (gtf file, TxDb object, or bambuAnnotation object), and reference genome sequence (fasta file or BSgenome). <em>bambu</em> will return a summarizedExperiment object with the genomic coordinates for annotated and new transcripts and transcript expression estimates. We highly recommend to use the same annotations that were used for genome alignment. If you have a gtf file and fasta file you can run bambu with the following options:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(bambu)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>test.bam <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">"extdata"</span>, <span class="st">"SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam"</span>,</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">package =</span> <span class="st">"bambu"</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fa.file <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">"extdata"</span>, <span class="st">"Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa"</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">package =</span> <span class="st">"bambu"</span>)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>gtf.file <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">"extdata"</span>, <span class="st">"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf"</span>, <span class="at">package =</span> <span class="st">"bambu"</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>bambuAnnotations <span class="ot">&lt;-</span> <span class="fu">prepareAnnotations</span>(gtf.file)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>se <span class="ot">&lt;-</span> <span class="fu">bambu</span>(<span class="at">reads =</span> test.bam, <span class="at">annotations =</span> bambuAnnotations, <span class="at">genome =</span> fa.file)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="er">|</span>                                                                      <span class="er">|</span>   <span class="dv">0</span>%</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="er">|======================================================================|</span> <span class="dv">100</span>%</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="er">|</span>                                                                      <span class="er">|</span>   <span class="dv">0</span>%</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="er">|======================================================================|</span> <span class="dv">100</span>%</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="er">|</span>                                                                      <span class="er">|</span>   <span class="dv">0</span>%</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  <span class="er">|======================================================================|</span> <span class="dv">100</span>%</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  <span class="er">|</span>                                                                      <span class="er">|</span>   <span class="dv">0</span>%</span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>  <span class="er">|======================================================================|</span> <span class="dv">100</span>%</span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>  <span class="er">|</span>                                                                      <span class="er">|</span>   <span class="dv">0</span>%</span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>  <span class="er">|======================================================================|</span> <span class="dv">100</span>%</span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="do">##&gt; </span></span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>  <span class="er">|</span>                                                                      <span class="er">|</span>   <span class="dv">0</span>%</span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>  <span class="sc">|</span>                                                                            </span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>  <span class="er">|======================================================================|</span> <span class="dv">100</span>%</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/GoekeLab/bambu">bambu</a></span><span class="op">)</span>
+<span class="va">test.bam</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.bam"</span>,
+    package <span class="op">=</span> <span class="st">"bambu"</span><span class="op">)</span>
+<span class="va">fa.file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa"</span>,
+    package <span class="op">=</span> <span class="st">"bambu"</span><span class="op">)</span>
+<span class="va">gtf.file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf"</span>, package <span class="op">=</span> <span class="st">"bambu"</span><span class="op">)</span>
+<span class="va">bambuAnnotations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/prepareAnnotations.html">prepareAnnotations</a></span><span class="op">(</span><span class="va">gtf.file</span><span class="op">)</span>
+<span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">test.bam</span>, annotations <span class="op">=</span> <span class="va">bambuAnnotations</span>, genome <span class="op">=</span> <span class="va">fa.file</span><span class="op">)</span></code></pre></div>
 <p><em>bambu</em> returns a SummarizedExperiment object which can be accessed as follows:</p>
 <ul>
-<li>assays(se) returns the transcript abundance estimates as counts or CPM<br>
-</li>
+<li>assays(se) returns the transcript abundance estimates as counts or CPM, as well the full length or unique read counts</li>
 <li>rowRanges(se) returns a GRangesList with all annotated and newly discovered transcripts<br>
 </li>
 <li>rowData(se) returns additional information about each transcript such as the gene name and the class of newly discovered transcript</li>
 </ul>
 </div>
 </div>
-<div id="a-complete-workflow-to-identify-and-quantify-transcript-expression-from" class="section level1">
+<div id="a-complete-workflow-to-identify-and-quantify-transcript-expression-from-nanopore-rna-seq-data" class="section level1">
 <h1 class="hasAnchor">
-<a href="#a-complete-workflow-to-identify-and-quantify-transcript-expression-from" class="anchor"></a>A complete workflow to identify and quantify transcript expression from</h1>
-<p>Nanopore RNA-Seq data {#complete-workflow} To demonstrate the usage of Bambu, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7) that were generated by the <a href="https://github.com/GoekeLab/sg-nex-data">SG-NEx project</a>. Each of these cell lines has three replicates, with 1 direct RNA sequencing run and 2 cDNA sequencing runs. Reads are aligned to chromosome 22 (Grch38) and stored as bam files. In this workflow, we will demonstrate how to apply <em>bambu</em> to these bam files to identify novel transcripts and estimates transcript expression, visualize the results, and identify differentially expressed genes and transcripts.</p>
+<a href="#a-complete-workflow-to-identify-and-quantify-transcript-expression-from-nanopore-rna-seq-data" class="anchor"></a>A complete workflow to identify and quantify transcript expression from Nanopore RNA-Seq data</h1>
+<p>To demonstrate the usage of Bambu, we used long-read RNA-Seq data generated using Oxford Nanopore Sequencing from the NanoporeRNASeq package, which consists of 6 samples from two human cell lines (K562 and MCF7) that were generated by the <a href="https://github.com/GoekeLab/sg-nex-data">SG-NEx project</a>. Each of these cell lines has three replicates, with 1 direct RNA sequencing run and 2 cDNA sequencing runs. Reads are aligned to chromosome 22 (Grch38) and stored as bam files. In this workflow, we will demonstrate how to apply <em>bambu</em> to these bam files to identify novel transcripts and estimate transcript expression levels, visualize the results, and identify differentially expressed genes and transcripts.</p>
 <div id="input-data" class="section level2">
 <h2 class="hasAnchor">
 <a href="#input-data" class="anchor"></a>Input data</h2>
-<div id="bam-files" class="section level3">
+<div id="aligned-reads-bam-files" class="section level3">
 <h3 class="hasAnchor">
-<a href="#bam-files" class="anchor"></a>Aligned reads (bam files)</h3>
+<a href="#aligned-reads-bam-files" class="anchor"></a>Aligned reads (bam files)</h3>
 <p><em>bambu</em> takes genomic alignments saved in bam files. Here we use bam-files from the <em>NanoporeRNASeq</em> package, which contains reads aligned to the first half of the human chromosome 22 using <em>minimap2</em>.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/GoekeLab/bambu">bambu</a></span><span class="op">)</span>
@@ -189,18 +154,16 @@
 <span class="co">##&gt; 5 NanoporeRNASeq/versi..</span>
 <span class="co">##&gt; 6 NanoporeRNASeq/versi..</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">ExperimentHub</span><span class="op">)</span>
-<span class="va">NanoporeData</span> <span class="op">&lt;-</span> <span class="fu">query</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/ExperimentHub/man/ExperimentHub-class.html">ExperimentHub</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"NanoporeRNA"</span>, <span class="st">"GRCh38"</span>, <span class="st">"BAM"</span><span class="op">)</span><span class="op">)</span>
-<span class="va">bamFiles</span> <span class="op">&lt;-</span> <span class="fu">Rsamtools</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Rsamtools/man/BamFile-class.html">BamFileList</a></span><span class="op">(</span><span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3808"</span><span class="op">]</span><span class="op">]</span>, <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3809"</span><span class="op">]</span><span class="op">]</span>,
-    <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3810"</span><span class="op">]</span><span class="op">]</span>, <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3811"</span><span class="op">]</span><span class="op">]</span>, <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3812"</span><span class="op">]</span><span class="op">]</span>,
-    <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3813"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></code></pre></div>
+<span class="va">NanoporeData</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/AnnotationHub/man/AnnotationHub-class.html">query</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/ExperimentHub/man/ExperimentHub-class.html">ExperimentHub</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">c</a></span><span class="op">(</span><span class="st">"NanoporeRNA"</span>, <span class="st">"GRCh38"</span>, <span class="st">"BAM"</span><span class="op">)</span><span class="op">)</span>
+<span class="va">bamFile</span> <span class="op">&lt;-</span> <span class="fu">Rsamtools</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Rsamtools/man/BamFile-class.html">BamFileList</a></span><span class="op">(</span><span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3808"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></code></pre></div>
 </div>
-<div id="genome-sequences" class="section level3">
+<div id="genome-sequence-fasta-file-bsgenome-object" class="section level3">
 <h3 class="hasAnchor">
-<a href="#genome-sequences" class="anchor"></a>Genome sequence (fasta file/ BSGenome object)</h3>
+<a href="#genome-sequence-fasta-file-bsgenome-object" class="anchor"></a>Genome sequence (fasta file/ BSGenome object)</h3>
 <p><em>bambu</em> additionally requires a genome sequence, which is used to correct splicing junctions in read alignments. Ideally, we recommend to use the same genome seqeunce file that was used for alignment to be used for bambu.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># get path to fasta file</span>
-<span class="va">genomeSequenceData</span> <span class="op">&lt;-</span> <span class="fu">query</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/ExperimentHub/man/ExperimentHub-class.html">ExperimentHub</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"NanoporeRNA"</span>, <span class="st">"GRCh38"</span>, <span class="st">"FASTA"</span><span class="op">)</span><span class="op">)</span>
+<span class="va">genomeSequenceData</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/AnnotationHub/man/AnnotationHub-class.html">query</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/ExperimentHub/man/ExperimentHub-class.html">ExperimentHub</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">c</a></span><span class="op">(</span><span class="st">"NanoporeRNA"</span>, <span class="st">"GRCh38"</span>, <span class="st">"FASTA"</span><span class="op">)</span><span class="op">)</span>
 <span class="va">genomeSequence</span> <span class="op">&lt;-</span> <span class="va">genomeSequenceData</span><span class="op">[[</span><span class="st">"EH7260"</span><span class="op">]</span><span class="op">]</span></code></pre></div>
 <p>As an option, users can also choose to use a BSgenome object:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -210,7 +173,7 @@
 <div id="genome-annotations-bambu-annotations-object-gtf-file-txdb-object" class="section level3">
 <h3 class="hasAnchor">
 <a href="#genome-annotations-bambu-annotations-object-gtf-file-txdb-object" class="anchor"></a>Genome annotations (bambu annotations object/ gtf file / TxDb object)</h3>
-<p>{#annotations}<br><em>bambu</em> also requires a reference transcript annotations object, which is used to correct read alignments, to identify for transcripts and genes (and the type for novel transcripts), and for quantification. The annotation object can be created from a gtf file:</p>
+<p><em>bambu</em> also requires a reference transcript annotations object, which is used to correct read alignments, to train a model for transcript discovery, and for quantification. The annotation object can be created from a gtf file:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">gtf.file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf"</span>, package <span class="op">=</span> <span class="st">"bambu"</span><span class="op">)</span>
 <span class="va">annotation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/prepareAnnotations.html">prepareAnnotations</a></span><span class="op">(</span><span class="va">gtf.file</span><span class="op">)</span></code></pre></div>
@@ -261,250 +224,666 @@
 <span class="co">##&gt; &lt;1497 more elements&gt;</span></code></pre></div>
 </div>
 </div>
-<div id="transcript-discovery-quantification" class="section level2">
+<div id="transcript-discovery-and-quantification" class="section level2">
 <h2 class="hasAnchor">
-<a href="#transcript-discovery-quantification" class="anchor"></a>Transcript discovery and quantification</h2>
-<div id="run-bambu" class="section level3">
+<a href="#transcript-discovery-and-quantification" class="anchor"></a>Transcript discovery and quantification</h2>
+<div id="running-bambu" class="section level3">
 <h3 class="hasAnchor">
-<a href="#run-bambu" class="anchor"></a>Running bambu</h3>
-<p>Next we apply <em>bambu</em> on the input data (bam files, annotations, genomeSequence). Bambu will perform isoform discovery to extend the provided annotation, and then quantify the transcript expression from these extended annotation using an Expectation-Maximisation algorithm. Here we will use 1 core, which can be changed to process multiple files in parallel.</p>
+<a href="#running-bambu" class="anchor"></a>Running bambu</h3>
+<p>Next we apply <em>bambu</em> on the input data (bam files, annotations, genomeSequence). Bambu will perform isoform discovery to extend the provided annotations, and then quantify the transcript expression from these extended annotations using an Expectation-Maximisation algorithm. Here we will use 1 core, which can be changed to process multiple files in parallel.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFile</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
     ncore <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">se</span>
 <span class="co">##&gt; class: RangedSummarizedExperiment </span>
-<span class="co">##&gt; dim: 1511 6 </span>
-<span class="co">##&gt; metadata(0):</span>
-<span class="co">##&gt; assays(6): counts CPM ... uniqueCounts theta</span>
-<span class="co">##&gt; rownames(1511): tx.1 tx.2 ... ENST00000641933 ENST00000641967</span>
-<span class="co">##&gt; rowData names(6): TXNAME GENEID ... readCount txNDR</span>
-<span class="co">##&gt; colnames(6): a59435bcc4d4_3844 a5946402f226_3846 ... a594dde6847_3852</span>
-<span class="co">##&gt;   a5947ea78412_3854</span>
+<span class="co">##&gt; dim: 1500 1 </span>
+<span class="co">##&gt; metadata(1): IncompatibleCounts</span>
+<span class="co">##&gt; assays(4): counts CPM fullLengthCounts uniqueCounts</span>
+<span class="co">##&gt; rownames(1500): ENST00000043402 ENST00000086933 ... ENST00000641933</span>
+<span class="co">##&gt;   ENST00000641967</span>
+<span class="co">##&gt; rowData names(10): TXNAME GENEID ... relReadCount relSubsetCount</span>
+<span class="co">##&gt; colnames(1): a59435bcc4d4_3844</span>
 <span class="co">##&gt; colData names(3): name d_rate nGeneFordRate</span></code></pre></div>
-<p>For the downstream analysis, we will add the condition of interest to the  object that describes the samples. Here we are interested in a comparison of the 2 cell lines:</p>
+<p>Optionally, users can choose to apply <em>bambu</em> to do transcript discovery only</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu">colData</span><span class="op">(</span><span class="va">se</span><span class="op">)</span><span class="op">$</span><span class="va">condition</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">as.factor</a></span><span class="op">(</span><span class="va">SGNexSamples</span><span class="op">$</span><span class="va">cellLine</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="va">seNoquant</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFile</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    quant <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
 <p>Optionally, users can choose to apply <em>bambu</em> to do quantification only (without isoform discovery)</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">seUnextended</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+<code class="sourceCode R"><span class="va">seUnextended</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFile</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
     discovery <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">seUnextended</span>
 <span class="co">##&gt; class: RangedSummarizedExperiment </span>
-<span class="co">##&gt; dim: 1500 6 </span>
-<span class="co">##&gt; metadata(0):</span>
-<span class="co">##&gt; assays(6): counts CPM ... uniqueCounts theta</span>
+<span class="co">##&gt; dim: 1500 1 </span>
+<span class="co">##&gt; metadata(1): IncompatibleCounts</span>
+<span class="co">##&gt; assays(4): counts CPM fullLengthCounts uniqueCounts</span>
 <span class="co">##&gt; rownames(1500): ENST00000043402 ENST00000086933 ... ENST00000641933</span>
 <span class="co">##&gt;   ENST00000641967</span>
 <span class="co">##&gt; rowData names(3): TXNAME GENEID eqClass</span>
-<span class="co">##&gt; colnames(6): a59435bcc4d4_3844 a5946402f226_3846 ... a594dde6847_3852</span>
-<span class="co">##&gt;   a5947ea78412_3854</span>
+<span class="co">##&gt; colnames(1): a59435bcc4d4_3844</span>
 <span class="co">##&gt; colData names(3): name d_rate nGeneFordRate</span></code></pre></div>
+</div>
+<div id="running-multiple-samples" class="section level3">
+<h3 class="hasAnchor">
+<a href="#running-multiple-samples" class="anchor"></a>Running multiple samples</h3>
+<p>If you have multiple replicates for a sample, or plan to do comparative analysis between conditions, it may be beneficial to run all samples together instead of individually. This can be done by providing a vector of paths to all the bam files you want to analyze together.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">bamFiles</span> <span class="op">&lt;-</span> <span class="fu">Rsamtools</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Rsamtools/man/BamFile-class.html">BamFileList</a></span><span class="op">(</span><span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3808"</span><span class="op">]</span><span class="op">]</span>, <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3809"</span><span class="op">]</span><span class="op">]</span>,
+    <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3810"</span><span class="op">]</span><span class="op">]</span>, <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3811"</span><span class="op">]</span><span class="op">]</span>, <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3812"</span><span class="op">]</span><span class="op">]</span>,
+    <span class="va">NanoporeData</span><span class="op">[[</span><span class="st">"EH3813"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>
+<span class="va">se.multiSample</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span><span class="op">)</span></code></pre></div>
+<p>The advantage of running samples together include: novel transcripts that are identified in multiple samples are assigned unified IDs, enabling comparative analysis between different samples. This is especially important for downstream differential expression analysis when looking at novel transcripts. Running multiple samples can be multithreaded. While running multiple samples, by default, <em>bambu</em> will train a model separately on each sample and score novel transcripts in each sample separately.</p>
+<p>If you need to combine samples in multiple configurations (for example different pairwise comparisons) we would recommend using the intermediate rcFiles to save processing time.</p>
+</div>
+<div id="modulating-the-sensitivity" class="section level3">
+<h3 class="hasAnchor">
+<a href="#modulating-the-sensitivity" class="anchor"></a>Modulating the sensitivity of discovery (pre and post analysis)</h3>
+<p>When doing transcript discovery there is a balance between sensitivity (the number of real novel transcripts that are detected) and the precision (how many of the novel transcripts are real). To control this balance, <em>bambu</em> uses the novel discovery rate (NDR) as the main parameter. The NDR threshold approximates the proportion of novel candidates output by bambu, relative to the number of known transcripts it found, i.e., an NDR of 0.1 would mean that 10% of all transcripts passing the threshold are classified as novel.</p>
+<p>If you are using a genome where you expect a high amount of novel transcripts, a higher NDR is recommended so that these novel transcripts are not missed. Conversely if you are using a well annotated genome, we recommend a lower NDR threshold to reduce the presence of false positives. By default the NDR threshold is automatically chosen for the user based on predicted level of annotation completeness when compared to the default model trained on human reference annotations (Hg38).</p>
+<p>To manually select an NDR value, use the NDR argument in <em>bambu</em>:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">se.NDR_0.3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    NDR <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></code></pre></div>
+<p>Alternatively transcript discovery can be run without thresholds, producing a GRangesList annotation object with all transcripts scored with its NDR score. Note that this means turning quant = FALSE in running <em>bambu</em>. The annotations can be filtered by their NDR score (see example below), read count and gene read proportion between the discovery and quantification steps or used for other types of analysis.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">newAnnotations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    NDR <span class="op">=</span> <span class="fl">1</span>, quant <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>
+<span class="va">annotations.filtered</span> <span class="op">&lt;-</span> <span class="va">newAnnotations</span><span class="op">[</span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html">is.na</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">mcols</a></span><span class="op">(</span><span class="va">newAnnotations</span><span class="op">)</span><span class="op">$</span><span class="va">txNDR</span><span class="op">)</span> <span class="op">&amp;</span> <span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">mcols</a></span><span class="op">(</span><span class="va">newAnnotations</span><span class="op">)</span><span class="op">$</span><span class="va">txNDR</span> <span class="op">&lt;</span>
+    <span class="fl">0.1</span><span class="op">)</span> <span class="op">|</span> <span class="fu"><a href="https://rdrr.io/r/base/NA.html">is.na</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">mcols</a></span><span class="op">(</span><span class="va">newAnnotations</span><span class="op">)</span><span class="op">$</span><span class="va">txNDR</span><span class="op">)</span><span class="op">]</span>
+<span class="va">se.NDR_1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">annotations.filtered</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    NDR <span class="op">=</span> <span class="fl">1</span>, discovery <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+<p>Additionally there are other thresholds that advanced users can access through opt.discovery when running <em>bambu</em> (see arguments).</p>
 </div>
 <div id="visualise-results" class="section level3">
 <h3 class="hasAnchor">
 <a href="#visualise-results" class="anchor"></a>Visualise results</h3>
 <p><em>bambu</em> provides functions to visualise and explore the results. When multiple samples are used, we can visualise the correlation and clustering of all samples with a heatmap:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org">ggplot2</a></span><span class="op">)</span>
-<span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">se</span>, type <span class="op">=</span> <span class="st">"heatmap"</span><span class="op">)</span></code></pre></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-15-1.png" width="768"></p>
+<span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">se.multiSample</span>, type <span class="op">=</span> <span class="st">"heatmap"</span><span class="op">)</span></code></pre></div>
+<p><img src="bambu_files/figure-html/unnamed-chunk-18-1.png" width="768"></p>
 <p>Additionally, we can also visualise the correlation with a 2-dimmensional PCA plot.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">se</span>, type <span class="op">=</span> <span class="st">"pca"</span><span class="op">)</span></code></pre></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-16-1.png" width="768"></p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">se.multiSample</span>, type <span class="op">=</span> <span class="st">"pca"</span><span class="op">)</span></code></pre></div>
+<p><img src="bambu_files/figure-html/unnamed-chunk-19-1.png" width="768"></p>
 <p>In addition to visualising the correlation between samples, <em>bambu</em> also provide a function to visualise the extended annotation and expression estimation for individual genes. Here we look at gene ENSG00000099968 and visualise the transcript coordinates for annotated and novel isoforms and expression levels for these isoforms across all samples.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">se</span>, type <span class="op">=</span> <span class="st">"annotation"</span>, gene_id <span class="op">=</span> <span class="st">"ENSG00000099968"</span><span class="op">)</span></code></pre></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-17-1.png" width="768"></p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">se.multiSample</span>, type <span class="op">=</span> <span class="st">"annotation"</span>, gene_id <span class="op">=</span> <span class="st">"ENSG00000099968"</span><span class="op">)</span></code></pre></div>
+<p><img src="bambu_files/figure-html/unnamed-chunk-20-1.png" width="768"></p>
 <pre><code>##&gt; [[1]]
 ##&gt; TableGrob (3 x 1) "arrange": 3 grobs
 ##&gt;   z     cells    name                grob
 ##&gt; 1 1 (2-2,1-1) arrange      gtable[layout]
 ##&gt; 2 2 (3-3,1-1) arrange      gtable[layout]
-##&gt; 3 3 (1-1,1-1) arrange text[GRID.text.250]</code></pre>
+##&gt; 3 3 (1-1,1-1) arrange text[GRID.text.244]</code></pre>
 </div>
-<div id="obtain-gene-expression-estimates-from-transcript-expression" class="section level3">
+<div id="gene-expression" class="section level3">
 <h3 class="hasAnchor">
-<a href="#obtain-gene-expression-estimates-from-transcript-expression" class="anchor"></a>Obtain gene expression estimates from transcript expression</h3>
-<p>{#gene-expression} Gene expression can be calculated from the transcript expression estimates returned by <em>bambu</em> using the  function. Looking at the output, we can see there are novel genes identified as well</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">seGene</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/transcriptToGeneExpression.html">transcriptToGeneExpression</a></span><span class="op">(</span><span class="va">se</span><span class="op">)</span>
-<span class="va">seGene</span>
+<a href="#gene-expression" class="anchor"></a>Obtain gene expression estimates from transcript expression</h3>
+<p>For the downstream analysis, we will add the condition of interest to the  object that describes the samples. Here we are interested in a comparison of the 2 cell lines:</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">colData</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span><span class="op">$</span><span class="va">condition</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">as.factor</a></span><span class="op">(</span><span class="va">SGNexSamples</span><span class="op">$</span><span class="va">cellLine</span><span class="op">)</span></code></pre></div>
+<p>To obtain the accurate gene expression estimates which uses all reads that can be assigned to each gene (including reads that are incompatible with all existing annotations) you can run the following command. Looking at the output, we can see there are novel genes identified as well</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">seGene.multiSample</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/transcriptToGeneExpression.html">transcriptToGeneExpression</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span>
+<span class="va">seGene.multiSample</span>
 <span class="co">##&gt; class: RangedSummarizedExperiment </span>
-<span class="co">##&gt; dim: 574 6 </span>
+<span class="co">##&gt; dim: 572 6 </span>
 <span class="co">##&gt; metadata(0):</span>
 <span class="co">##&gt; assays(2): counts CPM</span>
-<span class="co">##&gt; rownames(574): ENSG00000015475 ENSG00000040608 ... gene.43 gene.45</span>
+<span class="co">##&gt; rownames(572): ENSG00000015475 ENSG00000040608 ... gene.33 gene.37</span>
 <span class="co">##&gt; rowData names(2): GENEID newGeneClass</span>
 <span class="co">##&gt; colnames(6): a59435bcc4d4_3844 a5946402f226_3846 ... a594dde6847_3852</span>
 <span class="co">##&gt;   a5947ea78412_3854</span>
 <span class="co">##&gt; colData names(4): name d_rate nGeneFordRate condition</span></code></pre></div>
 <p>We can again use the  function to visualise the gene expression data across the 6 samples with a heatmap or PCA plot. As expected, samples from the same cell line showed higher correlation than across the cell lines.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu">colData</span><span class="op">(</span><span class="va">seGene</span><span class="op">)</span><span class="op">$</span><span class="va">groupVar</span> <span class="op">&lt;-</span> <span class="va">SGNexSamples</span><span class="op">$</span><span class="va">cellLine</span>
-<span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">seGene</span>, type <span class="op">=</span> <span class="st">"heatmap"</span><span class="op">)</span></code></pre></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-19-1.png" width="768"></p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">colData</a></span><span class="op">(</span><span class="va">seGene.multiSample</span><span class="op">)</span><span class="op">$</span><span class="va">groupVar</span> <span class="op">&lt;-</span> <span class="va">SGNexSamples</span><span class="op">$</span><span class="va">cellLine</span>
+<span class="fu"><a href="../reference/plotBambu.html">plotBambu</a></span><span class="op">(</span><span class="va">seGene.multiSample</span>, type <span class="op">=</span> <span class="st">"heatmap"</span><span class="op">)</span></code></pre></div>
+<p><img src="bambu_files/figure-html/unnamed-chunk-23-1.png" width="768"></p>
 </div>
 <div id="save-data" class="section level3">
 <h3 class="hasAnchor">
 <a href="#save-data" class="anchor"></a>Save data (gtf/text)</h3>
 <p><em>bambu</em> includes a function to write the extended annotations, the transcript and the gene expression estimates that include any newly discovered genes and transcripts to text files.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">save.dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html">tempdir</a></span><span class="op">(</span><span class="op">)</span>
-<span class="fu"><a href="../reference/writeBambuOutput.html">writeBambuOutput</a></span><span class="op">(</span><span class="va">se</span>, path <span class="op">=</span> <span class="va">save.dir</span>, prefix <span class="op">=</span> <span class="st">"NanoporeRNASeq_"</span><span class="op">)</span></code></pre></div>
+<span class="fu"><a href="../reference/writeBambuOutput.html">writeBambuOutput</a></span><span class="op">(</span><span class="va">se.multiSample</span>, path <span class="op">=</span> <span class="va">save.dir</span>, prefix <span class="op">=</span> <span class="st">"NanoporeRNASeq_"</span><span class="op">)</span></code></pre></div>
 <p><em>bambu</em> also includes a function that only exports the extended annotations to gtf file:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">save.file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".gtf"</span><span class="op">)</span>
-<span class="fu"><a href="../reference/writeToGTF.html">writeToGTF</a></span><span class="op">(</span><span class="fu">rowRanges</span><span class="op">(</span><span class="va">se</span><span class="op">)</span>, file <span class="op">=</span> <span class="va">save.file</span><span class="op">)</span></code></pre></div>
+<span class="fu"><a href="../reference/writeToGTF.html">writeToGTF</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/RangedSummarizedExperiment-class.html">rowRanges</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span>, file <span class="op">=</span> <span class="va">save.file</span><span class="op">)</span></code></pre></div>
 </div>
 </div>
-<div id="DESeq2" class="section level2">
+<div id="advanced-usages" class="section level2">
 <h2 class="hasAnchor">
-<a href="#DESeq2" class="anchor"></a>Identifying differentially expressed genes</h2>
+<a href="#advanced-usages" class="anchor"></a>Advanced usages for different use cases</h2>
+<div id="use-pre-trained-model" class="section level3">
+<h3 class="hasAnchor">
+<a href="#use-pre-trained-model" class="anchor"></a>Using a pre-trained model</h3>
+<p>By default, <em>bambu</em> requires at least 1000 transcripts from the annotations to be detected in a sample in order to train a sample specific model. In use cases where this is not possible <em>bambu</em> will instead use a default pre-trained model to calculate the transcript probability score (TPS) for each read class. Users can force this behavior if they believe their annotations are not sufficient for sample specific training (for example if they suspect a high proportion of real novel transcripts are present in their sample). This is advantageous when you want NDR calibration without the impacts of a model trained using low quality annotations.</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    opt.discovery <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>fitReadClassModel <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<p>The default pre-trained model was trained on SGNex_HepG2_directRNA_replicate5_run1 and has the following characteristics:</p>
+<p>Genome: Homo_sapiens.GRCh38.dna_sm.primary_assembly <br> Annotations: Homo_sapiens.GRCh38.91<br> Read count: 7,861,846<br> Technology: Nanopore (ONT)<br> Library preparation: directRNA<br> Base Calling Accuracy: 79%<br> Average Read Length: 1093<br></p>
+<p>We have found the pre-trained model works successfully across species borders (on Arabidopsis thaliana) and on different technologies (PacBio), with only small decreases in performance compared to using a sample specific model. The pre-trained model is not always effective in samples with large differences in sequencing quality or if the library preparation results in biases in the overall structure of the transcriptome. In this case, we would recommend training a new model using similar data from a different sample that has quality reference annotations (See <a href="#train-model">Training a model on another species/dataset and applying it</a>).</p>
+<p>For the example in this vignette, the data used is rather small, hence the pre-trained model is used by default. So you won’t see differences in the output, but you may try it out with more data (see <a href="https://github.com/GoekeLab/sg-nex-data">SG-NEx data</a>)</p>
+</div>
+<div id="de-novo" class="section level3">
+<h3 class="hasAnchor">
+<a href="#de-novo" class="anchor"></a>De-novo transcript discovery</h3>
+<p>In cases where the organism does not yet have reference annotations, or unreliable annotations, <em>bambu</em> can be run in de-novo mode. In de-novo mode, <em>bambu</em> does not train a model, and instead uses the pre-trained model to classify novel transcripts (see <a href="#use-pretrained-model">Using a pre-trained model</a>. To learn how to train a new model for a more closely related organism/sample see <a href="#train-model">Training a model on another species/dataset and applying it</a>. Without annotations <em>bambu</em> is unable to calibrate the NDR output, nor be able to recommend a threshold and will instead use the TPS as the thresholded value. Therefore you should supply a manual NDR threshold (<a href="#modulating-the-sensitivity">Modulating the sensitivity of discovery (pre and post analysis)</a>) and note that the precision of the output is unlikely to linearly match an applied threshold. The TPS threshold used is (&gt; 1-NDR). If an NDR is not provided, a default NDR threshold of &lt;0.1 is used (an effective TPS threshold of &gt; 0.9). As in <a href="#modulating-the-sensitivity">Modulating the sensitivity of discovery (pre and post analysis)</a> an NDR of 1 can be provided to output all possible read classes with their TPS scores</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">novelAnnotations</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="cn">NULL</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    NDR <span class="op">=</span> <span class="fl">1</span>, quant <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+</div>
+<div id="storing-and-using-preprocessed-files-rcfiles" class="section level3">
+<h3 class="hasAnchor">
+<a href="#storing-and-using-preprocessed-files-rcfiles" class="anchor"></a>Storing and using preprocessed files (rcFiles)</h3>
+<p>The first step of <em>bambu</em> involves the construction of read classes which is a large fraction of the running time. This could be time-consuming if we want to perform transcript discovery &amp; quantification multiple times on the same dataset using different configurations (eg. NDR, or combinations of samples), especially when the sample is large. To mitigate this, we can store the read class information as read class files (rcFiles) during a <em>bambu</em> run. Then they can be used as an input argument in the <em>bambu</em> main function for the subsequent <em>bambu</em> run.</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="co"># se &lt;- bambu(rcFile = rcFiles, annotations = annotations, genome = fa.file)</span></code></pre></div>
+<p>rcFiles can be generated in two ways, either as a direct output of the bambu() function when quant and discovery are FALSE, or as written outputs when a path is provided to the rcOutdir argument. When rcFiles are output using rcOutdir this is done using BiocFileCache. For more details on how to access, use, and identify these files see <a href="https://bioconductor.org/packages/release/bioc/html/BiocFileCache.html">here</a>. A short example is shown below.</p>
+<p>Example using rcOutDir to produce preprocessed files</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, rcOutDir <span class="op">=</span> <span class="va">save.dir</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>,
+    genome <span class="op">=</span> <span class="va">genomeSequence</span><span class="op">)</span></code></pre></div>
+<p>This will store a preprocessed rcFile in the provided directory for each sample file provided to reads. To access these files for future use, we recommend using the BioCFileCache package which provides the metadata needed to identify the sample.</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">BiocFileCache</span><span class="op">)</span>
+<span class="va">bfc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/BiocFileCache/man/BiocFileCache-class.html">BiocFileCache</a></span><span class="op">(</span><span class="va">save.dir</span>, ask <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>
+<span class="va">info</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/BiocFileCache/man/BiocFileCache-class.html">bfcinfo</a></span><span class="op">(</span><span class="va">bfc</span><span class="op">)</span></code></pre></div>
+<p>The info object is a tibble which associates the filename (fpath) with the sample (rname) to help you identify which .rds file you need.</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">info</span>
+<span class="co">##&gt; # A tibble: 6 × 10</span>
+<span class="co">##&gt;   rid   rname            creat…¹ acces…² rpath rtype fpath last_…³ etag  expires</span>
+<span class="co">##&gt;   &lt;chr&gt; &lt;chr&gt;            &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;   &lt;dbl&gt; &lt;chr&gt;   &lt;dbl&gt;</span>
+<span class="co">##&gt; 1 BFC1  a59435bcc4d4_38… 2022-0… 2022-0… /tmp… rela… 139b…      NA &lt;NA&gt;       NA</span>
+<span class="co">##&gt; 2 BFC2  a5946402f226_38… 2022-0… 2022-0… /tmp… rela… 139b…      NA &lt;NA&gt;       NA</span>
+<span class="co">##&gt; 3 BFC3  a59451d01b00_38… 2022-0… 2022-0… /tmp… rela… 139b…      NA &lt;NA&gt;       NA</span>
+<span class="co">##&gt; 4 BFC4  a5946dd6ed7b_38… 2022-0… 2022-0… /tmp… rela… 139b…      NA &lt;NA&gt;       NA</span>
+<span class="co">##&gt; 5 BFC5  a594dde6847_385… 2022-0… 2022-0… /tmp… rela… 139b…      NA &lt;NA&gt;       NA</span>
+<span class="co">##&gt; 6 BFC6  a5947ea78412_38… 2022-0… 2022-0… /tmp… rela… 139b…      NA &lt;NA&gt;       NA</span>
+<span class="co">##&gt; # … with abbreviated variable names ¹​create_time, ²​access_time,</span>
+<span class="co">##&gt; #   ³​last_modified_time</span>
+<span class="co"># running bambu using the first file</span>
+<span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>rcFile <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">rpath</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span><span class="op">)</span>
+<span class="co">##&gt; GRangesList object of length 1502:</span>
+<span class="co">##&gt; $tx.1</span>
+<span class="co">##&gt; GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;       seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;          &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class="co">##&gt;   [1]       22 12298626-12298878      - |         2            1</span>
+<span class="co">##&gt;   [2]       22 12309648-12309819      - |         1            2</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; $tx.2</span>
+<span class="co">##&gt; GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;       seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;          &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class="co">##&gt;   [1]       22 12554991-12555126      + |         1            2</span>
+<span class="co">##&gt;   [2]       22 12565912-12566167      + |         2            1</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; $ENST00000043402</span>
+<span class="co">##&gt; GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;       seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;          &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class="co">##&gt;   [1]       22 20241415-20243110      - |         2            1</span>
+<span class="co">##&gt;   [2]       22 20268071-20268531      - |         1            2</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; ...</span>
+<span class="co">##&gt; &lt;1499 more elements&gt;</span>
+<span class="co">##&gt; DataFrame with 1502 rows and 10 columns</span>
+<span class="co">##&gt;                          GENEID      newTxClass readCount     txNDR</span>
+<span class="co">##&gt;                     &lt;character&gt;     &lt;character&gt; &lt;integer&gt; &lt;numeric&gt;</span>
+<span class="co">##&gt; tx.1                    gene.31 newGene-spliced        11 0.0613147</span>
+<span class="co">##&gt; tx.2                    gene.12 newGene-spliced        78 0.0136515</span>
+<span class="co">##&gt; ENST00000043402 ENSG00000040608      annotation        10 0.0667470</span>
+<span class="co">##&gt; ENST00000086933 ENSG00000063515      annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000155674 ENSG00000069998      annotation        NA        NA</span>
+<span class="co">##&gt; ...                         ...             ...       ...       ...</span>
+<span class="co">##&gt; ENST00000641242 ENSG00000284654      annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641337 ENSG00000284621      annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641915 ENSG00000284665      annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641933 ENSG00000284651      annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641967 ENSG00000284630      annotation        NA        NA</span>
+<span class="co">##&gt;                 relReadCount relSubsetCount          TXNAME         eqClass</span>
+<span class="co">##&gt;                    &lt;numeric&gt;      &lt;numeric&gt;     &lt;character&gt;     &lt;character&gt;</span>
+<span class="co">##&gt; tx.1                       1              1            tx.1            tx.1</span>
+<span class="co">##&gt; tx.2                       1              1            tx.2            tx.2</span>
+<span class="co">##&gt; ENST00000043402            1              1 ENST00000043402 ENST00000043402</span>
+<span class="co">##&gt; ENST00000086933           NA             NA ENST00000086933 ENST00000086933</span>
+<span class="co">##&gt; ENST00000155674           NA             NA ENST00000155674 ENST00000155674</span>
+<span class="co">##&gt; ...                      ...            ...             ...             ...</span>
+<span class="co">##&gt; ENST00000641242           NA             NA ENST00000641242 ENST00000641242</span>
+<span class="co">##&gt; ENST00000641337           NA             NA ENST00000641337 ENST00000641337</span>
+<span class="co">##&gt; ENST00000641915           NA             NA ENST00000641915 ENST00000641915</span>
+<span class="co">##&gt; ENST00000641933           NA             NA ENST00000641933 ENST00000641933</span>
+<span class="co">##&gt; ENST00000641967           NA             NA ENST00000641967 ENST00000641967</span>
+<span class="co">##&gt;                      txid   eqClassById</span>
+<span class="co">##&gt;                 &lt;integer&gt; &lt;IntegerList&gt;</span>
+<span class="co">##&gt; tx.1                    1             1</span>
+<span class="co">##&gt; tx.2                    2             2</span>
+<span class="co">##&gt; ENST00000043402         3             3</span>
+<span class="co">##&gt; ENST00000086933         4             4</span>
+<span class="co">##&gt; ENST00000155674         5             5</span>
+<span class="co">##&gt; ...                   ...           ...</span>
+<span class="co">##&gt; ENST00000641242      1498          1498</span>
+<span class="co">##&gt; ENST00000641337      1499          1499</span>
+<span class="co">##&gt; ENST00000641915      1500          1500</span>
+<span class="co">##&gt; ENST00000641933      1501          1501</span>
+<span class="co">##&gt; ENST00000641967      1502          1502</span></code></pre></div>
+<p>This output is also generated when both quant and discovery are set to false in a list form indexed by sample.</p>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    discovery <span class="op">=</span> <span class="cn">FALSE</span>, quant <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+<p>As this is an intermediate object it will not be suitable to use for general use cases. We will document the object below for any potential advanced use cases that may arise.</p>
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">rowData</a></span><span class="op">(</span><span class="va">se</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>
+<span class="co">##&gt; DataFrame with 5616 rows and 23 columns</span>
+<span class="co">##&gt;                     chr.rc strand.rc    startSD     endSD readCount.posStrand</span>
+<span class="co">##&gt;                   &lt;factor&gt;  &lt;factor&gt;  &lt;numeric&gt; &lt;numeric&gt;           &lt;integer&gt;</span>
+<span class="co">##&gt; rc.1                    22         +         NA        NA                   1</span>
+<span class="co">##&gt; rc.2                    22         *         NA        NA                   1</span>
+<span class="co">##&gt; rc.3                    22         +         NA        NA                   1</span>
+<span class="co">##&gt; rc.4                    22         +         NA        NA                   1</span>
+<span class="co">##&gt; rc.5                    22         *         NA        NA                   1</span>
+<span class="co">##&gt; ...                    ...       ...        ...       ...                 ...</span>
+<span class="co">##&gt; rcunsplicedNew.95       22         *         NA        NA                   0</span>
+<span class="co">##&gt; rcunsplicedNew.96       22         *         NA        NA                   1</span>
+<span class="co">##&gt; rcunsplicedNew.97       22         *    9.89949       0.0                   0</span>
+<span class="co">##&gt; rcunsplicedNew.98       22         * 1282.19444    1481.3                  72</span>
+<span class="co">##&gt; rcunsplicedNew.99       22         *         NA        NA                   0</span>
+<span class="co">##&gt;                             intronStarts             intronEnds</span>
+<span class="co">##&gt;                              &lt;character&gt;            &lt;character&gt;</span>
+<span class="co">##&gt; rc.1              10716989,10718464,10.. 10717993,10719774,10..</span>
+<span class="co">##&gt; rc.2                            10717385               10721323</span>
+<span class="co">##&gt; rc.3                            10717714               10720835</span>
+<span class="co">##&gt; rc.4                   10718330,10718568      10718490,10723770</span>
+<span class="co">##&gt; rc.5                   10718577,10723906      10723868,10729611</span>
+<span class="co">##&gt; ...                                  ...                    ...</span>
+<span class="co">##&gt; rcunsplicedNew.95                     NA                     NA</span>
+<span class="co">##&gt; rcunsplicedNew.96                     NA                     NA</span>
+<span class="co">##&gt; rcunsplicedNew.97                     NA                     NA</span>
+<span class="co">##&gt; rcunsplicedNew.98                     NA                     NA</span>
+<span class="co">##&gt; rcunsplicedNew.99                     NA                     NA</span>
+<span class="co">##&gt;                               confidenceType readCount            readIds</span>
+<span class="co">##&gt;                                     &lt;factor&gt; &lt;integer&gt;             &lt;list&gt;</span>
+<span class="co">##&gt; rc.1              lowConfidenceJunctionReads         1                  1</span>
+<span class="co">##&gt; rc.2              lowConfidenceJunctionReads         1                  2</span>
+<span class="co">##&gt; rc.3              lowConfidenceJunctionReads         1                  3</span>
+<span class="co">##&gt; rc.4              lowConfidenceJunctionReads         1                  4</span>
+<span class="co">##&gt; rc.5              lowConfidenceJunctionReads         1                  5</span>
+<span class="co">##&gt; ...                                      ...       ...                ...</span>
+<span class="co">##&gt; rcunsplicedNew.95               unsplicedNew         1               1020</span>
+<span class="co">##&gt; rcunsplicedNew.96               unsplicedNew         1               1021</span>
+<span class="co">##&gt; rcunsplicedNew.97               unsplicedNew         2          1022,1023</span>
+<span class="co">##&gt; rcunsplicedNew.98               unsplicedNew        96 1024,1025,1031,...</span>
+<span class="co">##&gt; rcunsplicedNew.99               unsplicedNew         1               1176</span>
+<span class="co">##&gt;                               GENEID novelGene  numExons geneReadProp</span>
+<span class="co">##&gt;                          &lt;character&gt; &lt;logical&gt; &lt;integer&gt;    &lt;numeric&gt;</span>
+<span class="co">##&gt; rc.1                          gene.1      TRUE         8     0.142857</span>
+<span class="co">##&gt; rc.2                        gene.328      TRUE         2     0.333333</span>
+<span class="co">##&gt; rc.3                          gene.2      TRUE         2     1.000000</span>
+<span class="co">##&gt; rc.4                          gene.1      TRUE         3     0.142857</span>
+<span class="co">##&gt; rc.5                          gene.1      TRUE         3     0.142857</span>
+<span class="co">##&gt; ...                              ...       ...       ...          ...</span>
+<span class="co">##&gt; rcunsplicedNew.95 gene.unstranded.82      TRUE         1    1.0000000</span>
+<span class="co">##&gt; rcunsplicedNew.96 gene.unstranded.83      TRUE         1    1.0000000</span>
+<span class="co">##&gt; rcunsplicedNew.97    ENSG00000172967     FALSE         1    0.0124224</span>
+<span class="co">##&gt; rcunsplicedNew.98    ENSG00000172967     FALSE         1    0.5962733</span>
+<span class="co">##&gt; rcunsplicedNew.99           gene.445      TRUE         1    0.5000000</span>
+<span class="co">##&gt;                   geneReadCount     equal compatible numAstart   numAend</span>
+<span class="co">##&gt;                       &lt;integer&gt; &lt;logical&gt;  &lt;numeric&gt; &lt;integer&gt; &lt;integer&gt;</span>
+<span class="co">##&gt; rc.1                          7        NA         NA        NA        NA</span>
+<span class="co">##&gt; rc.2                          3        NA         NA        NA        NA</span>
+<span class="co">##&gt; rc.3                          1        NA         NA        NA        NA</span>
+<span class="co">##&gt; rc.4                          7        NA         NA        NA        NA</span>
+<span class="co">##&gt; rc.5                          7        NA         NA        NA        NA</span>
+<span class="co">##&gt; ...                         ...       ...        ...       ...       ...</span>
+<span class="co">##&gt; rcunsplicedNew.95             1        NA         NA        NA        NA</span>
+<span class="co">##&gt; rcunsplicedNew.96             1        NA         NA        NA        NA</span>
+<span class="co">##&gt; rcunsplicedNew.97           161     FALSE          0         3         5</span>
+<span class="co">##&gt; rcunsplicedNew.98           161     FALSE          0         1         6</span>
+<span class="co">##&gt; rcunsplicedNew.99             2        NA         NA        NA        NA</span>
+<span class="co">##&gt;                   numTstart   numTend     txScore txScore.noFit</span>
+<span class="co">##&gt;                   &lt;integer&gt; &lt;integer&gt;   &lt;numeric&gt;     &lt;numeric&gt;</span>
+<span class="co">##&gt; rc.1                     NA        NA          NA            NA</span>
+<span class="co">##&gt; rc.2                     NA        NA          NA            NA</span>
+<span class="co">##&gt; rc.3                     NA        NA          NA            NA</span>
+<span class="co">##&gt; rc.4                     NA        NA          NA            NA</span>
+<span class="co">##&gt; rc.5                     NA        NA          NA            NA</span>
+<span class="co">##&gt; ...                     ...       ...         ...           ...</span>
+<span class="co">##&gt; rcunsplicedNew.95        NA        NA          NA            NA</span>
+<span class="co">##&gt; rcunsplicedNew.96        NA        NA          NA            NA</span>
+<span class="co">##&gt; rcunsplicedNew.97         2         4 0.000773744     0.0156188</span>
+<span class="co">##&gt; rcunsplicedNew.98         3         1 0.006129994     0.0278838</span>
+<span class="co">##&gt; rcunsplicedNew.99        NA        NA          NA            NA</span></code></pre></div>
+</div>
+<div id="track-read-assignment" class="section level3">
+<h3 class="hasAnchor">
+<a href="#track-read-assignment" class="anchor"></a>Tracking read-to-transcript assignment</h3>
+<p>Some use cases require knowing which individual reads support specific transcripts (novel and annotated). By default this feature is off due to the memory overhead it introduces but can be turned on using the trackReads argument. The output has three columns: read_id, a list of indices of equal matches, a list of indices of compatible matches. These indices match the annotations found in rowRanges(se)</p>
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    trackReads <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>
+<span class="co">##&gt; GRangesList object of length 1512:</span>
+<span class="co">##&gt; $tx.1</span>
+<span class="co">##&gt; GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;       seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;          &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class="co">##&gt;   [1]       22 12298626-12298878      - |         2            1</span>
+<span class="co">##&gt;   [2]       22 12309648-12309819      - |         1            2</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; $tx.2</span>
+<span class="co">##&gt; GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;       seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;          &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class="co">##&gt;   [1]       22 12554991-12555126      + |         1            2</span>
+<span class="co">##&gt;   [2]       22 12565912-12566167      + |         2            1</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; $tx.3</span>
+<span class="co">##&gt; GRanges object with 12 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;        seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;           &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;integer&gt;    &lt;integer&gt;</span>
+<span class="co">##&gt;    [1]       22 19714575-19714631      + |         1           12</span>
+<span class="co">##&gt;    [2]       22 19719602-19719698      + |         2           11</span>
+<span class="co">##&gt;    [3]       22 19719806-19719892      + |         3           10</span>
+<span class="co">##&gt;    [4]       22 19720115-19720238      + |         4            9</span>
+<span class="co">##&gt;    [5]       22 19720320-19720454      + |         5            8</span>
+<span class="co">##&gt;    ...      ...               ...    ... .       ...          ...</span>
+<span class="co">##&gt;    [8]       22 19721640-19721736      + |         8            5</span>
+<span class="co">##&gt;    [9]       22 19721822-19721957      + |         9            4</span>
+<span class="co">##&gt;   [10]       22 19722237-19722339      + |        10            3</span>
+<span class="co">##&gt;   [11]       22 19722428-19723579      + |        11            2</span>
+<span class="co">##&gt;   [12]       22 19723854-19724769      + |        12            1</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; ...</span>
+<span class="co">##&gt; &lt;1509 more elements&gt;</span>
+<span class="co">##&gt; DataFrame with 1512 rows and 10 columns</span>
+<span class="co">##&gt;                          GENEID             newTxClass readCount     txNDR</span>
+<span class="co">##&gt;                     &lt;character&gt;            &lt;character&gt; &lt;integer&gt; &lt;numeric&gt;</span>
+<span class="co">##&gt; tx.1                    gene.33        newGene-spliced        11 0.0581395</span>
+<span class="co">##&gt; tx.2                    gene.12        newGene-spliced        78 0.0416667</span>
+<span class="co">##&gt; tx.3            ENSG00000184702 newFirstJunctionnewF..         3 0.0581395</span>
+<span class="co">##&gt; tx.4                    gene.14        newGene-spliced         5 0.0714286</span>
+<span class="co">##&gt; tx.5            ENSG00000183506              newWithin        14 0.0581395</span>
+<span class="co">##&gt; ...                         ...                    ...       ...       ...</span>
+<span class="co">##&gt; ENST00000641242 ENSG00000284654             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641337 ENSG00000284621             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641915 ENSG00000284665             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641933 ENSG00000284651             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641967 ENSG00000284630             annotation        NA        NA</span>
+<span class="co">##&gt;                 relReadCount relSubsetCount          TXNAME         eqClass</span>
+<span class="co">##&gt;                    &lt;numeric&gt;      &lt;numeric&gt;     &lt;character&gt;     &lt;character&gt;</span>
+<span class="co">##&gt; tx.1                1.000000              1            tx.1            tx.1</span>
+<span class="co">##&gt; tx.2                1.000000              1            tx.2            tx.2</span>
+<span class="co">##&gt; tx.3                0.016129              1            tx.3            tx.3</span>
+<span class="co">##&gt; tx.4                1.000000              1            tx.4            tx.4</span>
+<span class="co">##&gt; tx.5                0.175000              1            tx.5            tx.5</span>
+<span class="co">##&gt; ...                      ...            ...             ...             ...</span>
+<span class="co">##&gt; ENST00000641242           NA             NA ENST00000641242 ENST00000641242</span>
+<span class="co">##&gt; ENST00000641337           NA             NA ENST00000641337 ENST00000641337</span>
+<span class="co">##&gt; ENST00000641915           NA             NA ENST00000641915 ENST00000641915</span>
+<span class="co">##&gt; ENST00000641933           NA             NA ENST00000641933 ENST00000641933</span>
+<span class="co">##&gt; ENST00000641967           NA             NA ENST00000641967 ENST00000641967</span>
+<span class="co">##&gt;                      txid   eqClassById</span>
+<span class="co">##&gt;                 &lt;integer&gt; &lt;IntegerList&gt;</span>
+<span class="co">##&gt; tx.1                    1             1</span>
+<span class="co">##&gt; tx.2                    2             2</span>
+<span class="co">##&gt; tx.3                    3             3</span>
+<span class="co">##&gt; tx.4                    4             4</span>
+<span class="co">##&gt; tx.5                    5             5</span>
+<span class="co">##&gt; ...                   ...           ...</span>
+<span class="co">##&gt; ENST00000641242      1508          1508</span>
+<span class="co">##&gt; ENST00000641337      1509          1509</span>
+<span class="co">##&gt; ENST00000641915      1510          1510</span>
+<span class="co">##&gt; ENST00000641933      1511          1511</span>
+<span class="co">##&gt; ENST00000641967      1512          1512</span>
+<span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Annotated-class.html">metadata</a></span><span class="op">(</span><span class="va">se</span><span class="op">)</span><span class="op">$</span><span class="va">readToTranscriptMaps</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>
+<span class="co">##&gt; # A tibble: 22,069 × 3</span>
+<span class="co">##&gt;    read_id                              equal_matches compatible_matches</span>
+<span class="co">##&gt;    &lt;chr&gt;                                &lt;list&gt;        &lt;list&gt;            </span>
+<span class="co">##&gt;  1 9db30f53-2e3a-45bc-a01a-586782f00797 &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  2 dec47cfc-becc-4ff1-9344-0275c2518a41 &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  3 d544f2e7-a8cc-4a4c-94da-161213ba767b &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  4 3a49d2c1-92e8-409c-bbec-0901cf6efa6c &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  5 881bcf9d-9d04-44cb-8d69-a2c03eb9f417 &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  6 4f41b1d0-69bf-4eeb-8eab-fd552ec1e991 &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  7 a6d7ed99-683c-4f23-a138-d387059fc65e &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  8 af2ffb1f-98e3-4e0b-befc-5571fd6af49e &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt;  9 9a0ed6a4-6d9b-4264-ba97-858f93eca3a7 &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt; 10 1e6750b9-ed24-4626-96f3-c25625ffbfa3 &lt;NULL&gt;        &lt;NULL&gt;            </span>
+<span class="co">##&gt; # … with 22,059 more rows</span></code></pre></div>
+</div>
+<div id="train-model" class="section level3">
+<h3 class="hasAnchor">
+<a href="#train-model" class="anchor"></a>Training a model on another species/dataset and applying it</h3>
+<p>In situations where training is not or cannot be performed, and the default model is also not suitable for the sample (the sample is generated from a different technology, species, condition, etc), <em>bambu</em> provides the option to train a new model, if well annotated similar data is available. For example one might train a model on arabidopsis to apply to an unannotated plant sample.</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>   <span class="co"># first train the model using a related annotated dataset from .bam</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>se <span class="ot">=</span> <span class="fu">bambu</span>(<span class="at">reads =</span> sample1.bam, <span class="at">annotations =</span> annotations, <span class="at">genome =</span> fa.file, <span class="at">discovery =</span> <span class="cn">FALSE</span>, <span class="at">quant =</span> <span class="cn">FALSE</span>, <span class="at">opt.discovery =</span> <span class="fu">list</span>(<span class="at">returnModel =</span> <span class="cn">TRUE</span>)) <span class="co"># note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE.</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="co"># newDefaultModel = metadata(se[[1]])$model # [[1]] will select the model trained on the first sample</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">#alternatively train the model using an rcFile</span></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>rcFile <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(pathToRcFile)</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>newDefaultModel <span class="ot">=</span> <span class="fu">trainBambu</span>(rcFile)</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="co"># use the trained model on another sample</span></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a><span class="co"># sample2.bam and fa.file2 represent the aligned reads and genome for the poorly annotated sample</span></span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a>se <span class="ot">&lt;-</span> <span class="fu">bambu</span>(<span class="at">reads =</span> sample2.bam, <span class="at">annotations =</span> <span class="cn">NULL</span>, <span class="at">genome =</span> fa.file2, <span class="at">opt.discovery =</span> <span class="fu">list</span>(<span class="at">defaultModels =</span> newDefaultModel, <span class="at">fitReadClassModel =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a><span class="co">#trainBambu Arguments</span></span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>rcFile <span class="ot">&lt;-</span> <span class="cn">NULL</span>, min.readCount <span class="ot">=</span> <span class="dv">2</span>, nrounds <span class="ot">=</span> <span class="dv">50</span>, NDR.threshold <span class="ot">=</span> <span class="fl">0.1</span>, verbose <span class="ot">=</span> <span class="cn">TRUE</span></span></code></pre></div>
+</div>
+<div id="include-single-exons" class="section level3">
+<h3 class="hasAnchor">
+<a href="#include-single-exons" class="anchor"></a>Including single exons</h3>
+<p>By default <em>bambu</em> does not report single exon transcripts because they are known to have a high frequency of false positives and do not have splice junctions that are used by <em>bambu</em> to distinguish read classes. Nevertheless <em>bambu</em> trains a separate model on single-exon transcripts, and these predictions can be accessed and included in the annotations.</p>
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, annotations <span class="op">=</span> <span class="va">HsChr22BambuAnnotation</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span>,
+    opt.discovery <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>min.txScore.singleExon <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span>
+<span class="co">##&gt; GRangesList object of length 1511:</span>
+<span class="co">##&gt; $tx.1</span>
+<span class="co">##&gt; GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;       seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;          &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;numeric&gt;    &lt;numeric&gt;</span>
+<span class="co">##&gt;   [1]       22 12298626-12298878      - |         2            1</span>
+<span class="co">##&gt;   [2]       22 12309648-12309819      - |         1            2</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; $tx.2</span>
+<span class="co">##&gt; GRanges object with 2 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;       seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;          &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;numeric&gt;    &lt;numeric&gt;</span>
+<span class="co">##&gt;   [1]       22 12554991-12555126      + |         1            2</span>
+<span class="co">##&gt;   [2]       22 12565912-12566167      + |         2            1</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; $tx.3</span>
+<span class="co">##&gt; GRanges object with 12 ranges and 2 metadata columns:</span>
+<span class="co">##&gt;        seqnames            ranges strand | exon_rank exon_endRank</span>
+<span class="co">##&gt;           &lt;Rle&gt;         &lt;IRanges&gt;  &lt;Rle&gt; | &lt;numeric&gt;    &lt;numeric&gt;</span>
+<span class="co">##&gt;    [1]       22 19714575-19714631      + |         1           12</span>
+<span class="co">##&gt;    [2]       22 19719602-19719698      + |         2           11</span>
+<span class="co">##&gt;    [3]       22 19719806-19719892      + |         3           10</span>
+<span class="co">##&gt;    [4]       22 19720115-19720238      + |         4            9</span>
+<span class="co">##&gt;    [5]       22 19720320-19720454      + |         5            8</span>
+<span class="co">##&gt;    ...      ...               ...    ... .       ...          ...</span>
+<span class="co">##&gt;    [8]       22 19721640-19721736      + |         8            5</span>
+<span class="co">##&gt;    [9]       22 19721822-19721957      + |         9            4</span>
+<span class="co">##&gt;   [10]       22 19722237-19722339      + |        10            3</span>
+<span class="co">##&gt;   [11]       22 19722428-19723579      + |        11            2</span>
+<span class="co">##&gt;   [12]       22 19723854-19724769      + |        12            1</span>
+<span class="co">##&gt;   -------</span>
+<span class="co">##&gt;   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="co">##&gt; </span>
+<span class="co">##&gt; ...</span>
+<span class="co">##&gt; &lt;1508 more elements&gt;</span>
+<span class="co">##&gt; DataFrame with 1511 rows and 10 columns</span>
+<span class="co">##&gt;                          GENEID             newTxClass readCount     txNDR</span>
+<span class="co">##&gt;                     &lt;character&gt;            &lt;character&gt; &lt;integer&gt; &lt;numeric&gt;</span>
+<span class="co">##&gt; tx.1                    gene.33        newGene-spliced        11 0.0689655</span>
+<span class="co">##&gt; tx.2                    gene.12        newGene-spliced        78 0.0416667</span>
+<span class="co">##&gt; tx.3            ENSG00000184702 newFirstJunctionnewF..         3 0.0689655</span>
+<span class="co">##&gt; tx.4            ENSG00000183506              newWithin        14 0.0689655</span>
+<span class="co">##&gt; tx.5            ENSG00000272779 newFirstJunctionnewF..        31 0.0816327</span>
+<span class="co">##&gt; ...                         ...                    ...       ...       ...</span>
+<span class="co">##&gt; ENST00000641242 ENSG00000284654             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641337 ENSG00000284621             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641915 ENSG00000284665             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641933 ENSG00000284651             annotation        NA        NA</span>
+<span class="co">##&gt; ENST00000641967 ENSG00000284630             annotation        NA        NA</span>
+<span class="co">##&gt;                 relReadCount relSubsetCount          TXNAME         eqClass</span>
+<span class="co">##&gt;                    &lt;numeric&gt;      &lt;numeric&gt;     &lt;character&gt;     &lt;character&gt;</span>
+<span class="co">##&gt; tx.1                0.333333              1            tx.1            tx.1</span>
+<span class="co">##&gt; tx.2                0.866667              1            tx.2            tx.2</span>
+<span class="co">##&gt; tx.3                0.016129              1            tx.3            tx.3</span>
+<span class="co">##&gt; tx.4                0.175000              1            tx.4            tx.4</span>
+<span class="co">##&gt; tx.5                0.231343              1            tx.5            tx.5</span>
+<span class="co">##&gt; ...                      ...            ...             ...             ...</span>
+<span class="co">##&gt; ENST00000641242           NA             NA ENST00000641242 ENST00000641242</span>
+<span class="co">##&gt; ENST00000641337           NA             NA ENST00000641337 ENST00000641337</span>
+<span class="co">##&gt; ENST00000641915           NA             NA ENST00000641915 ENST00000641915</span>
+<span class="co">##&gt; ENST00000641933           NA             NA ENST00000641933 ENST00000641933</span>
+<span class="co">##&gt; ENST00000641967           NA             NA ENST00000641967 ENST00000641967</span>
+<span class="co">##&gt;                      txid   eqClassById</span>
+<span class="co">##&gt;                 &lt;integer&gt; &lt;IntegerList&gt;</span>
+<span class="co">##&gt; tx.1                    1             1</span>
+<span class="co">##&gt; tx.2                    2             2</span>
+<span class="co">##&gt; tx.3                    3             3</span>
+<span class="co">##&gt; tx.4                    4             4</span>
+<span class="co">##&gt; tx.5                    5             5</span>
+<span class="co">##&gt; ...                   ...           ...</span>
+<span class="co">##&gt; ENST00000641242      1507          1507</span>
+<span class="co">##&gt; ENST00000641337      1508          1508</span>
+<span class="co">##&gt; ENST00000641915      1509          1509</span>
+<span class="co">##&gt; ENST00000641933      1510          1510</span>
+<span class="co">##&gt; ENST00000641967      1511          1511</span></code></pre></div>
+</div>
+</div>
+<div id="downstream-analysis" class="section level2">
+<h2 class="hasAnchor">
+<a href="#downstream-analysis" class="anchor"></a>Downstream analysis</h2>
+<div id="DESeq2" class="section level3">
+<h3 class="hasAnchor">
+<a href="#DESeq2" class="anchor"></a>Identifying differentially expressed genes</h3>
 <p>One of the most common tasks when analysing RNA-Seq data is the analysis of differential gene expression across a condition of intertest. Here we use <em>DESeq2</em> to find the differentially expressed genes between MCF7 and K562 cell lines. Similar to using results from <em>Salmon</em>, estimates from <em>bambu</em> will first be rounded.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/mikelove/DESeq2">DESeq2</a></span><span class="op">)</span>
-<span class="va">dds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/DESeqDataSet.html">DESeqDataSetFromMatrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html">round</a></span><span class="op">(</span><span class="fu">assays</span><span class="op">(</span><span class="va">seGene</span><span class="op">)</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span>, colData <span class="op">=</span> <span class="fu">colData</span><span class="op">(</span><span class="va">se</span><span class="op">)</span>,
+<span class="va">dds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/DESeqDataSet.html">DESeqDataSetFromMatrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">assays</a></span><span class="op">(</span><span class="va">seGene.multiSample</span><span class="op">)</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span>, colData <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">colData</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span>,
     design <span class="op">=</span> <span class="op">~</span><span class="va">condition</span><span class="op">)</span>
 <span class="va">dds.deseq</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/DESeq.html">DESeq</a></span><span class="op">(</span><span class="va">dds</span><span class="op">)</span>
 <span class="va">deGeneRes</span> <span class="op">&lt;-</span> <span class="fu">DESeq2</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/results.html">results</a></span><span class="op">(</span><span class="va">dds.deseq</span>, independentFiltering <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">deGeneRes</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html">order</a></span><span class="op">(</span><span class="va">deGeneRes</span><span class="op">$</span><span class="va">padj</span><span class="op">)</span>, <span class="op">]</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">head</a></span><span class="op">(</span><span class="va">deGeneRes</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/pkg/BiocGenerics/man/order.html">order</a></span><span class="op">(</span><span class="va">deGeneRes</span><span class="op">$</span><span class="va">padj</span><span class="op">)</span>, <span class="op">]</span><span class="op">)</span>
 <span class="co">##&gt; log2 fold change (MLE): condition MCF7 vs K562 </span>
 <span class="co">##&gt; Wald test p-value: condition MCF7 vs K562 </span>
 <span class="co">##&gt; DataFrame with 6 rows and 6 columns</span>
 <span class="co">##&gt;                  baseMean log2FoldChange     lfcSE      stat</span>
 <span class="co">##&gt;                 &lt;numeric&gt;      &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;</span>
-<span class="co">##&gt; ENSG00000185686  500.6470       -7.15159  0.500364 -14.29278</span>
-<span class="co">##&gt; ENSG00000283633   95.7518       -9.10519  1.246517  -7.30451</span>
-<span class="co">##&gt; ENSG00000197077   26.9189        9.17563  1.320390   6.94918</span>
-<span class="co">##&gt; ENSG00000240972 2443.3934        2.47082  0.357369   6.91392</span>
-<span class="co">##&gt; ENSG00000099977  235.8601        1.92963  0.306609   6.29347</span>
-<span class="co">##&gt; ENSG00000169635   43.5245       -3.36897  0.569649  -5.91411</span>
-<span class="co">##&gt;                                                                pvalue</span>
+<span class="co">##&gt; ENSG00000185686  511.2052       -7.20624  0.492066 -14.64487</span>
+<span class="co">##&gt; ENSG00000283633   98.0449       -9.17396  1.241044  -7.39213</span>
+<span class="co">##&gt; ENSG00000240972 2408.0854        2.40895  0.337272   7.14247</span>
+<span class="co">##&gt; ENSG00000197077   26.4122        9.12027  1.316105   6.92975</span>
+<span class="co">##&gt; ENSG00000099977  232.3477        1.86772  0.294728   6.33708</span>
+<span class="co">##&gt; ENSG00000169635   44.5578       -3.43892  0.567275  -6.06218</span>
+<span class="co">##&gt;                                                                  pvalue</span>
+<span class="co">##&gt;                                                               &lt;numeric&gt;</span>
+<span class="co">##&gt; ENSG00000185686 0.00000000000000000000000000000000000000000000000145288</span>
+<span class="co">##&gt; ENSG00000283633 0.00000000000014449663170714021373649004028471016161249</span>
+<span class="co">##&gt; ENSG00000240972 0.00000000000091667845289588904807890076440778835903736</span>
+<span class="co">##&gt; ENSG00000197077 0.00000000000421597264035320338235607890642164645184781</span>
+<span class="co">##&gt; ENSG00000099977 0.00000000023416273398772617500212561188069684825485695</span>
+<span class="co">##&gt; ENSG00000169635 0.00000000134285027735714261577369776863360648078149495</span>
+<span class="co">##&gt;                                                                  padj</span>
 <span class="co">##&gt;                                                             &lt;numeric&gt;</span>
-<span class="co">##&gt; ENSG00000185686 0.000000000000000000000000000000000000000000000242728</span>
-<span class="co">##&gt; ENSG00000283633 0.000000000000278275679947613751071839495840056657549</span>
-<span class="co">##&gt; ENSG00000197077 0.000000000003674139901044937399445365779334784031053</span>
-<span class="co">##&gt; ENSG00000240972 0.000000000004714473225561034087277656270998130953048</span>
-<span class="co">##&gt; ENSG00000099977 0.000000000310450546572304490812751211792114465481962</span>
-<span class="co">##&gt; ENSG00000169635 0.000000003336692881462347780346996492929594058107767</span>
-<span class="co">##&gt;                                                                padj</span>
-<span class="co">##&gt;                                                           &lt;numeric&gt;</span>
-<span class="co">##&gt; ENSG00000185686 0.0000000000000000000000000000000000000000000631093</span>
-<span class="co">##&gt; ENSG00000283633 0.0000000000361758383931897894568746600884185651500</span>
-<span class="co">##&gt; ENSG00000197077 0.0000000003064407596614672382912675321117289967132</span>
-<span class="co">##&gt; ENSG00000240972 0.0000000003064407596614672382912675321117289967132</span>
-<span class="co">##&gt; ENSG00000099977 0.0000000161434284217598349698291349809883832300272</span>
-<span class="co">##&gt; ENSG00000169635 0.0000001445900248633684085023933191607725667893192</span></code></pre></div>
+<span class="co">##&gt; ENSG00000185686 0.000000000000000000000000000000000000000000000405353</span>
+<span class="co">##&gt; ENSG00000283633 0.000000000020157280123146059626913743366674234246128</span>
+<span class="co">##&gt; ENSG00000240972 0.000000000085251096119317677836266719831501918053229</span>
+<span class="co">##&gt; ENSG00000197077 0.000000000294064091664635932082317060727908418493737</span>
+<span class="co">##&gt; ENSG00000099977 0.000000013066280556515119613860904706961058030501022</span>
+<span class="co">##&gt; ENSG00000169635 0.000000062442537897107126360200541215911274051109103</span></code></pre></div>
 <p>A quick summary of differentially expressed genes</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">deGeneRes</span><span class="op">)</span>
 <span class="co">##&gt; </span>
-<span class="co">##&gt; out of 260 with nonzero total read count</span>
+<span class="co">##&gt; out of 279 with nonzero total read count</span>
 <span class="co">##&gt; adjusted p-value &lt; 0.1</span>
-<span class="co">##&gt; LFC &gt; 0 (up)       : 19, 7.3%</span>
-<span class="co">##&gt; LFC &lt; 0 (down)     : 22, 8.5%</span>
+<span class="co">##&gt; LFC &gt; 0 (up)       : 20, 7.2%</span>
+<span class="co">##&gt; LFC &lt; 0 (down)     : 24, 8.6%</span>
 <span class="co">##&gt; outliers [1]       : 0, 0%</span>
 <span class="co">##&gt; low counts [2]     : 0, 0%</span>
 <span class="co">##&gt; (mean count &lt; 0)</span>
 <span class="co">##&gt; [1] see 'cooksCutoff' argument of ?results</span>
 <span class="co">##&gt; [2] see 'independentFiltering' argument of ?results</span></code></pre></div>
-<p>We can also visualise the MA-plot for differentially used isoforms using . However, visualizing the MA-plots using the original log-fold change results will be affected by the noise associated with log2 fold changes from low count genes without requiring arbitrary filtering thresholds. As recommended in the [<em>DESeq2</em>tutorial] (<a href="http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/" class="uri">http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/</a> DESeq2.html#alternative-shrinkage-estimators). we applied the same shrinkage to effect sizes to improve the visualization.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<p>We can also visualise the MA-plot for differentially used isoforms using . However, visualizing the MA-plots using the original log-fold change results will be affected by the noise associated with log2 fold changes from low count genes without requiring arbitrary filtering thresholds. As recommended in the <a href="http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#alternative-shrinkage-estimators"><em>DESeq2</em> tutorial</a>. we applied the same shrinkage to effect sizes to improve the visualization.</p>
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">apeglm</span><span class="op">)</span>
 <span class="va">resLFC</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/lfcShrink.html">lfcShrink</a></span><span class="op">(</span><span class="va">dds.deseq</span>, coef <span class="op">=</span> <span class="st">"condition_MCF7_vs_K562"</span>, type <span class="op">=</span> <span class="st">"apeglm"</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/plotMA.html">plotMA</a></span><span class="op">(</span><span class="va">resLFC</span>, ylim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-24-1.png" width="768"></p>
+<span class="fu"><a href="https://rdrr.io/pkg/DESeq2/man/plotMA.html">plotMA</a></span><span class="op">(</span><span class="va">resLFC</span>, ylim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<p><img src="bambu_files/figure-html/unnamed-chunk-39-1.png" width="768"></p>
 </div>
-<div id="DEXSeq" class="section level2">
-<h2 class="hasAnchor">
-<a href="#DEXSeq" class="anchor"></a>Identifying differential transcript usage</h2>
+<div id="DEXSeq" class="section level3">
+<h3 class="hasAnchor">
+<a href="#DEXSeq" class="anchor"></a>Identifying differential transcript usage</h3>
 <p>We used <em>DEXSeq</em> to detect alternative used isoforms.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">DEXSeq</span><span class="op">)</span>
-<span class="va">dxd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DEXSeq/man/DEXSeqDataSet.html">DEXSeqDataSet</a></span><span class="op">(</span>countData <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html">round</a></span><span class="op">(</span><span class="fu">assays</span><span class="op">(</span><span class="va">se</span><span class="op">)</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span>, sampleData <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html">as.data.frame</a></span><span class="op">(</span><span class="fu">colData</span><span class="op">(</span><span class="va">se</span><span class="op">)</span><span class="op">)</span>,
-    design <span class="op">=</span> <span class="op">~</span><span class="va">sample</span> <span class="op">+</span> <span class="va">exon</span> <span class="op">+</span> <span class="va">condition</span><span class="op">:</span><span class="va">exon</span>, featureID <span class="op">=</span> <span class="fu">rowData</span><span class="op">(</span><span class="va">se</span><span class="op">)</span><span class="op">$</span><span class="va">TXNAME</span>, groupID <span class="op">=</span> <span class="fu">rowData</span><span class="op">(</span><span class="va">se</span><span class="op">)</span><span class="op">$</span><span class="va">GENEID</span><span class="op">)</span>
+<span class="va">dxd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DEXSeq/man/DEXSeqDataSet.html">DEXSeqDataSet</a></span><span class="op">(</span>countData <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">assays</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span>, sampleData <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/BiocGenerics/man/as.data.frame.html">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">colData</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span><span class="op">)</span>,
+    design <span class="op">=</span> <span class="op">~</span><span class="va">sample</span> <span class="op">+</span> <span class="va">exon</span> <span class="op">+</span> <span class="va">condition</span><span class="op">:</span><span class="va">exon</span>, featureID <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">rowData</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span><span class="op">$</span><span class="va">TXNAME</span>,
+    groupID <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html">rowData</a></span><span class="op">(</span><span class="va">se.multiSample</span><span class="op">)</span><span class="op">$</span><span class="va">GENEID</span><span class="op">)</span>
 <span class="va">dxr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/DEXSeq/man/DEXSeq.html">DEXSeq</a></span><span class="op">(</span><span class="va">dxd</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">dxr</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/pkg/S4Vectors/man/Vector-class.html">head</a></span><span class="op">(</span><span class="va">dxr</span><span class="op">)</span>
 <span class="co">##&gt; </span>
 <span class="co">##&gt; LRT p-value: full vs reduced</span>
 <span class="co">##&gt; </span>
 <span class="co">##&gt; DataFrame with 6 rows and 12 columns</span>
 <span class="co">##&gt;                              groupID   featureID exonBaseMean dispersion</span>
 <span class="co">##&gt;                          &lt;character&gt; &lt;character&gt;    &lt;numeric&gt;  &lt;numeric&gt;</span>
-<span class="co">##&gt; gene.30:tx.1                 gene.30        tx.1     9.059656         NA</span>
-<span class="co">##&gt; gene.35:tx.2                 gene.35        tx.2     1.046280         NA</span>
-<span class="co">##&gt; gene.12:tx.3                 gene.12        tx.3     1.054917         NA</span>
-<span class="co">##&gt; ENSG00000184702:tx.4 ENSG00000184702        tx.4    32.603977   0.904926</span>
-<span class="co">##&gt; ENSG00000183506:tx.5 ENSG00000183506        tx.5    14.804874   1.399612</span>
-<span class="co">##&gt; gene.45:tx.6                 gene.45        tx.6     0.767463         NA</span>
+<span class="co">##&gt; gene.33:tx.1                 gene.33        tx.1     1.857454         NA</span>
+<span class="co">##&gt; gene.12:tx.2                 gene.12        tx.2     7.062606         NA</span>
+<span class="co">##&gt; ENSG00000184702:tx.3 ENSG00000184702        tx.3    26.756126   0.815003</span>
+<span class="co">##&gt; gene.14:tx.4                 gene.14        tx.4     0.792746         NA</span>
+<span class="co">##&gt; ENSG00000183506:tx.5 ENSG00000183506        tx.5    12.989695   1.376616</span>
+<span class="co">##&gt; ENSG00000272779:tx.6 ENSG00000272779        tx.6    10.912815   0.249921</span>
 <span class="co">##&gt;                           stat    pvalue      padj      K562      MCF7</span>
 <span class="co">##&gt;                      &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;</span>
-<span class="co">##&gt; gene.30:tx.1                NA        NA        NA        NA        NA</span>
-<span class="co">##&gt; gene.35:tx.2                NA        NA        NA        NA        NA</span>
-<span class="co">##&gt; gene.12:tx.3                NA        NA        NA        NA        NA</span>
-<span class="co">##&gt; ENSG00000184702:tx.4   1.86587  0.171949  0.591465   1.31079   1.64896</span>
-<span class="co">##&gt; ENSG00000183506:tx.5   1.32103  0.250408  0.631578   1.06310   1.20895</span>
-<span class="co">##&gt; gene.45:tx.6                NA        NA        NA        NA        NA</span>
-<span class="co">##&gt;                      log2fold_MCF7_K562   genomicData     countData</span>
-<span class="co">##&gt;                               &lt;numeric&gt; &lt;GRangesList&gt;      &lt;matrix&gt;</span>
-<span class="co">##&gt; gene.30:tx.1                         NA                 36:48:5:...</span>
-<span class="co">##&gt; gene.35:tx.2                         NA                   9:5:0:...</span>
-<span class="co">##&gt; gene.12:tx.3                         NA                   8:3:2:...</span>
-<span class="co">##&gt; ENSG00000184702:tx.4           1.162939               24:132:88:...</span>
-<span class="co">##&gt; ENSG00000183506:tx.5           0.522927                43:61:24:...</span>
-<span class="co">##&gt; gene.45:tx.6                         NA                   5:5:0:...</span></code></pre></div>
+<span class="co">##&gt; gene.33:tx.1                NA        NA        NA        NA        NA</span>
+<span class="co">##&gt; gene.12:tx.2                NA        NA        NA        NA        NA</span>
+<span class="co">##&gt; ENSG00000184702:tx.3  3.316109  0.068604  0.838929   4.31895   5.77536</span>
+<span class="co">##&gt; gene.14:tx.4                NA        NA        NA        NA        NA</span>
+<span class="co">##&gt; ENSG00000183506:tx.5  0.351154  0.553461  1.000000   4.32537   3.51294</span>
+<span class="co">##&gt; ENSG00000272779:tx.6  2.605249  0.106510  0.897838   3.69295   4.17067</span>
+<span class="co">##&gt;                      log2fold_MCF7_K562   genomicData    countData</span>
+<span class="co">##&gt;                               &lt;numeric&gt; &lt;GRangesList&gt;     &lt;matrix&gt;</span>
+<span class="co">##&gt; gene.33:tx.1                         NA                 14:6:3:...</span>
+<span class="co">##&gt; gene.12:tx.2                         NA               32:37:13:...</span>
+<span class="co">##&gt; ENSG00000184702:tx.3           1.823097               19:77:87:...</span>
+<span class="co">##&gt; gene.14:tx.4                         NA                  4:1:0:...</span>
+<span class="co">##&gt; ENSG00000183506:tx.5          -1.063803               42:60:21:...</span>
+<span class="co">##&gt; ENSG00000272779:tx.6           0.624386                 7:16:7:...</span></code></pre></div>
 <p>We can visualize the MA-plot</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/pkg/DEXSeq/man/plotMA.html">plotMA</a></span><span class="op">(</span><span class="va">dxr</span>, cex <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></code></pre></div>
-<p><img src="bambu_files/figure-html/unnamed-chunk-26-1.png" width="768"></p>
-</div>
-</div>
-<div id="large-sample-num" class="section level1">
-<h1 class="hasAnchor">
-<a href="#large-sample-num" class="anchor"></a>Running bambu with large number of samples</h1>
-<p>For larger sample numbers we recommend to write the processed data to a file. This can be done by providing the readClass.outputDir:</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span>reads <span class="op">=</span> <span class="va">bamFiles</span>, rcOutDir <span class="op">=</span> <span class="st">"./bambu/"</span>, annotations <span class="op">=</span> <span class="va">annotaiton</span>, genome <span class="op">=</span> <span class="va">genomeSequence</span><span class="op">)</span></code></pre></div>
-</div>
-<div id="bambu-parameters" class="section level1">
-<h1 class="hasAnchor">
-<a href="#bambu-parameters" class="anchor"></a>Bambu parameters</h1>
-<div id="advanced-options" class="section level2">
-<h2 class="hasAnchor">
-<a href="#advanced-options" class="anchor"></a>Advanced Options</h2>
-<p>For transcript discovery we recommend to adjust the parameters according to the number of replicates and the sequencing throughput. The most relevant parameters are explained here. You can use any combination of these parameters. ### More stringent filtering thresholds imposed on potential novel transcripts</p>
-<ul>
-<li>Keep novel transcripts with min 5 read count in at least 1 sample:</li>
-</ul>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span><span class="va">reads</span>, <span class="va">annotations</span>, <span class="va">genome</span>, opt.discovery <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>min.readCount <span class="op">=</span> <span class="fl">5</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<ul>
-<li>Keep novel transcripts with min 5 samples having at least 2 counts:</li>
-</ul>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span><span class="va">reads</span>, <span class="va">annotations</span>, <span class="va">genome</span>, opt.discovery <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>min.sampleNumber <span class="op">=</span> <span class="fl">5</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<ul>
-<li>Filter out transcripts with relative abundance within gene lower than 10%:</li>
-</ul>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span><span class="va">reads</span>, <span class="va">annotations</span>, <span class="va">genome</span>, opt.discovery <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>min.readFractionByGene <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-<div id="quantification-without-bias-correction" class="section level3">
-<h3 class="hasAnchor">
-<a href="#quantification-without-bias-correction" class="anchor"></a>Quantification without bias correction</h3>
-<p>The default estimation automatically does bias correction for expression estimates. However, you can choose to perform the quantification without bias correction.</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span><span class="va">reads</span>, <span class="va">annotations</span>, <span class="va">genome</span>, opt.em <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>bias <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></code></pre></div>
-</div>
-<div id="parallel-computation" class="section level3">
-<h3 class="hasAnchor">
-<a href="#parallel-computation" class="anchor"></a>Parallel computation</h3>
-<p>bambu allows parallel computation.</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="../reference/bambu.html">bambu</a></span><span class="op">(</span><span class="va">reads</span>, <span class="va">annotations</span>, <span class="va">genome</span>, ncore <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></code></pre></div>
-<p>See <em><a href="https://goekelab.github.io/bambu/">our page</a></em> for details to customize other conditions.</p>
+<p><img src="bambu_files/figure-html/unnamed-chunk-41-1.png" width="768"></p>
 </div>
 </div>
 </div>
@@ -522,135 +901,143 @@
 <div id="session-info" class="section level1">
 <h1 class="hasAnchor">
 <a href="#session-info" class="anchor"></a>Session Information</h1>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html">sessionInfo</a></span><span class="op">(</span><span class="op">)</span>
 <span class="co">##&gt; R version 4.1.0 (2021-05-18)</span>
 <span class="co">##&gt; Platform: x86_64-pc-linux-gnu (64-bit)</span>
-<span class="co">##&gt; Running under: Ubuntu 20.04.3 LTS</span>
+<span class="co">##&gt; Running under: Ubuntu 20.04.4 LTS</span>
 <span class="co">##&gt; </span>
 <span class="co">##&gt; Matrix products: default</span>
 <span class="co">##&gt; BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3</span>
 <span class="co">##&gt; LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/liblapack.so.3</span>
 <span class="co">##&gt; </span>
 <span class="co">##&gt; locale:</span>
-<span class="co">##&gt;  [1] LC_CTYPE=en_SG.UTF-8       LC_NUMERIC=C              </span>
-<span class="co">##&gt;  [3] LC_TIME=en_SG.UTF-8        LC_COLLATE=en_SG.UTF-8    </span>
-<span class="co">##&gt;  [5] LC_MONETARY=en_SG.UTF-8    LC_MESSAGES=en_SG.UTF-8   </span>
+<span class="co">##&gt;  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              </span>
+<span class="co">##&gt;  [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    </span>
+<span class="co">##&gt;  [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   </span>
 <span class="co">##&gt;  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 </span>
 <span class="co">##&gt;  [9] LC_ADDRESS=C               LC_TELEPHONE=C            </span>
-<span class="co">##&gt; [11] LC_MEASUREMENT=en_SG.UTF-8 LC_IDENTIFICATION=C       </span>
+<span class="co">##&gt; [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       </span>
 <span class="co">##&gt; </span>
 <span class="co">##&gt; attached base packages:</span>
 <span class="co">##&gt; [1] stats4    stats     graphics  grDevices utils     datasets  methods  </span>
 <span class="co">##&gt; [8] base     </span>
 <span class="co">##&gt; </span>
 <span class="co">##&gt; other attached packages:</span>
-<span class="co">##&gt;  [1] DEXSeq_1.39.0                         </span>
-<span class="co">##&gt;  [2] RColorBrewer_1.1-2                    </span>
-<span class="co">##&gt;  [3] AnnotationDbi_1.55.1                  </span>
-<span class="co">##&gt;  [4] BiocParallel_1.27.4                   </span>
-<span class="co">##&gt;  [5] apeglm_1.15.0                         </span>
-<span class="co">##&gt;  [6] DESeq2_1.33.4                         </span>
-<span class="co">##&gt;  [7] ggplot2_3.3.5                         </span>
+<span class="co">##&gt;  [1] DEXSeq_1.40.0                         </span>
+<span class="co">##&gt;  [2] RColorBrewer_1.1-3                    </span>
+<span class="co">##&gt;  [3] AnnotationDbi_1.56.2                  </span>
+<span class="co">##&gt;  [4] BiocParallel_1.28.1                   </span>
+<span class="co">##&gt;  [5] apeglm_1.16.0                         </span>
+<span class="co">##&gt;  [6] DESeq2_1.34.0                         </span>
+<span class="co">##&gt;  [7] ggplot2_3.3.6                         </span>
 <span class="co">##&gt;  [8] BSgenome.Hsapiens.NCBI.GRCh38_1.3.1000</span>
-<span class="co">##&gt;  [9] BSgenome_1.61.0                       </span>
-<span class="co">##&gt; [10] rtracklayer_1.53.1                    </span>
-<span class="co">##&gt; [11] Rsamtools_2.9.1                       </span>
-<span class="co">##&gt; [12] Biostrings_2.61.2                     </span>
-<span class="co">##&gt; [13] XVector_0.33.0                        </span>
-<span class="co">##&gt; [14] NanoporeRNASeq_1.3.3                  </span>
-<span class="co">##&gt; [15] ExperimentHub_2.1.4                   </span>
-<span class="co">##&gt; [16] AnnotationHub_3.1.5                   </span>
-<span class="co">##&gt; [17] BiocFileCache_2.1.1                   </span>
-<span class="co">##&gt; [18] dbplyr_2.1.1                          </span>
-<span class="co">##&gt; [19] bambu_1.99.1                          </span>
-<span class="co">##&gt; [20] SummarizedExperiment_1.23.4           </span>
-<span class="co">##&gt; [21] Biobase_2.53.0                        </span>
-<span class="co">##&gt; [22] GenomicRanges_1.45.0                  </span>
-<span class="co">##&gt; [23] GenomeInfoDb_1.29.4                   </span>
-<span class="co">##&gt; [24] IRanges_2.27.2                        </span>
-<span class="co">##&gt; [25] S4Vectors_0.31.2                      </span>
-<span class="co">##&gt; [26] BiocGenerics_0.39.2                   </span>
-<span class="co">##&gt; [27] MatrixGenerics_1.5.3                  </span>
-<span class="co">##&gt; [28] matrixStats_0.60.1                    </span>
+<span class="co">##&gt;  [9] Rsamtools_2.10.0                      </span>
+<span class="co">##&gt; [10] NanoporeRNASeq_1.4.0                  </span>
+<span class="co">##&gt; [11] ExperimentHub_2.2.0                   </span>
+<span class="co">##&gt; [12] AnnotationHub_3.2.0                   </span>
+<span class="co">##&gt; [13] BiocFileCache_2.2.0                   </span>
+<span class="co">##&gt; [14] dbplyr_2.2.1                          </span>
+<span class="co">##&gt; [15] bambu_2.1.8                           </span>
+<span class="co">##&gt; [16] BSgenome_1.62.0                       </span>
+<span class="co">##&gt; [17] rtracklayer_1.54.0                    </span>
+<span class="co">##&gt; [18] Biostrings_2.62.0                     </span>
+<span class="co">##&gt; [19] XVector_0.34.0                        </span>
+<span class="co">##&gt; [20] SummarizedExperiment_1.24.0           </span>
+<span class="co">##&gt; [21] Biobase_2.54.0                        </span>
+<span class="co">##&gt; [22] GenomicRanges_1.46.1                  </span>
+<span class="co">##&gt; [23] GenomeInfoDb_1.30.0                   </span>
+<span class="co">##&gt; [24] IRanges_2.28.0                        </span>
+<span class="co">##&gt; [25] S4Vectors_0.32.3                      </span>
+<span class="co">##&gt; [26] BiocGenerics_0.40.0                   </span>
+<span class="co">##&gt; [27] MatrixGenerics_1.6.0                  </span>
+<span class="co">##&gt; [28] matrixStats_0.62.0                    </span>
 <span class="co">##&gt; </span>
 <span class="co">##&gt; loaded via a namespace (and not attached):</span>
-<span class="co">##&gt;   [1] utf8_1.2.2                    tidyselect_1.1.1             </span>
-<span class="co">##&gt;   [3] RSQLite_2.2.8                 htmlwidgets_1.5.3            </span>
-<span class="co">##&gt;   [5] grid_4.1.0                    munsell_0.5.0                </span>
-<span class="co">##&gt;   [7] codetools_0.2-18              ragg_1.1.3                   </span>
-<span class="co">##&gt;   [9] statmod_1.4.36                xgboost_1.4.1.1              </span>
-<span class="co">##&gt;  [11] withr_2.4.2                   colorspace_2.0-2             </span>
-<span class="co">##&gt;  [13] filelock_1.0.2                OrganismDbi_1.35.0           </span>
-<span class="co">##&gt;  [15] highr_0.9                     knitr_1.33                   </span>
-<span class="co">##&gt;  [17] rstudioapi_0.13               labeling_0.4.2               </span>
-<span class="co">##&gt;  [19] bbmle_1.0.24                  GenomeInfoDbData_1.2.6       </span>
-<span class="co">##&gt;  [21] hwriter_1.3.2                 bit64_4.0.5                  </span>
-<span class="co">##&gt;  [23] farver_2.1.0                  rprojroot_2.0.2              </span>
-<span class="co">##&gt;  [25] coda_0.19-4                   vctrs_0.3.8                  </span>
-<span class="co">##&gt;  [27] generics_0.1.0                xfun_0.25                    </span>
-<span class="co">##&gt;  [29] biovizBase_1.41.0             R6_2.5.1                     </span>
-<span class="co">##&gt;  [31] doParallel_1.0.16             clue_0.3-59                  </span>
-<span class="co">##&gt;  [33] locfit_1.5-9.4                AnnotationFilter_1.17.1      </span>
-<span class="co">##&gt;  [35] bitops_1.0-7                  cachem_1.0.6                 </span>
-<span class="co">##&gt;  [37] reshape_0.8.8                 DelayedArray_0.19.1          </span>
-<span class="co">##&gt;  [39] assertthat_0.2.1              promises_1.2.0.1             </span>
-<span class="co">##&gt;  [41] BiocIO_1.3.0                  scales_1.1.1                 </span>
-<span class="co">##&gt;  [43] nnet_7.3-16                   gtable_0.3.0                 </span>
-<span class="co">##&gt;  [45] ggbio_1.41.0                  ensembldb_2.17.4             </span>
-<span class="co">##&gt;  [47] rlang_0.4.11                  genefilter_1.75.1            </span>
-<span class="co">##&gt;  [49] systemfonts_1.0.3             GlobalOptions_0.1.2          </span>
-<span class="co">##&gt;  [51] splines_4.1.0                 lazyeval_0.2.2               </span>
-<span class="co">##&gt;  [53] dichromat_2.0-0               checkmate_2.0.0              </span>
-<span class="co">##&gt;  [55] BiocManager_1.30.16           yaml_2.2.1                   </span>
-<span class="co">##&gt;  [57] reshape2_1.4.4                GenomicFeatures_1.45.1       </span>
-<span class="co">##&gt;  [59] backports_1.2.1               httpuv_1.6.2                 </span>
-<span class="co">##&gt;  [61] Hmisc_4.5-0                   RBGL_1.69.0                  </span>
-<span class="co">##&gt;  [63] tools_4.1.0                   ellipsis_0.3.2               </span>
-<span class="co">##&gt;  [65] jquerylib_0.1.4               Rcpp_1.0.7                   </span>
-<span class="co">##&gt;  [67] plyr_1.8.6                    base64enc_0.1-3              </span>
-<span class="co">##&gt;  [69] progress_1.2.2                zlibbioc_1.39.0              </span>
-<span class="co">##&gt;  [71] purrr_0.3.4                   RCurl_1.98-1.4               </span>
-<span class="co">##&gt;  [73] prettyunits_1.1.1             rpart_4.1-15                 </span>
-<span class="co">##&gt;  [75] GetoptLong_1.0.5              cluster_2.1.2                </span>
-<span class="co">##&gt;  [77] fs_1.5.0                      magrittr_2.0.1               </span>
-<span class="co">##&gt;  [79] data.table_1.14.0             circlize_0.4.13              </span>
-<span class="co">##&gt;  [81] mvtnorm_1.1-2                 ProtGenerics_1.25.1          </span>
-<span class="co">##&gt;  [83] hms_1.1.0                     mime_0.11                    </span>
-<span class="co">##&gt;  [85] evaluate_0.14                 xtable_1.8-4                 </span>
-<span class="co">##&gt;  [87] XML_3.99-0.7                  emdbook_1.3.12               </span>
-<span class="co">##&gt;  [89] jpeg_0.1-9                    gridExtra_2.3                </span>
-<span class="co">##&gt;  [91] shape_1.4.6                   bdsmatrix_1.3-4              </span>
-<span class="co">##&gt;  [93] compiler_4.1.0                biomaRt_2.49.4               </span>
-<span class="co">##&gt;  [95] tibble_3.1.4                  crayon_1.4.1                 </span>
-<span class="co">##&gt;  [97] htmltools_0.5.2               later_1.3.0                  </span>
-<span class="co">##&gt;  [99] Formula_1.2-4                 tidyr_1.1.3                  </span>
-<span class="co">##&gt; [101] geneplotter_1.71.0            DBI_1.1.1                    </span>
-<span class="co">##&gt; [103] formatR_1.11                  ComplexHeatmap_2.9.3         </span>
-<span class="co">##&gt; [105] MASS_7.3-54                   rappdirs_0.3.3               </span>
-<span class="co">##&gt; [107] Matrix_1.3-4                  parallel_4.1.0               </span>
-<span class="co">##&gt; [109] pkgconfig_2.0.3               pkgdown_1.6.1                </span>
-<span class="co">##&gt; [111] GenomicAlignments_1.29.0      numDeriv_2016.8-1.1          </span>
-<span class="co">##&gt; [113] foreign_0.8-81                xml2_1.3.2                   </span>
-<span class="co">##&gt; [115] foreach_1.5.1                 annotate_1.71.0              </span>
-<span class="co">##&gt; [117] bslib_0.2.5.1                 stringr_1.4.0                </span>
-<span class="co">##&gt; [119] VariantAnnotation_1.39.0      digest_0.6.27                </span>
-<span class="co">##&gt; [121] graph_1.71.2                  rmarkdown_2.10               </span>
-<span class="co">##&gt; [123] htmlTable_2.2.1               restfulr_0.0.13              </span>
-<span class="co">##&gt; [125] curl_4.3.2                    shiny_1.6.0                  </span>
-<span class="co">##&gt; [127] rjson_0.2.20                  lifecycle_1.0.0              </span>
-<span class="co">##&gt; [129] jsonlite_1.7.2                desc_1.3.0                   </span>
-<span class="co">##&gt; [131] fansi_0.5.0                   pillar_1.6.2                 </span>
-<span class="co">##&gt; [133] lattice_0.20-44               GGally_2.1.2                 </span>
-<span class="co">##&gt; [135] KEGGREST_1.33.0               fastmap_1.1.0                </span>
-<span class="co">##&gt; [137] httr_1.4.2                    survival_3.2-13              </span>
-<span class="co">##&gt; [139] interactiveDisplayBase_1.31.2 glue_1.4.2                   </span>
-<span class="co">##&gt; [141] png_0.1-7                     iterators_1.0.13             </span>
-<span class="co">##&gt; [143] BiocVersion_3.14.0            bit_4.0.4                    </span>
-<span class="co">##&gt; [145] stringi_1.7.4                 sass_0.4.0                   </span>
-<span class="co">##&gt; [147] blob_1.2.2                    textshaping_0.3.6            </span>
-<span class="co">##&gt; [149] latticeExtra_0.6-29           memoise_2.0.0                </span>
-<span class="co">##&gt; [151] dplyr_1.0.7</span></code></pre></div>
+<span class="co">##&gt;   [1] utf8_1.2.2                    ggstance_0.3.5               </span>
+<span class="co">##&gt;   [3] tidyselect_1.1.2              htmlwidgets_1.5.4            </span>
+<span class="co">##&gt;   [5] RSQLite_2.2.17                grid_4.1.0                   </span>
+<span class="co">##&gt;   [7] munsell_0.5.0                 codetools_0.2-18             </span>
+<span class="co">##&gt;   [9] ragg_1.2.0                    statmod_1.4.36               </span>
+<span class="co">##&gt;  [11] xgboost_1.6.0.1               withr_2.5.0                  </span>
+<span class="co">##&gt;  [13] colorspace_2.0-3              OrganismDbi_1.36.0           </span>
+<span class="co">##&gt;  [15] filelock_1.0.2                highr_0.9                    </span>
+<span class="co">##&gt;  [17] knitr_1.36                    rstudioapi_0.13              </span>
+<span class="co">##&gt;  [19] labeling_0.4.2                bbmle_1.0.24                 </span>
+<span class="co">##&gt;  [21] GenomeInfoDbData_1.2.7        hwriter_1.3.2                </span>
+<span class="co">##&gt;  [23] polyclip_1.10-0               bit64_4.0.5                  </span>
+<span class="co">##&gt;  [25] farver_2.1.1                  rprojroot_2.0.2              </span>
+<span class="co">##&gt;  [27] coda_0.19-4                   vctrs_0.4.1                  </span>
+<span class="co">##&gt;  [29] generics_0.1.3                xfun_0.30                    </span>
+<span class="co">##&gt;  [31] biovizBase_1.42.0             geepack_1.3.9                </span>
+<span class="co">##&gt;  [33] R6_2.5.1                      doParallel_1.0.16            </span>
+<span class="co">##&gt;  [35] clue_0.3-60                   locfit_1.5-9.4               </span>
+<span class="co">##&gt;  [37] AnnotationFilter_1.18.0       bitops_1.0-7                 </span>
+<span class="co">##&gt;  [39] cachem_1.0.6                  reshape_0.8.8                </span>
+<span class="co">##&gt;  [41] DelayedArray_0.20.0           assertthat_0.2.1             </span>
+<span class="co">##&gt;  [43] promises_1.2.0.1              BiocIO_1.4.0                 </span>
+<span class="co">##&gt;  [45] scales_1.2.1                  nnet_7.3-17                  </span>
+<span class="co">##&gt;  [47] gtable_0.3.1                  ggbio_1.42.0                 </span>
+<span class="co">##&gt;  [49] ensembldb_2.18.2              rlang_1.0.5                  </span>
+<span class="co">##&gt;  [51] genefilter_1.76.0             systemfonts_1.0.3            </span>
+<span class="co">##&gt;  [53] GlobalOptions_0.1.2           splines_4.1.0                </span>
+<span class="co">##&gt;  [55] lazyeval_0.2.2                dichromat_2.0-0              </span>
+<span class="co">##&gt;  [57] checkmate_2.0.0               broom_1.0.1                  </span>
+<span class="co">##&gt;  [59] mosaicCore_0.9.2              BiocManager_1.30.16          </span>
+<span class="co">##&gt;  [61] yaml_2.3.5                    reshape2_1.4.4               </span>
+<span class="co">##&gt;  [63] GenomicFeatures_1.46.1        backports_1.4.1              </span>
+<span class="co">##&gt;  [65] httpuv_1.6.3                  Hmisc_4.6-0                  </span>
+<span class="co">##&gt;  [67] RBGL_1.70.0                   tools_4.1.0                  </span>
+<span class="co">##&gt;  [69] ellipsis_0.3.2                jquerylib_0.1.4              </span>
+<span class="co">##&gt;  [71] geeM_0.10.1                   ggformula_0.10.2             </span>
+<span class="co">##&gt;  [73] ggridges_0.5.3                Rcpp_1.0.9                   </span>
+<span class="co">##&gt;  [75] plyr_1.8.7                    base64enc_0.1-3              </span>
+<span class="co">##&gt;  [77] progress_1.2.2                zlibbioc_1.40.0              </span>
+<span class="co">##&gt;  [79] purrr_0.3.4                   RCurl_1.98-1.8               </span>
+<span class="co">##&gt;  [81] prettyunits_1.1.1             rpart_4.1.16                 </span>
+<span class="co">##&gt;  [83] GetoptLong_1.0.5              haven_2.5.1                  </span>
+<span class="co">##&gt;  [85] cluster_2.1.2                 fs_1.5.0                     </span>
+<span class="co">##&gt;  [87] magrittr_2.0.3                data.table_1.14.2            </span>
+<span class="co">##&gt;  [89] circlize_0.4.13               mvtnorm_1.1-3                </span>
+<span class="co">##&gt;  [91] ProtGenerics_1.26.0           hms_1.1.2                    </span>
+<span class="co">##&gt;  [93] mime_0.12                     evaluate_0.14                </span>
+<span class="co">##&gt;  [95] xtable_1.8-4                  XML_3.99-0.10                </span>
+<span class="co">##&gt;  [97] emdbook_1.3.12                jpeg_0.1-9                   </span>
+<span class="co">##&gt;  [99] gridExtra_2.3                 shape_1.4.6                  </span>
+<span class="co">##&gt; [101] bdsmatrix_1.3-4               compiler_4.1.0               </span>
+<span class="co">##&gt; [103] biomaRt_2.50.1                tibble_3.1.8                 </span>
+<span class="co">##&gt; [105] crayon_1.5.1                  htmltools_0.5.2              </span>
+<span class="co">##&gt; [107] later_1.3.0                   Formula_1.2-4                </span>
+<span class="co">##&gt; [109] geneplotter_1.72.0            tidyr_1.2.1                  </span>
+<span class="co">##&gt; [111] ROCit_2.1.1                   DBI_1.1.3                    </span>
+<span class="co">##&gt; [113] tweenr_2.0.2                  formatR_1.12                 </span>
+<span class="co">##&gt; [115] ComplexHeatmap_2.10.0         MASS_7.3-58.1                </span>
+<span class="co">##&gt; [117] rappdirs_0.3.3                Matrix_1.4-1                 </span>
+<span class="co">##&gt; [119] cli_3.4.0                     parallel_4.1.0               </span>
+<span class="co">##&gt; [121] forcats_0.5.2                 pkgconfig_2.0.3              </span>
+<span class="co">##&gt; [123] pkgdown_1.6.1                 GenomicAlignments_1.30.0     </span>
+<span class="co">##&gt; [125] numDeriv_2016.8-1.1           foreign_0.8-81               </span>
+<span class="co">##&gt; [127] xml2_1.3.3                    foreach_1.5.2                </span>
+<span class="co">##&gt; [129] annotate_1.72.0               bslib_0.3.1                  </span>
+<span class="co">##&gt; [131] VariantAnnotation_1.40.0      stringr_1.4.1                </span>
+<span class="co">##&gt; [133] digest_0.6.29                 graph_1.72.0                 </span>
+<span class="co">##&gt; [135] rmarkdown_2.11                htmlTable_2.3.0              </span>
+<span class="co">##&gt; [137] MESS_0.5.9                    restfulr_0.0.15              </span>
+<span class="co">##&gt; [139] curl_4.3.2                    shiny_1.7.1                  </span>
+<span class="co">##&gt; [141] rjson_0.2.21                  lifecycle_1.0.2              </span>
+<span class="co">##&gt; [143] jsonlite_1.8.0                desc_1.4.0                   </span>
+<span class="co">##&gt; [145] fansi_1.0.3                   labelled_2.9.1               </span>
+<span class="co">##&gt; [147] pillar_1.8.1                  lattice_0.20-45              </span>
+<span class="co">##&gt; [149] GGally_2.1.2                  KEGGREST_1.34.0              </span>
+<span class="co">##&gt; [151] fastmap_1.1.0                 httr_1.4.4                   </span>
+<span class="co">##&gt; [153] survival_3.2-13               interactiveDisplayBase_1.32.0</span>
+<span class="co">##&gt; [155] glue_1.6.2                    png_0.1-7                    </span>
+<span class="co">##&gt; [157] iterators_1.0.14              BiocVersion_3.14.0           </span>
+<span class="co">##&gt; [159] bit_4.0.4                     ggforce_0.3.4                </span>
+<span class="co">##&gt; [161] stringi_1.7.8                 sass_0.4.0                   </span>
+<span class="co">##&gt; [163] blob_1.2.3                    textshaping_0.3.6            </span>
+<span class="co">##&gt; [165] latticeExtra_0.6-29           memoise_2.0.1                </span>
+<span class="co">##&gt; [167] dplyr_1.0.10</span></code></pre></div>
 </div>
   </div>
 

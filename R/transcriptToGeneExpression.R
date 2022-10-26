@@ -19,20 +19,28 @@ transcriptToGeneExpression <- function(se) {
     setnames(counts, "rn", "TXNAME")
     rowDataSe <- as.data.table(rowData(se))
     counts <- rowDataSe[, .(TXNAME, GENEID)][counts, on = "TXNAME"]
+    
+    incompatibleCounts <- metadata(se)$incompatibleCounts
+    incompatibleCounts[, TXNAME := "incompatible"]
+    counts_incompatible <- melt(incompatibleCounts, id.vars = c("GENEID","TXNAME"), 
+        measure.vars = setdiff(colnames(incompatibleCounts), c("GENEID","TXNAME")))
+    # GENEID, TXNAME, variable, value
+    counts <- rbind(counts, counts_incompatible[variable %in% unique(counts$variable)])
     counts[, valueGene := sum(value), by = list(variable, GENEID)]
     counts[, valueGeneCPM := valueGene / max(sum(value), 1) * 10^6,
            by = list(variable)]
+
     ## counts
-    counts_gene <- dcast(unique(counts[, .(GENEID, variable, valueGene)]),
-            GENEID ~ variable, value.var = "valueGene")
+    counts_gene <- dcast(unique(counts[, .(GENEID, variable,
+        valueGene)]), GENEID ~ variable, value.var = "valueGene")
     counts_gene_CPM <- dcast(unique(counts[, .(GENEID, variable,
-            valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
+        valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
     ## geneRanges
     exByGene <- reducedRangesByGenes(rowRanges(se))
-    if ("newTxClass" %in% colnames(rowDataSe)) {
-        rowDataSe <- rowDataSe[, .(TXNAME, GENEID, newTxClass)]
+    if ("txClassDescription" %in% colnames(rowDataSe)) {
+        rowDataSe <- rowDataSe[, .(TXNAME, GENEID, txClassDescription)]
         rowDataSe[, newGeneClass := ifelse(grepl("ENSG", GENEID),
-            "annotation", unique(newTxClass)), by = GENEID]
+            "annotation", unique(txClassDescription)), by = GENEID]
         mcols(exByGene) <- unique(rowDataSe[, .(GENEID,
             newGeneClass)])[match(names(exByGene), GENEID)]
     }
