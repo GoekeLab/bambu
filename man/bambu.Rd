@@ -142,11 +142,8 @@ accessed by \emph{counts()}, including the following variables
     \item{CPM}{sequencing depth normalized estimates}
     \item{fullLengthCounts}{estimates of read counts mapped as full length 
     reads for each transcript}
-    \item{partialLengthCounts}{estimates of read counts mapped as partial 
-    length reads for each transcript}
     \item{uniqueCounts}{counts of reads that are uniquely mapped to each 
     transcript}
-    \item{theta}{raw estimates}
 }
 Output annotations that are usually the annotations with/without novel 
 transcripts/genes added, depending on whether \emph{discovery} mode is on
