@@ -44,6 +44,7 @@ if (getRversion() >= "2.15.1") {
         "tr_dimension","txid","cumN","gene_grp_id","txlen",
         "maxTxScore.noFit.combined","maxTxScore.noFit.new",
         "txScore.noFit","n.obs","nObs_list","K_list","txids_list",
-        "anyEqual","txScore.noFit","txidTemp"
+        "anyEqual","txScore.noFit","txidTemp",
+        "subjectHits.y", "txNumberFiltered"
     ))
 }
