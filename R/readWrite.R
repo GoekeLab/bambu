@@ -43,6 +43,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
 
 
 #' helper function to write counts 
+#' @noRd
 writeCountsOutput <- function(se, varname = "counts",
                               feature = "transcript", outdir, prefix){
     estimates <- data.table(as.data.frame(assays(se)[[varname]]),
