@@ -71,6 +71,7 @@
 #'     \item exon3prime (splicing): k if there is/are k equivalent exon(s) having different 3' end site (except the 3' end site of the last exon).
 #' }
 #' @importFrom dplyr tibble 
+#' @export
 #' @examples
 #' query <- readRDS(system.file("extdata", 
 #'     "annotateSpliceOverlapByDist_testQuery.rds",
