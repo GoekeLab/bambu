@@ -1,6 +1,6 @@
 <img src="figures/transparent-bambu.png" title="Bambu" alt="Bambu">
 
-# bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
+# bambu: Context-Aware Transcript Quantification from Long Read RNA-Seq data
 
 [![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-stable-green.svg)](https://www.tidyverse.org/lifecycle/#stable)
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
