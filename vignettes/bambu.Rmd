@@ -95,7 +95,6 @@ from the *NanoporeRNASeq* package, which contains reads aligned to the first
 half of the human chromosome 22 using *minimap2*.
 ```{r}
 library(bambu)
-devtools::install_github("GoekeLab/NanoporeRNASeq")
 library(NanoporeRNASeq)
 data("SGNexSamples")
 SGNexSamples

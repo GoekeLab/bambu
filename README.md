@@ -1,6 +1,6 @@
 <img src="figures/transparent-bambu.png" title="Bambu" alt="Bambu">
 
-# bambu: reference-guided transcript discovery and quantification for long read RNA-Seq data
+# bambu: Context-Aware Transcript Quantification from Long Read RNA-Seq data
 
 [![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-stable-green.svg)](https://www.tidyverse.org/lifecycle/#stable)
 [![Maintained?](https://img.shields.io/badge/Maintained%3F-Yes-brightgreen)](https://github.com/GoekeLab/bambu/graphs/contributors)
@@ -51,14 +51,9 @@ BiocManager::install("bambu")
 ```
 
 GitHub:
-First download *bambu* from github
-```bash
-git clone https://github.com/GoekeLab/bambu.git
-```
-Within R load the package (be sure to put the correct path to *bambu* below)
 ```rscript
 library(devtools)
-load_all("/path/to/bambu")
+load_github("GoekeLab/bambu")
 library(bambu)
 ```
 We can test if *bambu* is installed correctly and runs correctly by using a small test set that comes with the package. 
