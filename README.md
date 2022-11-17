@@ -258,7 +258,8 @@ plotBambu(se, type = "pca", group.var) # PCA visualization
 ```
 
 ### *Bambu* Advanced Options
-Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the paper ***(LINK???)*** before attempting to use these features.
+Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the [paper](https://www.biorxiv.org/content/10.1101/2022.11.14.516358v1) before attempting to use these features.
+
 ### Using a pretrained model
 
 *Bambu* requires at least 1000 transcripts from the annotations to be detected in a sample in order to train a sample specific model. In use cases where this is not possible *bambu* will instead use a default pretrained model to calculate the transcript probability score (TPS) for each read class. Users can force this behavior if they believe their annotations are not sufficient for sample specific training (for example if they suspect a high proportion of real novel transcripts are present in their sample). This is advantageous when you want NDR calibration without the impacts of a model trained using low quality annotations. 
