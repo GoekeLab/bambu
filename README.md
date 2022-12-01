@@ -53,7 +53,7 @@ BiocManager::install("bambu")
 GitHub:
 ```rscript
 library(devtools)
-load_github("GoekeLab/bambu")
+install_github("GoekeLab/bambu")
 library(bambu)
 ```
 We can test if *bambu* is installed correctly and runs correctly by using a small test set that comes with the package. 
