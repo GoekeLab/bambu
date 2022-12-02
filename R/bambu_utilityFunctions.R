@@ -155,16 +155,9 @@ checkInputSequence <- function(genomeSequence) {
     } 
     tryCatch(
     {
-        if (.Platform$OS.type == "windows") {
-        genomeSequence <- Biostrings::readDNAStringSet(genomeSequence)
-        newlevels <- unlist(lapply(strsplit(names(genomeSequence)," "),
-                                    "[[", 1))
-        names(genomeSequence) <- newlevels
-        } else {
         indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
         if (!indexFileExists) indexFa(genomeSequence)
         genomeSequence <- FaFile(genomeSequence)
-        }
     },
     error=function(cond) {
         stop("Input genome file not readable.",
