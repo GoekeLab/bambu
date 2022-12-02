@@ -53,7 +53,7 @@ BiocManager::install("bambu")
 GitHub:
 ```rscript
 library(devtools)
-load_github("GoekeLab/bambu")
+install_github("GoekeLab/bambu")
 library(bambu)
 ```
 We can test if *bambu* is installed correctly and runs correctly by using a small test set that comes with the package. 
@@ -258,7 +258,8 @@ plotBambu(se, type = "pca", group.var) # PCA visualization
 ```
 
 ### *Bambu* Advanced Options
-Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the paper ***(LINK???)*** before attempting to use these features.
+Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the [paper](https://www.biorxiv.org/content/10.1101/2022.11.14.516358v1) before attempting to use these features.
+
 ### Using a pretrained model
 
 *Bambu* requires at least 1000 transcripts from the annotations to be detected in a sample in order to train a sample specific model. In use cases where this is not possible *bambu* will instead use a default pretrained model to calculate the transcript probability score (TPS) for each read class. Users can force this behavior if they believe their annotations are not sufficient for sample specific training (for example if they suspect a high proportion of real novel transcripts are present in their sample). This is advantageous when you want NDR calibration without the impacts of a model trained using low quality annotations. 
@@ -559,7 +560,8 @@ Release date: 2020-06-18
 Release date: 2020-05-29 
 
 ### Citation
-A manuscript describing *bambu* is currently in preparation. If you use *bambu* for your research, please cite using the following doi: 10.18129/B9.bioc.bambu. Please specificy that you are using a pre-publication release.
+Chen, Ying, et al. "Context-Aware Transcript Quantification from Long Read RNA-Seq data with Bambu" bioRxiv (2022). doi: https://doi.org/10.1101/2022.11.14.516358
+
 ### Contributors
 
 This package is developed and maintained by [Ying Chen](https://github.com/cying111), [Andre Sim](https://github.com/andredsim), [Yuk Kei Wan](https://github.com/yuukiiwa), [Keith Yeo](https://github.com/keithyjy), [Min Hao Ling](https://github.com/lingminhao) and  [Jonathan Goeke](https://github.com/jonathangoeke) at the Genome Institute of Singapore. If you want to contribute, please leave an issue. Thank you.
