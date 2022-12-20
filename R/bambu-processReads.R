@@ -96,6 +96,9 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                        "genomic regions. These reads will be dropped. Check you are using the ",
                        "same genome used for the alignment"))
     }
+    if(length(readGrgList) == 0) {
+        stop("No reads left after filtering.")
+    }
     # construct read classes for each chromosome seperately 
     if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
                                                       annotations, stranded, verbose,bam.file)
