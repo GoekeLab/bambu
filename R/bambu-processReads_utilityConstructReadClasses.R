@@ -250,7 +250,7 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    if(length(unlist(rcUnsplicedAnnotation))>0)
+    if(length(rcUnsplicedAnnotation)>0)
         reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
             unlist(mcols(rcUnsplicedAnnotation)$readIds)]
     if(length(reads.singleExon)==0){
@@ -315,7 +315,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
-        return(list(GRangesList()))
+        return(GRangesList())
     }
     exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
