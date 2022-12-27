@@ -20,6 +20,9 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     
     thresholdIndex = which(rowData(se)$readCount
                            >=min.readCount)
+    metadata(se)$warnings = c(metadata(se)$warnings,
+        "No read classes with more than 1 read. Unable to train or score any.")
+
     compTable <- isReadClassCompatible(rowRanges(se[thresholdIndex,]), 
                                        annotations)
     polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
@@ -34,21 +37,24 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
     #calculate using the pretrained model for NDR recommendation
-    txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
-                                model = NULL, defaultModels)
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
-    rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+    if(length(thresholdIndex)>0){
+        txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
+                                    model = NULL, defaultModels)
+        
+        rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+    }
 
     model = NULL
-    if (fit){ 
+    rowData(se)$txScore = rowData(se)$txScore.noFit
+    if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose)
         if(returnModel) metadata(se)$model = model
         txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels)
+                                 print(5)
         rowData(se)$txScore = rep(NA,nrow(se))
         if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
-    } else{
-        rowData(se)$txScore = rowData(se)$txScore.noFit
     }
     if(is.null(model) & fit) metadata(se)$warnings = c(metadata(se)$warnings,
         "Bambu was unable to train a model on this sample, and is using a pretrained model")
@@ -143,7 +149,6 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
         if(length(indexSE)>0){
             txScoreSE = predict(model$transcriptModelSE, as.matrix(features))
         } else txScoreSE = NULL
-        
     } else {
         if (!is.null(defaultModels)){
             txScore = predict(defaultModels$transcriptModelME, 
