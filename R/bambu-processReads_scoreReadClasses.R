@@ -196,6 +196,12 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
         if(verbose) message("Transcript model not trained. Using pre-trained models")
         return(NULL)
     }
+    transcriptModelME = NULL
+    transcriptModelSE = NULL
+    txScoreBaseline = NA
+    txScoreBaselineSE = NA
+    lmNDR = NULL
+    lmNDR.SE = NULL
     ## Multi-Exon
     indexME = which(!rowData$novelGene & rowData$numExons>1)
     if(length(indexME)>0){
@@ -204,6 +210,25 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
             labels.train=txFeatures$labels[indexME], 
             nrounds = nrounds, show.cv=FALSE)
         txScore = predict(transcriptModelME, as.matrix(features))[indexME]
+
+        ##Calculate the txScore baseline
+        NDR = calculateNDR(txScore, txFeatures$labels[indexME])
+        #lm of NDR vs txScore
+        lmNDR = lm(txScore~poly(NDR,3,raw=TRUE))
+        txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
+
+        ## Compare the trained model AUC to the default model AUC
+        txScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
+        newPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore)
+        currentPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore.default)
+        if(verbose){
+        message("On the dataset the new trained model achieves a ROC AUC of ",
+            signif(newPerformance$AUC,3),  " and a Precision-Recall AUC of ", signif(newPerformance$PR.AUC,3), ".", 
+            "This is compared to the Bambu pretrained model trained on human ONT RNA-Seq data model which achiveves a ROC AUC of ",
+            signif(currentPerformance$AUC,3), " and a Precision-Recall AUC of ", signif(currentPerformance$PR.AUC,3))
+        }
+        #shrink size of lm
+        lmNDR = trim_lm(lmNDR)
     }
     ## Single-Exon
     indexSE = which(!rowData$novelGene & rowData$numExons==1)
@@ -213,30 +238,15 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
             labels.train=txFeatures$labels[indexSE], 
             nrounds = nrounds, show.cv=FALSE)
         txScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
-    }
-    ##Calculate the txScore baseline
-    NDR = calculateNDR(txScore, txFeatures$labels[indexME])
-    NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
-    #lm of NDR vs txScore
-    lmNDR = lm(txScore~poly(NDR,3,raw=TRUE))
-    txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
-    lmNDR.SE = glm(txScoreSE~NDR.SE)
-    txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
 
-    ## Compare the trained model AUC to the default model AUC
-    txScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
-    newPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore)
-    currentPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore.default)
-        if(verbose){
-        message("On the dataset the new trained model achieves a ROC AUC of ",
-            signif(newPerformance$AUC,3),  " and a Precision-Recall AUC of ", signif(newPerformance$PR.AUC,3), ".", 
-            "This is compared to the Bambu pretrained model trained on human ONT RNA-Seq data model which achiveves a ROC AUC of ",
-            signif(currentPerformance$AUC,3), " and a Precision-Recall AUC of ", signif(currentPerformance$PR.AUC,3))
+        NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
+        lmNDR.SE = glm(txScoreSE~NDR.SE)
+        txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
+        lmNDR.SE = trim_lm(lmNDR.SE)
     }
 
-    #shrink size of lm
-    lmNDR = trim_lm(lmNDR)
-    lmNDR.SE = trim_lm(lmNDR.SE)
+
+    
 
     return(list(transcriptModelME = transcriptModelME, 
                 transcriptModelSE = transcriptModelSE,

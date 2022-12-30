@@ -22,11 +22,13 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         warning("read Id not sorted, can result in wrong assignments.
             Please report this")
     start.ptm <- proc.time()
-    exonsByRC.spliced <- constructSplicedReadClasses(
-        uniqueJunctions = uniqueJunctions,
-        unlisted_junctions = unlisted_junctions,
-        readGrgList = readGrgList,
-        stranded = stranded)
+    if(!is.null(uniqueJunctions)){
+        exonsByRC.spliced <- constructSplicedReadClasses(
+            uniqueJunctions = uniqueJunctions,
+            unlisted_junctions = unlisted_junctions,
+            readGrgList = readGrgList,
+            stranded = stranded)}
+    else{exonsByRC.spliced = GRangesList()}
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
