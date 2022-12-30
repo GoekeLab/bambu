@@ -20,8 +20,11 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     
     thresholdIndex = which(rowData(se)$readCount
                            >=min.readCount)
-    metadata(se)$warnings = c(metadata(se)$warnings,
-        "No read classes with more than 1 read. Unable to train or score any.")
+    if(length(thresholdIndex)==0){
+        warning = "No read classes with more than 1 read. Unable to train or score any."
+        metadata(se)$warnings = c(metadata(se)$warnings, warning)
+        if(verbose) warning(warning)
+    }
 
     compTable <- isReadClassCompatible(rowRanges(se[thresholdIndex,]), 
                                        annotations)
@@ -56,8 +59,11 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
         rowData(se)$txScore = rep(NA,nrow(se))
         if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
     }
-    if(is.null(model) & fit) metadata(se)$warnings = c(metadata(se)$warnings,
-        "Bambu was unable to train a model on this sample, and is using a pretrained model")
+    if(is.null(model) & fit) {
+        warning = "Bambu was unable to train a model on this sample, and is using a pretrained model"
+        metadata(se)$warnings = c(metadata(se)$warnings, warning)
+        if(verbose) warning(warning)
+    }
     end.ptm <- proc.time()
     if (verbose) 
         message("Finished generating scores for read classes in ", 

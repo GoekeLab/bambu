@@ -11,10 +11,7 @@
 isore.constructJunctionTables <- function(unlisted_junctions, annotations,
     genomeSequence, stranded = FALSE, verbose = FALSE) {
     start.ptm <- proc.time()
-    if(length(unlisted_junctions)==0){
-        if (verbose) message("No aligned spliced reads detected")
-        return(NULL)
-    }
+    if(length(unlisted_junctions)==0) return(NULL)
     #summarise junction counts and strand for all reads
     uniqueJunctions <- createJunctionTable(unlisted_junctions,
         genomeSequence = genomeSequence)
