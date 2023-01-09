@@ -55,7 +55,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
         if(returnModel) metadata(se)$model = model
         txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels)
-                                 print(5)
         rowData(se)$txScore = rep(NA,nrow(se))
         if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
     }
