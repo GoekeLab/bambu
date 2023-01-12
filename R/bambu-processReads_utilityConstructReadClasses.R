@@ -22,15 +22,17 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         warning("read Id not sorted, can result in wrong assignments.
             Please report this")
     start.ptm <- proc.time()
-    exonsByRC.spliced <- constructSplicedReadClasses(
-        uniqueJunctions = uniqueJunctions,
-        unlisted_junctions = unlisted_junctions,
-        readGrgList = readGrgList,
-        stranded = stranded)
+    if(!is.null(uniqueJunctions)){
+        exonsByRC.spliced <- constructSplicedReadClasses(
+            uniqueJunctions = uniqueJunctions,
+            unlisted_junctions = unlisted_junctions,
+            readGrgList = readGrgList,
+            stranded = stranded)}
+    else{exonsByRC.spliced = GRangesList()}
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
-        message("Finished create transcript models (read classes) for reads with ",
+        message("Finished creating transcript models (read classes) for reads with ",
     "spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) { 
         exonsByRC.unspliced <- NULL
@@ -250,8 +252,9 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
-        unlist(mcols(rcUnsplicedAnnotation)$readIds)]
+    if(length(rcUnsplicedAnnotation)>0)
+        reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
+            unlist(mcols(rcUnsplicedAnnotation)$readIds)]
     if(length(reads.singleExon)==0){
       exonsByReadClass <- rcUnsplicedAnnotation
     }else{
@@ -314,7 +317,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
-        return(list(GRangesList()))
+        return(GRangesList())
     }
     exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,

@@ -282,7 +282,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
                                           rcWidth*d_rate/1000), by = list(gene_sid,txid)]
   if (d_rate == 0) {
     tmp[, par_status := all(!equal & multi_align),
-        by = list(eqClassById, gene_sid)]
+        by = list(eqClassId, gene_sid)]
     tmp[which(par_status), aval := 0.01]
   }
   tmp[, aval := pmax(pmin(aval,1),0)] #d_rate should be contained to 0-1
