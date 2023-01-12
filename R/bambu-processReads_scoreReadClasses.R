@@ -128,6 +128,13 @@ countPolyATerminals = function(grl, genomeSequence){
                   width = 10, fix = 'end', ignore.strand=FALSE)
     strand(start)[which(strand(start)=='*')] = "+"
     strand(end)[which(strand(end)=='*')] = "+"
+    print("Testing Windows Output XCVB")
+    print(seqinfo(genomeSequence))
+    print(BSgenome::getSeq(genomeSequence,start))
+    print(start)
+    test = GRanges(seqnames = c(9),ranges = IRanges(10000, end = 10010),strand = c("+"))
+    print(BSgenome::getSeq(genomeSequence, test))
+    print(Biostrings::getSeq(genomeSequence, test))
     startSeqs = BSgenome::getSeq(genomeSequence,start)
     endSeqs = BSgenome::getSeq(genomeSequence,end)
     numATstart = BSgenome::letterFrequency(startSeqs, c("A","T"))
