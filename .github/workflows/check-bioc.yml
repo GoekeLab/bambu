@@ -249,21 +249,21 @@ jobs:
           )
         shell: Rscript {0}
         
-      # - name: Run CMD check for Windows
-      #   if: runner.os == 'Windows'
-      #   env:
-      #     _R_CHECK_CRAN_INCOMING_: false
-      #     DISPLAY: 99.0
-      #   run: |
-      #     options(crayon.enabled = TRUE)
-      #     options(rcmdcheck.test_output = TRUE)
-      #     rcmdcheck::rcmdcheck(
-      #         args = c("--no-manual", "--no-vignettes", "--timings", "--no-multiarch", "--ignore-vignettes", "--no-examples"),
-      #         build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-build-vignettes"),
-      #         error_on = "warning",
-      #         check_dir = "check"
-      #     )
-      #   shell: Rscript {0}
+      - name: Run CMD check for Windows
+        if: runner.os == 'Windows'
+        env:
+          _R_CHECK_CRAN_INCOMING_: false
+          DISPLAY: 99.0
+        run: |
+          options(crayon.enabled = TRUE)
+          options(rcmdcheck.test_output = TRUE)
+          rcmdcheck::rcmdcheck(
+              args = c("--no-manual", "--no-vignettes", "--timings", "--no-multiarch", "--ignore-vignettes", "--no-examples"),
+              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-build-vignettes"),
+              error_on = "warning",
+              check_dir = "check"
+          )
+        shell: Rscript {0}
 
       - name: Run CMD check for Linux
         if: runner.os == 'Linux'
