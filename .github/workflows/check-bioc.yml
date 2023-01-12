@@ -144,12 +144,12 @@ jobs:
 
           ## Required for tcltk
           brew install xquartz --cask
-# 
-#       - name: Install Windows system dependencies
-#         if: runner.os == 'Windows'
-#         run: |
-#           ## Edit below if you have any Windows system dependencies
-#         shell: Rscript {0}
+
+      - name: Install Windows system dependencies
+        if: runner.os == 'Windows'
+        run: |
+          ## Edit below if you have any Windows system dependencies
+        shell: Rscript {0}
 
       - name: Install BiocManager
         run: |
