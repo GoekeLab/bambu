@@ -143,7 +143,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
-    
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
     
@@ -153,7 +152,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
 
     rm.readClassSe <- FALSE
     readClassList = reads
-    isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
+    isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
+    isBamFiles = !isRDSs
+    if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
     if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder

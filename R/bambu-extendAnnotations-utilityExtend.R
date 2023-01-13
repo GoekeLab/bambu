@@ -18,10 +18,12 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     transcriptRanges <- makeExonsIntronsSpliced(
       rowDataSplicedTibble, annotationSeqLevels)
     confidenceTypeVec <- rowDataTibble$confidenceType
-    rowDataFilteredSpliced <- addNewSplicedReadClasses(transcriptRanges,
+    if(nrow(rowDataSplicedTibble)>0){
+        rowDataFilteredSpliced <- addNewSplicedReadClasses(transcriptRanges,
                                                        rowDataSplicedTibble, annotationGrangesList, 
                                                        min.exonDistance, min.primarySecondaryDist,
                                                        min.primarySecondaryDistStartEnd, verbose)
+    } else{ rowDataFilteredSpliced = NULL}
     rowDataFilteredUnspliced <- rowDataTibble[which(confidenceTypeVec == "unsplicedNew"),]
     SEnRng <- addNewUnsplicedReadClasses(rowDataFilteredUnspliced, 
                                          rowDataFilteredSpliced, transcriptRanges$exons, 
@@ -194,11 +196,14 @@ calculateNDR = function(score, labels){
 #' @importFrom dplyr select distinct 
 #' @noRd
 makeExonsIntronsSpliced <- function(transcriptsTibble,annotationSeqLevels){
-  intronsByReadClass <- makeGRangesListFromFeatureFragments(
-    seqnames = transcriptsTibble$chr,
-    fragmentStarts = transcriptsTibble$intronStarts,
-    fragmentEnds = transcriptsTibble$intronEnds,
-    strand = transcriptsTibble$strand)
+  if(all(is.na(transcriptsTibble$intronStarts))){
+      intronsByReadClass = GRangesList()}
+  else {    intronsByReadClass <- makeGRangesListFromFeatureFragments(
+        seqnames = transcriptsTibble$chr,
+        fragmentStarts = transcriptsTibble$intronStarts,
+        fragmentEnds = transcriptsTibble$intronEnds,
+        strand = transcriptsTibble$strand)
+  }
   names(intronsByReadClass) <- seq_along(intronsByReadClass)
   seqlevels(intronsByReadClass) <-
     unique(c(seqlevels(intronsByReadClass), 
@@ -559,6 +564,7 @@ addNewUnsplicedReadClasses <- function(rowDataFilteredUnspliced,  rowDataFiltere
       unique(c(seqlevels(exonsByReadClassUnspliced),
                seqlevels(annotationGrangesList)))
     rowDataFilteredUnspliced$GENEID <- NA
+    rowDataFilteredUnspliced$TXNAME <- NA
     rowDataFilteredUnspliced$readClassType <- "unsplicedNew"
     rowDataFilteredUnspliced$novelGene <- TRUE
     rowDataFilteredUnspliced$novelTranscript <- TRUE
@@ -650,7 +656,6 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       mcols(extendedAnnotationRanges)$relReadCount = NA
       mcols(extendedAnnotationRanges)$relSubsetCount = NA
     }
-  
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
