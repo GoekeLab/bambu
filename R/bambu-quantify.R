@@ -24,6 +24,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
     setnames(incompatibleCounts, "counts", colnames(readClass))
+    compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
     counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
@@ -68,7 +69,7 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     if (verbose) message("Finished EM estimation in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     outEst <- modifyQuantOut(outEst,outIni)
-    theta_est <- formatOutput(rbind(rcPreOut[[2]],outEst))
+    theta_est <- rbind(rcPreOut[[2]],outEst)
     theta_est <- removeDuplicates(theta_est)
     return(theta_est)
 }

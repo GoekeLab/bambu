@@ -454,16 +454,16 @@ modifyQuantOut <- function(outEst, outIni){
 }
 
 
-#' This function converts transcript and gene ids back to transcript and gene 
-#' names 
+#' This function converts transcript and gene ids back to transcript and gene
+#' names
 #' @noRd
-formatOutput <- function(theta_est){
-    theta_est <- theta_est[, .(txid, counts, fullLengthCounts,
-    uniqueCounts)]
-    totalCount <- sum(theta_est$counts)
-    theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
-    return(theta_est)
-}
+# formatOutput <- function(theta_est){
+#     theta_est <- theta_est[, .(txid, counts, fullLengthCounts,
+#     uniqueCounts)]
+#     # totalCount <- sum(theta_est$counts)
+#     # theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
+#     return(theta_est)
+# }
 
 
 #' Remove duplicate transcript counts originated from multiple genes
@@ -472,8 +472,8 @@ formatOutput <- function(theta_est){
 removeDuplicates <- function(counts){
     counts_final <- unique(counts[, list(counts = sum(counts),
                                          fullLengthCounts = sum(fullLengthCounts),
-                                         uniqueCounts = sum(uniqueCounts),
-                                         CPM = sum(CPM)), by = txid],by = NULL)
+                                         uniqueCounts = sum(uniqueCounts)), 
+                                  by = txid],by = NULL)
     return(counts_final)
 }
 
@@ -508,6 +508,15 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
   compatibleMatches = compatibleMatches$annotationTxIds[match(readClass_id, compatibleMatches$readClassId)]
   readToTranscriptMap = tibble(readId=read_id, equalMatches = equalMatches, compatibleMatches = compatibleMatches)
   return(readToTranscriptMap)
+}
+
+
+#' calculate CPM post estimation
+#' @noRd
+calculateCPM <- function(compatibleCounts, incompatibleCounts){
+    totalCount <- sum(compatibleCounts$counts)+sum(incompatibleCounts$counts)
+    compatibleCounts[, `:=`(CPM = counts / totalCount * (10^6))]
+    return(compatibleCounts)
 }
 
 #' @useDynLib bambu, .registration = TRUE
