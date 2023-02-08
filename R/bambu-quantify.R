@@ -28,11 +28,12 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
+    sig.digit <- emParameters[["sig.digit"]]
     seOutput <- SummarizedExperiment(
-        assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
-        dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
+        assays = SimpleList(counts = matrix(round(counts$counts,sig.digit), ncol = 1,
+        dimnames = list(NULL, colNameRC)), CPM = matrix(round(counts$CPM,sig.digit),
         ncol =  1, dimnames = list(NULL, colNameRC)),
-        fullLengthCounts = matrix(counts$fullLengthCounts, ncol = 1,
+        fullLengthCounts = matrix(round(counts$fullLengthCounts,sig.digit), ncol = 1,
             dimnames = list(NULL, colNameRC)),
         uniqueCounts = matrix(counts$uniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
