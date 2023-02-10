@@ -23,8 +23,8 @@ bambu.quantify <- function(readClass, annotations, emParameters,
                                ncore = ncore, verbose = verbose)
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
-    setnames(incompatibleCounts, "counts", colnames(readClass))
     compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
+    setnames(incompatibleCounts, "counts", colnames(readClass))
     counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
