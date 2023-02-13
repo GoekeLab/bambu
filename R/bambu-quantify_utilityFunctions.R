@@ -454,18 +454,6 @@ modifyQuantOut <- function(outEst, outIni){
 }
 
 
-#' This function converts transcript and gene ids back to transcript and gene
-#' names
-#' @noRd
-# formatOutput <- function(theta_est){
-#     theta_est <- theta_est[, .(txid, counts, fullLengthCounts,
-#     uniqueCounts)]
-#     # totalCount <- sum(theta_est$counts)
-#     # theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
-#     return(theta_est)
-# }
-
-
 #' Remove duplicate transcript counts originated from multiple genes
 #' @import data.table
 #' @noRd
