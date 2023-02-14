@@ -1,3 +1,11 @@
+bambu v3.0.8 (change date: 2023-02-14)
+==========================================
+Minor fixes:
+    * Bug fix for writeOutput function to remove unused argument due to dplyr package update
+    * Correct CPM calculation to incorporate incompatible reads 
+    * Round up quantification estimates to 5 digits (customisable through opt.em argument) 
+
+
 bambu v3.0.0 (Change date: 2022-10-25)
 ===========================================
 Major changes:
