@@ -243,10 +243,10 @@ se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence
 saveRDS(se, file = "./inst/extdata/seOutput_trackReads_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, returnDistTable = TRUE)
-saveRDS(se, file = "./inst/extdata/seOutput_distTable_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
+saveRDS(se, file = "./inst/extdata/seOutput_distTable_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 se <- bambu(reads = test.bam, annotations = NULL, genome = genomeSequence, NDR = 1)
-saveRDS(se, file = "./inst/extdata/seOutput_denovo_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds")
+saveRDS(se, file = "./inst/extdata/seOutput_denovo_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 
 ##

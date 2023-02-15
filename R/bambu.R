@@ -72,6 +72,7 @@
 #'     defaults to 0.0001}
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
+#'     \item{sig.digit}{specifying the maximum significant digits of the reported estimates}
 #' }
 #' @param rcOutDir A string variable specifying the path to where
 #' read class files will be saved.
