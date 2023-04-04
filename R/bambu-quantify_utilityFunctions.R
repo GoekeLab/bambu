@@ -378,7 +378,7 @@ getInputList <- function(readClassDt){
 #' @noRd
 abundance_quantification <- function(inputRcDt, readClassDt, ncore = 1,
                                      maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
-      if (ncore == 1) {
+      # if (ncore == 1) {
         emResultsList <- lapply(as.list(names(inputRcDt)),
                                 run_parallel,
                                 conv = conv,
@@ -387,19 +387,19 @@ abundance_quantification <- function(inputRcDt, readClassDt, ncore = 1,
                                 inputRcDt = inputRcDt,
                                 readClassDt = readClassDt
         )
-    } else {
-        bpParameters <- bpparam()
-        bpParameters$workers <- ncore
-        emResultsList <- bplapply(as.list(names(inputRcDt)),
-                                  run_parallel,
-                                  conv = conv,
-                                  minvalue = minvalue, 
-                                  maxiter = maxiter,
-                                  inputRcDt = inputRcDt,
-                                  readClassDt = readClassDt,
-                                  BPPARAM = bpParameters
-        )
-    }
+    # } else {
+    #     bpParameters <- bpparam()
+    #     bpParameters$workers <- ncore
+    #     emResultsList <- bplapply(as.list(names(inputRcDt)),
+    #                               run_parallel,
+    #                               conv = conv,
+    #                               minvalue = minvalue, 
+    #                               maxiter = maxiter,
+    #                               inputRcDt = inputRcDt,
+    #                               readClassDt = readClassDt,
+    #                               BPPARAM = bpParameters
+    #     )
+    # }
     estimates <- do.call("rbind", emResultsList)
     return(estimates)
 }
