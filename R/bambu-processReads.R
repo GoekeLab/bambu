@@ -163,6 +163,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
                                           annotations, stranded, verbose,bam.file){
     readGrgList = split(readGrgList, getChrFromGrList(readGrgList))
     se = lapply(names(readGrgList),FUN = function(i){
+        if(length(readGrgList[[i]]) == 0) return(NULL)
         # create error and strand corrected junction tables
         unlisted_junctions <- unlistIntrons(readGrgList[[i]], use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
@@ -172,6 +173,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
                                               annotations, stranded, verbose)
         return(se.temp)
     })
+    se = se[!sapply(se, FUN = is.null)]
     se = do.call("rbind",se)
     rownames(se) = paste("rc", seq_len(nrow(se)), sep = ".")
     return(se)
