@@ -149,7 +149,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose)
-    if (bpParameters$workers > 1) ncore <- 1
 
     rm.readClassSe <- FALSE
     readClassList = reads
@@ -188,7 +187,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         countsSe <- bplapply(readClassList, bambu.quantify,
                              annotations = annotations, isoreParameters = isoreParameters,
                              emParameters = emParameters, trackReads = trackReads, 
-                             returnDistTable = returnDistTable, ncore = ncore, verbose = verbose, 
+                             returnDistTable = returnDistTable, verbose = verbose, 
                              BPPARAM = bpParameters)
         countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
         rowRanges(countsSe) <- annotations

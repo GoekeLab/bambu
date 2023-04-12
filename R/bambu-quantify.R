@@ -3,7 +3,7 @@
 #' @import data.table
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters, 
-                           trackReads = FALSE, returnDistTable = FALSE, ncore = 1,
+                           trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
     min.exonDistance = isoreParameters[["min.exonDistance"]]
     min.primarySecondaryDist =
@@ -19,8 +19,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
     incompatibleCounts <- processIncompatibleCounts(readClassDist)
     readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-    compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,
-                               ncore = ncore, verbose = verbose)
+    compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
     compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
