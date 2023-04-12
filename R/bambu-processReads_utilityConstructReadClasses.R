@@ -534,7 +534,9 @@ assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap,
             dplyr::select(newGeneId, newExonId) %>% distinct()
     }
     # combined gene ids
-    geneGeneMap <- left_join(refGeneTxMap, dplyr::rename(refGeneTxMap, 
+    refGeneTxMapMins = refGeneTxMap %>% group_by(newTxId) %>% filter(newGeneId == min(newGeneId)) %>% ungroup()
+    refGeneTxMapNotMins = refGeneTxMap %>% group_by(newTxId) %>% filter(newGeneId != min(newGeneId)) %>% ungroup()
+    geneGeneMap <- left_join(refGeneTxMapMins, dplyr::rename(refGeneTxMapNotMins, 
         newGeneId.merge=newGeneId), by = "newTxId") %>% 
         filter(newGeneId<newGeneId.merge) %>% 
         filter(!(newGeneId %in% newGeneId.merge)) %>% 
