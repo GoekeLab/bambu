@@ -51,12 +51,13 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
   eqClassTable <- eqClassTable %>% 
     group_by(eqClassById) %>%
     mutate(eqClassId = cur_group_id()) %>%
-    select(-eqClassById) %>%
     data.table()
   
   tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
                              txlen = sum(width(annotations))))
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
+  
+  eqClassTable[, eqClassById := NULL]
   return(eqClassTable)
 }
 
@@ -234,7 +235,7 @@ addAval <- function(readClassDt, emParameters, verbose){
 simplifyNames <- function(readClassDt){
   readClassDt <- as.data.table(readClassDt)
   readClassDt[, gene_sid := match(GENEID, unique(readClassDt$GENEID))]
-  readClassDt[, `:=`(GENEID = NULL, eqClassById = NULL)]
+  readClassDt[, `:=`(GENEID = NULL)]
   return(readClassDt)
 }
 
