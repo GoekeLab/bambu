@@ -56,6 +56,9 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
   tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
                              txlen = sum(width(annotations))))
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
+  
+  # remove unused columns
+  eqClassTable[, eqClassById := NULL]
   return(eqClassTable)
 }
 
@@ -373,9 +376,8 @@ getInputList <- function(readClassDt){
 #' @param readClassDt A \code{data.table} with columns
 #' @importFrom BiocParallel bpparam bplapply
 #' @noRd
-abundance_quantification <- function(inputRcDt, readClassDt, ncore = 1,
+abundance_quantification <- function(inputRcDt, readClassDt,
                                      maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
-      if (ncore == 1) {
         emResultsList <- lapply(as.list(names(inputRcDt)),
                                 run_parallel,
                                 conv = conv,
@@ -384,19 +386,6 @@ abundance_quantification <- function(inputRcDt, readClassDt, ncore = 1,
                                 inputRcDt = inputRcDt,
                                 readClassDt = readClassDt
         )
-    } else {
-        bpParameters <- bpparam()
-        bpParameters$workers <- ncore
-        emResultsList <- bplapply(as.list(names(inputRcDt)),
-                                  run_parallel,
-                                  conv = conv,
-                                  minvalue = minvalue, 
-                                  maxiter = maxiter,
-                                  inputRcDt = inputRcDt,
-                                  readClassDt = readClassDt,
-                                  BPPARAM = bpParameters
-        )
-    }
     estimates <- do.call("rbind", emResultsList)
     return(estimates)
 }
