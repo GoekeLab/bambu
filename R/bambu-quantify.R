@@ -62,7 +62,6 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     readClassDt <- split(readClassDt, by = "gene_grp_id")
     start.ptm <- proc.time()
     outEst <- abundance_quantification(inputRcDt, readClassDt,
-                                       ncore = ncore,
                                        maxiter = emParameters[["maxiter"]],
                                        conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.ptm <- proc.time()
