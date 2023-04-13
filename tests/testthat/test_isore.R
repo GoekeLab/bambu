@@ -12,6 +12,7 @@ test_that("junction identification and isore.constructReadClasses completes succ
     # create error and strand corrected junction tables
     genomeSequence <- checkInputSequence(genomeSequence)
     unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
+    seqlevels(unlisted_junctions) = seqlevels(genomeSequence) #for windows
     uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
         annotations,genomeSequence, stranded = FALSE, verbose = FALSE)
     # create SE object with reconstructed readClasses
