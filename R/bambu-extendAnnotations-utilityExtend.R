@@ -80,42 +80,52 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   
   #calculate relative read count before any filtering
   rowDataCombined <- group_by(rowDataCombined, GENEID) %>% mutate(relReadCount = readCount/sum(readCount))
+  
+  #filter out subset reads
   if (remove.subsetTx) { # (1) based on compatibility with annotations
-    notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
+    notCompatibleIds <- (!grepl("compatible", rowDataCombined$readClassType) |
         rowDataCombined$readClassType == "equal:compatible") #keep equal for FDR calculation
+    # subsetTranscripts <- combindRowDataWithRanges(
+    #     rowDataCombined[!notCompatibleIds,], 
+    #     exonRangesCombined[!notCompatibleIds])
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined, 
                         useTxScore = length(annotationGrangesList)==0)
-
   if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
       NDR = recommendNDR(rowDataCombined, baselineFDR, NDR, defaultModels, verbose)
   } else {
       if(is.null(NDR)) NDR = 0.5
   }
   filterSet = (rowDataCombined$NDR <= NDR | rowDataCombined$readClassType == "equal:compatible")
+  lowConfidenceTranscripts <- combindRowDataWithRanges(
+        rowDataCombined[!filterSet,], 
+        exonRangesCombined[!filterSet])
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
-  #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
+
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
-  minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
-  rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
-  #post extend annotation filters applied here (currently only subset filter)
-  if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
-    filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass
-    exonRangesCombined <- exonRangesCombined[filterSet]
-    rowDataCombined <- rowDataCombined[filterSet,]
-  }
+
   if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
     "WARNING - No annotations were provided. Please increase NDR threshold to use novel transcripts")
   if(sum(filterSet)==0) message("WARNING - No novel transcripts meet the given thresholds. Try a higher NDR.")
   # (3) combine novel transcripts with annotations
+  extendedAnnotationRanges <- combindRowDataWithRanges(rowDataCombined, exonRangesCombined)
   extendedAnnotationRanges <- combineWithAnnotations(
-    rowDataCombined, exonRangesCombined, 
+    rowDataCombined, extendedAnnotationRanges, 
     annotationGrangesList, prefix)
+  minEqClasses <-
+    getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
+  if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
+  mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
+  extendedAnnotationRanges <- calculateRelSubsetCount(extendedAnnotationRanges, minEqClasses$eqClassById, min.readFractionByEqClass)
+  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
+                 c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", "txClassDescription","readCount","relReadCount", "relSubsetCount", "txid", "eqClassById")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
+  #if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
+  metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
   end.ptm <- proc.time()
   if (verbose) message("transcript filtering in ",
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
@@ -612,10 +622,9 @@ includeOverlapReadClass <- function(candidateList, filteredOverlapList) {
   return(temp)
 }
 
-#' combine annotations with predicted transcripts
+#' extract the important row range columns and add them to the ranges for final output
 #' @noRd
-combineWithAnnotations <- function(rowDataCombinedFiltered, 
-                                        exonRangesCombinedFiltered,annotationGrangesList, prefix){
+combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombinedFiltered){
     rowDataCombinedFiltered$txClassDescription <- rowDataCombinedFiltered$readClassType
     rowDataCombinedFiltered$txClassDescription[rowDataCombinedFiltered$readClassType
                                        == "unsplicedNew" & rowDataCombinedFiltered$novelGene] <-
@@ -626,7 +635,14 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
-                                  "relReadCount", "relSubsetCount")]
+                                  "relReadCount")]
+    return(extendedAnnotationRanges)
+}
+
+#' combine annotations with predicted transcripts
+#' @noRd
+combineWithAnnotations <- function(rowDataCombinedFiltered, 
+                                        extendedAnnotationRanges,annotationGrangesList, prefix){
     equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
     #remove extended ranges that are already present in annotation
     extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
@@ -642,7 +658,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR = equalRanges$NDR
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
+        #mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
     }
     if (length(extendedAnnotationRanges)) {
       mcols(extendedAnnotationRanges)$TXNAME <- paste0(
@@ -655,17 +671,26 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       extendedAnnotationRanges <- annotationRangesToMerge
       mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
       mcols(extendedAnnotationRanges)$relReadCount = NA
-      mcols(extendedAnnotationRanges)$relSubsetCount = NA
+      #mcols(extendedAnnotationRanges)$relSubsetCount = NA
     }
-  minEqClasses <-
-    getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
-  if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
-  mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
-  mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                 c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", "txClassDescription","readCount","relReadCount", "relSubsetCount", "txid", "eqClassById")]
   return(extendedAnnotationRanges)
 }
 
+#' calculate relative subset read count after filtering (increase speed, subsets are not considered here)'
+#' @noRd
+calculateRelSubsetCount = function(extendedAnnotationRanges, minEq, min.readFractionByEqClass){
+  filter = !is.na(mcols(extendedAnnotationRanges)$readCount)
+  mcols(extendedAnnotationRanges)$relSubsetCount <- NA
+  mcols(extendedAnnotationRanges)$relSubsetCount[filter] <- 
+    mcols(extendedAnnotationRanges)$readCount[filter]/
+    unlist(lapply(minEq[filter], function(x){return(sum(mcols(extendedAnnotationRanges)$readCount[x], na.rm = TRUE))}))
+  #post extend annotation filters applied here (currently only subset filter)
+  if(min.readFractionByEqClass>0) { # filter out subset transcripts based on relative expression
+    filterSet <- is.na(mcols(extendedAnnotationRanges)$relSubsetCount) | mcols(extendedAnnotationRanges)$relSubsetCount > min.readFractionByEqClass
+    extendedAnnotationRanges <- extendedAnnotationRanges[filterSet]
+  }
+  return(extendedAnnotationRanges)
+}
 
 #' Estimate distance between read class and annotations
 #' @param seReadClass seReadClass
