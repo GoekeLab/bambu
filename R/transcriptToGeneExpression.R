@@ -20,12 +20,12 @@ transcriptToGeneExpression <- function(se) {
     rowDataSe <- as.data.table(rowData(se))
     counts <- rowDataSe[, .(TXNAME, GENEID)][counts, on = "TXNAME"]
     
-    # incompatibleCounts <- metadata(se)$incompatibleCounts
-    # incompatibleCounts[, TXNAME := "incompatible"]
-    # counts_incompatible <- melt(incompatibleCounts, id.vars = c("GENEID","TXNAME"), 
-    #     measure.vars = setdiff(colnames(incompatibleCounts), c("GENEID","TXNAME")))
-    # # GENEID, TXNAME, variable, value
-    # counts <- rbind(counts, counts_incompatible[variable %in% unique(counts$variable)])
+    incompatibleCounts <- metadata(se)$incompatibleCounts
+    incompatibleCounts[, TXNAME := "incompatible"]
+    counts_incompatible <- melt(incompatibleCounts, id.vars = c("GENEID","TXNAME"), 
+        measure.vars = setdiff(colnames(incompatibleCounts), c("GENEID","TXNAME")))
+    # GENEID, TXNAME, variable, value
+    counts <- rbind(counts, counts_incompatible[variable %in% unique(counts$variable)])
     counts[, valueGene := sum(value), by = list(variable, GENEID)]
     counts[, valueGeneCPM := valueGene / max(sum(value), 1) * 10^6,
            by = list(variable)]
