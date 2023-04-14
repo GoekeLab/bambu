@@ -95,7 +95,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   } else {
       if(is.null(NDR)) NDR = 0.5
   }
-  filterSet = (rowDataCombined$NDR <= NDR)
+  filterSet = (rowDataCombined$NDR <= NDR | rowDataCombined$readClassType == "equal:compatible")
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
   #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
