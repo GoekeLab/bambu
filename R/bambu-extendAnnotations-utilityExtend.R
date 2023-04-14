@@ -85,9 +85,9 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- (!grepl("compatible", rowDataCombined$readClassType) |
         rowDataCombined$readClassType == "equal:compatible") #keep equal for FDR calculation
-    # subsetTranscripts <- combindRowDataWithRanges(
-    #     rowDataCombined[!notCompatibleIds,], 
-    #     exonRangesCombined[!notCompatibleIds])
+    subsetTranscripts <- combindRowDataWithRanges(
+        rowDataCombined[!notCompatibleIds,], 
+        exonRangesCombined[!notCompatibleIds])
     exonRangesCombined <- exonRangesCombined[notCompatibleIds]
     rowDataCombined <- rowDataCombined[notCompatibleIds,]
   }
@@ -124,7 +124,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                  c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", "txClassDescription","readCount","relReadCount", "relSubsetCount", "txid", "eqClassById")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
-  #if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
+  if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
   metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
   end.ptm <- proc.time()
   if (verbose) message("transcript filtering in ",
@@ -633,9 +633,15 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
                                        == "allNew" & rowDataCombinedFiltered$novelGene] <-
       "newGene-spliced"
     extendedAnnotationRanges <- exonRangesCombinedFiltered
+    if("NDR" %in% colnames(rowDataCombinedFiltered)){
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
                                   "relReadCount")]
+    } else{
+    mcols(extendedAnnotationRanges) <-
+      rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount",
+                                  "relReadCount")]
+    }
     return(extendedAnnotationRanges)
 }
 
