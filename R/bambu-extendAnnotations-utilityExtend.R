@@ -778,3 +778,25 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   return(readClassTable)
 }
+
+#' Function to change NDR threshold on extendedAnnotations
+#' @title Function to change NDR threshold on extendedAnnotations
+#' @description This function train a model for use on other data
+#' @param extendedAnnotations A GRangesList object produced from bambu(quant = FALSE) or rowRanges(se)
+#' @param NDR The maximum NDR for novel transcripts to be in extendedAnnotations (0-1)
+#' Output - returns a similiar GRangesList object with entries swapped into or out of metadata(extendedAnnotations)$lowConfidenceTranscripts
+#' @details 
+#' @return extendedAnnotations with a new NDR threshold
+#' @export
+setNDR = function(extendedAnnotations, NDR){
+  toRemove = (mcols(extendedAnnotations)$NDR > NDR & mcols(extendedAnnotations)$txClassDescription != "annotation")
+  toAdd = mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR
+  
+  temp = c(metadata(extendedAnnotations)$lowConfidenceTranscripts[!toAdd], extendedAnnotations[toRemove])
+  extendedAnnotations = c(extendedAnnotations[!toRemove], metadata(extendedAnnotations)$lowConfidenceTranscripts[toAdd])
+  metadata(extendedAnnotations)$lowConfidenceTranscripts = temp
+  
+  metadata(extendedAnnotations)$NDR = NDR
+
+  return(extendedAnnotations)
+}
