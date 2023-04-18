@@ -154,7 +154,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     readClassList = reads
     isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
     isBamFiles = !isRDSs
-    warnings = NULL
     if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
     if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
@@ -171,8 +170,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory)
-        warnings = handleWarnings(readClassList, verbose)
     }
+    warnings = handleWarnings(readClassList, verbose)
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         message("--- Start extending annotations ---")
