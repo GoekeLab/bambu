@@ -1,8 +1,7 @@
 Package: bambu
 Type: Package
-Title: Reference-guided isoform reconstruction and quantification for long read 
-    RNA-Seq data
-Version: 2.1.8
+Title: Context-Aware Transcript Quantification from Long Read RNA-Seq data
+Version: 3.1.6
 Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
              email = "chen_ying@gis.a-star.edu.sg"),
              person("Andre", "Sim", role = "aut",
@@ -68,7 +67,7 @@ biocViews:
     Transcriptomics
 bugReports: https://github.com/GoekeLab/bambu/issues
 URL: https://github.com/GoekeLab/bambu   
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.1
 LinkingTo: 
     Rcpp,
     RcppArmadillo
@@ -86,9 +85,7 @@ Imports:
     Rsamtools,
     methods,
     Rcpp,
-    xgboost,
-    ROCit,
-    MESS
+    xgboost
 VignetteBuilder: 
     knitr
 LazyData: true

@@ -15,7 +15,8 @@
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
-    trackReads = trackReads, fusionMode = fusionMode, lowMemory=FALSE) {
+    lowMemory=FALSE, trackReads = trackReads, fusionMode = fusionMode) {
+    genomeSequence <- checkInputSequence(genomeSequence)
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
         if (!is.null(yieldSize)) {
@@ -43,7 +44,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     defaultModels = isoreParameters[["defaultModels"]]
     returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
-    if (!verbose) message("Start generating read class files")
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
         genomeSequence = genomeSequence,annotations = annotations,
@@ -53,8 +53,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)},
         BPPARAM = bpParameters)
-    if (!verbose)
-        message("Finished generating read classes from genomic alignments.")
     return(readClassList)
 }
 
@@ -66,39 +64,61 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE) {
+    if(verbose) message(names(bam.file)[1])
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
-    seqlevelCheckReadsAnnotation(readGrgList, annotations)
+    warnings = c()
+    warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
+    if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
-        message("not all chromosomes from reads present in reference genome 
-            sequence, reads without reference chromosome sequence are dropped")
         refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
+        if (!all(seqlevels(annotations) %in% refSeqLevels)&(!(length(annotations)==0))) {
+            refSeqLevels <- intersect(refSeqLevels, seqlevels(annotations))
+            warningText = paste0("not all chromosomes from annotations present in ", 
+            "reference genome sequence, annotations without reference genomic sequence ",
+            "are dropped")
+            warnings = c(warnings, warningText)
+            if(verbose) warning(warningText)
+            annotations <- keepSeqlevels(annotations, value = refSeqLevels,
+                                         pruning.mode = "coarse")
+        }
+        warningText = paste0("not all chromosomes from reads present in reference ",
+        "genome sequence, reads without reference chromosome sequence are dropped")
+        warnings = c(warnings, warningText)
+        if(verbose) warning(warningText)
         readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
                                      pruning.mode = "coarse")
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
-    }
-    if (!all(seqlevels(annotations) %in% refSeqLevels)) {
-        message("not all chromosomes from annotations present in reference genome 
-    sequence, annotations without reference chrosomomse sequence are dropped")
-        annotations <- keepSeqlevels(annotations, value = refSeqLevels,
-                                     pruning.mode = "coarse")
     }
     #removes reads that are outside genome coordinates
     badReads = which(max(end(ranges(readGrgList)))>=
                          seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
     if(length(badReads) > 0 ){
         readGrgList = readGrgList[-badReads]
-        warning(paste0(length(badReads), " reads are mapped outside the provided ",
+        warningText = paste0(length(badReads), " reads are mapped outside the provided ",
                        "genomic regions. These reads will be dropped. Check you are using the ",
-                       "same genome used for the alignment"))
+                       "same genome used for the alignment")
+        warnings = c(warnings, warningText)
+        if(verbose) warning(warningText)
+    }
+    if(length(readGrgList) == 0) {
+        stop("No reads left after filtering.")
     }
     # construct read classes for each chromosome seperately 
     if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
                                                       annotations, stranded, verbose,bam.file)
     else { 
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
+        if(length(unlisted_junctions)==0){
+            warningText = paste0("No aligned spliced reads detected!", 
+                "Bambu expects spliced reads. If this is intended, ",
+                "see Documentation on how to handle single-exon ",
+                "transcripts")
+            warnings = c(warnings, warningText)
+            if (verbose) warning(warningText)
+        }
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         # create SE object with reconstructed readClasses
@@ -106,8 +126,11 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                          uniqueJunctions, runName = names(bam.file)[1],
                                          annotations, stranded, verbose)
     }
-    if(trackReads) metadata(se)$readNames = names(readGrgList)
-    metadata(se)$readId = mcols(readGrgList)$id
+    metadata(se)$warnings = warnings
+    if(trackReads){
+        metadata(se)$readNames = names(readGrgList)
+        metadata(se)$readId = mcols(readGrgList)$id
+    }
     rm(readGrgList)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
@@ -158,13 +181,15 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels
 #' @noRd
 seqlevelCheckReadsAnnotation <- function(reads, annotations){
+    warnings = c()
     if (length(intersect(seqlevels(reads),
                          seqlevels(annotations))) == 0)
-        warning("no annotations with matching seqlevel styles, 
-        all missing chromosomes will use de-novo annotations")
+        warnings = c(warnings, paste0("no annotations with matching seqlevel styles, ",
+        "all missing chromosomes will use de-novo annotations"))
     if (!all(seqlevels(reads) %in% 
              seqlevels(annotations))) 
-        message("not all chromosomes present in reference annotations,
-            annotations might be incomplete. Please compare objects
-            on the same reference")
+        warnings = c(warnings, paste0("not all chromosomes present in reference annotations, ",
+            "annotations might be incomplete. Please compare objects ",
+            "on the same reference"))
+    return(warnings)
 }

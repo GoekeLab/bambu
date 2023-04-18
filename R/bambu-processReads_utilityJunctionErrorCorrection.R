@@ -15,8 +15,8 @@ junctionErrorCorrection <- function(uniqueJunctions, verbose) {
         uniqJunctionsNmodels <-
             findUniqueJunctions(uniqueJunctions, junctionModel, verbose)
         uniqueJunctions <- uniqJunctionsNmodels$uniqueJunctions
-        message("Junction correction with not enough data,
-            precalculated model is used")
+        if(verbose) message("Junction correction with not enough data, ",
+            "precalculated model is used")
     }
     end.ptm <- proc.time()
     if (verbose) 
@@ -35,8 +35,8 @@ junctionErrorCorrection <- function(uniqueJunctions, verbose) {
             uniqueJunctions[uniqueJunctions$mergedHighConfJunctionIdAll_noNA]))
     end.ptm <- proc.time()
     if (verbose) 
-        message("Finished correcting junction based on set of high confidence
-            junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+        message("Finished correcting junction based on set of high confidence ",
+            "junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     return(uniqueJunctions)
 }
 
@@ -216,16 +216,16 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
             eval_metric = 'error',
             verbose = 0)
         predictions <- predict(cv.fit, data.train.cv.test)
-        message('prediction accuracy (CV) (higher for splice 
-                donor than splice acceptor)')
+        message('prediction accuracy (CV) (higher for splice ',
+                'donor than splice acceptor)')
         # Predictions is thresholded on 0.5 instead of 0 now to produce a 
         # proper confusion matrix and fix an error that occurred with the
         # argument to fisher.test()
         testResults <- fisher.test(table(predictions > 0.5,
                                          labels.train.cv.test))
-        show(testResults$estimate)
-        show(testResults$p.value)
-        show(evalutePerformance(labels.train.cv.test == 1,predictions)$AUC)
+        message("estimate: ", testResults$estimate)
+        message("pValue: ", testResults$p.value)
+        message("AUC: ", evaluatePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
     
     cv.fit <- xgboost(data = data.train, 
@@ -301,7 +301,6 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
     ##max Distance can be a parameter that can be set by users
     #here: assign reference junction to all junctions based on prediciton score
     for (maxDist in 0:10) {
-        if (verbose) message(maxDist)
         overlapByDist = findOverlaps(candidateJunctions[which(is.na(
             mergedHighConfJunctionId))], candidateJunctions[which(
                 candidateJunctions$highConfJunctionPrediction)],
@@ -322,10 +321,10 @@ findJunctionsByStrand <- function(candidateJunctions,highConfidentJunctionSet,
 findHighConfidenceJunctions <- function(junctions, junctionModel,
                                         verbose = FALSE) {
     if (verbose) {
-        message('reads count for all annotated junctions')
-        message(sum(junctions$score[junctions$annotatedJunction]))
-        message(sum(junctions$score[junctions$annotatedJunction]) /
-                    sum(junctions$score))
+        message('reads count for all annotated junctions: ', 
+        sum(junctions$score[junctions$annotatedJunction]),
+        " (", sum(junctions$score[junctions$annotatedJunction]) /
+                    sum(junctions$score), "%)")
     }
     junctionStrand = as.character(strand(junctions))
     ##note: the output can be visualised (bed/bigbed track) 
@@ -351,27 +350,25 @@ findHighConfidenceJunctions <- function(junctions, junctionModel,
         junctions <- useRefJunctionForConflict(junctions,
                 candidateJunctionsMinus, candidateJunctionsPlus)
     } else {
-        warning('no junction correction as no high confidence
-                reference junctions found')
+        warning('no junction correction as no high confidence ',
+                'reference junctions found')
         junctions$mergedHighConfJunctionId <-  names(junctions)
     }
     if (verbose) {
-        message('reads count for all annotated junctions after 
-                correction to reference junction')
         sumByJuncId <- tapply(junctions$score,
-                            junctions$mergedHighConfJunctionId, sum)
-        message(
-            sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]))
-        message(
-            sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]) / 
-                sum(junctions$score))
+                    junctions$mergedHighConfJunctionId, sum)
+        message('reads count for all annotated junctions after ',
+                'correction to reference junction: ', 
+            sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]),
+            " (", sum(sumByJuncId[junctions[names(sumByJuncId)]$annotatedJunction]) / 
+                sum(junctions$score), "%)")
     }
     return(junctions[,'mergedHighConfJunctionId'])
 }
 
 #' Evaluate performance
 #' @noRd
-evalutePerformance <- function(labels, scores, decreasing = TRUE){
+evaluatePerformance <- function(labels, scores, decreasing = TRUE){
     labels <- labels[order(scores, decreasing = decreasing)]
     results <- list()
     # TP/(TP+FP); True Positive Rate;Sensitivity; recall
@@ -382,6 +379,9 @@ evalutePerformance <- function(labels, scores, decreasing = TRUE){
     results[['precision']] <- cumsum(labels)/(seq_along(labels))
     results[['AUC']] <- sum(results[['TPR']][!duplicated( results[['FPR']],
     fromLast = TRUE)] / sum(!duplicated( results[['FPR']],
+    fromLast = TRUE)))
+    results[['PR.AUC']] <-sum(results[['precision']][!duplicated( results[['TPR']],
+    fromLast = TRUE)] / sum(!duplicated( results[['TPR']],
     fromLast = TRUE)))
     return(results)
 }

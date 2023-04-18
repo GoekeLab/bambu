@@ -5,60 +5,46 @@
 \title{long read isoform reconstruction and quantification}
 \usage{
 bambu(
-    reads = NULL,
-    rcFile = NULL,
-    rcOutDir = NULL,
-    annotations = NULL,
-    genome = NULL,
-    stranded = FALSE,
-    ncore = 1,
-    NDR = 0.1,
-    yieldSize = NULL,
-    opt.discovery = NULL,
-    opt.em = NULL,
-    trackReads = FALSE,
-    returnDistTable = FALSE,
-    discovery = TRUE,
-    quant = TRUE,
-    fusionMode = TRUE,
-    verbose = FALSE,
-    lowMemory = FALSE
+  reads,
+  annotations = NULL,
+  genome = NULL,
+  NDR = NULL,
+  opt.discovery = NULL,
+  opt.em = NULL,
+  rcOutDir = NULL,
+  discovery = TRUE,
+  quant = TRUE,
+  stranded = FALSE,
+  ncore = 1,
+  yieldSize = NULL,
+  trackReads = FALSE,
+  returnDistTable = FALSE,
+  lowMemory = FALSE,
+  fusionMode = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
 \item{reads}{A string or a vector of strings specifying the paths of bam
 files for genomic alignments, or a \code{BamFile} object or a
-\code{BamFileList}  object (see \code{Rsamtools}).}
+\code{BamFileList}  object (see \code{Rsamtools}). Alternatively 
+string or a vector of strings specifying the read class files 
+that are saved during previous run of \code{\link{bambu}}.}
 
-\item{rcFile}{A string or a vector of strings specifying the read
-class files that are saved during previous run of \code{\link{bambu}}.}
+\item{annotations}{A path to a .gtf file or a \code{TxDb} object 
+or a GRangesList object obtained by \code{\link{prepareAnnotations}}.}
 
-\item{rcOutDir}{A string variable specifying the path to where
-read class files will be saved.}
-
-\item{annotations}{A \code{TxDb} object or A GRangesList object
-obtained by \code{\link{prepareAnnotations}}.}
-
-\item{genome}{A fasta file or a BSGenome object.}
-
-\item{stranded}{A boolean for strandedness, defaults to FALSE.}
-
-\item{ncore}{specifying number of cores used when parallel processing 
-is used, defaults to 1.}
+\item{genome}{A path to a fasta file or a BSGenome object.}
 
 \item{NDR}{specifying the maximum NDR rate to novel transcript
-output from detected read classes, defaults to 0.1}
-
-\item{yieldSize}{see \code{Rsamtools}.}
+output from detected read classes, defaults to an automatic recommendation}
 
 \item{opt.discovery}{A list of controlling parameters for isoform
 reconstruction process:
 \describe{
-    \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
-    defaults to empty}
     \item{remove.subsetTx}{indicating whether filter to remove read classes
     which are a subset of known transcripts(), defaults to TRUE}
-    \item{min.readCount}{specifying minimun read count to consider a read
+    \item{min.readCount}{specifying minimum read count to consider a read
     class valid in a sample, defaults to 2}
     \item{min.readFractionByGene}{specifying minimum relative read count per
     gene, highly expressed genes will have many high read count low relative
@@ -82,6 +68,22 @@ reconstruction process:
     \item{min.txScore.singleExon}{specifying the minimum transcript level 
     threshold for single-exon transcripts during sample combining, defaults 
     to 1}
+    \item{fitReadClassModel}{ A boolean specifying if Bambu should attempt
+    to train a transcript discovery model for all samples. Defaults to TRUE}
+    \item{defaultModels}{A model object obtained by code{\link{trainBambu}}
+    or when returnModel is TRUE}
+    \item{returnModel}{A boolean specifying if the trained model is output
+    with the readclass files. Defaults to FALSE}
+    \item{baselineFDR}{A number between 0 - 1, specifying the false discovery
+    rate used during NDR recomendation. Defaults to 0.1}
+    \item{min.readFractionByEqClass}{indicating the minimum relative read
+    count of a subset transcript compared to all superset transcripts 
+    (ie the relative read count within the minimum equivalent class). This 
+    filter is applied on the set of annotations across all samples using the 
+    total read count, this is not a per-sample filter. Please use with 
+    caution. defaults to 0}
+    \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
+    defaults to "Bambu"}
 }}
 
 \item{opt.em}{A list of controlling parameters for quantification
@@ -94,30 +96,41 @@ algorithm estimation process:
     defaults to 0.0001}
     \item{minvalue}{specifying the minvalue for convergence consideration, 
     defaults to 0.00000001}
+     \item{sig.digit}{specifying the maximum significant digits of the reported estimates}
 }}
 
-\item{trackReads}{When TRUE read names will be tracked and output as
-    metadata in the final output as readToTranscriptMaps detailing. 
-    the assignment of reads to transcripts. The output is a list with 
-    an entry for each sample.}
-
-\item{returnDistTable}{When TRUE the calculated distance table between
-    read classes and annotations will be output as metadata as 
-    distTables. The output is a list with an entry for each sample.}
+\item{rcOutDir}{A string variable specifying the path to where
+read class files will be saved.}
 
 \item{discovery}{A logical variable indicating whether annotations
-are to be extended for quantification.}
+are to be extended. Defaults to TRUE}
 
 \item{quant}{A logical variable indicating whether quantification will 
-be performed}
+be performed. If false the output type will change. Defaults to TRUE}
+
+\item{stranded}{A boolean for strandedness, defaults to FALSE.}
+
+\item{ncore}{specifying number of cores used when parallel processing 
+is used, defaults to 1.}
+
+\item{yieldSize}{see \code{Rsamtools}.}
+
+\item{trackReads}{When TRUE read names will be tracked and output as
+metadata in the final output as readToTranscriptMaps detailing. 
+the assignment of reads to transcripts. The output is a list with 
+an entry for each sample.}
+
+\item{returnDistTable}{When TRUE the calculated distance table between
+read classes and annotations will be output as metadata as 
+distTables. The output is a list with an entry for each sample.}
+
+\item{lowMemory}{Read classes will be processed by chromosomes when lowMemory 
+is specified. This option provides an efficient way to process big samples.}
 
 \item{fusionMode}{A logical variable indicating whether run in fusion mode}
 
 \item{verbose}{A logical variable indicating whether processing messages will
 be printed.}
-
-\item{lowMemory}{Read classes will be processed by chromosomes when lowMemory 
-is specified. This option provides an efficient way to process big samples.}
 }
 \value{
 \code{bambu} will output different results depending on whether
@@ -130,11 +143,8 @@ accessed by \emph{counts()}, including the following variables
     \item{CPM}{sequencing depth normalized estimates}
     \item{fullLengthCounts}{estimates of read counts mapped as full length 
     reads for each transcript}
-    \item{partialLengthCounts}{estimates of read counts mapped as partial 
-    length reads for each transcript}
     \item{uniqueCounts}{counts of reads that are uniquely mapped to each 
     transcript}
-    \item{theta}{raw estimates}
 }
 Output annotations that are usually the annotations with/without novel 
 transcripts/genes added, depending on whether \emph{discovery} mode is on
@@ -169,5 +179,5 @@ gr <- readRDS(system.file("extdata",
     "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
     package = "bambu"))
 se <- bambu(reads = test.bam, annotations = gr, 
-    genome = fa.file, discovery = TRUE, quant = TRUE)
+    genome = fa.file,  discovery = TRUE, quant = TRUE)
 }

@@ -43,6 +43,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
 
 
 #' helper function to write counts 
+#' @noRd
 writeCountsOutput <- function(se, varname = "counts",
                               feature = "transcript", outdir, prefix){
     estimates <- data.table(as.data.frame(assays(se)[[varname]]),
@@ -95,7 +96,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         }
     }
     df <- left_join(df, geneIDs[, c("TXNAME", "GENEID")], 
-        by = c("group_name" = "TXNAME"), all = TRUE)
+        by = c("group_name" = "TXNAME"))
     df$group_name <- paste('transcript_id "', df$group_name, '";', sep = "")
     df$GENEID <- paste('gene_id "', df$GENEID, '";', sep = "")
     dfExon <- mutate(df, source = "Bambu", feature = "exon", score = ".",
@@ -104,7 +105,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         strand, frame, attributes, group_name)
     dfTx <- as.data.frame(range(ranges(annotation)))
     dfTx <-
-        left_join(dfTx, geneIDs, by = c("group_name" = "TXNAME"), all = TRUE)
+        left_join(dfTx, geneIDs, by = c("group_name" = "TXNAME"))
     dfTx$group_name <-
         paste('transcript_id "', dfTx$group_name, '";', sep = "")
     dfTx$GENEID <- paste('gene_id "', dfTx$GENEID, '";', sep = "")
