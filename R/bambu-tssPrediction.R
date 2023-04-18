@@ -1,15 +1,15 @@
-library(dplyr)
-library(purrr)
-library(ROCit)
-library(Biostrings)
+# library(dplyr)
+# library(purrr)
+# library(ROCit)
+# library(Biostrings)
 
-# **** This is the code script to predict transcription state site of novel transcript. Refer
-# to the slides for some of the preliminary analysis **** 
+# # **** This is the code script to predict transcription state site of novel transcript. Refer
+# # to the slides for some of the preliminary analysis **** 
 
-# Load the necessary data 
-annotations <- readRDS("./output/annotations.rds") 
-fastaFile <- readDNAStringSet("./dataset/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa")                                                       
-RCFile <- readRDS("./output/A549_directRNA_replicate4.rds") # read class file, run bambu to get it. 
+# # Load the necessary data 
+# annotations <- readRDS("./output/annotations.rds") 
+# fastaFile <- readDNAStringSet("./dataset/Homo_sapiens.GRCh38.dna_sm.primary_assembly.fa")                                                       
+# RCFile <- readRDS("./output/A549_directRNA_replicate4.rds") # read class file, run bambu to get it. 
 
 # Helper function
 onlyAnnotatedRCWithMoreThanOneExon <- function(rcFile){
@@ -214,106 +214,106 @@ getFeatureData <- function(metadata, rcFile, neighbourhoodUpstreamWS, neighbourh
 
 # Main workflow (startendprediction)
 # Train test split 
-RCFile <- onlyAnnotatedRCWithMoreThanOneExon(RCFile)
+# RCFile <- onlyAnnotatedRCWithMoreThanOneExon(RCFile)
 
-set.seed(42)
-trainingIndex <- sample.int(length(RCFile), size = 0.8 * length(RCFile))
-testingIndex <- setdiff(seq(length(RCFile)), trainingIndex)
+# set.seed(42)
+# trainingIndex <- sample.int(length(RCFile), size = 0.8 * length(RCFile))
+# testingIndex <- setdiff(seq(length(RCFile)), trainingIndex)
 
-trainingRCFile <- RCFile[trainingIndex,]
-testingRCFile <- RCFile[testingIndex]
+# trainingRCFile <- RCFile[trainingIndex,]
+# testingRCFile <- RCFile[testingIndex]
 
-# get the important metadata for training and testing using bam file and their corresponding rcFile 
-trainingMetadata <- getMetadata(trainingRCFile)
-testingMetadata <- getMetadata(testingRCFile)
+# # get the important metadata for training and testing using bam file and their corresponding rcFile 
+# trainingMetadata <- getMetadata(trainingRCFile)
+# testingMetadata <- getMetadata(testingRCFile)
 
-# model training
+# # model training
 
-## List of hyperparameters 
+# ## List of hyperparameters 
 
-neighbourhoodUpstreamWS <- 15
-neighbourhoodDownstreamWS <- 15
-labelWS <- 10
-upstreamWS <- 1500
-downstreamWS <- 1500
-upstreamCpGWS <- 500
-downstreamCpGWS <- 500
-upstreamkMerWS <- 500
-downstreamkMerWS <- 500
-kmer <- 2
+# neighbourhoodUpstreamWS <- 15
+# neighbourhoodDownstreamWS <- 15
+# labelWS <- 10
+# upstreamWS <- 1500
+# downstreamWS <- 1500
+# upstreamCpGWS <- 500
+# downstreamCpGWS <- 500
+# upstreamkMerWS <- 500
+# downstreamkMerWS <- 500
+# kmer <- 2
 
-trainingFeatureDataWithLabel <- getFeatureData(trainingMetadata, trainingRCFile, neighbourhoodUpstreamWS, neighbourhoodDownstreamWS, 
-                                               labelWS, upstreamWS, downstreamWS, upstreamCpGWS, downstreamCpGWS, 
-                                               upstreamkMerWS, downstreamkMerWS, kmer)
+# trainingFeatureDataWithLabel <- getFeatureData(trainingMetadata, trainingRCFile, neighbourhoodUpstreamWS, neighbourhoodDownstreamWS, 
+#                                                labelWS, upstreamWS, downstreamWS, upstreamCpGWS, downstreamCpGWS, 
+#                                                upstreamkMerWS, downstreamkMerWS, kmer)
 
-# trainingFeatureDataWithLabel <- trainingFeatureDataWithLabel %>% # Turn this off if read class labeling strat is used. This is labeling strat based on peaks
-#     group_by(peaks) %>%
-#     mutate(label = ifelse(any(label == 1), 1, 0)) %>%
-#     ungroup()
+# # trainingFeatureDataWithLabel <- trainingFeatureDataWithLabel %>% # Turn this off if read class labeling strat is used. This is labeling strat based on peaks
+# #     group_by(peaks) %>%
+# #     mutate(label = ifelse(any(label == 1), 1, 0)) %>%
+# #     ungroup()
 
-validFeature <- names(which(apply(trainingFeatureDataWithLabel[,8:(length(trainingFeatureDataWithLabel) - 1)],2, sd) != 0)) # exclude features with no variance
+# validFeature <- names(which(apply(trainingFeatureDataWithLabel[,8:(length(trainingFeatureDataWithLabel) - 1)],2, sd) != 0)) # exclude features with no variance
 
-scaledTrainingFeatureData <- scale(trainingFeatureDataWithLabel[,validFeature]) # normalise the data 
-scaledTrainingFeatureDataWithLabel <- data.frame(trainingFeatureDataWithLabel[,1:7], scaledTrainingFeatureData, label = as.factor(trainingFeatureDataWithLabel$label))
+# scaledTrainingFeatureData <- scale(trainingFeatureDataWithLabel[,validFeature]) # normalise the data 
+# scaledTrainingFeatureDataWithLabel <- data.frame(trainingFeatureDataWithLabel[,1:7], scaledTrainingFeatureData, label = as.factor(trainingFeatureDataWithLabel$label))
 
-set.seed(42)
-model <- fitXGBoostModel(labels.train = as.numeric(as.character(scaledTrainingFeatureDataWithLabel$label)),  ## **** this chunk of code takes a high computational time, hope can be improved ****
-                          data.train = as.matrix(scaledTrainingFeatureDataWithLabel[,-c(1:7,length(scaledTrainingFeatureDataWithLabel))]))
+# set.seed(42)
+# model <- fitXGBoostModel(labels.train = as.numeric(as.character(scaledTrainingFeatureDataWithLabel$label)),  ## **** this chunk of code takes a high computational time, hope can be improved ****
+#                           data.train = as.matrix(scaledTrainingFeatureDataWithLabel[,-c(1:7,length(scaledTrainingFeatureDataWithLabel))]))
 
-y.training <- predict(model, as.matrix(scaledTrainingFeatureDataWithLabel[,8:(length(scaledTrainingFeatureDataWithLabel) - 1)]))
+# y.training <- predict(model, as.matrix(scaledTrainingFeatureDataWithLabel[,8:(length(scaledTrainingFeatureDataWithLabel) - 1)]))
 
-training.final <- cbind(scaledTrainingFeatureDataWithLabel, y.training) %>% # final dataframe with labels and prediction score from the model for each read class 
-    group_by(rc) %>% 
-    arrange(desc(y.training)) %>% 
-    filter(row_number() == 1) %>% # we choose the potential peaks (in the read class) that has the highest score as the peaks of the read class 
-    ungroup() %>% 
-    relocate(c(label,y.training), .before = peaks)
+# training.final <- cbind(scaledTrainingFeatureDataWithLabel, y.training) %>% # final dataframe with labels and prediction score from the model for each read class 
+#     group_by(rc) %>% 
+#     arrange(desc(y.training)) %>% 
+#     filter(row_number() == 1) %>% # we choose the potential peaks (in the read class) that has the highest score as the peaks of the read class 
+#     ungroup() %>% 
+#     relocate(c(label,y.training), .before = peaks)
 
-baselineTraining <- data.frame(rc = rownames(trainingRCFile), peaks.baseline = ifelse(rowData(trainingRCFile)$strand.rc == "+", # the peaks for each read class using Bambu's baseline
-                                                                           as.vector(min(start(trainingRCFile))), 
-                                                                           as.vector(max(end(trainingRCFile)))))
+# baselineTraining <- data.frame(rc = rownames(trainingRCFile), peaks.baseline = ifelse(rowData(trainingRCFile)$strand.rc == "+", # the peaks for each read class using Bambu's baseline
+#                                                                            as.vector(min(start(trainingRCFile))), 
+#                                                                            as.vector(max(end(trainingRCFile)))))
 
-comparisonWithBaselineTraining <- training.final %>% # a dataframe to compare between baseline and model approach. 
-    full_join(baselineTraining, by = "rc") %>% 
-    mutate(diff.baseline = abs(annotatedTss - peaks.baseline)) %>% 
-    select(rc, peaks, diff, peaks.baseline, diff.baseline, annotatedTss) %>% 
-    filter(!is.na(peaks))
+# comparisonWithBaselineTraining <- training.final %>% # a dataframe to compare between baseline and model approach. 
+#     full_join(baselineTraining, by = "rc") %>% 
+#     mutate(diff.baseline = abs(annotatedTss - peaks.baseline)) %>% 
+#     select(rc, peaks, diff, peaks.baseline, diff.baseline, annotatedTss) %>% 
+#     filter(!is.na(peaks))
 
-# model testing 
-testingFeatureDataWithLabel <-  getFeatureData(testingMetadata, testingRCFile, neighbourhoodUpstreamWS, neighbourhoodDownstreamWS, 
-                                               labelWS, upstreamWS, downstreamWS, upstreamCpGWS, downstreamCpGWS, 
-                                               upstreamkMerWS, downstreamkMerWS, kmer)
+# # model testing 
+# testingFeatureDataWithLabel <-  getFeatureData(testingMetadata, testingRCFile, neighbourhoodUpstreamWS, neighbourhoodDownstreamWS, 
+#                                                labelWS, upstreamWS, downstreamWS, upstreamCpGWS, downstreamCpGWS, 
+#                                                upstreamkMerWS, downstreamkMerWS, kmer)
 
-# testingFeatureDataWithLabel <- testingFeatureDataWithLabel %>%  Turn this off if read class labeling strat is used. This is labeling strat based on peaks
-#     group_by(peaks) %>% 
-#     mutate(label = ifelse(any(label == 1), 1, 0)) %>% 
-#     ungroup() 
+# # testingFeatureDataWithLabel <- testingFeatureDataWithLabel %>%  Turn this off if read class labeling strat is used. This is labeling strat based on peaks
+# #     group_by(peaks) %>% 
+# #     mutate(label = ifelse(any(label == 1), 1, 0)) %>% 
+# #     ungroup() 
 
-scaledTestingFeatureData <- scale(testingFeatureDataWithLabel[,validFeature], # normalise the data 
-                                  center = attr(scaledTrainingFeatureData, "scaled:center"), 
-                                  scale = attr(scaledTrainingFeatureData, "scaled:scale"))
-scaledTestingFeatureDataWithLabel <- data.frame(testingFeatureDataWithLabel[,1:7], 
-                                                scaledTestingFeatureData, 
-                                                label = as.factor(testingFeatureDataWithLabel$label))
+# scaledTestingFeatureData <- scale(testingFeatureDataWithLabel[,validFeature], # normalise the data 
+#                                   center = attr(scaledTrainingFeatureData, "scaled:center"), 
+#                                   scale = attr(scaledTrainingFeatureData, "scaled:scale"))
+# scaledTestingFeatureDataWithLabel <- data.frame(testingFeatureDataWithLabel[,1:7], 
+#                                                 scaledTestingFeatureData, 
+#                                                 label = as.factor(testingFeatureDataWithLabel$label))
 
-y_pred <- predict(model, as.matrix(scaledTestingFeatureDataWithLabel[,8:(length(scaledTestingFeatureDataWithLabel) - 1)]))
+# y_pred <- predict(model, as.matrix(scaledTestingFeatureDataWithLabel[,8:(length(scaledTestingFeatureDataWithLabel) - 1)]))
 
-final <- cbind(scaledTestingFeatureDataWithLabel, y_pred) %>% # final dataframe with labels and prediction score from the model for each read class 
-    group_by(rc) %>% 
-    arrange(desc(y_pred)) %>% 
-    filter(row_number() == 1) %>% 
-    ungroup() %>% 
-    relocate(c(label,y_pred), .before = peaks)
+# final <- cbind(scaledTestingFeatureDataWithLabel, y_pred) %>% # final dataframe with labels and prediction score from the model for each read class 
+#     group_by(rc) %>% 
+#     arrange(desc(y_pred)) %>% 
+#     filter(row_number() == 1) %>% 
+#     ungroup() %>% 
+#     relocate(c(label,y_pred), .before = peaks)
 
-baseline <- data.frame(rc = rownames(testingRCFile), peaks.baseline = ifelse(rowData(testingRCFile)$strand.rc == "+",  # the peaks for each read class using Bambu's baseline
-                                                                           as.vector(min(start(testingRCFile))), 
-                                                                           as.vector(max(end(testingRCFile)))))
+# baseline <- data.frame(rc = rownames(testingRCFile), peaks.baseline = ifelse(rowData(testingRCFile)$strand.rc == "+",  # the peaks for each read class using Bambu's baseline
+#                                                                            as.vector(min(start(testingRCFile))), 
+#                                                                            as.vector(max(end(testingRCFile)))))
 
-comparisonWithBaseline <- final %>% # a dataframe to compare between baseline and model approach. 
-    full_join(baseline, by = "rc") %>% 
-    mutate(diff.baseline = abs(annotatedTss - peaks.baseline)) %>% 
-    select(rc, peaks, diff, peaks.baseline, diff.baseline, annotatedTss, y_pred) %>% 
-    filter(!is.na(peaks))
+# comparisonWithBaseline <- final %>% # a dataframe to compare between baseline and model approach. 
+#     full_join(baseline, by = "rc") %>% 
+#     mutate(diff.baseline = abs(annotatedTss - peaks.baseline)) %>% 
+#     select(rc, peaks, diff, peaks.baseline, diff.baseline, annotatedTss, y_pred) %>% 
+#     filter(!is.na(peaks))
 
 
 
@@ -345,34 +345,34 @@ slidingBoxFreq <- function(windowSize, peakData, k){
   return(peakData %>% select(-c("slideBoxFrequency", "interval")))
 }
 
-## Useful code to plot the ROC or PR curve 
-readClassMinimumDiff <- testingMetadata %>% 
-  mutate(ID = seq(n())) %>% 
-  select(ID, peaks, rc) %>% 
-  right_join(getAnnotatedStartSite(testingRCFile, testingMetadata$rc), by = c("ID" = "queryHits", "rc")) %>%
-  mutate(diff = abs(peaks - annotatedTss), .after = peaks) %>% 
-  relocate(annotatedTss, .before = diff) %>% 
-  group_by(ID) %>% 
-  arrange(diff) %>% 
-  filter(row_number() == 1) %>% 
-  ungroup() %>% 
-  group_by(rc) %>% 
-  summarize(min.diff = min(diff))
+# ## Useful code to plot the ROC or PR curve 
+# readClassMinimumDiff <- testingMetadata %>% 
+#   mutate(ID = seq(n())) %>% 
+#   select(ID, peaks, rc) %>% 
+#   right_join(getAnnotatedStartSite(testingRCFile, testingMetadata$rc), by = c("ID" = "queryHits", "rc")) %>%
+#   mutate(diff = abs(peaks - annotatedTss), .after = peaks) %>% 
+#   relocate(annotatedTss, .before = diff) %>% 
+#   group_by(ID) %>% 
+#   arrange(diff) %>% 
+#   filter(row_number() == 1) %>% 
+#   ungroup() %>% 
+#   group_by(rc) %>% 
+#   summarize(min.diff = min(diff))
 
-readClassMinimumDiffLessThanLabelWS <- (readClassMinimumDiff %>% filter(min.diff <= labelWS))$rc # read class with at least one read with distanceToAnnotation <= labelWS
-totalReadClassLessThanLabelWS <- nrow(readClassMinimumDiffLessThanLabelWS)
+# readClassMinimumDiffLessThanLabelWS <- (readClassMinimumDiff %>% filter(min.diff <= labelWS))$rc # read class with at least one read with distanceToAnnotation <= labelWS
+# totalReadClassLessThanLabelWS <- nrow(readClassMinimumDiffLessThanLabelWS)
 
-final.readClassMinimumDiffLessThanLabelWS  <- cbind(scaledTestingFeatureDataWithLabel, y_pred = y_pred) %>% 
-    filter(rc %in% readClassMinimumDiffLessThanLabelWS) %>% 
-    relocate()
+# final.readClassMinimumDiffLessThanLabelWS  <- cbind(scaledTestingFeatureDataWithLabel, y_pred = y_pred) %>% 
+#     filter(rc %in% readClassMinimumDiffLessThanLabelWS) %>% 
+#     relocate()
 
-rocpr<- measureit(score = final.readClassMinimumDiffLessThanLabelWS$y_pred, 
-                  class = final.readClassMinimumDiffLessThanLabelWS$label, 
-                  measure = c("TPR", "FPR", "PREC", "REC"))
+# rocpr<- measureit(score = final.readClassMinimumDiffLessThanLabelWS$y_pred, 
+#                   class = final.readClassMinimumDiffLessThanLabelWS$label, 
+#                   measure = c("TPR", "FPR", "PREC", "REC"))
 
-par(mfrow=c(1,2))
-plot(rocpr$TPR~rocpr$FPR, col = 1, xlab = "1-Specificity (FPR)", ylab = "Sensitivity (TPR)", type = "l", lwd = 2, main = "ROC Curve")
+# par(mfrow=c(1,2))
+# plot(rocpr$TPR~rocpr$FPR, col = 1, xlab = "1-Specificity (FPR)", ylab = "Sensitivity (TPR)", type = "l", lwd = 2, main = "ROC Curve")
 
-plot(rocpr$PREC~rocpr$REC, col = 1, xlab = "Recall", ylab = "Precision", type = "l", lwd = 2, main = "PR Curve")
-abline(h = table(final.readClassMinimumDiffLessThanLabelWS)[2], lty = 2, lwd = 2)
+# plot(rocpr$PREC~rocpr$REC, col = 1, xlab = "Recall", ylab = "Precision", type = "l", lwd = 2, main = "PR Curve")
+# abline(h = table(final.readClassMinimumDiffLessThanLabelWS)[2], lty = 2, lwd = 2)
 
