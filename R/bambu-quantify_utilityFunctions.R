@@ -56,11 +56,8 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
   tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
                              txlen = sum(width(annotations))))
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
-  
-<<<<<<< HEAD
+
   # remove unused columns
-=======
->>>>>>> origin/devel
   eqClassTable[, eqClassById := NULL]
   return(eqClassTable)
 }
