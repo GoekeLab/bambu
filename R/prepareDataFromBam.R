@@ -42,6 +42,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.n
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList[width(readGrgList) > 1]
     mcols(readGrgList)$id <- seq_along(readGrgList)
+    seqlevels(readGrgList)=as.character(unique(getChrFromGrList(readGrgList)))
     return(readGrgList)
 }
 
