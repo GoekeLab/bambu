@@ -115,6 +115,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, exonRangesCombined, 
     annotationGrangesList, prefix)
+  metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   end.ptm <- proc.time()
   if (verbose) message("transcript filtering in ",
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")

@@ -189,8 +189,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
-        mutate(readClassId = paste("rc", row_number(), sep = ".")) %>% 
-  
+        mutate(readClassId = paste("rc", row_number(), sep = "."))
     return(readTable)
 }
 
@@ -244,10 +243,14 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges
-    counts = (as.data.frame(reads.singleExon) %>% 
-         count(seqnames,start,end,strand)) %>% as.data.frame()
+    counts = as.data.frame(reads.singleExon) %>% 
+        mutate(id = mcols(reads.singleExon)$id) %>% 
+        group_by(seqnames,start,end,strand) %>% 
+        summarise(n=n(), id = list(id)) %>% 
+        as.data.frame()
     reads.singleExon = unique(reads.singleExon)
     mcols(reads.singleExon)$counts <- counts$n
+    mcols(reads.singleExon)$id <- counts$id
 
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
@@ -313,7 +316,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(readId)) %>% 
+            readIds = list(unlist(readId))) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
@@ -534,10 +537,10 @@ assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap,
             dplyr::select(newGeneId, newExonId) %>% distinct()
     }
     # combined gene ids
-    geneGeneMap <- left_join(refGeneTxMap, dplyr::rename(refGeneTxMap, 
+    refGeneTxMapMins = refGeneTxMap %>% group_by(newTxId) %>% filter(n() > 1) %>% filter(newGeneId == min(newGeneId)) %>% ungroup()
+    refGeneTxMapNotMins = refGeneTxMap %>% group_by(newTxId) %>% filter(newGeneId != min(newGeneId)) %>% ungroup()
+    geneGeneMap <- left_join(refGeneTxMapMins, dplyr::rename(refGeneTxMapNotMins, 
         newGeneId.merge=newGeneId), by = "newTxId") %>% 
-        filter(newGeneId<newGeneId.merge) %>% 
-        filter(!(newGeneId %in% newGeneId.merge)) %>% 
         dplyr::select(newGeneId, newGeneId.merge) %>% distinct()
     refGeneTxMap <- rbind(refGeneTxMap %>% filter(!(newGeneId %in% 
         geneGeneMap$newGeneId.merge)), left_join(geneGeneMap, refGeneTxMap, 
