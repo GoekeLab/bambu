@@ -22,9 +22,9 @@
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, devel]
   pull_request:
-    branches: [main, master]
+    branches: [main, devel]
 
 name: R-CMD-check-bioc
 
@@ -56,7 +56,7 @@ jobs:
         config:
           - { os: ubuntu-latest, r: '4.2', bioc: '3.16', cont: "bioconductor/bioconductor_docker:RELEASE_3_16", rspm: "https://packagemanager.rstudio.com/cran/__linux__/focal/latest" }
           - { os: macOS-latest, r: '4.2', bioc: '3.16'}
-          # - { os: windows-latest, r: '4.2', bioc: '3.16'}
+          - { os: windows-latest, r: '4.2', bioc: '3.16'}
           ## Check https://github.com/r-lib/actions/tree/master/examples
           ## for examples using the http-user-agent
     env:
@@ -81,7 +81,7 @@ jobs:
       ## https://github.com/r-lib/actions/blob/master/examples/check-standard.yaml
       ## If they update their steps, we will also need to update ours.
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       ## R is already included in the Bioconductor docker images
       - name: Setup R from r-lib
@@ -104,7 +104,7 @@ jobs:
 
       - name: Restore R package cache
         if: "!contains(github.event.head_commit.message, '/nocache') && runner.os != 'Linux'"
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ env.R_LIBS_USER }}
           key: ${{ env.cache-version }}-${{ runner.os }}-biocversion-devel-r-4.2-${{ hashFiles('.github/depends.Rds') }}
@@ -112,7 +112,7 @@ jobs:
 
       - name: Cache R packages on Linux
         if: "!contains(github.event.head_commit.message, '/nocache') && runner.os == 'Linux' "
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /home/runner/work/_temp/Library
           key: ${{ env.cache-version }}-${{ runner.os }}-biocversion-devel-r-4.2-${{ hashFiles('.github/depends.Rds') }}
@@ -144,12 +144,12 @@ jobs:
 
           ## Required for tcltk
           brew install xquartz --cask
-# 
-#       - name: Install Windows system dependencies
-#         if: runner.os == 'Windows'
-#         run: |
-#           ## Edit below if you have any Windows system dependencies
-#         shell: Rscript {0}
+
+      - name: Install Windows system dependencies
+        if: runner.os == 'Windows'
+        run: |
+          ## Edit below if you have any Windows system dependencies
+        shell: Rscript {0}
 
       - name: Install BiocManager
         run: |
@@ -215,13 +215,13 @@ jobs:
         shell: Rscript {0}
 
       - name: Install covr
-        if: github.ref == 'refs/heads/master' && env.run_covr == 'true' && runner.os == 'Linux'
+        if: github.ref == 'refs/heads/devel' && env.run_covr == 'true' && runner.os == 'Linux'
         run: |
           remotes::install_cran("covr")
         shell: Rscript {0}
 
       - name: Install pkgdown
-        if: github.ref == 'refs/heads/master' && env.run_pkgdown == 'true' && runner.os == 'Linux'
+        if: github.ref == 'refs/heads/devel' && env.run_pkgdown == 'true' && runner.os == 'Linux'
         run: |
           remotes::install_github("r-lib/pkgdown")
         shell: Rscript {0}
@@ -249,21 +249,21 @@ jobs:
           )
         shell: Rscript {0}
         
-      # - name: Run CMD check for Windows
-      #   if: runner.os == 'Windows'
-      #   env:
-      #     _R_CHECK_CRAN_INCOMING_: false
-      #     DISPLAY: 99.0
-      #   run: |
-      #     options(crayon.enabled = TRUE)
-      #     options(rcmdcheck.test_output = TRUE)
-      #     rcmdcheck::rcmdcheck(
-      #         args = c("--no-manual", "--no-vignettes", "--timings", "--no-multiarch", "--ignore-vignettes", "--no-examples"),
-      #         build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-build-vignettes"),
-      #         error_on = "warning",
-      #         check_dir = "check"
-      #     )
-      #   shell: Rscript {0}
+      - name: Run CMD check for Windows
+        if: runner.os == 'Windows'
+        env:
+          _R_CHECK_CRAN_INCOMING_: false
+          DISPLAY: 99.0
+        run: |
+          options(crayon.enabled = TRUE)
+          options(rcmdcheck.test_output = TRUE)
+          rcmdcheck::rcmdcheck(
+              args = c("--no-manual", "--no-vignettes", "--timings", "--no-multiarch", "--ignore-vignettes", "--no-examples"),
+              build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data", "--no-build-vignettes"),
+              error_on = "warning",
+              check_dir = "check"
+          )
+        shell: Rscript {0}
 
       - name: Run CMD check for Linux
         if: runner.os == 'Linux'
@@ -306,17 +306,17 @@ jobs:
         shell: Rscript {0}
 
       - name: Test coverage
-        if: github.ref == 'refs/heads/master' && env.run_covr == 'true' && runner.os == 'Linux'
+        if: github.ref == 'refs/heads/devel' && env.run_covr == 'true' && runner.os == 'Linux'
         run: |
           covr::codecov()
         shell: Rscript {0}
 
       - name: Install package
-        if: github.ref == 'refs/heads/master' && env.run_pkgdown == 'true' && runner.os == 'Linux'
+        if: github.ref == 'refs/heads/devel' && env.run_pkgdown == 'true' && runner.os == 'Linux'
         run: R CMD INSTALL .
 
       - name: Build and deploy pkgdown site
-        if: github.ref == 'refs/heads/master' && env.run_pkgdown == 'true' && runner.os == 'Linux'
+        if: github.ref == 'refs/heads/devel' && env.run_pkgdown == 'true' && runner.os == 'Linux'
         run: |
           git config --local user.name "$GITHUB_ACTOR"
           git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
@@ -334,7 +334,7 @@ jobs:
           name: ${{ runner.os }}-biocversion-devel-r-4.2-results
           path: check
 
-      - uses: docker/build-push-action@v2
+      - uses: docker/build-push-action@v1
         if: "!contains(github.event.head_commit.message, '/nodocker') && env.run_docker == 'true' && runner.os == 'Linux' "
         with:
           username: ${{ secrets.DOCKER_USERNAME }}

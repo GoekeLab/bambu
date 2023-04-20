@@ -3,9 +3,9 @@
 on:
   push:
     branches: 
-      - master
+      - devel
   pull_request:
-    branches: [main, master]
+    branches: [main, devel]
 
 name: lint
 

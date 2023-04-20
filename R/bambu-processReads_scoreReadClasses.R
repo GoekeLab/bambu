@@ -128,6 +128,8 @@ countPolyATerminals = function(grl, genomeSequence){
                   width = 10, fix = 'end', ignore.strand=FALSE)
     strand(start)[which(strand(start)=='*')] = "+"
     strand(end)[which(strand(end)=='*')] = "+"
+    seqlevels(start) = seqlevels(genomeSequence) #needed for windows DNAStringSet
+    seqlevels(end) = seqlevels(genomeSequence)
     startSeqs = BSgenome::getSeq(genomeSequence,start)
     endSeqs = BSgenome::getSeq(genomeSequence,end)
     numATstart = BSgenome::letterFrequency(startSeqs, c("A","T"))
