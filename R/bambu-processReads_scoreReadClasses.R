@@ -51,7 +51,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     model = NULL
     rowData(se)$txScore = rowData(se)$txScore.noFit
     if (fit & length(thresholdIndex)>0){ 
-        model = trainBambu(se, verbose = verbose)
+        model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
         if(returnModel) metadata(se)$model = model
         txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels)
@@ -302,6 +302,7 @@ prepareTranscriptModelFeatures = function(rowData){
 checkFeatures = function(features, verbose = FALSE){
     labels = features$labels
     trainable = TRUE
+    print(features)
     if(sum(labels)==length(labels) | sum(labels)==0){
         if (verbose) message("Sample is missing presence of both TRUE and FALSE labels.")
         trainable = FALSE
