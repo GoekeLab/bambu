@@ -85,8 +85,13 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     } else if (!is(annotation, "CompressedGRangesList")) {
         stop("The inputted GRangesList is of the wrong class.")
     }
+    NDR = NULL
     df <- as_tibble(annotation)
     df$exon_rank <- paste('exon_number "', df$exon_rank, '";', sep = "")
+    if(!is.null(mcols(annotation)$NDR)){
+        NDR = rep(mcols(annotation)$NDR, unname(elementNROWS(annotation)))
+        df$NDR <- paste('NDR "', as.character(NDR), '";', sep = "")
+    }
     if (missing(geneIDs)) {
         if (!is.null(mcols(annotation, use.names = FALSE)$GENEID)) {
             geneIDs <- as_tibble(mcols(annotation, use.names = FALSE)[,
@@ -100,7 +105,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     df$group_name <- paste('transcript_id "', df$group_name, '";', sep = "")
     df$GENEID <- paste('gene_id "', df$GENEID, '";', sep = "")
     dfExon <- mutate(df, source = "Bambu", feature = "exon", score = ".",
-        frame = ".", attributes = paste(GENEID, group_name, exon_rank)) %>%
+        frame = ".", attributes = paste(GENEID, group_name, exon_rank, NDR)) %>%
         select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
     dfTx <- as.data.frame(range(ranges(annotation)))
@@ -109,9 +114,11 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     dfTx$group_name <-
         paste('transcript_id "', dfTx$group_name, '";', sep = "")
     dfTx$GENEID <- paste('gene_id "', dfTx$GENEID, '";', sep = "")
+    if(!is.null(mcols(annotation)$NDR)) dfTx$NDR <- 
+        paste('NDR "', mcols(annotation)$NDR, '";', sep = "")
 
     dfTx <- mutate(dfTx,source = "Bambu", feature = "transcript", score = ".",
-        frame = ".", attributes = paste(GENEID, group_name)) %>%
+        frame = ".", attributes = paste(GENEID, group_name, NDR)) %>%
         select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
 
