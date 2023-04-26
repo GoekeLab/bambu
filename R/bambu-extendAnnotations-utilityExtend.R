@@ -784,13 +784,31 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @description This function train a model for use on other data
 #' @param extendedAnnotations A GRangesList object produced from bambu(quant = FALSE) or rowRanges(se)
 #' @param NDR The maximum NDR for novel transcripts to be in extendedAnnotations (0-1)
+#' @param includeRef A boolean which if TRUE will also filter out reference annotations based on their NDR
+#' @param prefix A string which determines which transcripts are considered novel by bambu and will be filtered (by default = 'Bambu')
 #' Output - returns a similiar GRangesList object with entries swapped into or out of metadata(extendedAnnotations)$lowConfidenceTranscripts
 #' @details 
 #' @return extendedAnnotations with a new NDR threshold
 #' @export
-setNDR = function(extendedAnnotations, NDR){
-  toRemove = (mcols(extendedAnnotations)$NDR > NDR & mcols(extendedAnnotations)$txClassDescription != "annotation")
-  toAdd = mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR
+setNDR = function(extendedAnnotations, NDR, includeRef = FALSE, prefix = 'Bambu'){
+
+    if(is.null(mcols(extendedAnnotations)$NDR)){
+        warning("Annotations were not extended by Bambu. NDR can not be set")
+        return(extendedAnnotations)
+    }
+    
+    if(is.null(metadata(extendedAnnotations)$lowConfidenceTranscripts)) 
+        metadata(extendedAnnotations)$lowConfidenceTranscripts = GRangesList()
+
+    if(includeRef){
+        toRemove = (mcols(extendedAnnotations)$NDR > NDR)
+        toAdd = mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR  
+    } else {
+        toRemove = (mcols(extendedAnnotations)$NDR > NDR & 
+            grepl(prefix, mcols(extendedAnnotations)$TXNAME))
+        toAdd = (mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR & 
+            grepl(prefix, mcols(extendedAnnotations)$TXNAME))     
+    }
   
   temp = c(metadata(extendedAnnotations)$lowConfidenceTranscripts[!toAdd], extendedAnnotations[toRemove])
   extendedAnnotations = c(extendedAnnotations[!toRemove], metadata(extendedAnnotations)$lowConfidenceTranscripts[toAdd])
