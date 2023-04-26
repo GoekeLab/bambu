@@ -183,6 +183,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
     if (quant) {
         message("--- Start isoform quantification ---")
+        if(!is.null(NDR) & !discovery)
+            annotations = setNDR(annotations, NDR, prefix = isoreParameters$prefix)
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
