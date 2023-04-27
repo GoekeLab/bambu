@@ -32,9 +32,9 @@ prepareAnnotationsFromGTF <- function(file) {
         data$maxTxScore.noFit <- NULL
         hasNDR = all(grepl("NDR ", data$attribute))
         if(hasNDR) {
-            data$NDR <- gsub(".*NDR (.*?);.*", "\\1", data$attribute)
-            data$maxTxScore <- gsub(".*maxTxScore (.*?);.*", "\\1", data$attribute)
-            data$maxTxScore.noFit <- gsub(".*maxTxScore.noFit (.*?);.*", "\\1", data$attribute)
+            data$NDR <- as.numeric(gsub(".*NDR (.*?);.*", "\\1", data$attribute))
+            data$maxTxScore <- as.numeric(gsub(".*maxTxScore (.*?);.*", "\\1", data$attribute))
+            data$maxTxScore.noFit <- as.numeric(gsub(".*maxTxScore.noFit (.*?);.*", "\\1", data$attribute))
         }
         multiTxCheck <- as_tibble(data) %>% select(seqname, GENEID) %>% distinct() %>% group_by(GENEID) %>% 
             mutate(n=n(), id=paste0('-',row_number()))
