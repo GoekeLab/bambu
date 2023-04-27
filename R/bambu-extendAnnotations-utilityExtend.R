@@ -806,6 +806,8 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @param NDR The maximum NDR for novel transcripts to be in extendedAnnotations (0-1). If not provided a recommended NDR is calculated.
 #' @param includeRef A boolean which if TRUE will also filter out reference annotations based on their NDR
 #' @param prefix A string which determines which transcripts are considered novel by bambu and will be filtered (by default = 'Bambu')
+#' @param baselineFDR a value between 0-1. Bambu uses this FDR on the trained model to recommend an equivilent NDR threshold to be used for the sample. By default, a baseline FDR of 0.1 is used. This does not impact the analysis if an NDR is set.
+#' @param defaultModels a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the bambu package
 #' Output - returns a similiar GRangesList object with entries swapped into or out of metadata(extendedAnnotations)$lowConfidenceTranscripts
 #' @details 
 #' @return extendedAnnotations with a new NDR threshold
