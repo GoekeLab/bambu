@@ -177,6 +177,20 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     return(NDR)
 }
 
+recommendNDR.onAnnotations = function(annotations, prefix = "Bambu", baselineFDR = 0.1, NDR = NULL, defaultModels2 = defaultModels2){
+    mcols = mcols(annotations)[!is.na(mcols(annotations)$maxTxScore),]
+    equal = !grepl(prefix, mcols$TXNAME)
+    #add envirnment so poly() works
+    attr(defaultModels2$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
+    baseline = predict(defaultModels2$lmNDR, newdata=data.frame(NDR=baselineFDR))
+    attr(defaultModels2$lmNDR[["terms"]], ".Environment") = c()
+    score = mcols$maxTxScore.noFit
+    NDRscores = calculateNDR(score, equal)
+    NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
+    NDR.rec = round(NDR.rec,3)
+    return(NDR.rec)
+}
+
 
 #' Calculate NDR based on transcripts 
 #' @noRd
@@ -789,23 +803,31 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @title Function to change NDR threshold on extendedAnnotations
 #' @description This function train a model for use on other data
 #' @param extendedAnnotations A GRangesList object produced from bambu(quant = FALSE) or rowRanges(se)
-#' @param NDR The maximum NDR for novel transcripts to be in extendedAnnotations (0-1)
+#' @param NDR The maximum NDR for novel transcripts to be in extendedAnnotations (0-1). If not provided a recommended NDR is calculated.
 #' @param includeRef A boolean which if TRUE will also filter out reference annotations based on their NDR
 #' @param prefix A string which determines which transcripts are considered novel by bambu and will be filtered (by default = 'Bambu')
 #' Output - returns a similiar GRangesList object with entries swapped into or out of metadata(extendedAnnotations)$lowConfidenceTranscripts
 #' @details 
 #' @return extendedAnnotations with a new NDR threshold
 #' @export
-setNDR = function(extendedAnnotations, NDR, includeRef = FALSE, prefix = 'Bambu'){
-
+setNDR = function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 'Bambu', baselineFDR = 0.1, defaultModels2 = defaultModels){
+    #Check to see if the annotations/gtf are dervived from Bambu
     if(is.null(mcols(extendedAnnotations)$NDR)){
-        warning("Annotations were not extended by Bambu. NDR can not be set")
+        warning("Annotations were not extended by Bambu (or the wrong prefix was provided). NDR can not be set")
         return(extendedAnnotations)
     }
-    
+
     if(is.null(metadata(extendedAnnotations)$lowConfidenceTranscripts)) 
         metadata(extendedAnnotations)$lowConfidenceTranscripts = GRangesList()
 
+    #recommend an NDR (needed when users read in Bambu GTF)
+    if(is.null(NDR)){
+        tempAnno = c(metadata(extendedAnnotations)$lowConfidenceTranscripts, extendedAnnotations)
+        NDR = recommendNDR.onAnnotations(tempAnno, prefix = prefix, baselineFDR = baselineFDR, NDR = NDR, defaultModels2 = defaultModels2)
+        message("Recommending a novel discovery rate (NDR) of: ", NDR)
+    }
+
+    #If reference annotations should be filtered too (note that reference annotations with no read support arn't filtered)
     if(includeRef){
         toRemove = (mcols(extendedAnnotations)$NDR > NDR)
         toAdd = mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR  
