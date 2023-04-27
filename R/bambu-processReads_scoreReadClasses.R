@@ -302,7 +302,6 @@ prepareTranscriptModelFeatures = function(rowData){
 checkFeatures = function(features, verbose = FALSE){
     labels = features$labels
     trainable = TRUE
-    print(features)
     if(sum(labels)==length(labels) | sum(labels)==0){
         if (verbose) message("Sample is missing presence of both TRUE and FALSE labels.")
         trainable = FALSE
