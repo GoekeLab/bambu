@@ -28,8 +28,14 @@ prepareAnnotationsFromGTF <- function(file) {
         data$GENEID <- gsub("gene_id (.*?);.*", "\\1", data$attribute)
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
         data$NDR <- NULL
+        data$maxTxScore <- NULL
+        data$maxTxScore.noFit <- NULL
         hasNDR = all(grepl("NDR ", data$attribute))
-        if(hasNDR) data$NDR <- gsub(".*NDR (.*?);.*", "\\1", data$attribute)
+        if(hasNDR) {
+            data$NDR <- gsub(".*NDR (.*?);.*", "\\1", data$attribute)
+            data$maxTxScore <- gsub(".*maxTxScore (.*?);.*", "\\1", data$attribute)
+            data$maxTxScore.noFit <- gsub(".*maxTxScore.noFit (.*?);.*", "\\1", data$attribute)
+        }
         multiTxCheck <- as_tibble(data) %>% select(seqname, GENEID) %>% distinct() %>% group_by(GENEID) %>% 
             mutate(n=n(), id=paste0('-',row_number()))
         if(any(multiTxCheck$n>1)) { # identical TXNAMES
@@ -48,7 +54,7 @@ prepareAnnotationsFromGTF <- function(file) {
             data$GENEID <- uniqueNamesTbl$gene_unique
             }
         geneData <- unique(data[, c("TXNAME", "GENEID")])
-        geneData <- if(hasNDR) { unique(data[, c("TXNAME", "GENEID", "NDR")])
+        geneData <- if(hasNDR) { unique(data[, c("TXNAME", "GENEID", "NDR", "maxTxScore", "maxTxScore.noFit")])
             } else {unique(data[, c("TXNAME", "GENEID")])}
         grlist <- makeGRangesListFromDataFrame(
         data[, c("seqname", "start", "end", "strand", "TXNAME")],
