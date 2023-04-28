@@ -827,15 +827,16 @@ setNDR = function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 
 
     #recommend an NDR (needed when users read in Bambu GTF)
     if(is.null(NDR)){
-        tempAnno = c(metadata(extendedAnnotations)$lowConfidenceTranscripts, extendedAnnotations)
+        tempAnno = c(extendedAnnotations, metadata(extendedAnnotations)$lowConfidenceTranscripts)
         NDR = recommendNDR.onAnnotations(tempAnno, prefix = prefix, baselineFDR = baselineFDR, defaultModels2 = defaultModels2)
         message("Recommending a novel discovery rate (NDR) of: ", NDR)
     }
 
     #If reference annotations should be filtered too (note that reference annotations with no read support arn't filtered)
     if(includeRef){
-        toRemove = (mcols(extendedAnnotations)$NDR > NDR)
-        toAdd = mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR  
+        toRemove = (!is.na(mcols(extendedAnnotations)$NDR) & mcols(extendedAnnotations)$NDR > NDR)
+        toAdd = !is.na(mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR) & 
+            mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR  
     } else {
         toRemove = (mcols(extendedAnnotations)$NDR > NDR & 
             grepl(prefix, mcols(extendedAnnotations)$TXNAME))
