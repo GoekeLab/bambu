@@ -181,7 +181,7 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     return(NDR)
 }
 
-recommendNDR.onAnnotations = function(annotations, prefix = "Bambu", baselineFDR = 0.1, NDR = NULL, defaultModels2 = defaultModels2){
+recommendNDR.onAnnotations = function(annotations, prefix = "Bambu", baselineFDR = 0.1, defaultModels2 = defaultModels2){
     mcols = mcols(annotations)[!is.na(mcols(annotations)$maxTxScore),]
     equal = !grepl(prefix, mcols$TXNAME)
     #add envirnment so poly() works
@@ -828,7 +828,7 @@ setNDR = function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 
     #recommend an NDR (needed when users read in Bambu GTF)
     if(is.null(NDR)){
         tempAnno = c(metadata(extendedAnnotations)$lowConfidenceTranscripts, extendedAnnotations)
-        NDR = recommendNDR.onAnnotations(tempAnno, prefix = prefix, baselineFDR = baselineFDR, NDR = NDR, defaultModels2 = defaultModels2)
+        NDR = recommendNDR.onAnnotations(tempAnno, prefix = prefix, baselineFDR = baselineFDR, defaultModels2 = defaultModels2)
         message("Recommending a novel discovery rate (NDR) of: ", NDR)
     }
 
