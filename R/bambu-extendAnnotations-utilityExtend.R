@@ -81,6 +81,10 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   #calculate relative read count before any filtering
   rowDataCombined <- group_by(rowDataCombined, GENEID) %>% mutate(relReadCount = readCount/sum(readCount))
   
+  rowDataCombined$TXNAME[is.na(rowDataCombined$TXNAME)] <- paste0(
+      prefix, "Tx", seq_len(sum(is.na(rowDataCombined$TXNAME))))
+  names(exonRangesCombined) <- rowDataCombined$TXNAME
+
   #filter out subset reads
   if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- (!grepl("compatible", rowDataCombined$readClassType) |
@@ -651,11 +655,11 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     if("NDR" %in% colnames(rowDataCombinedFiltered)){
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
+      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
                                   "maxTxScore", "maxTxScore.noFit", "relReadCount")]
     } else{
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount",
+      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount",
                                   "maxTxScore", "maxTxScore.noFit", "relReadCount")]
     }
     return(extendedAnnotationRanges)
@@ -665,9 +669,9 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
                                         extendedAnnotationRanges,annotationGrangesList, prefix){
-    equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
+    equalRanges = rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
     #remove extended ranges that are already present in annotation
-    extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
+    extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
     annotationRangesToMerge <- annotationGrangesList
     if(length(annotationGrangesList)){
         mcols(annotationRangesToMerge)$readCount <- NA
@@ -687,8 +691,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         #mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
     }
     if (length(extendedAnnotationRanges)) {
-      mcols(extendedAnnotationRanges)$TXNAME <- paste0(
-      prefix, "Tx", seq_along(extendedAnnotationRanges))
+      mcols(extendedAnnotationRanges)$TXNAME <- rowDataCombinedFiltered[rowDataCombinedFiltered$novelTranscript,]$TXNAME
     names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
     extendedAnnotationRanges <-
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
@@ -837,7 +840,7 @@ setNDR = function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 
         toRemove = (mcols(extendedAnnotations)$NDR > NDR & 
             grepl(prefix, mcols(extendedAnnotations)$TXNAME))
         toAdd = (mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR & 
-            grepl(prefix, mcols(extendedAnnotations)$TXNAME))     
+            grepl(prefix, mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$TXNAME))     
     }
   
   temp = c(metadata(extendedAnnotations)$lowConfidenceTranscripts[!toAdd], extendedAnnotations[toRemove])
