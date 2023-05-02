@@ -51,7 +51,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     model = NULL
     rowData(se)$txScore = rowData(se)$txScore.noFit
     if (fit & length(thresholdIndex)>0){ 
-        model = trainBambu(se, verbose = verbose)
+        model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
         if(returnModel) metadata(se)$model = model
         txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels)
