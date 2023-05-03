@@ -60,9 +60,9 @@ test_that("setNDR only effects transcripts with the prefix", {
 
 test_that("setNDR saves the used NDR threshold correctly", {
     extendedAnnotationsExpected <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds",package = "bambu"))
-    metadata(extendedAnnotationsExpected)$NDR = 0.7
+    #metadata(extendedAnnotationsExpected)$NDR = 0.7
     extendedAnnotationsExpected_1 = setNDR(extendedAnnotationsExpected, 1)
-    metadata(extendedAnnotationsExpected_1)$NDR = 1
+    expect_equal(metadata(extendedAnnotationsExpected_1)$NDRthreshold,1)
 })
 
 test_that("setNDR works when no lowConfidenceTranscripts are present", {

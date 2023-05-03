@@ -848,7 +848,7 @@ setNDR = function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 
   extendedAnnotations = c(extendedAnnotations[!toRemove], metadata(extendedAnnotations)$lowConfidenceTranscripts[toAdd])
   metadata(extendedAnnotations)$lowConfidenceTranscripts = temp
   
-  metadata(extendedAnnotations)$NDR = NDR
+  metadata(extendedAnnotations)$NDRthreshold = NDR
 
   return(extendedAnnotations)
 }
