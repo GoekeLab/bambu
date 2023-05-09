@@ -139,7 +139,8 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         col.names = FALSE, sep = "\t")
 }
 
-writeAnnotatonsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, outputAll = TRUE, outputBambuModels = TRUE){
+writeAnnotatonsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
+                                outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE){
     if(outputExtendedAnno){
         writeToGTF(annotation, paste0(file, "_extendedAnnotations"), geneIDs)
     }
@@ -149,11 +150,16 @@ writeAnnotatonsToGTF <- function(annotation, file, geneIDs = NULL, outputExtende
             message("The current NDR threshold already outputs all transcript models. This may result in reduced precision for th extendedAnnotations and supportedTranscriptModels gtfs")
         writeToGTF(annotationAll, paste0(file, "_allTranscriptModels"), geneIDs)
     }
+
     #todo - have this write bambu start and ends for annotated transcripts
     if(outputBambuModels){
         annotationBambu = annotation[!is.na(mcols(annotation)$readCount)]
         writeToGTF(annotationBambu, paste0(file, "_supportedTranscriptModels"), geneIDs)
+    }
 
+    if(outputNovelOnly){
+        annotationNovel = annotation[mcols(annotation)novelTranscript]
+        writeToGTF(annotationBambu, paste0(file, "_novelTranscripts"), geneIDs)
     }
 }
 
