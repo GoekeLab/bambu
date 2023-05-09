@@ -16,7 +16,8 @@
 #' ))
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
-writeBambuOutput <- function(se, path, prefix = "") {
+writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE, 
+                             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE) {
     if (missing(se) | missing(path)) {
         stop("Both summarizedExperiment object from bambu and
             the path for the output files are required.")
@@ -29,7 +30,8 @@ writeBambuOutput <- function(se, path, prefix = "") {
         transcript_gtffn <- paste(outdir, prefix,
             "extended_annotations.gtf", sep = "")
         gtf <- writeAnnotatonsToGTF(annotation = transcript_grList,
-            file = transcript_gtffn)
+            file = transcript_gtffn, outputExtendedAnno = TRUE, 
+            outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE)
         
         for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
@@ -139,6 +141,28 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         col.names = FALSE, sep = "\t")
 }
 
+#' Write annotation GRangesList into multiple filtered GTF files
+#' @title write GRangeslist into multiple filtered GTF files
+#' @param annotation a \code{GRangesList} object
+#' @param file the output gtf file name
+#' @param geneIDs an optional dataframe of geneIDs (column 2) with
+#'     the corresponding transcriptIDs (column 1)
+#' @param outputExtendedAnno an optional boolean to write the extended annotations as a GTF
+#' @param outputAll an optional boolean to write all transcripts (irrespective of confidence) as a GTF
+#' @param outputBambuModels an optional boolean to write only full-length read supported models as a GTF
+#' @param outputNovelOnly an optional boolean to write only novel high confidence transcripts as a GTF
+#' @return gtf a GTF dataframe
+#' @importFrom dplyr select as_tibble mutate %>% left_join arrange group_by
+#'     ungroup recode_factor
+#' @importFrom methods is
+#' @export
+#' @examples
+#' outputGtfFile <- tempfile()
+#' gr <- readRDS(system.file("extdata",
+#'     "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
+#'     package = "bambu"
+#' ))
+#' writeToGTF(gr, outputGtfFile)
 writeAnnotatonsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
                                 outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE){
     if(outputExtendedAnno){
