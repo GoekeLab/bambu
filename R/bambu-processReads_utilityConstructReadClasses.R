@@ -201,18 +201,23 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
 #' The goal of this is to seperate read classesa cross alternative TSS sites and internal exons  
 classifyReadsByFirstAndLastExon <-function(readTable, annotations){
     annotations = annotations[unname(elementNROWS(annotations))>1]
-    firstExons = heads(annotations,1L)
-    lastExons = tails(annotations,1L)
+    exons = unlist(annotations)
 
-    annoTable <- tibble(chr = as.factor(getChrFromGrList(annotations)), 
+    annoTable <- tibble(chr = as.character(seqnames(exons)), 
         intronStarts = NA, intronEnds = NA,
-        start = unlist(start(firstExons))-5, #add 5bp leeway when grouping reads to account for alignment error
-        end = unlist(end(lastExons))+5,
-        strand = as.character(getStrandFromGrList(annotations)), confidenceType = NA,
+        start = start(exons)-5, #add 5bp leeway when grouping reads to account for alignment error
+        end = end(exons)+5,
+        strand = as.character(strand(exons)), confidenceType = NA,
         alignmentStrand = NA,
         readId = NA,
-        firstJunction = unlist(end(firstExons))-1, #-1 to convert from exon to intron coord
-        lastJunction = unlist(start(lastExons))+1)
+        firstJunction = end(exons)-1, #-1 to convert from exon to intron coord
+        lastJunction = start(exons)+1)
+    #remove junctions from the start and end of first and last exon
+    annoTable$lastJunction[(annoTable$strand == "+" & mcols(exons)$exon_rank == 1)| (annoTable$strand == "-" & mcols(exons)$exon_endRank == 1)
+    ] = NA
+    annoTable$firstJunction[(annoTable$strand == "+" & mcols(exons)$exon_enRank == 1)| (annoTable$strand == "-" & mcols(exons)$exon_rank == 1)
+    ] = NA
+    annoTable = annoTable %>% distinct()
 
     readTable = rbind(readTable, annoTable)
 
