@@ -164,11 +164,11 @@ Alternatively the NDR threshold can be adjuted after discovery or on the final o
 ```rscript
 # after the discovery step
 extendedAnnotations_0.3 = setNDR(se.discoveryOnly, 0.3)
-writeToGTF(extendedAnnotations, "./output.gtf")
+writeAnnotationsToGTF(extendedAnnotations, "./output.gtf")
 
 # after a complete run
 extendedAnnotations_0.3 = setNDR(rowRanges(se), 0.3)
-writeToGTF(extendedAnnotations, "./output.gtf")
+writeAnnotationsToGTF(extendedAnnotations, "./output.gtf")
 ```
 
 To run quantification at a different NDR, simply provide bambu annotations alongside the new NDR threshold to bambu and it will automatically adjust the transcripts.
@@ -202,40 +202,36 @@ Access transcript expression estimates by extracting a variable (such as counts 
 
 For a full description of the other outputs see [Output Description](#Output-Description)
 
-The full output can be written to a file using writeBambuOutput().  Using this function will generate three files, including a .gtf file for the extended annotations, and two .txt files for the expression counts at transcript and gene levels.
+The full output can be written to a file using writeBambuOutput().  Using this function will generate six files, including 4four .gtf files(detailed below), and two .txt files for the expression counts at transcript and gene levels.
+
+By default bambu will write four .gtf files
+- **extendedAnnotations.gtf** - Contains all transcript models from the reference annotations and any novel high confidence transcript models (below NDR threshold) from Bambu
+- **allTranscriptModels** - Contains all transcript models from the reference annotations and all novel transcript models, irrespective of their NDR score. This is useful for reloading into Bambu with prepareAnnotations() to redo the analysis or reoutput the annotations at different NDR thresholds.
+- **supportedTranscriptModels** - Contains only transcript models that are fully supported by at least one read across the samples provided. Note that if multiple reference annotations share the same intron junctions, an abitrary one will selected to be be included in this output. 
+- **novelTranscripts** - Contains only novel high confidence transcript models (below NDR threshold) from Bambu. 
+
 ```rscript
 writeBambuOutput(se, path = "./bambu/")
 ```
-If you are only interested in the novel transcripts, one can filter this 'se' object first to remove reference annotations.
+If you would like to avoid outputting any of the above .gtf for space concerns, each can be toggled off with the below arguments.
 ```rscript
-se.novel = se[mcols(se)$novelTranscript,]
-writeBambuOutput(se.novel, path = "./bambu/")
-```
-If you are only interested in full-length transcripts that were detected by Bambu.
-```rscript
-se.novel = se[assays(se)$fullLengthCounts >= 1,]
-writeBambuOutput(se.novel, path = "./bambu/")
+writeBambuOutput(se.novel, path = "./bambu/", outputExtendedAnno = FALSE, outputAll = FALSE, outputBambuModels = FALSE, outputNovelOnly = FALSE)
 ```
 
 If quant is set to FALSE i.e. only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols()
-These annotations can be written to a .gtf file using writeToGTF(GRangesList_object, output_path).
+These annotations can be written to a .gtf file using writeAnnotatonsToGTF(GRangesList_object, output_path).
+This will output the four .gtf files mentioned above, and can be excluded using the same arguments.
 ```rscript
 se.discoveryOnly <- bambu(reads = sample, annotations = annotations, genome = fa.file, quant = FALSE)
-writeToGTF(se.discoveryOnly, "./output.gtf")
+writeAnnotatonsToGTF(se.discoveryOnly, "./output.gtf")
 ```
-As above, to output only the novel annotations, you need to filter out the reference annotations.
+If you would prefer to manually filter the annotations, you can also provide the resulting annotations to writeToGTF() which will output the annotations as is.
 ```rscript
 se.discoveryOnly.novel = se.discoveryOnly[mcols(se.discoveryOnly)$novelTranscript,]
 writeToGTF(se.discoveryOnly.novel, "./output.gtf")
 ```
-If you are only interested in full-length transcripts that were detected by Bambu. If multiple transcripts share exon-junctions, only one will be displayed. To avoid this, do the filter after quantification as in the example above.
-```rscript
-se.novel = se[!is.na(mcols(se)$readCount) & mcols(se)$readCount >= 1,]
-writeBambuOutput(se.novel, path = "./bambu/")
-```
 
 If both quant and discovery are set to FALSE, *bambu* will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
-
 
 ### Visualization
 You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running *bambu* on the three replicates of HepG2 cell line in the SG-NEx project)
