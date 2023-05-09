@@ -28,7 +28,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
         transcript_grList <- rowRanges(se)
         transcript_gtffn <- paste(outdir, prefix,
             "extended_annotations.gtf", sep = "")
-        gtf <- writeToGTF(annotation = transcript_grList,
+        gtf <- writeAnnotatonsToGTF(annotation = transcript_grList,
             file = transcript_gtffn)
         
         for(d in names(assays(se))){
@@ -98,7 +98,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         txScore.noFit = rep(mcols(annotation)$maxTxScore.noFit, unname(elementNROWS(annotation)))
         df$txScore.noFit <- paste('maxTxScore.noFit "', as.character(txScore.noFit), '";', sep = "")
     }
-    if (missing(geneIDs)) {
+    if (is.null(geneIDs)) {
         if (!is.null(mcols(annotation, use.names = FALSE)$GENEID)) {
             geneIDs <- as_tibble(mcols(annotation, use.names = FALSE)[,
                 c("TXNAME", "GENEID")])
@@ -137,6 +137,24 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     gtf <- mutate(gtf, strand = recode_factor(strand, `*` = "."))
     utils::write.table(gtf, file = file, quote = FALSE, row.names = FALSE,
         col.names = FALSE, sep = "\t")
+}
+
+writeAnnotatonsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, outputAll = TRUE, outputBambuModels = TRUE){
+    if(outputExtendedAnno){
+        writeToGTF(annotation, paste0(file, "_extendedAnnotations"), geneIDs)
+    }
+    if(outputAll){
+        annotationAll = setNDR(annotation, 1)
+        if(length(annotationAll) == length(annotation)) 
+            message("The current NDR threshold already outputs all transcript models. This may result in reduced precision for th extendedAnnotations and supportedTranscriptModels gtfs")
+        writeToGTF(annotationAll, paste0(file, "_allTranscriptModels"), geneIDs)
+    }
+    #todo - have this write bambu start and ends for annotated transcripts
+    if(outputBambuModels){
+        annotationBambu = annotation[!is.na(mcols(annotation)$readCount)]
+        writeToGTF(annotationBambu, paste0(file, "_supportedTranscriptModels"), geneIDs)
+
+    }
 }
 
 
