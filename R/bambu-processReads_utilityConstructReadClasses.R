@@ -27,7 +27,8 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
             uniqueJunctions = uniqueJunctions,
             unlisted_junctions = unlisted_junctions,
             readGrgList = readGrgList,
-            stranded = stranded)}
+            stranded = stranded,
+            annotations = annotations)}
     else{exonsByRC.spliced = GRangesList()}
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
@@ -55,7 +56,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' @importFrom GenomicRanges match
 #' @noRd
 constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
-                                        readGrgList, stranded = FALSE) {
+                                        readGrgList, stranded = FALSE, annotations) {
     options(scipen = 999)
     allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
                                                      uniqueJunctions, ignore.strand = TRUE)
@@ -89,7 +90,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     rm(lowConfidenceReads, uniqueJunctions, allToUniqueJunctionMatch)
     readTable <- createReadTable(start(unlisted_junctions), 
         end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
-        readStrand, readConfidence)
+        readStrand, readConfidence, annotations)
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
@@ -157,7 +158,7 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #'     row_number .groups
 #' @noRd
 createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
-    unlisted_junctions_id, readGrgList,readStrand, readConfidence) {
+    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     intronStartCoordinatesInt <- 
         as.integer(min(splitAsList(unlisted_junctions_start,
@@ -176,13 +177,16 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
         alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+',
-        readId = mcols(readGrgList)$id)
+        readId = mcols(readGrgList)$id,
+        firstJunction = intronStartCoordinatesInt,
+        lastJunction = intronEndCoordinatesInt)
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
+    readTable <- classifyReadsByFirstAndLastExon(readTable, annotations)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
-        group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
+        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
@@ -190,6 +194,33 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
+    return(readTable)
+}
+
+#' This function groups reads by their first/last junction and the smallest reference exon they fit into
+#' The goal of this is to seperate read classesa cross alternative TSS sites and internal exons  
+classifyReadsByFirstAndLastExon <-function(readTable, annotations){
+    annotations = annotations[unname(elementNROWS(annotations))>1]
+    firstExons = heads(annotations,1L)
+    lastExons = tails(annotations,1L)
+
+    annoTable <- tibble(chr = as.factor(getChrFromGrList(annotations)), 
+        intronStarts = NA, intronEnds = NA,
+        start = unlist(start(firstExons))-5, #add 5bp leeway when grouping reads to account for alignment error
+        end = unlist(end(lastExons))+5,
+        strand = as.character(getStrandFromGrList(annotations)), confidenceType = NA,
+        alignmentStrand = NA,
+        readId = NA,
+        firstJunction = unlist(end(firstExons))-1, #-1 to convert from exon to intron coord
+        lastJunction = unlist(start(lastExons))+1)
+
+    readTable = rbind(readTable, annoTable)
+
+    readTable <- readTable %>% 
+        group_by(chr, strand, firstJunction) %>% mutate(firstExonGroup = findInterval(start,sort(start[is.na(readId)]))) %>%
+        ungroup() %>% group_by(chr, strand, lastJunction) %>% mutate(lastExonGroup = findInterval(end, sort(end[is.na(readId)]))) %>% 
+        ungroup() %>% filter(!is.na(readId))
+
     return(readTable)
 }
 
