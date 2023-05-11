@@ -183,7 +183,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         strand = readStrand, confidenceType = readConfidence,
         alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+',
         firstJunction = intronStartCoordinatesInt,
-        lastJunction = intronEndCoordinatesInt)
+        lastJunction = intronEndCoordinatesInt,
         readId = mcols(readGrgList)$id,
         softClip5Prime = mcols(readGrgList)$softClip5Prime,
         softClip3Prime = mcols(readGrgList)$softClip3Prime,
