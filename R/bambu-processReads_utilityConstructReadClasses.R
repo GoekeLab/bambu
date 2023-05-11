@@ -16,6 +16,10 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                                use.names = FALSE)
     mcols(reads.singleExon)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
+    mcols(reads.singleExon)$softClip5Prime <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$softClip5Prime
+    mcols(reads.singleExon)$softClip3Prime <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$softClip3Prime
+    mcols(reads.singleExon)$hardClip5Prime <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$hardClip5Prime
+    mcols(reads.singleExon)$hardClip3Prime <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$hardClip3Prime
     #only keep multi exons reads in readGrgList   
     readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
     if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
@@ -95,7 +99,8 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
-        confidenceType, readCount, readIds)
+        confidenceType, readCount, readIds, starts, ends, readStrands,
+        softClips3Prime, softClips5Prime, hardClips3Prime, hardClips5Prime)
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
     return(exonsByReadClass)
@@ -177,20 +182,26 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
         alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+',
-        readId = mcols(readGrgList)$id,
         firstJunction = intronStartCoordinatesInt,
         lastJunction = intronEndCoordinatesInt)
+        readId = mcols(readGrgList)$id,
+        softClip5Prime = mcols(readGrgList)$softClip5Prime,
+        softClip3Prime = mcols(readGrgList)$softClip3Prime,
+        hardClip5Prime = mcols(readGrgList)$hardClip5Prime,
+        hardClip3Prime = mcols(readGrgList)$hardClip3Prime)
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
     readTable <- classifyReadsByFirstAndLastExon(readTable, annotations)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
-        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
+        group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
+                softClips3Prime = list(softClip3Prime), softClips5Prime = list(softClip5Prime), 
+            hardClips3Prime = list(hardClip3Prime), hardClips5Prime = list(hardClip5Prime), 
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -342,17 +353,21 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
              readStart = start(granges)[queryHits],
              readEnd = end(granges)[queryHits],
              counts = mcols(granges)$counts[queryHits],
-             readId = mcols(granges[queryHits])$id)
+             readId = mcols(granges[queryHits])$id,
+             softClip3Prime = mcols(granges[queryHits])$softClip3Prime,
+             softClip5Prime = mcols(granges[queryHits])$softClip5Prime,
+             hardClip3Prime = mcols(granges[queryHits])$hardClip3Prime,
+             hardClip5Prime = mcols(granges[queryHits])$hardClip5Prime)
     hitsDF <- hitsDF %>% 
         dplyr::select(chr, start, end, readStart, readEnd, 
             strand, readClassId, alignmentStrand, 
-            counts, readId) %>%
+            counts, readId, softClip3Prime, softClip5Prime, hardClip3Prime, hardClip5Prime) %>%
         group_by(readClassId) %>% 
         summarise(start = start[1], end = end[1], 
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(unlist(readId))) %>% 
+            readIds = list(readId)) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
@@ -371,7 +386,8 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
         intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, 
-        readCount.posStrand, readIds)
+        readCount.posStrand, readIds, starts, ends, readStrands, 
+        softClips3Prime, softClips5Prime, hardClips3Prime, hardClips5Prime)
     mcols(exByReadClassUnspliced) <- hitsDF
     return(exByReadClassUnspliced)
 }

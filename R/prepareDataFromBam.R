@@ -26,11 +26,19 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.n
     readGrgList <- list()
     counter <- 1
     while (isIncomplete(bf)) {
-        readGrgList[[counter]] <-
-            grglist(readGAlignments(bf,
+        reads = readGAlignments(bf,
             param = ScanBamParam(flag =
-                scanBamFlag(isSecondaryAlignment = FALSE)),
-            use.names = use.names))
+                scanBamFlag(isSecondaryAlignment = FALSE), what = "cigar"),
+            use.names = use.names)
+        readGrgList[[counter]] = grglist(reads)
+        softClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[S].*','\\1',mcols(reads)$cigar)), na.rm=T)
+        softClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[S]$','\\1',mcols(reads)$cigar)), na.rm=T)
+        hardClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[H].*','\\1',mcols(reads)$cigar)), na.rm=T)
+        hardClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[H]$','\\1',mcols(reads)$cigar)), na.rm=T)
+        mcols(readGrgList[[counter]])$softClip5Prime = softClip5Prime
+        mcols(readGrgList[[counter]])$softClip3Prime = softClip3Prime
+        mcols(readGrgList[[counter]])$hardClip5Prime = hardClip5Prime
+        mcols(readGrgList[[counter]])$hardClip3Prime = hardClip3Prime
         counter <- counter + 1
     }
     on.exit(close(bf))
