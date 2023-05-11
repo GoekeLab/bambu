@@ -26,6 +26,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         warning("read Id not sorted, can result in wrong assignments.
             Please report this")
     start.ptm <- proc.time()
+    print(1)
     if(!is.null(uniqueJunctions)){
         exonsByRC.spliced <- constructSplicedReadClasses(
             uniqueJunctions = uniqueJunctions,
@@ -41,6 +42,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     "spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) { 
         exonsByRC.unspliced <- NULL
+    print(2)
     } else {exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
         annotations, exonsByRC.spliced, stranded, verbose)}
     exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
@@ -62,6 +64,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
                                         readGrgList, stranded = FALSE, annotations) {
     options(scipen = 999)
+    print(1.1)
     allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
                                                      uniqueJunctions, ignore.strand = TRUE)
     correctedJunctionMatches <- 
@@ -75,7 +78,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         unlisted_junctions = unlisted_junctions[-toRemove]
         allToUniqueJunctionMatch = allToUniqueJunctionMatch[-toRemove]
     }
-
+    print(1.2)
     if (isFALSE(stranded)) {
         readStrand <- correctReadStrandById(
             as.factor(strand(unlisted_junctions)),
@@ -87,6 +90,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readConfidence <- factor(rep("highConfidenceJunctionReads",
         length(readStrand)), levels = c('highConfidenceJunctionReads',
         'lowConfidenceJunctionReads'))
+    print(1.3)
     lowConfidenceReads <- which(sum(is.na(splitAsList(
         uniqueJunctions$mergedHighConfJunctionId[allToUniqueJunctionMatch],
         mcols(unlisted_junctions)$id))) > 0)
@@ -95,7 +99,9 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readTable <- createReadTable(start(unlisted_junctions), 
         end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
         readStrand, readConfidence, annotations)
+    print(1.4)
     exonsByReadClass <- createExonsByReadClass(readTable)
+    print(head(readTable))
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
@@ -103,6 +109,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         softClips3Prime, softClips5Prime, hardClips3Prime, hardClips5Prime)
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
+    print(1.5)
     return(exonsByReadClass)
 }
 
@@ -171,6 +178,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     intronEndCoordinatesInt <- 
         as.integer(max(splitAsList(unlisted_junctions_end,
         unlisted_junctions_id)) + 2)
+    print(3)
     readTable <- tibble(chr = as.factor(getChrFromGrList(readGrgList)), 
         intronStarts = 
         unname(unstrsplit(splitAsList(as.character(unlisted_junctions_start),
@@ -189,14 +197,17 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         softClip3Prime = mcols(readGrgList)$softClip3Prime,
         hardClip5Prime = mcols(readGrgList)$hardClip5Prime,
         hardClip3Prime = mcols(readGrgList)$hardClip3Prime)
+    print(3.0)
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
     readTable <- classifyReadsByFirstAndLastExon(readTable, annotations)
+    print(3.1)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
-        summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
+        summarise(readCount = n(), starts = list(start), ends = list(end), 
+                startSD = sd(start), endSD = sd(end), readStrands = list(alignmentStrand),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
@@ -222,7 +233,11 @@ classifyReadsByFirstAndLastExon <-function(readTable, annotations){
         alignmentStrand = NA,
         readId = NA,
         firstJunction = end(exons)-1, #-1 to convert from exon to intron coord
-        lastJunction = start(exons)+1)
+        lastJunction = start(exons)+1,
+        softClip5Prime = NA,
+        softClip3Prime = NA,
+        hardClip5Prime = NA,
+        hardClip3Prime = NA)
     #remove junctions from the start and end of first and last exon
     annoTable$lastJunction[(annoTable$strand == "+" & mcols(exons)$exon_rank == 1)| (annoTable$strand == "-" & mcols(exons)$exon_endRank == 1)
     ] = NA
@@ -280,6 +295,7 @@ createExonsByReadClass <- function(readTable){
 #' @noRd
 constructUnsplicedReadClasses <- function(reads.singleExon, annotations, 
         readClassListSpliced, stranded, verbose = FALSE){
+    print(2.1)
     start.ptm <- proc.time()
     referenceExons <- unique(c(granges(unlist(
         readClassListSpliced[mcols(readClassListSpliced)$confidenceType ==
@@ -298,10 +314,11 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     reads.singleExon = unique(reads.singleExon)
     mcols(reads.singleExon)$counts <- counts$n
     mcols(reads.singleExon)$id <- counts$id
-
+    print(2.2)
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
+    print(2.3)
     if(length(rcUnsplicedAnnotation)>0)
         reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
             unlist(mcols(rcUnsplicedAnnotation)$readIds)]
@@ -317,6 +334,7 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
       exonsByReadClass <- c(rcUnsplicedAnnotation, 
                             rcUnsplicedReduced)
     }
+    print(2.4)
     end.ptm <- proc.time()
     if (verbose) message("Finished create single exon transcript models ",
         "(read classes) in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
@@ -363,11 +381,12 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
             strand, readClassId, alignmentStrand, 
             counts, readId, softClip3Prime, softClip5Prime, hardClip3Prime, hardClip5Prime) %>%
         group_by(readClassId) %>% 
-        summarise(start = start[1], end = end[1], 
+        summarise(start = start[1], end = end[1], starts = list(start), ends = list(ends), readStrands = list(alignmentStrand),
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(readId)) %>% 
+            readIds = list(readId), softClips3Prime = list(softClip3Prime), softClips5Prime = list(softClip5Prime), 
+            hardClips3Prime = list(hardClip3Prime), hardClips5Prime = list(hardClip5Prime)) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
@@ -383,6 +402,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     exByReadClassUnspliced <- relist(exByReadClassUnspliced, partitioning)
     rm(partitioning)
     names(exByReadClassUnspliced) <- hitsDF$readClassId
+    print(head(hitsDF))
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
         intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, 
