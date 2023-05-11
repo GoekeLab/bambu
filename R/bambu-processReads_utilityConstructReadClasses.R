@@ -381,7 +381,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
             strand, readClassId, alignmentStrand, 
             counts, readId, softClip3Prime, softClip5Prime, hardClip3Prime, hardClip5Prime) %>%
         group_by(readClassId) %>% 
-        summarise(start = start[1], end = end[1], starts = list(start), ends = list(ends), readStrands = list(alignmentStrand),
+        summarise(start = start[1], end = end[1], starts = list(start), ends = list(end), readStrands = list(alignmentStrand),
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
