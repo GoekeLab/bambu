@@ -255,11 +255,12 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    if(length(rcUnsplicedAnnotation)>0)
+    if(length(rcUnsplicedAnnotation)>0){
         #remove summed reads that fell in an annotation
         partitioning = PartitioningByEnd(mcols(reads.singleExon)$id)
         nonRefRead = !(unlist(mcols(reads.singleExon)$id) %in% unlist(mcols(rcUnsplicedAnnotation)$readIds))
         reads.singleExon <- reads.singleExon[all(relist(nonRefRead, partitioning))]
+    }
     if(length(reads.singleExon)==0){
       exonsByReadClass <- rcUnsplicedAnnotation
     }else{
