@@ -440,13 +440,13 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
     
     ## next for non unique hits select one gene (maximum overlap)
     multiHits <- which(queryHits(ov) %in% which(countQueryHits(ov)>1))
-    expandedRanges <- expandRangesList(ranges(grl[queryHits(ov)[multiHits]]),
-        ranges(geneRanges[subjectHits(ov)[multiHits]]))
-    rangeIntersect <- pintersect(expandedRanges, 
-        mcols(expandedRanges)$matchRng, resolve.empty = 'start.x')
-    intersectById <- tapply(width(rangeIntersect), 
-                            mcols(expandedRanges)$IdMap, sum)
-    
+    rangeIntersect= intersect(ranges(grl[queryHits(ov)[multiHits]]),
+                                ranges(geneRanges[subjectHits(ov)[multiHits]]))
+    filteredMultiHits =  data.frame(queryHits = queryHits(ov)[multiHits], 
+                                    intersectWidth = sum(width(rangeIntersect)), 
+                                    subjectHits = subjectHits(ov)[multiHits]) %>% 
+        group_by(queryHits) %>% summarise(subjectHits = subjectHits[which.max(intersectWidth)],
+                                                intersectWidth = max(intersectWidth))
     filteredMultiHits <- as_tibble(ov[multiHits]) %>% 
         mutate(intersectWidth = intersectById)
     if(fusionMode) {
