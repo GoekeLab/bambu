@@ -439,8 +439,7 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
     uniqueHits <- which(queryHits(ov) %in% which(countQueryHits(ov)==1))
     geneIds[queryHits(ov)[uniqueHits]] <- 
         names(geneRanges)[subjectHits(ov)[uniqueHits]]
-    
-    if(length(multiHits)>0){
+    if(length(ov)>0){
         ## next for non unique hits select one gene (maximum overlap)
         multiHits <- which(queryHits(ov) %in% which(countQueryHits(ov)>1))
         rangeIntersect= intersect(ranges(grl[queryHits(ov)[multiHits]]),
