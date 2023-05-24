@@ -121,45 +121,6 @@ isReadClassCompatible =  function(query, subject){
     return(outData)
 }
 
-isReadClassCompatible2 =  function(query, subject){
-    outData <- data.frame(compatible=rep(0, length(query)), 
-                          equal = rep(FALSE, length(query)))
-    
-    query.trimmed <- cutStartEndFromGrangesList(query)
-    subject.trimmed <- cutStartEndFromGrangesList(subject)
-
-    # reduce memory and speed footprint by reducing number of queries
-    # based on all intron match prefilter
-    unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, 
-                                        use.ids = FALSE)
-    intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
-        use.names = FALSE, use.ids = FALSE)
-    
-    partitioningQuery <- 
-        PartitioningByEnd(cumsum(elementNROWS(gaps(ranges(query)))),
-                          names = NULL)
-    allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
-    
-    olap = findOverlaps(query.trimmed[allIntronMatchQuery],
-                        subject.trimmed, 
-                        ignore.strand = FALSE, type = 'within')
-    query <- query[allIntronMatchQuery][queryHits(olap)]
-    
-    subject <- subject[subjectHits(olap)]
-    splice <- myGaps(query)
-
-    comp <- myCompatibleTranscription(query = query.trimmed[allIntronMatchQuery][queryHits(olap)], 
-                                            subject = subject.trimmed[subjectHits(olap)],
-                                            splice = splice)
-    equal <- elementNROWS(query)==elementNROWS(subject) & comp    
-    areWithin = checkEdgeExonsWithinIntronBoundaries(query[comp], subject[comp])
-    comp[comp] = areWithin
-    outData$compatible[allIntronMatchQuery] <- countQueryHits(olap[comp])
-    outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
-
-    return(outData)
-}
-
 #' returns a logical vector determining if the edge exons do not overlap with intron junctions
 #' threshold determines how many bases can overlap into the intron and still be considered compatible
 #' @noRd
