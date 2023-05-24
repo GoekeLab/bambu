@@ -85,9 +85,10 @@ calculateGeneProportion = function(counts, geneIds){
 isReadClassCompatible =  function(query, subject){
     outData <- data.frame(compatible=rep(0, length(query)), 
                           equal = rep(FALSE, length(query)))
-    query <- cutStartEndFromGrangesList(query)
-    subject <- cutStartEndFromGrangesList(subject)
     
+    query.trimmed <- cutStartEndFromGrangesList(query)
+    subject.trimmed <- cutStartEndFromGrangesList(subject)
+
     # reduce memory and speed footprint by reducing number of queries
     # based on all intron match prefilter
     unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, 
@@ -100,20 +101,23 @@ isReadClassCompatible =  function(query, subject){
                           names = NULL)
     allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
     
-    olap = findOverlaps(query[allIntronMatchQuery],subject, 
+    olap = findOverlaps(query.trimmed[allIntronMatchQuery],
+                        subject.trimmed, 
                         ignore.strand = FALSE, type = 'within')
     query <- query[allIntronMatchQuery][queryHits(olap)]
     
     subject <- subject[subjectHits(olap)]
     splice <- myGaps(query)
-    
-    comp <- myCompatibleTranscription(query = query, subject = subject,
-                                      splice = splice)
-    equal <- elementNROWS(query)==elementNROWS(subject) & comp
-    
+
+    comp <- myCompatibleTranscription(query = query.trimmed[allIntronMatchQuery][queryHits(olap)], 
+                                            subject = subject.trimmed[subjectHits(olap)],
+                                            splice = splice)
+    equal <- elementNROWS(query)==elementNROWS(subject) & comp    
+    areWithin = checkEdgeExonsWithinIntronBoundaries(query[comp], subject[comp])
+    comp[comp] = areWithin
     outData$compatible[allIntronMatchQuery] <- countQueryHits(olap[comp])
     outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
-    
+
     return(outData)
 }
 
@@ -160,37 +164,6 @@ isReadClassCompatible2 =  function(query, subject){
 #' threshold determines how many bases can overlap into the intron and still be considered compatible
 #' @noRd
 checkEdgeExonsWithinIntronBoundaries = function(query, subject, threshold = 35){
-    #does first query exon overlap with internal or external
-    # hasInternal = lengths(subject)>=3
-    # subject.internal = getInternalExons(subject)
-    # queryStart = heads(query,1L)[hasInternal]
-    # queryEnd = tails(query,1L)[hasInternal]
-
-    # isDiff = setdiff(queryStart, subject.internal)
-    # isIntersect = intersect(queryStart, subject.internal)
-    # FEwithin = !(elementNROWS(isDiff)==0L & elementNROWS(isIntersect)==0L)
-
-    # isDiff = setdiff(queryEnd, subject.internal)
-    # isIntersect = intersect(queryEnd, subject.internal)
-    # LEwithin = !(elementNROWS(isDiff)==0L & elementNROWS(isIntersect)==0L)
-    
-    # areWithin = rep(TRUE, length(query))
-    # areWithin[hasInternal] = FEwithin & LEwithin
-    # return(areWithin)
-
-    # poverlaps(unlist(heads(subject.internal, 1L)), unlist(queryStart),type = "within") #this doesn't include strand
-
-
-    # queryStart = heads(query,1L)
-    # FE.width = unlist(width(queryStart)>threshold)
-    # queryStart[FE.width] = narrow(queryStart[FE.width], start = threshold)
-    # queryStart[!FE.width] = resize(queryStart[!FE.width], width = 1, fix = "end")
-    # queryEnd = tails(query,1L)
-    # LE.width = unlist(width(queryEnd)>threshold)
-    # queryEnd[LE.width] = narrow(queryEnd[LE.width], end = threshold)
-    # queryEnd[!LE.width] = resize(queryEnd[!LE.width], fix = "start", width = 1)
-    # edgeExons = pc(queryStart,queryEnd)
-
     edgeExons = pc(heads(query,1L), tails(query,1L))
     introns = myGaps(subject)
     #reduce size of introns to allow for fuzziness at intron junctions caused by alignment
@@ -203,18 +176,6 @@ checkEdgeExonsWithinIntronBoundaries = function(query, subject, threshold = 35){
     intersectsIntron = elementNROWS(intersect(edgeExons, introns))!=0L
     return(!intersectsIntron)
 }
-
-#' returns a grangeslist object with only the internal exons. annotations with less than 2 exons are removed
-#' @noRd
-getInternalExons = function(annotations){
-    annotations.3exon = annotations[lengths(annotations)>=3]
-    annotations.trimmed <- unlist(annotations.3exon, use.names = FALSE)
-    partitioning <- PartitioningByEnd(cumsum(elementNROWS(annotations.3exon) - 2), names = NULL)
-    internalExonsSet <- which(annotations.trimmed$exon_rank > 1 & annotations.trimmed$exon_endRank > 1)
-    annotations.trimmed = relist(annotations.trimmed[internalExonsSet], partitioning)
-    mcols(annotations.trimmed)=mcols(annotations.3exon)
-    return(annotations.trimmed)
-    }
 
 #' returns number of A/T's each read class aligned 5' and 3' end
 #' @noRd
