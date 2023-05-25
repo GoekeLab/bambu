@@ -247,7 +247,7 @@ classifyReadsByFirstAndLastExon <-function(readTable, annotations, includeAnnoEd
         annoTable$firstJunction[(annoTable$strand == "+" & mcols(exons)$exon_endRank == 1)| (annoTable$strand == "-" & mcols(exons)$exon_rank == 1)
         ] = NA
     } else{
-        annoTable = annoTable[mcols(exons)$exon_rank != 1 & mcols(exons)$exon_endRank != 1]
+        annoTable = annoTable[mcols(exons)$exon_rank != 1 & mcols(exons)$exon_endRank != 1,]
     }
 
     annoTable = annoTable %>% distinct()
