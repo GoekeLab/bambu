@@ -222,14 +222,14 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
 #' This function groups reads by their first/last junction and the smallest reference exon they fit into
 #' The goal of this is to seperate read classesa cross alternative TSS sites and internal exons  
 #' If includeAnnoEdgeExons is true, the first and last exons of annotations are used to split read classes too
-classifyReadsByFirstAndLastExon <-function(readTable, annotations, includeAnnoEdgeExons = FALSE){
+classifyReadsByFirstAndLastExon <-function(readTable, annotations, includeAnnoEdgeExons = FALSE, leeway = 35){
     annotations = annotations[unname(elementNROWS(annotations))>1]
     exons = unlist(annotations)
 
     annoTable <- tibble(chr = as.character(seqnames(exons)), 
         intronStarts = NA, intronEnds = NA,
-        start = start(exons)-5, #add 5bp leeway when grouping reads to account for alignment error
-        end = end(exons)+5,
+        start = start(exons)-leeway, #add leeway when grouping reads to account for alignment error
+        end = end(exons)+leeway,
         strand = as.character(strand(exons)), confidenceType = NA,
         alignmentStrand = NA,
         readId = NA,
@@ -239,7 +239,7 @@ classifyReadsByFirstAndLastExon <-function(readTable, annotations, includeAnnoEd
         softClip3Prime = NA,
         hardClip5Prime = NA,
         hardClip3Prime = NA)
-        
+
     if(includeAnnoEdgeExons){
         #remove junctions from the start and end of first and last exon
         annoTable$lastJunction[(annoTable$strand == "+" & mcols(exons)$exon_rank == 1)| (annoTable$strand == "-" & mcols(exons)$exon_endRank == 1)
