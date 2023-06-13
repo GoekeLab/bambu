@@ -94,3 +94,17 @@ test_that("readGTF can generate a GRangesList from a GTF file", {
     expect_s4_class(gr, class = "CompressedGRangesList")
     expect_named(mcols(gr), c("TXNAME", "GENEID"))
 })
+
+test_that("writeToGTF writes the NDR, txScore and txScore.noFit correctly", {
+    extendedAnnotationsExpected <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds",package = "bambu"))
+    
+    writeToGTF(extendedAnnotationsExpected, test_path("fixtures", "grGTF.rds"))
+
+    extendedAnnotations = prepareAnnotations(test_path("fixtures", "grGTF.rds"))
+
+    expect_equal(mcols(extendedAnnotations)$NDR, mcols(extendedAnnotationsExpected)$NDR)
+    expect_equal(mcols(extendedAnnotations)$txScore, mcols(extendedAnnotationsExpected)$txScore)
+    expect_equal(mcols(extendedAnnotations)$txScore.noFit, mcols(extendedAnnotationsExpected)$txScore.noFit)
+
+    unlink(test_path("fixtures", "*"))
+})

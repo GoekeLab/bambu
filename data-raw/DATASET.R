@@ -300,12 +300,12 @@ gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_100
 
 extendedAnnotations <- isore.extendAnnotations(combinedTranscripts=seIsoReCombined,
                                                annotationGrangesList=gr,
-                                               remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.1, 
+                                               remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.7, 
                                                min.exonDistance = 35, min.exonOverlap = 10,
                                                min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-                                               prefix='', verbose=FALSE, defaultModels = defaultModels)
+                                               prefix='Bambu', verbose=FALSE, defaultModels = defaultModels)
 saveRDS(extendedAnnotations, file = "./inst/extdata/extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", compress = "xz")
-
+writeToGTF(extendedAnnotations, "./inst/extdata/extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.gtf")
 ## expected output for test isore
 
 seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
