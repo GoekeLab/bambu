@@ -163,7 +163,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 #'     package = "bambu"
 #' ))
 #' writeToGTF(gr, outputGtfFile)
-writeAnnotatonsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
+writeAnnotationsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
                                 outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE){
     if(outputExtendedAnno){
         writeToGTF(annotation, paste0(file, "_extendedAnnotations"), geneIDs)
@@ -182,7 +182,7 @@ writeAnnotatonsToGTF <- function(annotation, file, geneIDs = NULL, outputExtende
     }
 
     if(outputNovelOnly){
-        annotationNovel = annotation[mcols(annotation)novelTranscript]
+        annotationNovel = annotation[mcols(annotation)$novelTranscript]
         writeToGTF(annotationBambu, paste0(file, "_novelTranscripts"), geneIDs)
     }
 }
