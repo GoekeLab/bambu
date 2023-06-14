@@ -486,31 +486,38 @@ rowData(se)
 ### Release History
 
 **bambu v3.2.6**
+
 Release date: 2023-Apr-26
+
 Minor changes:
-    * Fixes crash during Low Memory Mode when there are scaffolds with no reads
-    * Fixes crash on windows machines caused by DNAStringSet
-    * Adds NDR metadata when running discovery mode with recommended NDR, so users do not need to look at console for the recommended NDR.
-    * Re-enabled GitHub actions for new devel branch name and the windows check
-    * Fixed a crash that occurs with large datasets resulting in large overflow tables during novel gene id assignment
-    * Remove nested bplapply in EM
-    * Remove unused eqClassById list column in the readClassDist object to reduce memory usage
-    * Fixed a bug that caused identical unspliced reads to not be tracked when trackReads = TRUE
+
+- Fixes crash during Low Memory Mode when there are scaffolds with no reads
+- Fixes crash on windows machines caused by DNAStringSet
+- Adds NDR metadata when running discovery mode with recommended NDR, so users do not need to look at console for the recommended NDR.
+- Re-enabled GitHub actions for new devel branch name and the windows check
+- Fixed a crash that occurs with large datasets resulting in large overflow tables during novel gene id assignment
+- Remove nested bplapply in EM
+- Remove unused eqClassById list column in the readClassDist object to reduce memory usage
+- Fixed a bug that caused identical unspliced reads to not be tracked when trackReads = TRUE
 
 **bambu version 3.0.0**
+
 Release date: 2022-10-25
+
 Major changes:
-    * Updated the input parameters of Bambu to simplify the user experience
-    * Introduced NDR threshold recommendation 
-    * Implemented trainBambu(), allowing users to train and use models on their own data
-    * Reads that cannot be assigned to any transcript are grouped as incompatible counts
-    * Partial estimates are removed from output as it can be directly obtained based on total count estimates and full-length count estimates
-    * The fusion mode is now available, which assigns read classes that align to multiple genes to a new combined fusion gene
+
+- Updated the input parameters of Bambu to simplify the user experience
+- Introduced NDR threshold recommendation 
+- Implemented trainBambu(), allowing users to train and use models on their own data
+- Reads that cannot be assigned to any transcript are grouped as incompatible counts
+- Partial estimates are removed from output as it can be directly obtained based on total count estimates and full-length count estimates
+- The fusion mode is now available, which assigns read classes that align to multiple genes to a new combined fusion gene
 
 Minor changes:
-    * Novel transcripts and genes are now by default output with a Bambu prefix
-    * Updated the documentation, messages and errors output by Bambu
-    * Annotated transcripts (with unique exon-junctions) with at least 1 full-length read are assigned a NDR rank
+
+- Novel transcripts and genes are now by default output with a Bambu prefix
+- Updated the documentation, messages and errors output by Bambu
+- Annotated transcripts (with unique exon-junctions) with at least 1 full-length read are assigned a NDR rank
 
 **bambu version 1.99.0**
 
