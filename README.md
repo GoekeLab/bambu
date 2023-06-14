@@ -579,7 +579,7 @@ Release date: 2020-06-18
 Release date: 2020-05-29 
 
 ### Citation
-Chen, Ying, et al. "Context-Aware Transcript Quantification from Long Read RNA-Seq data with Bambu" bioRxiv (2022). doi: https://doi.org/10.1101/2022.11.14.516358
+Chen, Y., Sim, A., Wan, Y.K. et al. Context-aware transcript quantification from long-read RNA-seq data with Bambu. Nat Methods (2023). https://doi.org/10.1038/s41592-023-01908-w
 
 ### Contributors
 
