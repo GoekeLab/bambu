@@ -34,6 +34,7 @@
   - [Training a model on another species/dataset and applying it](#Training-a-model-on-another-speciesdataset-and-applying-it)
   - [Quantification of gene expression](#Quantification-of-gene-expression)
   - [Including single exons](#Including-single-exons)
+  - [Fusion gene/isoform detection](#Fusion-geneisoform-detection)
   - [*bambu* Arguments](#Bambu-Arguments)
   - [Output Description](#Output-Description)
 - [Release History](#Release-History)
@@ -422,6 +423,18 @@ By default *bambu* does not report single exon transcripts because they are know
 
 ```rscript
 se <- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, opt.discovery = list(min.txScore.singleExon = 0))
+```
+
+
+
+### Fusion gene/isoform detection
+
+To facilitate fusion gene/isoform detection, *bambu* has implemented a fusion mode. When it is set to TRUE, it will assign multiple GENEIDs to fusion transcripts, separated by ":". 
+
+To use this feature, it is recommended to detect the fusion gene breakpoints using fusion detection tools like [JAFFAL](https://github.com/Oshlack/JAFFA) first. Then fusion chromosome fasta file can be created by concatenating the two fusion gene sequences. Similarly, the fusion annotation gtf file can also be created with  coordinates of the transcripts from the relevant genes changed to fusion chromosome coordinates. It is then required to do the re-alignment of reads originating from fusion region to the generated fusion chromosome fasta file. Then users can apply *bambu* on the re-aligned bam files with fusion chromosome fasta and gtf files. 
+
+```rscript
+se <- bambu(reads = fusionAligned.bam, annotations = fusionAnnotations, genome = fusionFasta, fusionMode = TRUE)
 ```
 
 ### *Bambu* Arguments
