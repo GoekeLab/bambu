@@ -29,7 +29,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         transcript_grList <- rowRanges(se)
         transcript_gtffn <- paste(outdir, prefix,
             "extended_annotations.gtf", sep = "")
-        gtf <- writeAnnotatonsToGTF(annotation = transcript_grList,
+        gtf <- writeAnnotationsToGTF(annotation = transcript_grList,
             file = transcript_gtffn, outputExtendedAnno = TRUE, 
             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE)
         
