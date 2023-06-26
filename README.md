@@ -219,11 +219,11 @@ writeBambuOutput(se.novel, path = "./bambu/", outputExtendedAnno = FALSE, output
 ```
 
 If quant is set to FALSE i.e. only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols()
-These annotations can be written to a .gtf file using writeAnnotatonsToGTF(GRangesList_object, output_path).
+These annotations can be written to a .gtf file using writeAnnotationsToGTF(GRangesList_object, output_path).
 This will output the four .gtf files mentioned above, and can be excluded using the same arguments.
 ```rscript
 se.discoveryOnly <- bambu(reads = sample, annotations = annotations, genome = fa.file, quant = FALSE)
-writeAnnotatonsToGTF(se.discoveryOnly, "./output.gtf")
+writeAnnotationsToGTF(se.discoveryOnly, "./output.gtf")
 ```
 If you would prefer to manually filter the annotations, you can also provide the resulting annotations to writeToGTF() which will output the annotations as is.
 ```rscript
