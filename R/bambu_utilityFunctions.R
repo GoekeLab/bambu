@@ -184,11 +184,11 @@ handleWarnings <- function(readClassList, verbose){
     sampleNames = c()
     for(i in seq_along(readClassList)){
         readClassSe = readClassList[[i]]
-        if (is.character(readClassSe)) 
-            readClassSe <- readRDS(file = readClassSe)
+        if (is.character(readClassSe)) {
+            readClassSe <- readRDS(file = readClassSe)}
         warnings[[i]] = metadata(readClassSe)$warnings
-        if(is.null(metadata(readClassSe)$warnings)) warnings[[i]] = NA
-        sampleNames = c(sampleNames, colnames(readClassList[[i]]))
+        if(is.null(metadata(readClassSe)$warnings)) {warnings[[i]] = NA}
+        sampleNames = c(sampleNames, colnames(readClassSe))
     }
     names(warnings) = sampleNames
     if(verbose & any(lengths(warnings)>0)){
