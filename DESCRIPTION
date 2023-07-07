@@ -57,6 +57,7 @@ biocViews:
     GenomeAnnotation,
     GenomeAssembly,
     ImmunoOncology,
+    LongRead,
     MultipleComparison,
     Normalization, 
     RNASeq, 
