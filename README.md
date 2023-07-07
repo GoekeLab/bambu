@@ -485,7 +485,19 @@ rowData(se)
 
 ### Release History
 
-**bambu v3.2.6**
+**bambu v3.2.5**
+
+Release date: 2023-July-07
+
+Minor changes:
+
+- Fix crash when extremely large datasets provided
+- Speed up read class construction 
+- Add LongRead BiocView 
+- Update release history
+
+
+**bambu v3.2.4**
 
 Release date: 2023-Apr-26
 
