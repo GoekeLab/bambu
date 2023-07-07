@@ -31,10 +31,10 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.n
                 scanBamFlag(isSecondaryAlignment = FALSE), what = "cigar"),
             use.names = use.names)
         readGrgList[[counter]] = grglist(reads)
-        softClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[S].*','\\1',mcols(reads)$cigar)), na.rm=T)
-        softClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[S]$','\\1',mcols(reads)$cigar)), na.rm=T)
-        hardClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[H].*','\\1',mcols(reads)$cigar)), na.rm=T)
-        hardClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[H]$','\\1',mcols(reads)$cigar)), na.rm=T)
+        softClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[S].*','\\1',GenomicAlignments::cigar(reads))), na.rm=T)
+        softClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[S]$','\\1',GenomicAlignments::cigar(reads))), na.rm=T)
+        hardClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[H].*','\\1',GenomicAlignments::cigar(reads))), na.rm=T)
+        hardClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[H]$','\\1',GenomicAlignments::cigar(reads))), na.rm=T)
         mcols(readGrgList[[counter]])$softClip5Prime = softClip5Prime
         mcols(readGrgList[[counter]])$softClip3Prime = softClip3Prime
         mcols(readGrgList[[counter]])$hardClip5Prime = hardClip5Prime
