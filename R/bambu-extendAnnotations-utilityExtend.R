@@ -850,6 +850,10 @@ setNDR = function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 
   temp = c(metadata(extendedAnnotations)$lowConfidenceTranscripts[!toAdd], extendedAnnotations[toRemove])
   extendedAnnotations = c(extendedAnnotations[!toRemove], metadata(extendedAnnotations)$lowConfidenceTranscripts[toAdd])
   metadata(extendedAnnotations)$lowConfidenceTranscripts = temp
+
+  mcols(extendedAnnotations)$txid <- seq_along(extendedAnnotations)
+  minEqClasses <- getMinimumEqClassByTx(extendedAnnotations)
+  mcols(extendedAnnotations)$eqClassById <- minEqClasses$eqClassById
   
   metadata(extendedAnnotations)$NDRthreshold = NDR
 
