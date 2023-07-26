@@ -88,9 +88,9 @@ plotPCA <- function(se, count.data, group.variable) {
         p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
             ggplot2::geom_point(ggplot2::aes(col = groupVar)) +
             ggplot2::ylab(paste0("PC2 (",
-            round(pca_result$sdev[2] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[2]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::xlab(paste0("PC1 (",
-            round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[1]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::theme_minimal()
     } else {
         pca_result <- prcomp(t(as.matrix(count.data))) 
@@ -99,9 +99,9 @@ plotPCA <- function(se, count.data, group.variable) {
         p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
             ggplot2::geom_point(ggplot2::aes(col = runname)) +
             ggplot2::ylab(paste0("PC2 (",
-            round(pca_result$sdev[2] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[2]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::xlab(paste0("PC1 (",
-            round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[1]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::theme_minimal()
     }
     return(p)
