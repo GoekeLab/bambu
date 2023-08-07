@@ -1,6 +1,11 @@
-findPolyATail = function(reads, softClipPrime, polyAPattern, polyAPatternLong, mat, searchLengthUnaligned = 20){
-    polyASeqPrime <- GRanges(seqnames = c(1:length(reads)),
-        IRanges(rep(1,length(reads)), width=softClipPrime))
+findPolyATail = function(reads, softClipPrime, side, polyAPattern, polyAPatternLong, mat, searchLengthUnaligned = 20){
+    if(side == "start"){
+        polyASeqPrime <- GRanges(seqnames = c(1:length(reads)),
+            IRanges(rep(1,length(reads)), width=softClipPrime))
+    } else{
+        polyASeqPrime <- GRanges(seqnames = c(1:length(reads)),
+            IRanges(end = lengths(x), width=softClipPrime))
+    }
     x = mcols(reads)$seq
     names(x) = c(1:length(reads))
     polyASeqPrime = BSgenome::getSeq(x, polyASeqPrime)
@@ -22,5 +27,4 @@ findPolyATail = function(reads, softClipPrime, polyAPattern, polyAPatternLong, m
         substitutionMatrix=mat)
     paPrimeTable[extendedSet,] <- paPrimeTableLong
     return(paPrimeTable[,'score'])
-
 }

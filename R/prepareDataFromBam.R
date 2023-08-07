@@ -49,8 +49,12 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.n
         mcols(readGrgList[[counter]])$hardClip3Prime = hardClip3Prime
 
         #todo: seperate this by alignment strand
-        mcols(readGrgList[[counter]])$polyA5 = findPolyATail(reads, softClip5Prime, polyAPattern, polyAPatternLong, mat)
-        mcols(readGrgList[[counter]])$polyA3 = findPolyATail(reads, softClip3Prime, polyTPattern, polyTPatternLong, mat)
+        mcols(readGrgList[[counter]])$polyA5 = findPolyATail(reads, softClip5Prime, "start", polyAPattern, polyAPatternLong, mat)
+        mcols(readGrgList[[counter]])$polyA3 = findPolyATail(reads, softClip3Prime, "end", polyTPattern, polyTPatternLong, mat)
+        
+        # mcols(readGrgList[[counter]])$polyA = rep(NA, length(reads))
+        # mcols(readGrgList[[counter]])$polyA[strand(reads)=="+"] = findPolyATail(reads[strand(reads)=="+"], softClip5Prime, polyAPattern, polyAPatternLong, mat)
+        # mcols(readGrgList[[counter]])$polyA[strand(reads)=="-"] = findPolyATail(reads[strand(reads)=="-"], softClip3Prime, polyTPattern, polyTPatternLong, mat)
         
         counter <- counter + 1
     }
