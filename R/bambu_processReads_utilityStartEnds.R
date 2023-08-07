@@ -1,4 +1,4 @@
-findPolyATail = function(reads, softClipPrime, polyAPattern, polyAPatternLong, mat){
+findPolyATail = function(reads, softClipPrime, polyAPattern, polyAPatternLong, mat, searchLengthUnaligned = 20){
     polyASeqPrime <- GRanges(seqnames = c(1:length(reads)),
         IRanges(rep(1,length(reads)), width=softClipPrime))
     x = mcols(reads)$seq
@@ -11,6 +11,7 @@ findPolyATail = function(reads, softClipPrime, polyAPattern, polyAPatternLong, m
         gapOpening=-2,
         gapExtension= -3,
         substitutionMatrix=mat)
+
     extendedSet <- which(paPrimeTable[,'score']> (0.95*searchLengthUnaligned))
     paPrimeTableLong <- barcodeAlignmentExtended(
         pattern=polyAPatternLong, 
