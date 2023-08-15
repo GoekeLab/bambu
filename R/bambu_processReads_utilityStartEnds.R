@@ -1,14 +1,13 @@
-findPolyATail = function(reads, softClipPrime, side, polyAPattern, polyAPatternLong, mat, searchLengthUnaligned = 20){
+findPolyATail = function(seqs, softClipPrime, side, polyAPattern, polyAPatternLong, mat, searchLengthUnaligned = 20){
+    names(seqs) = c(1:length(seqs))
     if(side == "start"){
-        polyASeqPrime <- GRanges(seqnames = c(1:length(reads)),
-            IRanges(rep(1,length(reads)), width=softClipPrime))
+        polyASeqPrime <- GRanges(seqnames = c(1:length(seqs)),
+            IRanges(rep(1,length(seqs)), width=softClipPrime))
     } else{
-        polyASeqPrime <- GRanges(seqnames = c(1:length(reads)),
-            IRanges(end = lengths(x), width=softClipPrime))
+        polyASeqPrime <- GRanges(seqnames = c(1:length(seqs)),
+            IRanges(end = lengths(seqs), width=softClipPrime))
     }
-    x = mcols(reads)$seq
-    names(x) = c(1:length(reads))
-    polyASeqPrime = BSgenome::getSeq(x, polyASeqPrime)
+    polyASeqPrime = BSgenome::getSeq(seqs, polyASeqPrime)
     paPrimeTable <- barcodeAlignmentExtended(
         pattern=polyAPattern, 
         subject=polyASeqPrime,
