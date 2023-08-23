@@ -184,24 +184,27 @@ handleWarnings <- function(readClassList, verbose){
     sampleNames = c()
     for(i in seq_along(readClassList)){
         readClassSe = readClassList[[i]]
-        if (is.character(readClassSe)) 
-            readClassSe <- readRDS(file = readClassSe)
-        warnings[[i]] = metadata(readClassSe)$warnings
+        if (is.character(readClassSe)){
+            readClassSe <- readRDS(file = readClassSe)}
+        warnings[[i]] = NA
+        if(!is.null(metadata(readClassSe)$warnings)){
+            warnings[[i]] = metadata(readClassSe)$warnings}
         sampleNames = c(sampleNames, colnames(readClassList[[i]]))
     }
     names(warnings) = sampleNames
 
-    if(verbose & any(lengths(warnings)>0)){
+    if(verbose & any(!is.na(warnings))){
         message("--- per sample warnings during read class construction ---")
-        for(i in seq_along(warnings)){
-            if(lengths(warnings)[i]>0){
-                message("Warnings for: ", sampleNames[i])
-                sapply(warnings[[i]], message)
-            }
+        warnings.tmp = warnings[!is.na(warnings)]
+        for(i in seq_along(warnings.tmp)){
+            message("Warnings for: ", names(warnings.tmp)[i])
+            sapply(warnings.tmp[[i]], message)
         }
     } else {
-        message("Detected ", sum(lengths(warnings)), " warnings across the samples during ",
-        "read class construction. Access warnings with metadata(bambuOutput)$warnings")
+        warningCount = sum(lengths(warnings[!is.na(warnings)]))
+        if(warningCount > 0){
+            message("Detected ", warningCount, " warnings across the samples during ",
+        "read class construction. Access warnings with metadata(bambuOutput)$warnings")}
     }
     return(warnings)
 }
