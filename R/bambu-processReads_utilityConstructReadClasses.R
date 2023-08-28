@@ -449,16 +449,13 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
                                     ranges(geneRanges[subjectHits(ov)[multiHits]]))
         filteredMultiHits =  data.frame(queryHits = queryHits(ov)[multiHits], 
                                         intersectWidth = sum(width(rangeIntersect)), 
-                                        subjectHits = subjectHits(ov)[multiHits]) %>% 
-            group_by(queryHits) %>% summarise(subjectHits = subjectHits[which.max(intersectWidth)],
-                                                    intersectWidth = max(intersectWidth))
+                                         subjectHits = subjectHits(ov)[multiHits])
         if(fusionMode) {
         filteredMultiHits <- filteredMultiHits %>%  
             filter(intersectWidth>min.exonOverlap) %>%  
             mutate(geneid = names(geneRanges)[subjectHits]) %>%  distinct() %>% 
             group_by(queryHits) %>% summarise(geneid = paste(geneid, collapse=':'))
         geneIds[filteredMultiHits$queryHits] <- filteredMultiHits$geneid
-        
         } else {
         filteredMultiHits <- filteredMultiHits %>% 
             group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% 
