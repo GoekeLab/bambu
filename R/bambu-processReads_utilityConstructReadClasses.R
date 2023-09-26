@@ -16,6 +16,8 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                                use.names = FALSE)
     mcols(reads.singleExon)$id <- mcols(readGrgList[
         elementNROWS(readGrgList) == 1])$id
+    mcols(reads.singleExon)$sampleID <- mcols(readGrgList[
+        elementNROWS(readGrgList) == 1])$sampleID    
     #only keep multi exons reads in readGrgList   
     readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
     if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
@@ -94,7 +96,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
-        confidenceType, readCount, readIds)
+        confidenceType, readCount, readIds, sampleIDs)
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
     return(exonsByReadClass)
@@ -176,7 +178,8 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         end = pmax(end(readRanges), intronEndCoordinatesInt),
         strand = readStrand, confidenceType = readConfidence,
         alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+',
-        readId = mcols(readGrgList)$id)
+        readId = mcols(readGrgList)$id,
+        sampleID = mcols(readGrgList)$sampleID)
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
@@ -186,7 +189,8 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
-                readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
+                readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), 
+                readIds = list(readId), sampleIDs = list(sampleID),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -244,13 +248,15 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     # by their minimum read class coordinates
     #remove duplicate ranges
     counts = as.data.frame(reads.singleExon) %>% 
-        mutate(id = mcols(reads.singleExon)$id) %>% 
+        mutate(id = mcols(reads.singleExon)$id,
+        sampleID = mcols(reads.singleExon)$sampleID) %>% 
         group_by(seqnames,start,end,strand) %>% 
-        summarise(n=n(), id = list(id)) %>% 
+        summarise(n=n(), id = list(id), sampleID = list(sampleID)) %>% 
         as.data.frame()
     reads.singleExon = unique(reads.singleExon)
     mcols(reads.singleExon)$counts <- counts$n
     mcols(reads.singleExon)$id <- counts$id
+    mcols(reads.singleExon)$sampleID <- counts$sampleID
 
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
@@ -309,17 +315,18 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
              readStart = start(granges)[queryHits],
              readEnd = end(granges)[queryHits],
              counts = mcols(granges)$counts[queryHits],
-             readId = mcols(granges[queryHits])$id)
+             readId = mcols(granges[queryHits])$id,
+             sampleID = mcols(granges[queryHits])$sampleID)
     hitsDF <- hitsDF %>% 
         dplyr::select(chr, start, end, readStart, readEnd, 
             strand, readClassId, alignmentStrand, 
-            counts, readId) %>%
+            counts, readId, sampleID) %>%
         group_by(readClassId) %>% 
         summarise(start = start[1], end = end[1], 
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(unlist(readId))) %>% 
+            readIds = list(unlist(readId)), sampleIDs = list(unlist(sampleID))) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
@@ -338,7 +345,7 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
     hitsDF <- dplyr::select(hitsDF, chr.rc = chr, strand.rc = strand,
         intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, 
-        readCount.posStrand, readIds)
+        readCount.posStrand, readIds, sampleIDs)
     mcols(exByReadClassUnspliced) <- hitsDF
     return(exByReadClassUnspliced)
 }

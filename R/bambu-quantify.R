@@ -2,31 +2,22 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(readClass, annotations, emParameters, 
+bambu.quantify <- function(i, readClassDist, countMatrix, annotations, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
-    min.exonDistance = isoreParameters[["min.exonDistance"]]
-    min.primarySecondaryDist =
-        isoreParameters[['min.primarySecondaryDist']] 
-    min.primarySecondaryDistStartEnd =
-        isoreParameters[['min.primarySecondaryDistStartEnd2']]
-    if (is.character(readClass)) readClass <- readRDS(file = readClass)
-    readClassDist <- isore.estimateDistanceToAnnotations(readClass, annotations,
-                                                         min.exonDistance = min.exonDistance,
-                                                         min.primarySecondaryDist = min.primarySecondaryDist,
-                                                         min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
-                                                         verbose = verbose)
-    metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
-    incompatibleCounts <- processIncompatibleCounts(readClassDist)
+    
+    metadata(readClassDist)$distTable$readCount <- countMatrix[,i] 
+    #distTable$readCount <- assays(seReadClass)$counts
     readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
+    incompatibleCounts <- processIncompatibleCounts(readClassDist)
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
     compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
-    setnames(incompatibleCounts, "counts", colnames(readClass))
+    setnames(incompatibleCounts, "counts", colnames(countMatrix)[i])
     counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
-    colNameRC <- colnames(readClass)
-    colDataRC <- colData(readClass)
+    colNameRC <- colnames(countMatrix)[i]
+    colDataRC <- NULL # TODO carry over coldata??!!
     sig.digit <- emParameters[["sig.digit"]]
     seOutput <- SummarizedExperiment(
         assays = SimpleList(counts = matrix(round(counts$counts,sig.digit), ncol = 1,
@@ -35,12 +26,9 @@ bambu.quantify <- function(readClass, annotations, emParameters,
         fullLengthCounts = matrix(round(counts$fullLengthCounts,sig.digit), ncol = 1,
             dimnames = list(NULL, colNameRC)),
         uniqueCounts = matrix(counts$uniqueCounts, 
-            ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
+            ncol = 1, dimnames = list(NULL, colNameRC))))
     metadata(seOutput)$incompatibleCounts = incompatibleCounts
-    if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
-    if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-        generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
-                                    annotations)
+
     return(seOutput)
 }
 

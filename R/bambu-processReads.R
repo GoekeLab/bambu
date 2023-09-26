@@ -44,15 +44,58 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     defaultModels = isoreParameters[["defaultModels"]]
     returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
-    readClassList <- bplapply(names(reads), function(bamFileName) {
-        bambu.processReadsByFile(bam.file = reads[bamFileName],
+
+    readGrgList <- bplapply(seq_along(reads), function(i) {
+        bambu.processReadsByFile(bam.file = reads[names(reads)[i]],
         genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)},
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, index = i)},
         BPPARAM = bpParameters)
+    readGrgList = do.call(c, readGrgList)    
+    mcols(readGrgList)$id <- seq_along(readGrgList) 
+
+    readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
+        readClass.outputDir = readClass.outputDir,
+        stranded = stranded, min.readCount = min.readCount, 
+        fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
+        defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
+
+    metadata(readClassList)$samples = names(reads)
+    countMatrix = splitReadClassFiles(readClassList)
+    colnames(countMatrix) = metadata(readClassList)$samples
+    rownames(countMatrix) = rownames(readClassList)
+    metadata(readClassList)$countMatrix = countMatrix
+
+    # TODO return output
+    # if (!is.null(readClass.outputDir)) {
+    #     readClassFile <- paste0(readClass.outputDir,names(bam.file),
+    #                             "_readClassSe.rds")
+    #     if (file.exists(readClassFile)) {
+    #         show(paste(readClassFile, "exists, will be overwritten"))
+    #         warning(readClassFile, "exists, will be overwritten")
+    #     } else {
+    #         readClassFile <- BiocFileCache::bfcnew(BiocFileCache::BiocFileCache(
+    #             readClass.outputDir, ask = FALSE),
+    #             paste0(names(bam.file),"_readClassSe"), ext = ".rds")
+    #     }
+    #     saveRDS(se, file = readClassFile)
+    #     se <- readClassFile
+    # }
+
+
+    # readClassList <- bplapply(names(reads), function(bamFileName) {
+    #     bambu.processReadsByFile(bam.file = reads[bamFileName],
+    #     genomeSequence = genomeSequence,annotations = annotations,
+    #     readClass.outputDir = readClass.outputDir,
+    #     stranded = stranded, min.readCount = min.readCount, 
+    #     fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
+    #     defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
+    #     lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)},
+    #     BPPARAM = bpParameters)
     return(readClassList)
 }
 
@@ -63,7 +106,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE) {
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, index = 0) {
     if(verbose) message(names(bam.file)[1])
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     warnings = c()
@@ -92,6 +135,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
+    mcols(readGrgList)$sampleID = index
     #removes reads that are outside genome coordinates
     badReads = which(max(end(ranges(readGrgList)))>=
                          seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
@@ -106,6 +150,15 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     if(length(readGrgList) == 0) {
         stop("No reads left after filtering.")
     }
+    
+    return(readGrgList)
+}
+
+constructReadClasses <- function(readGrgList, genomeSequence, annotations,
+    readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
+    fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE){
+    warnings = c() ###TODO
     # construct read classes for each chromosome seperately 
     if(lowMemory) se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
                                                       annotations, stranded, verbose,bam.file)
@@ -123,15 +176,17 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         # create SE object with reconstructed readClasses
         se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
-                                         uniqueJunctions, runName = names(bam.file)[1],
+                                         uniqueJunctions, runName = "TODO",
                                          annotations, stranded, verbose)
     }
+
     metadata(se)$warnings = warnings
     if(trackReads){
         metadata(se)$readNames = names(readGrgList)
         metadata(se)$readId = mcols(readGrgList)$id
     }
     rm(readGrgList)
+    refSeqLevels <- seqlevels(genomeSequence)
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se,genomeSequence, annotations, 
@@ -142,20 +197,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              min.exonOverlap = min.exonOverlap,
                              fusionMode = fusionMode,
                              verbose = verbose)
-    if (!is.null(readClass.outputDir)) {
-        readClassFile <- paste0(readClass.outputDir,names(bam.file),
-                                "_readClassSe.rds")
-        if (file.exists(readClassFile)) {
-            show(paste(readClassFile, "exists, will be overwritten"))
-            warning(readClassFile, "exists, will be overwritten")
-        } else {
-            readClassFile <- BiocFileCache::bfcnew(BiocFileCache::BiocFileCache(
-                readClass.outputDir, ask = FALSE),
-                paste0(names(bam.file),"_readClassSe"), ext = ".rds")
-        }
-        saveRDS(se, file = readClassFile)
-        se <- readClassFile
-    }
     return(se)
 }
 
@@ -194,4 +235,20 @@ seqlevelCheckReadsAnnotation <- function(reads, annotations){
             "annotations might be incomplete. Please compare objects ",
             "on the same reference"))
     return(warnings)
+}
+
+splitReadClassFiles = function(readClassFile){
+  rowIndex = c()
+  sampleCount = c()
+  counts = c()
+  for(i in seq_along(metadata(readClassFile)$samples)){
+    counts.sample = sapply(rowData(readClassFile)$sampleIDs, FUN = function(x){sum(x==i)})
+    counts = c(counts, counts.sample[counts.sample != 0])
+    rowIndex = c(rowIndex, which(counts.sample != 0))
+    sampleCount = c(sampleCount, sum(counts.sample !=0))
+  }
+  counts = sparseMatrix(i = rowIndex,
+               j = rep(seq_along(metadata(readClassFile)$samples), sampleCount),
+               x = counts)
+  return(counts)
 }

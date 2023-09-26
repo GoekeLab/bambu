@@ -171,11 +171,11 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory)
     }
-    warnings = handleWarnings(readClassList, verbose)
+    #warnings = handleWarnings(readClassList, verbose)
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         message("--- Start extending annotations ---")
-        annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
+        annotations <- bambu.extendAnnotations(list(readClassList), annotations, NDR,
                                                isoreParameters, stranded, bpParameters, fusionMode, verbose)
         metadata(annotations)$warnings = warnings
         if (!quant) return(annotations)
@@ -184,7 +184,30 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         message("--- Start isoform quantification ---")
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
-        countsSe <- bplapply(readClassList, bambu.quantify,
+
+        #Do distTable calculation once on all read classes
+        min.exonDistance = isoreParameters[["min.exonDistance"]]
+        min.primarySecondaryDist =
+            isoreParameters[['min.primarySecondaryDist']] 
+        min.primarySecondaryDistStartEnd =
+            isoreParameters[['min.primarySecondaryDistStartEnd2']]
+        if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
+        readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
+                                                            min.exonDistance = min.exonDistance,
+                                                            min.primarySecondaryDist = min.primarySecondaryDist,
+                                                            min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
+                                                            verbose = verbose)
+        metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
+        #metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
+        # if (trackReads) metadata(seOutput)$readToTranscriptMap = 
+        #     generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
+        #                             annotations)
+        # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
+        
+        ####
+        countMatrix2 = metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
+        countsSe <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify, 
+                            readClassDist = readClassDist, countMatrix = countMatrix2,
                              annotations = annotations, isoreParameters = isoreParameters,
                              emParameters = emParameters, trackReads = trackReads, 
                              returnDistTable = returnDistTable, verbose = verbose, 
