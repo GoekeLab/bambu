@@ -15,44 +15,46 @@
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
-    lowMemory=FALSE, trackReads = trackReads, fusionMode = fusionMode) {
+    lowMemory=FALSE, trackReads = trackReads, fusionMode = fusionMode, rgrLists = FALSE) {
     genomeSequence <- checkInputSequence(genomeSequence)
+    if(rgrLists == FALSE){
     # ===# create BamFileList object from character #===#
-    if (is(reads, "BamFile")) {
-        if (!is.null(yieldSize)) {
-            yieldSize(reads) <- yieldSize
+        if (is(reads, "BamFile")) {
+            if (!is.null(yieldSize)) {
+                yieldSize(reads) <- yieldSize
+            } else {
+                yieldSize <- yieldSize(reads)
+            }
+            reads <- BamFileList(reads)
+            names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
+        } else if (is(reads, "BamFileList")) {
+            if (!is.null(yieldSize)) {
+                yieldSize(reads) <- yieldSize
+            } else {
+                yieldSize <- min(yieldSize(reads))
+            }
+        } else if (any(!grepl("\\.bam$", reads))) {
+            stop("Bam file is missing from arguments.")
         } else {
-            yieldSize <- yieldSize(reads)
+            if (is.null(yieldSize)) yieldSize <- NA
+            reads <- BamFileList(reads, yieldSize = yieldSize)
+            names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
         }
-        reads <- BamFileList(reads)
-        names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
-    } else if (is(reads, "BamFileList")) {
-        if (!is.null(yieldSize)) {
-            yieldSize(reads) <- yieldSize
-        } else {
-            yieldSize <- min(yieldSize(reads))
-        }
-    } else if (any(!grepl("\\.bam$", reads))) {
-        stop("Bam file is missing from arguments.")
-    } else {
-        if (is.null(yieldSize)) yieldSize <- NA
-        reads <- BamFileList(reads, yieldSize = yieldSize)
-        names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     }
     min.readCount = isoreParameters[["min.readCount"]]
     fitReadClassModel = isoreParameters[["fitReadClassModel"]]
     defaultModels = isoreParameters[["defaultModels"]]
     returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
-
+        
     readGrgList <- bplapply(seq_along(reads), function(i) {
-        bambu.processReadsByFile(bam.file = reads[names(reads)[i]],
+        bambu.processReadsByFile(bam.file = reads[i],
         genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, index = i)},
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, index = i, rgrLists = rgrLists)},
         BPPARAM = bpParameters)
     readGrgList = do.call(c, readGrgList)    
     mcols(readGrgList)$id <- seq_along(readGrgList) 
@@ -64,7 +66,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
 
-    metadata(readClassList)$samples = names(reads)
+    metadata(readClassList)$samples = reads
     countMatrix = splitReadClassFiles(readClassList)
     colnames(countMatrix) = metadata(readClassList)$samples
     rownames(countMatrix) = rownames(readClassList)
@@ -106,9 +108,15 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, index = 0) {
-    if(verbose) message(names(bam.file)[1])
-    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, index = 0, rgrLists = FALSE) {
+    #if(verbose) message(names(bam.file)[1])
+    if(rgrLists){
+        print(bam.file)
+        readGrgList <- readRDS(bam.file)
+    } else{
+        readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
+    }
+    
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
     if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))

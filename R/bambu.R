@@ -139,7 +139,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
-    fusionMode = FALSE, verbose = FALSE) {
+    fusionMode = FALSE, verbose = FALSE, rgrLists = FALSE) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -155,7 +155,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
     isBamFiles = !isRDSs
     if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
-    if (isBamFiles | is(reads, "BamFileList")) {
+    if(TRUE){
+    #if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
             message("There are more than 10 samples, read class files
@@ -169,7 +170,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
-            lowMemory = lowMemory)
+            lowMemory = lowMemory, rgrLists = rgrLists)
     }
     #warnings = handleWarnings(readClassList, verbose)
     if (!discovery & !quant) return(readClassList)
