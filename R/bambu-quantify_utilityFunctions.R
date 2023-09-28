@@ -44,19 +44,18 @@ processIncompatibleCounts <- function(readClassDist){
 #' @import data.table
 #' @noRd
 genEquiRCs <- function(readClassDist, annotations, verbose){
-  distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
-  eqClassCount <- getUniCountPerEquiRC(distTable)
+  eqClassCount <- getUniCountPerEquiRC(metadata(readClassDist)$distTable)
   eqClassTable <- addEmptyRC(eqClassCount, annotations)
   # create equiRC id 
   eqClassTable <- eqClassTable %>% 
     group_by(eqClassById) %>%
     mutate(eqClassId = cur_group_id()) %>%
     data.table()
-  
+
   tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
                              txlen = sum(width(annotations))))
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
-
+  
   # remove unused columns
   eqClassTable[, eqClassById := NULL]
   return(eqClassTable)

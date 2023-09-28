@@ -200,7 +200,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                             min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
-        #metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
+        metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
         # if (trackReads) metadata(seOutput)$readToTranscriptMap = 
         #     generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
         #                             annotations)
