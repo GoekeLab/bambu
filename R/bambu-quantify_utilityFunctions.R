@@ -487,6 +487,23 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
   return(readToTranscriptMap)
 }
 
+#' Get counts of equivilent classes from a distTable and match to a readClassDt
+#' @noRd
+calculateEqClassCounts = function(distTable, readClassDt){
+        eqClasses = distTable %>% group_by(eqClassById) %>%
+        mutate(anyEqual = any(equal)) %>%
+        select(eqClassById, firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
+        distinct() %>%
+        mutate(nobs = sum(readCount),
+                rcWidth = ifelse(anyEqual, max(totalWidth), 
+                                max(firstExonWidth))) %>%
+        select(eqClassById,GENEID,nobs,rcWidth) %>% 
+        ungroup()  %>%
+        distinct()
+        eqCounts = y$nobs[match(readClassDt$eqClassById,eqClasses$eqClassById)]
+        eqCounts[is.na(eqCounts)] = 0
+        return(eqCounts)
+    }
 
 #' calculate CPM post estimation
 #' @noRd
