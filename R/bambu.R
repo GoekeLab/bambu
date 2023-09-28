@@ -195,8 +195,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
         metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)        
-        
-        ####
         countMatrix2 = metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
         countsSe <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify, 
@@ -205,7 +203,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                              emParameters = emParameters, trackReads = trackReads, 
                              returnDistTable = returnDistTable, verbose = verbose, 
                              BPPARAM = bpParameters)
-        countsSe <- combineCountSes(countsSe, trackReads)
+        countsSe <- combineCountSes(countsSe)
         rowRanges(countsSe) <- annotations
         metadata(countsSe)$warnings = warnings
         if (trackReads) metadata(seOutput)$readToTranscriptMap = 
