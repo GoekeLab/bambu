@@ -208,8 +208,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         
         ####
         countMatrix2 = metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
+        readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
         countsSe <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify, 
-                            readClassDist = readClassDist, countMatrix = countMatrix2,
+                            readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
                              annotations = annotations, isoreParameters = isoreParameters,
                              emParameters = emParameters, trackReads = trackReads, 
                              returnDistTable = returnDistTable, verbose = verbose, 

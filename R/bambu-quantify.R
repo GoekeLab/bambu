@@ -2,13 +2,33 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(i, readClassDist, countMatrix, annotations, emParameters, 
+bambu.quantify <- function(i, readClassDist, readClassDt, countMatrix, annotations, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
-    
     metadata(readClassDist)$distTable$readCount <- countMatrix[,i] 
+    metadata(readClassDist)$distTable = metadata(readClassDist)$distTable[metadata(readClassDist)$distTable$readCount != 0,]
     #distTable$readCount <- assays(seReadClass)$counts
-    readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
+    
+
+    #calculate equivilent class counts
+    start.ptm <- proc.time()
+    y = metadata(readClassDist)$distTable %>% group_by(eqClassById) %>%
+    mutate(anyEqual = any(equal)) %>%
+    select(eqClassById, firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
+    distinct() %>%
+    mutate(nobs = sum(readCount),
+            rcWidth = ifelse(anyEqual, max(totalWidth), 
+                            max(firstExonWidth))) %>%
+    select(eqClassById,GENEID,nobs,rcWidth) %>% 
+    ungroup()  %>%
+    distinct()
+    readClassDt$nobs = y$nobs[match(readClassDt$eqClassById,y$eqClassById)]
+    readClassDt$nobs[is.na(readClassDt$nobs)] = 0
+    end.ptm <- proc.time()
+    if (verbose) message("Finished eqv.class counts in ",
+                         round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    ####
+
     incompatibleCounts <- processIncompatibleCounts(readClassDist)
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
@@ -28,7 +48,6 @@ bambu.quantify <- function(i, readClassDist, countMatrix, annotations, emParamet
         uniqueCounts = matrix(counts$uniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))))
     metadata(seOutput)$incompatibleCounts = incompatibleCounts
-
     return(seOutput)
 }
 

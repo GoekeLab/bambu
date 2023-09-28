@@ -57,7 +57,8 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
   
   # remove unused columns
-  eqClassTable[, eqClassById := NULL]
+  #eqClassTable[, eqClassById := NULL]
+
   return(eqClassTable)
 }
 
