@@ -214,28 +214,12 @@ handleWarnings <- function(readClassList, verbose){
 #' @noRd
 combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
     sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
-    if(trackReads){
-        readToTranscriptMaps = lapply(countsSe, FUN = function(se){metadata(se)$readToTranscriptMap})
-        names(readToTranscriptMaps) = sampleNames
-        countsSe = lapply(countsSe, FUN = function(se){
-            metadata(se)$readToTranscriptMap=NULL
-            return(se)})
-    }
-    if(returnDistTable){
-        distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
-        names(distTables) = sampleNames
-        countsSe = lapply(countsSe, FUN = function(se){
-            metadata(se)$distTable=NULL
-            return(se)})
-    }
     # combine incompatible counts
     incompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$incompatibleCounts}))
     countsSe = lapply(countsSe, FUN = function(se){
         metadata(se)$incompatibleCounts=NULL
         return(se)})
     countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
-    if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
-    if(returnDistTable) metadata(countsSe)$distTables = distTables
     metadata(countsSe)$incompatibleCounts = incompatibleCounts
     return(countsSe)
 }

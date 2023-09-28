@@ -186,25 +186,15 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
 
-        #Do distTable calculation once on all read classes
-        min.exonDistance = isoreParameters[["min.exonDistance"]]
-        min.primarySecondaryDist =
-            isoreParameters[['min.primarySecondaryDist']] 
-        min.primarySecondaryDistStartEnd =
-            isoreParameters[['min.primarySecondaryDistStartEnd2']]
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
         if(is.list(readClassList)) readClassList = readClassList[[1]]
         readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
-                                                            min.exonDistance = min.exonDistance,
-                                                            min.primarySecondaryDist = min.primarySecondaryDist,
-                                                            min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
+                                                            min.exonDistance = isoreParameters[["min.exonDistance"]],
+                                                            min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']] 
+                                                            min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
-        metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
-        # if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-        #     generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
-        #                             annotations)
-        # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
+        metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)        
         
         ####
         countMatrix2 = metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
@@ -215,9 +205,13 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                              emParameters = emParameters, trackReads = trackReads, 
                              returnDistTable = returnDistTable, verbose = verbose, 
                              BPPARAM = bpParameters)
-        countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
+        countsSe <- combineCountSes(countsSe, trackReads)
         rowRanges(countsSe) <- annotations
         metadata(countsSe)$warnings = warnings
+        if (trackReads) metadata(seOutput)$readToTranscriptMap = 
+        generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
+                                    annotations)
+        if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
         if (rm.readClassSe) file.remove(unlist(readClassList))
         message("--- Finished running Bambu ---")
         return(countsSe)
