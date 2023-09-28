@@ -155,7 +155,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
     isBamFiles = !isRDSs
     if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
-    if(TRUE){
+    if(rgrLists){
     #if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
@@ -193,6 +193,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         min.primarySecondaryDistStartEnd =
             isoreParameters[['min.primarySecondaryDistStartEnd2']]
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
+        if(is.list(readClassList)) readClassList = readClassList[[1]]
         readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
                                                             min.exonDistance = min.exonDistance,
                                                             min.primarySecondaryDist = min.primarySecondaryDist,
