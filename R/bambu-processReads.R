@@ -65,9 +65,9 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
-
-    metadata(readClassList)$samples = reads
+    metadata(readClassList)$samples = names(reads)
     countMatrix = splitReadClassFiles(readClassList)
+
     colnames(countMatrix) = metadata(readClassList)$samples
     rownames(countMatrix) = rownames(readClassList)
     metadata(readClassList)$countMatrix = countMatrix
@@ -158,7 +158,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     if(length(readGrgList) == 0) {
         stop("No reads left after filtering.")
     }
-    
     return(readGrgList)
 }
 
@@ -258,5 +257,16 @@ splitReadClassFiles = function(readClassFile){
   counts = sparseMatrix(i = rowIndex,
                j = rep(seq_along(metadata(readClassFile)$samples), sampleCount),
                x = counts)
+
+#   countMat = sapply(seq_along(metadata(readClassFile)$samples), FUN = function(i){
+#     counts.sample = sapply(rowData(readClassFile)$sampleIDs, FUN = function(x){sum(x==i)})
+#     return(c(counts.sample[counts.sample != 0], #counts
+#         which(counts.sample != 0)), #rowindex
+#         sum(counts.sample !=0)) #sampleCount
+#   })
+#   counts = sparseMatrix(i = countMat[2,],
+#                j = rep(seq_along(metadata(readClassFile)$samples), countMat[3,]),
+#                x = countMat[1,])
+
   return(counts)
 }

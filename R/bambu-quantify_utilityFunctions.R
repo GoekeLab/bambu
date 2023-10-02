@@ -500,7 +500,7 @@ calculateEqClassCounts = function(distTable, readClassDt){
         select(eqClassById,GENEID,nobs,rcWidth) %>% 
         ungroup()  %>%
         distinct()
-        eqCounts = y$nobs[match(readClassDt$eqClassById,eqClasses$eqClassById)]
+        eqCounts = eqClasses$nobs[match(readClassDt$eqClassById,eqClasses$eqClassById)]
         eqCounts[is.na(eqCounts)] = 0
         return(eqCounts)
     }
