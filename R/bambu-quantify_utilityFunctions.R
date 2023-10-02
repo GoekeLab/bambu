@@ -44,21 +44,21 @@ processIncompatibleCounts <- function(readClassDist){
 #' @import data.table
 #' @noRd
 genEquiRCs <- function(readClassDist, annotations, verbose){
-  distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
-  eqClassCount <- getUniCountPerEquiRC(distTable)
+  eqClassCount <- getUniCountPerEquiRC(metadata(readClassDist)$distTable)
   eqClassTable <- addEmptyRC(eqClassCount, annotations)
   # create equiRC id 
   eqClassTable <- eqClassTable %>% 
     group_by(eqClassById) %>%
     mutate(eqClassId = cur_group_id()) %>%
     data.table()
-  
+
   tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
                              txlen = sum(width(annotations))))
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
-
+  
   # remove unused columns
-  eqClassTable[, eqClassById := NULL]
+  #eqClassTable[, eqClassById := NULL]
+
   return(eqClassTable)
 }
 
@@ -487,6 +487,23 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
   return(readToTranscriptMap)
 }
 
+#' Get counts of equivilent classes from a distTable and match to a readClassDt
+#' @noRd
+calculateEqClassCounts = function(distTable, readClassDt){
+        eqClasses = distTable %>% group_by(eqClassById) %>%
+        mutate(anyEqual = any(equal)) %>%
+        select(eqClassById, firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
+        distinct() %>%
+        mutate(nobs = sum(readCount),
+                rcWidth = ifelse(anyEqual, max(totalWidth), 
+                                max(firstExonWidth))) %>%
+        select(eqClassById,GENEID,nobs,rcWidth) %>% 
+        ungroup()  %>%
+        distinct()
+        eqCounts = eqClasses$nobs[match(readClassDt$eqClassById,eqClasses$eqClassById)]
+        eqCounts[is.na(eqCounts)] = 0
+        return(eqCounts)
+    }
 
 #' calculate CPM post estimation
 #' @noRd

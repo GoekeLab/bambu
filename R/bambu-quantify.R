@@ -2,83 +2,39 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(readClass, annotations, emParameters, 
+bambu.quantify <- function(i, readClassDist, readClassDt, countMatrix, annotations, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
-                           verbose = FALSE, readGrgListFile = NULL, 
-                           isoreParameters = setIsoreParameters(NULL)) {
-  min.exonDistance = isoreParameters[["min.exonDistance"]]
-  min.primarySecondaryDist =
-    isoreParameters[['min.primarySecondaryDist']] 
-  min.primarySecondaryDistStartEnd =
-    isoreParameters[['min.primarySecondaryDistStartEnd2']]
-  if (is.character(readClass)) readClass <- readRDS(file = readClass)
-  readClassDist <- isore.estimateDistanceToAnnotations(readClass, annotations,
-                                                       min.exonDistance = min.exonDistance,
-                                                       min.primarySecondaryDist = min.primarySecondaryDist,
-                                                       min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
-                                                       verbose = verbose)
-  metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
-  incompatibleCounts <- processIncompatibleCounts(readClassDist)
-  readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-  compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
-  
-  ### add ### 
-  rm(readClassDt)
-  ### add ### 
-  
-  incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
-  incompatibleCounts[is.na(counts), counts := 0]
-  compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
-  setnames(incompatibleCounts, "counts", colnames(readClass))
-  counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
-  
-  ### add ### 
-  rm(compatibleCounts)
-  ### add ###
-  
-  colNameRC <- colnames(readClass)
-  colDataRC <- colData(readClass)
-  sig.digit <- emParameters[["sig.digit"]]
-  seOutput <- SummarizedExperiment(
-    assays = SimpleList(counts = matrix(round(counts$counts,sig.digit), ncol = 1,
-                                        dimnames = list(NULL, colNameRC)), 
-                        CPM = matrix(round(counts$CPM,sig.digit), ncol =  1, dimnames = list(NULL, colNameRC)),
-                        fullLengthCounts = matrix(round(counts$fullLengthCounts,sig.digit), ncol = 1,
-                                                  dimnames = list(NULL, colNameRC)),
-                        uniqueCounts = matrix(counts$uniqueCounts, 
-                                              ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
-  
-  ### add ###
-  rm(counts)
-  ### add ### 
-  
-  metadata(seOutput)$incompatibleCounts = incompatibleCounts
-  
-  ### add ### 
-  rm(incompatibleCounts)
-  ### add ###
-  
-  if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
-  if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-    generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
-                                annotations)
-  
-  ### add ### 
-  rm(readClassDist)
-  ### add ### 
-  
-  ### add ###
-  if (!is.null(readGrgListFile)){
-      seOutput <- list(incompatibleCounts = as(metadata(seOutput)$incompatibleCounts[[colnames(seOutput)]], "sparseVector"),
+                           verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+    metadata(readClassDist)$distTable$readCount <- countMatrix[,i] 
+    metadata(readClassDist)$distTable = metadata(readClassDist)$distTable[metadata(readClassDist)$distTable$readCount != 0,]
+    readClassDt$nobs = calculateEqClassCounts(metadata(readClassDist)$distTable, readClassDt)
+    incompatibleCounts <- processIncompatibleCounts(readClassDist)
+    compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
+    incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
+    incompatibleCounts[is.na(counts), counts := 0]
+    compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
+    setnames(incompatibleCounts, "counts", colnames(countMatrix)[i])
+    counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
+    colNameRC <- colnames(countMatrix)[i]
+    colDataRC <- NULL # TODO carry over coldata??!!
+    sig.digit <- emParameters[["sig.digit"]]
+    seOutput <- SummarizedExperiment(
+        assays = SimpleList(counts = matrix(round(counts$counts,sig.digit), ncol = 1,
+        dimnames = list(NULL, colNameRC)), CPM = matrix(round(counts$CPM,sig.digit),
+        ncol =  1, dimnames = list(NULL, colNameRC)),
+        fullLengthCounts = matrix(round(counts$fullLengthCounts,sig.digit), ncol = 1,
+            dimnames = list(NULL, colNameRC)),
+        uniqueCounts = matrix(counts$uniqueCounts, 
+            ncol = 1, dimnames = list(NULL, colNameRC))))
+    metadata(seOutput)$incompatibleCounts = incompatibleCounts
+
+    seOutput <- list(incompatibleCounts = as(metadata(seOutput)$incompatibleCounts[[colnames(seOutput)]], "sparseVector"),
                        counts = as(assays(seOutput)$counts, "sparseVector"),
                        CPM = as(assays(seOutput)$CPM, "sparseVector"),
                        fullLengthCounts = as(assays(seOutput)$fullLengthCounts, "sparseVector"),
                        uniqueCounts = as(assays(seOutput)$uniqueCounts, "sparseVector"),
                        colnames = colnames(seOutput), colData = colData(seOutput))
-  }
-  ### add ###
-
-  return(seOutput)
+    return(seOutput)
 }
 
 #' Process data.table object
