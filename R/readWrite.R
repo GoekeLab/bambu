@@ -35,9 +35,20 @@ writeBambuOutput <- function(se, path, prefix = "") {
             writeCountsOutput(se, varname=d,
                              feature='transcript',outdir, prefix)
         }
-        seGene <- transcriptToGeneExpression(se)
-        writeCountsOutput(seGene, varname='counts',
-                             feature='gene',outdir, prefix)
+        
+        seGene <- transcriptToGeneExpression(se[,1])
+        
+        for (i in seq(ceiling(length(colnames(se)) / 100))){
+          if (i == ceiling(length(colnames(se)) / 100)){
+              seGene <- cbind(seGene, transcriptToGeneExpression(se[,(100*i-99):length(colnames(se))]))
+          } else{
+              seGene <- cbind(seGene, transcriptToGeneExpression(se[,(100*i-99):(100*i)]))
+          }
+        }
+        
+        seGene <- seGene[,-1]
+        
+        writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
     }
 }
 
@@ -46,19 +57,36 @@ writeBambuOutput <- function(se, path, prefix = "") {
 #' @noRd
 writeCountsOutput <- function(se, varname = "counts",
                               feature = "transcript", outdir, prefix){
-    estimates <- data.table(as.data.frame(assays(se)[[varname]]),
-                            keep.rownames = TRUE) 
-    if(feature == "transcript"){
+  
+    estimatesfn <- paste(outdir, prefix, varname,"_",feature,".txt", sep = "")
+    if(!is(assays(se)[[varname]], "sparseMatrix")){
+      estimates <- data.table(as.data.frame(assays(se)[[varname]]),
+                              keep.rownames = TRUE) 
+      if(feature == "transcript"){
         setnames(estimates, "rn", "TXNAME")
         geneIDs <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
         estimates <- geneIDs[estimates, on = "TXNAME"]
-    }else{
+      }else{
         setnames(estimates, "rn","GENEID")
+      } 
+      
+      utils::write.table(estimates, file = estimatesfn, sep = "\t", quote = FALSE, row.names = FALSE)
+      
+    } else{
+        estimates <- assays(se)[[varname]]
+        if (feature == "transcript"){
+          Matrix::writeMM(estimates, estimatesfn)
+          geneIDs <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
+          utils::write.table(geneIDs, file = paste0(outdir, "txANDgenes.txt"), 
+                             sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+          utils::write.table(colnames(se), file = paste0(outdir, "barcodes.txt"), quote = FALSE, row.names = FALSE, col.names = FALSE)
+          
+        } else{
+          Matrix::writeMM(estimates, estimatesfn)
+          utils::write.table(names(se), file = paste0(outdir, "genes.txt"), 
+                             sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+        }
     }
-    estimatesfn <- paste(outdir, prefix, 
-                                 varname,"_",feature,".txt", sep = "")
-    utils::write.table(estimates, file = estimatesfn,
-                       sep = "\t", quote = FALSE, row.names = FALSE)
 }
 
 #' Write annotation GRangesList into a GTF file

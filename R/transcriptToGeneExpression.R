@@ -11,7 +11,7 @@
 #' ))
 #' transcriptToGeneExpression(se)
 transcriptToGeneExpression <- function(se) {
-    counts <- as.data.table(assays(se)$counts, keep.rownames = TRUE)
+    counts <- as.data.table(as.matrix(assays(se)$counts), keep.rownames = TRUE)
     runnames <- colnames(counts)[-1]
     colnames(counts)[-1] <- rename_duplicatedNames(runnames)
     colData(se)@rownames <- rename_duplicatedNames(colData(se)@rownames)
@@ -63,5 +63,11 @@ transcriptToGeneExpression <- function(se) {
             dimnames = list(RowNames, ColNames))),
         rowRanges = exByGene[RowNames],
         colData = ColData)
+    
+    if(is(assays(se)$counts, "sparseMatrix")) {
+        assays(seOutput)$counts <- as(assays(seOutput)$counts, "sparseMatrix")
+        assays(seOutput)$CPM <- as(assays(seOutput)$CPM, "sparseMatrix")
+    }
+    
     return(seOutput)
 }
