@@ -139,7 +139,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
-    fusionMode = FALSE, verbose = FALSE, rgrLists = FALSE) {
+    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -155,7 +155,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
     isBamFiles = !isRDSs
     if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
-    #if(rgrLists){
     if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
@@ -170,31 +169,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
-            lowMemory = lowMemory, rgrLists = rgrLists)
+            lowMemory = lowMemory, demultiplexed = FALSE)
     }
-    #warnings = handleWarnings(readClassList, verbose)
-    if (!discovery & !quant) return(readClassList)
-    if (discovery) {
-        message("--- Start extending annotations ---")
-        annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-                                               isoreParameters, stranded, bpParameters, fusionMode, verbose)
-        metadata(annotations)$warnings = warnings
-        if (!quant) return(annotations)
-    }
-    message("--- Start generating read class files ---")
-    
-    readClassList <- bambu.processReads(reads, annotations,
-       genomeSequence = genome,
-       readClass.outputDir = rcOutDir, yieldSize = yieldSize,
-       bpParameters, stranded, verbose,
-       isoreParameters, trackReads = trackReads, fusionMode = fusionMode,
-       lowMemory = lowMemory, demultiplexed = demultiplexed, readGrgListFile = readGrgListFile)
-  }
-  if (is.null(readGrgListFile)) warnings = handleWarnings(readClassList, verbose)
+
+  #warnings = handleWarnings(readClassList, verbose)
   if (!discovery & !quant) return(readClassList)
   if (discovery) {
     message("--- Start extending annotations ---")
-    annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
+    annotations <- bambu.extendAnnotations(list(readClassList), annotations, NDR,
                                            isoreParameters, stranded, bpParameters, fusionMode, verbose)
     metadata(annotations)$warnings = warnings
     
@@ -216,34 +198,36 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
         metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
-        countMatrix2 = metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
+        countMatrix2 = as.matrix(metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,])
+        colnames(countMatrix2) = colnames(metadata(readClassList)$countMatrix) 
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-        countsSe <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify, 
-                            readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
-                             annotations = annotations, isoreParameters = isoreParameters,
-                             emParameters = emParameters, trackReads = trackReads, 
-                             returnDistTable = returnDistTable, verbose = verbose, 
-                             BPPARAM = bpParameters)
-        countsSe <- combineCountSes(countsSe)
-        rowRanges(countsSe) <- annotations
-        #metadata(countsSe)$warnings = warnings
-        if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-        generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
-                                    annotations)
-        if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
-        if (rm.readClassSe) file.remove(unlist(readClassList))
-        message("--- Finished running Bambu ---")
-        return(countsSe)
+        # countsSe <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify, 
+        #                     readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
+        #                      annotations = annotations, isoreParameters = isoreParameters,
+        #                      emParameters = emParameters, trackReads = trackReads, 
+        #                      returnDistTable = returnDistTable, verbose = verbose, 
+        #                      BPPARAM = bpParameters)
+        # countsSe <- combineCountSes(countsSe)
+        # rowRanges(countsSe) <- annotations
+        # #metadata(countsSe)$warnings = warnings
+        # if (trackReads) metadata(seOutput)$readToTranscriptMap = 
+        # generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
+        #                             annotations)
+        # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
+        # if (rm.readClassSe) file.remove(unlist(readClassList))
+        # message("--- Finished running Bambu ---")
+        # return(countsSe)
 
 
     ###MESSYFOREST sparsematrix
 
-        countsSeCompressed <- bplapply(info$rpath, bambu.quantify,
+        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify,
+                                     readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
                                      annotations = annotations, isoreParameters = isoreParameters,
                                      emParameters = emParameters, trackReads = trackReads, 
                                      returnDistTable = returnDistTable, verbose = verbose, 
-                                     readGrgListFile = readGrgListFile, 
                                      BPPARAM = bpParameters)
+    print("bambu.quantify finished")
       
       ### countsData
       countsData <- c("incompatibleCounts", "counts", "CPM", "fullLengthCounts", "uniqueCounts")
@@ -277,6 +261,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
       
       metadata(countsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
       rowRanges(countsSe) <- annotations
-      metadata(countsSe)$warnings = warnings
+      #metadata(countsSe)$warnings = warnings
+
+      return(countsSe)
     }
 }

@@ -52,7 +52,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         stranded = stranded, min.readCount = min.readCount, 
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, index = i, rgrLists = rgrLists)},
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, demultiplexed = FALSE, index = i)},
         BPPARAM = bpParameters)
     readGrgList = do.call(c, readGrgList)    
     mcols(readGrgList)$id <- seq_along(readGrgList) 
@@ -65,7 +65,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
     metadata(readClassList)$samples = names(reads)
     countMatrix = splitReadClassFiles(readClassList)
-
     colnames(countMatrix) = metadata(readClassList)$samples
     rownames(countMatrix) = rownames(readClassList)
     metadata(readClassList)$countMatrix = countMatrix
@@ -106,14 +105,9 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, index = 0, rgrLists = FALSE) {
-    #if(verbose) message(names(bam.file)[1])
-    if(rgrLists){
-        print(bam.file)
-        readGrgList <- readRDS(bam.file)
-    } else{
-        readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
-    }
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, index = 0) {
+    
+    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads, demultiplexed)
     
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
@@ -167,23 +161,15 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
       if (isTRUE(demultiplexed)){
         cellBarcodeAssign <- tibble(index = mcols(readGrgList)$id, CB = mcols(readGrgList)$CB) %>% nest(.by = "CB")
 
-        if (!dir.exists("CB")){
-          dir.create("CB")
-        } else{
-          unlink(paste("CB", "*", sep = "/"))
-        }
+        # if (!dir.exists("CB")){
+        #   dir.create("CB")
+        # } else{
+        #   unlink(paste("CB", "*", sep = "/"))
+        # }
         
-        invisible(lapply(seq(nrow(cellBarcodeAssign)),
-                  function(x){saveRDS(readGrgList[pull(cellBarcodeAssign$data[[x]])], paste0("CB/", cellBarcodeAssign$CB[[x]],".rds"))}))
-      }
-      ## add ###
-      
-    ### add ###    
-    } else {
-        
-        readGrgList <- readRDS(bam.file[[1]])
-    
-    }
+        # invisible(lapply(seq(nrow(cellBarcodeAssign)),
+        #           function(x){saveRDS(readGrgList[pull(cellBarcodeAssign$data[[x]])], paste0("CB/", cellBarcodeAssign$CB[[x]],".rds"))}))
+      } 
     return(readGrgList)
 }
 
