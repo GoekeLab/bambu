@@ -209,15 +209,31 @@ handleWarnings <- function(readClassList, verbose){
 
 #' Combine count se object while preserving the metadata objects
 #' @noRd
-combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
-    sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
-    # combine incompatible counts
-    incompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$incompatibleCounts}))
-    countsSe = lapply(countsSe, FUN = function(se){
-        metadata(se)$incompatibleCounts=NULL
-        return(se)})
-    countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
-    metadata(countsSe)$incompatibleCounts = incompatibleCounts
+combineCountSes <- function(countsSe, annotations){
+    countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
+    sampleNames = sapply(countsSeCompressed, FUN = function(x){x$colnames})
+    countsDataMat <- lapply(countsData, FUN = function(k){
+        countsVecList <- lapply(countsSeCompressed, function(j){j[[k]]})
+        countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j){j@i})),
+                                j = unlist(lapply(seq_along(countsVecList), function(j){rep(j, length(countsVecList[[j]]@i))})),
+                                x = unlist(lapply(countsVecList, function(j){j@x})),
+                                dims = c(length(countsVecList[[1]]), length(countsVecList)))
+        if(all(countsMat==0)){return(NULL)}
+        colnames(countsMat) <- sampleNames
+        if (k == "incompatibleCounts"){
+            countsMat <- data.table(as.data.frame(as.matrix(countsMat)) %>%
+                                    mutate(GENEID = unique(mcols(annotations)$GENEID)) %>%
+                                    select(GENEID, everything()))
+        }
+        return(countsMat)
+    })
+    names(countsDataMat) = countsData
+    countsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
+                                                        CPM = countsDataMat$CPM, 
+                                                        fullLengthCounts = countsDataMat$fullLengthCounts, 
+                                                        uniqueCounts = countsDataMat$uniqueCounts))
+    metadata(countsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
+    rowRanges(countsSe) <- annotations
     return(countsSe)
 }
 

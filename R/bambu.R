@@ -173,21 +173,21 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
 
   #warnings = handleWarnings(readClassList, verbose)
-  if (!discovery & !quant) return(readClassList)
-  if (discovery) {
-    message("--- Start extending annotations ---")
-    annotations <- bambu.extendAnnotations(list(readClassList), annotations, NDR,
-                                           isoreParameters, stranded, bpParameters, fusionMode, verbose)
-    metadata(annotations)$warnings = warnings
-    
-    if (!quant) return(annotations)
-  }
+    if (!discovery & !quant) return(readClassList)
+    if (discovery) {
+        message("--- Start extending annotations ---")
+        annotations <- bambu.extendAnnotations(list(readClassList), annotations, NDR,
+                                            isoreParameters, stranded, bpParameters, fusionMode, verbose)
+        metadata(annotations)$warnings = warnings
+        
+        if (!quant) return(annotations)
+    }
   
-  if (quant) {
+    if (quant) {
     
-    message("--- Start isoform quantification ---")
-    if(length(annotations)==0) stop("No valid annotations, if running
-                                de novo please try less stringent parameters")
+        message("--- Start isoform quantification ---")
+        if(length(annotations)==0) stop("No valid annotations, if running
+                                    de novo please try less stringent parameters")
 
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
         if(is.list(readClassList)) readClassList = readClassList[[1]]
@@ -201,68 +201,20 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         countMatrix2 = as.matrix(metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,])
         colnames(countMatrix2) = colnames(metadata(readClassList)$countMatrix) 
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-        # countsSe <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify, 
-        #                     readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
-        #                      annotations = annotations, isoreParameters = isoreParameters,
-        #                      emParameters = emParameters, trackReads = trackReads, 
-        #                      returnDistTable = returnDistTable, verbose = verbose, 
-        #                      BPPARAM = bpParameters)
-        # countsSe <- combineCountSes(countsSe)
-        # rowRanges(countsSe) <- annotations
-        # #metadata(countsSe)$warnings = warnings
-        # if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-        # generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
-        #                             annotations)
-        # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
-        # if (rm.readClassSe) file.remove(unlist(readClassList))
-        # message("--- Finished running Bambu ---")
-        # return(countsSe)
-
-
-    ###MESSYFOREST sparsematrix
 
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify,
-                                     readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
-                                     annotations = annotations, isoreParameters = isoreParameters,
-                                     emParameters = emParameters, trackReads = trackReads, 
-                                     returnDistTable = returnDistTable, verbose = verbose, 
-                                     BPPARAM = bpParameters)
-    print("bambu.quantify finished")
-      
-      ### countsData
-      countsData <- c("incompatibleCounts", "counts", "CPM", "fullLengthCounts", "uniqueCounts")
-      countsDataMat <- list()
-      
-      for (k in seq_along(countsData)){
-        countsVecList <- lapply(seq_along(countsSeCompressed), function(j){countsSeCompressed[[j]][[countsData[k]]]})
-        
-        countsMat <- sparseMatrix(i = unlist(lapply(seq_along(countsVecList), function(j){countsVecList[[j]]@i})),
-                                  j = unlist(lapply(seq_along(countsVecList), function(j){rep(j, length(countsVecList[[j]]@i))})),
-                                  x = unlist(lapply(seq_along(countsVecList), function(j){countsVecList[[j]]@x})),
-                                  dims = c(length(countsVecList[[1]]), length(countsVecList)))
-        
-        colnames(countsMat) <- unlist(lapply(seq_along(countsSeCompressed), function(j){countsSeCompressed[[j]]$colnames}))
-        
-        if (countsData[k] == "incompatibleCounts"){
-          countsMat <- data.table(as.data.frame(as.matrix(countsMat)) %>%
-                                    mutate(GENEID = unique(mcols(annotations)$GENEID)) %>%
-                                    select(GENEID, everything()))
-        }
-        
-        countsDataMat[[countsData[k]]] <- countsMat 
-      }
-      
-      countsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
-                                                           CPM = countsDataMat$CPM, 
-                                                           fullLengthCounts = countsDataMat$fullLengthCounts, 
-                                                           uniqueCounts = countsDataMat$uniqueCounts), 
-                                       colData = as(bind_rows(lapply(lapply(seq_along(countsSeCompressed), 
-                                                 function(j){countsSeCompressed[[j]]$colData}), as.data.frame)), "DataFrame"))
-      
-      metadata(countsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
-      rowRanges(countsSe) <- annotations
-      #metadata(countsSe)$warnings = warnings
+                                        readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
+                                        annotations = annotations, isoreParameters = isoreParameters,
+                                        emParameters = emParameters, trackReads = trackReads, 
+                                        returnDistTable = returnDistTable, verbose = verbose, 
+                                        BPPARAM = bpParameters)
+        countsSe <- combineCountSes(countsSe, annotations)
 
-      return(countsSe)
+        #metadata(countsSe)$warnings = warnings
+        # if (trackReads) metadata(seOutput)$readToTranscriptMap = 
+        #     generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
+        #                              annotations)
+        # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
+        return(countsSe)
     }
 }
