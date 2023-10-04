@@ -203,7 +203,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
         print(ncol(countMatrix2))
         bpParameters$workers = ncore #TODO temp fix because currently its set to number of input files
-        bpParameters$progressbar = TRUE
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify,
                                         readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
                                         annotations = annotations, isoreParameters = isoreParameters,
