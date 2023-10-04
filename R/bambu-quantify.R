@@ -5,6 +5,8 @@
 bambu.quantify <- function(i, readClassDist, readClassDt, countMatrix, annotations, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+    print(i)
+    #TODO do not alter readClassDist and readClassDT objects to save memory
     metadata(readClassDist)$distTable$readCount <- countMatrix[,i] 
     metadata(readClassDist)$distTable = metadata(readClassDist)$distTable[metadata(readClassDist)$distTable$readCount != 0,]
     readClassDt$nobs = calculateEqClassCounts(metadata(readClassDist)$distTable, readClassDt)

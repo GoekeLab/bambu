@@ -86,7 +86,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     #     saveRDS(se, file = readClassFile)
     #     se <- readClassFile
     # }
-    return(readClassList)
+    #TODO don't output list, current there because discovery needs it
+    return(list(readClassList))
 }
 
 #' Preprocess bam files and save read class files

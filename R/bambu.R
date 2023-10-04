@@ -176,7 +176,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         message("--- Start extending annotations ---")
-        annotations <- bambu.extendAnnotations(list(readClassList), annotations, NDR,
+        annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                             isoreParameters, stranded, bpParameters, fusionMode, verbose)
         metadata(annotations)$warnings = warnings
         
@@ -201,14 +201,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         countMatrix2 = as.matrix(metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,])
         colnames(countMatrix2) = colnames(metadata(readClassList)$countMatrix) 
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-
+        print(ncol(countMatrix2))
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify,
                                         readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
                                         annotations = annotations, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose, 
                                         BPPARAM = bpParameters)
-        countsSe <- combineCountSes(countsSe, annotations)
+        countsSe <- combineCountSes(countsSeCompressed, annotations)
 
         #metadata(countsSe)$warnings = warnings
         # if (trackReads) metadata(seOutput)$readToTranscriptMap = 

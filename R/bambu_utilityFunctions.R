@@ -211,9 +211,9 @@ handleWarnings <- function(readClassList, verbose){
 #' @noRd
 combineCountSes <- function(countsSe, annotations){
     countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
-    sampleNames = sapply(countsSeCompressed, FUN = function(x){x$colnames})
+    sampleNames = sapply(countsSe, FUN = function(x){x$colnames})
     countsDataMat <- lapply(countsData, FUN = function(k){
-        countsVecList <- lapply(countsSeCompressed, function(j){j[[k]]})
+        countsVecList <- lapply(countsSe, function(j){j[[k]]})
         countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j){j@i})),
                                 j = unlist(lapply(seq_along(countsVecList), function(j){rep(j, length(countsVecList[[j]]@i))})),
                                 x = unlist(lapply(countsVecList, function(j){j@x})),
