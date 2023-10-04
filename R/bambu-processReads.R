@@ -52,7 +52,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         stranded = stranded, min.readCount = min.readCount, 
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, demultiplexed = FALSE, index = i)},
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, demultiplexed = demultiplexed, index = i)},
         BPPARAM = bpParameters)
     readGrgList = do.call(c, readGrgList)    
     mcols(readGrgList)$id <- seq_along(readGrgList) 
@@ -63,7 +63,10 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
+
     metadata(readClassList)$samples = names(reads)
+    if(demultiplexed)metadata(readClassList)$samples =  metadata(readGrgList)$CB
+    return(readClassList)
     countMatrix = splitReadClassFiles(readClassList)
     colnames(countMatrix) = metadata(readClassList)$samples
     rownames(countMatrix) = rownames(readClassList)
@@ -106,9 +109,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, index = 0) {
-    
-    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads, demultiplexed)
-    
+    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed)
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
     if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))
@@ -135,7 +136,10 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
-    mcols(readGrgList)$sampleID = index
+    if(demultiplexed){ 
+        metadata(readGrgList)$CB = levels(mcols(readGrgList)$CB)
+        mcols(readGrgList)$sampleID = mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$CB)
+    } else {mcols(readGrgList)$sampleID = index}
     #removes reads that are outside genome coordinates
     badReads = which(max(end(ranges(readGrgList)))>=
                          seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
@@ -257,28 +261,11 @@ seqlevelCheckReadsAnnotation <- function(reads, annotations){
 }
 
 splitReadClassFiles = function(readClassFile){
-  rowIndex = c()
-  sampleCount = c()
-  counts = c()
-  for(i in seq_along(metadata(readClassFile)$samples)){
-    counts.sample = sapply(rowData(readClassFile)$sampleIDs, FUN = function(x){sum(x==i)})
-    counts = c(counts, counts.sample[counts.sample != 0])
-    rowIndex = c(rowIndex, which(counts.sample != 0))
-    sampleCount = c(sampleCount, sum(counts.sample !=0))
-  }
-  counts = sparseMatrix(i = rowIndex,
-               j = rep(seq_along(metadata(readClassFile)$samples), sampleCount),
-               x = counts)
-
-#   countMat = sapply(seq_along(metadata(readClassFile)$samples), FUN = function(i){
-#     counts.sample = sapply(rowData(readClassFile)$sampleIDs, FUN = function(x){sum(x==i)})
-#     return(c(counts.sample[counts.sample != 0], #counts
-#         which(counts.sample != 0)), #rowindex
-#         sum(counts.sample !=0)) #sampleCount
-#   })
-#   counts = sparseMatrix(i = countMat[2,],
-#                j = rep(seq_along(metadata(readClassFile)$samples), countMat[3,]),
-#                x = countMat[1,])
-
-  return(counts)
+    counts.table = lapply(rowData(readClassFile)$sampleIDs, FUN = function(x){table(x)})
+    counts = sparseMatrix(
+    i = rep(seq_along(counts.table), lengths(counts.table)),
+    j = as.numeric(names(unlist(counts.table))),
+    x = unlist(counts.table),
+    dims = c(nrow(readClassFile), length(metadata(readClassFile)$samples)))
+    return(counts)
 }

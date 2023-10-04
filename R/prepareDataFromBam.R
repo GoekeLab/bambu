@@ -27,24 +27,22 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.n
     counter <- 1
     cells <- c()
     umi <- c()
-    
+    if(demultiplexed) use.names = TRUE
     while (isIncomplete(bf)) {
         readGrgList[[counter]] <-
             grglist(readGAlignments(bf,
             param = ScanBamParam(flag =
                 scanBamFlag(isSecondaryAlignment = FALSE)),
             use.names = use.names))
-        
         ### add ### 
         if (isTRUE(demultiplexed)){
-          mcols(readGrgList[[counter]])$CB <-  substr(names(readGrgList[[counter]]), 1, 16)
-          mcols(readGrgList[[counter]])$UMI <- substr(names(readGrgList[[counter]]), 18, 29)
-          names(readGrgList[[counter]]) <- NULL 
-          cells <- unique(c(cells, mcols(readGrgList[[counter]])$CB))
-          mcols(readGrgList[[counter]])$CB <- factor(mcols(readGrgList[[counter]])$CB, levels = cells)
-          
-          umi <- unique(c(umi, mcols(readGrgList[[counter]])$UMI))
-          mcols(readGrgList[[counter]])$UMI <- factor(mcols(readGrgList[[counter]])$UMI, levels = umi)
+            mcols(readGrgList[[counter]])$CB <-  substr(names(readGrgList[[counter]]), 1, 16)
+            mcols(readGrgList[[counter]])$UMI <- substr(names(readGrgList[[counter]]), 18, 29)
+            names(readGrgList[[counter]]) <- NULL 
+            cells <- unique(c(cells, mcols(readGrgList[[counter]])$CB))
+            mcols(readGrgList[[counter]])$CB <- factor(mcols(readGrgList[[counter]])$CB, levels = cells)
+            umi <- unique(c(umi, mcols(readGrgList[[counter]])$UMI))
+            mcols(readGrgList[[counter]])$UMI <- factor(mcols(readGrgList[[counter]])$UMI, levels = umi)
         }
         ### add ### 
         

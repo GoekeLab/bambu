@@ -169,7 +169,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             readClass.outputDir = rcOutDir, yieldSize, 
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
-            lowMemory = lowMemory, demultiplexed = FALSE)
+            lowMemory = lowMemory, demultiplexed = demultiplexed)
     }
 
   #warnings = handleWarnings(readClassList, verbose)
