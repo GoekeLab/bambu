@@ -198,21 +198,26 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
         metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
-        countMatrix2 = as.matrix(metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,])
+        countMatrix2 = metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
         colnames(countMatrix2) = colnames(metadata(readClassList)$countMatrix) 
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
         print(ncol(countMatrix2))
+        distTable = metadata(readClassDist)$distTable
         GENEIDs = factor(unique(mcols(annotations)$GENEID))
         GENEID.i = as.numeric(GENEIDs)
-        metadata(readClassDist)$distTable$GENEID.i = GENEID.i[match(distTable$GENEID, GENEIDs)]
-
-        metadata(readClassDist)$distTable$GENEID.match = rowData(readClassDist)$geneId[match(distTable$readClassId, rownames(rowData(readClassDist)))]
-        metadata(readClassDist)$distTable$GENEID.match = metadata(readClassDist)$distTable$GENEID.match == metadata(readClassDist)$distTable$GENEID
+        distTable$GENEID.i = GENEID.i[match(distTable$GENEID, GENEIDs)]
+        #check distTable and rowData match for incompatible counts
+        distTable$GENEID.match = rowData(readClassDist)$geneId[match(distTable$readClassId, rownames(rowData(readClassDist)))]
+        distTable$GENEID.match = distTable$GENEID.match == distTable$GENEID
+        
+        rm(readClassDist)
+        rm(readClassList)
+        gc()
 
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), FUN = function(i){
             print(i)
-            return(bambu.quantify(distTable = metadata(readClassDist)$distTable, readClassDt = readClassDt, countMatrix = unname(countMatrix2[,i]),
-                                        sampleName = colnames(countMatrix2)[i], txid.index = mcols(annotations)$txid, GENEIDs = GENEID.i, isoreParameters = isoreParameters,
+            return(bambu.quantify(distTable = distTable, readClassDt = readClassDt, countMatrix = unname(countMatrix2[,i]), 
+                                        txid.index = mcols(annotations)$txid, GENEIDs = GENEID.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
                                         BPPARAM = bpParameters)

@@ -24,7 +24,7 @@ processIncompatibleCounts <- function(distTable){
         .(readClassId, annotationTxId, readCount, GENEID, GENEID.match, GENEID.i, dist,equal)]
     distTable <- distTable[grep("unidentified", annotationTxId)]
     # filter out multiple geneIDs mapped to the same readClass using rowData(se)
-    distTable[GENEID.match,]
+    distTable[GENEID.match==TRUE,]
     distTable[, readCount := sum(readCount), by = GENEID]
     counts <- unique(distTable[,.(GENEID, GENEID.i, readCount)])
     setnames(counts, "readCount", "counts")
