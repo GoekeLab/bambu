@@ -202,12 +202,21 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         colnames(countMatrix2) = colnames(metadata(readClassList)$countMatrix) 
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
         print(ncol(countMatrix2))
-        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), bambu.quantify,
-                                        readClassDist = readClassDist, readClassDt = readClassDt, countMatrix = countMatrix2,
-                                        annotations = annotations, isoreParameters = isoreParameters,
+        GENEIDs = factor(unique(mcols(annotations)$GENEID))
+        GENEID.i = as.numeric(GENEIDs)
+        metadata(readClassDist)$distTable$GENEID.i = GENEID.i[match(distTable$GENEID, GENEIDs)]
+
+        metadata(readClassDist)$distTable$GENEID.match = rowData(readClassDist)$geneId[match(distTable$readClassId, rownames(rowData(readClassDist)))]
+        metadata(readClassDist)$distTable$GENEID.match = metadata(readClassDist)$distTable$GENEID.match == metadata(readClassDist)$distTable$GENEID
+
+        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), FUN = function(i){
+            print(i)
+            return(bambu.quantify(distTable = metadata(readClassDist)$distTable, readClassDt = readClassDt, countMatrix = unname(countMatrix2[,i]),
+                                        sampleName = colnames(countMatrix2)[i], txid.index = mcols(annotations)$txid, GENEIDs = GENEID.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
-                                        returnDistTable = returnDistTable, verbose = verbose, 
+                                        returnDistTable = returnDistTable, verbose = verbose))}, 
                                         BPPARAM = bpParameters)
+        countsSeCompressed$colnames = colnames(countMatrix)                                
         countsSe <- combineCountSes(countsSeCompressed, annotations)
 
         #metadata(countsSe)$warnings = warnings

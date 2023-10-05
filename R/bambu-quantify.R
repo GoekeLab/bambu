@@ -2,40 +2,25 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(i, readClassDist, readClassDt, countMatrix, annotations, emParameters, 
+bambu.quantify <- function(distTable, readClassDt, countMatrix, sampleName, txid.index, GENEIDs, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
-    print(i)
-    #TODO do not alter readClassDist and readClassDT objects to save memory
-    metadata(readClassDist)$distTable$readCount <- countMatrix[,i] 
-    metadata(readClassDist)$distTable = metadata(readClassDist)$distTable[metadata(readClassDist)$distTable$readCount != 0,]
-    readClassDt$nobs = calculateEqClassCounts(metadata(readClassDist)$distTable, readClassDt)
-    incompatibleCounts <- processIncompatibleCounts(readClassDist)
+    distTable$readCount <- countMatrix
+    distTable = metadata(readClassDist)$distTable[metadata(readClassDist)$distTable$readCount != 0,]
+    readClassDt$nobs = calculateEqClassCounts(distTable, readClassDt)
+    incompatibleCounts <- processIncompatibleCounts(distTable)
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
-    incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
+    incompatibleCounts <- incompatibleCounts[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
     incompatibleCounts[is.na(counts), counts := 0]
     compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
-    setnames(incompatibleCounts, "counts", colnames(countMatrix)[i])
-    counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
-    colNameRC <- colnames(countMatrix)[i]
-    colDataRC <- NULL # TODO carry over coldata??!!
+    setnames(incompatibleCounts, "counts", sampleName)
+    counts <- compatibleCounts[match(txid.index, txid)]
     sig.digit <- emParameters[["sig.digit"]]
-    seOutput <- SummarizedExperiment(
-        assays = SimpleList(counts = matrix(round(counts$counts,sig.digit), ncol = 1,
-        dimnames = list(NULL, colNameRC)), CPM = matrix(round(counts$CPM,sig.digit),
-        ncol =  1, dimnames = list(NULL, colNameRC)),
-        fullLengthCounts = matrix(round(counts$fullLengthCounts,sig.digit), ncol = 1,
-            dimnames = list(NULL, colNameRC)),
-        uniqueCounts = matrix(counts$uniqueCounts, 
-            ncol = 1, dimnames = list(NULL, colNameRC))))
-    metadata(seOutput)$incompatibleCounts = incompatibleCounts
-
-    seOutput <- list(incompatibleCounts = as(metadata(seOutput)$incompatibleCounts[[colnames(seOutput)]], "sparseVector"),
-                       counts = as(assays(seOutput)$counts, "sparseVector"),
-                       CPM = as(assays(seOutput)$CPM, "sparseVector"),
-                       fullLengthCounts = as(assays(seOutput)$fullLengthCounts, "sparseVector"),
-                       uniqueCounts = as(assays(seOutput)$uniqueCounts, "sparseVector"),
-                       colnames = colnames(seOutput), colData = colData(seOutput))
+    seOutput <- list(incompatibleCounts = as(incompatibleCounts[[sampleName]], "sparseVector"),
+                    counts = as(round(counts$counts,sig.digit), "sparseVector"),
+                    CPM = as(round(counts$CPM,sig.digit), "sparseVector"),
+                    fullLengthCounts = as(round(counts$fullLengthCounts,sig.digit), "sparseVector"),
+                    uniqueCounts = as(counts$uniqueCounts, "sparseVector"))                   
     return(seOutput)
 }
 

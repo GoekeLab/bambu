@@ -19,22 +19,16 @@ modifyIncompatibleAssignment <- function(distTable){
 
 #' Process incompatible counts
 #' @noRd
-processIncompatibleCounts <- function(readClassDist){
-  distTable <- data.table(as.data.frame(metadata(readClassDist)$distTable))[, 
-                                                                            .(readClassId, annotationTxId, readCount, GENEID, dist,equal)]
-  distTableIncompatible <- distTable[grep("unidentified", annotationTxId)]
-  # filter out multiple geneIDs mapped to the same readClass using rowData(se)
-  geneRCMap <- as.data.table(as.data.frame(rowData(readClassDist)),
-                             keep.rownames = TRUE)
-  setnames(geneRCMap, old = c("rn", "geneId"),
-           new = c("readClassId", "GENEID"))
-  distTable <- distTable[geneRCMap[ readClassId %in% 
-                                      unique(distTableIncompatible$readClassId), .(readClassId, GENEID)],
-                         on = c("readClassId", "GENEID")]
-  distTable[, readCount := sum(readCount), by = GENEID]
-  counts <- unique(distTable[,.(GENEID, readCount)])
-  setnames(counts, "readCount", "counts")
-  return(counts)
+processIncompatibleCounts <- function(distTable){
+    distTable <- data.table(as.data.frame(distTable))[, 
+        .(readClassId, annotationTxId, readCount, GENEID, GENEID.match, GENEID.i, dist,equal)]
+    distTable <- distTable[grep("unidentified", annotationTxId)]
+    # filter out multiple geneIDs mapped to the same readClass using rowData(se)
+    distTable[GENEID.match,]
+    distTable[, readCount := sum(readCount), by = GENEID]
+    counts <- unique(distTable[,.(GENEID, GENEID.i, readCount)])
+    setnames(counts, "readCount", "counts")
+    return(counts)
 }
 
 
