@@ -216,9 +216,9 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
         metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
         #match count matrix with distTable to speed up calculations
-        metadata(readClassList)$countMatrix.matched = 
+        metadata(readClassDist)$countMatrix.matched = 
             metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
-        colnames(metadata(readClassList)$countMatrix.matched) = colnames(metadata(readClassList)$countMatrix) 
+        colnames(metadata(readClassDist)$countMatrix.matched) = colnames(metadata(readClassList)$countMatrix) 
         #convert string gene ids into index to save memory
         GENEIDs = factor(unique(mcols(annotations)$GENEID))
         GENEID.i = as.numeric(GENEIDs)
@@ -236,7 +236,8 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
 #' @noRd
 combineCountSes <- function(countsSe, annotations){
     countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
-    sampleNames = sapply(countsSe, FUN = function(x){x$colnames})
+    sampleNames = countsSe$colnames
+    countsSe$colnames = NULL
     countsDataMat <- lapply(countsData, FUN = function(k){
         countsVecList <- lapply(countsSe, function(j){j[[k]]})
         countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j){j@i})),

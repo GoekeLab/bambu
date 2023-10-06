@@ -194,7 +194,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
         
         distTable = metadata(readClassDist)$distTable
-        countMatrix.matched = metadata(readClassList)$countMatrix.matched
+        countMatrix.matched = metadata(readClassDist)$countMatrix.matched
         rm(readClassDist)
         rm(readClassList)
         gc()
