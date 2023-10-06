@@ -184,44 +184,29 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
   
     if (quant) {
-    
         message("--- Start isoform quantification ---")
         if(length(annotations)==0) stop("No valid annotations, if running
                                     de novo please try less stringent parameters")
 
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
         if(is.list(readClassList)) readClassList = readClassList[[1]]
-        readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
-                                                            min.exonDistance = isoreParameters[["min.exonDistance"]],
-                                                            min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']],
-                                                            min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
-                                                            verbose = verbose)
-        metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
-        metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
-        countMatrix2 = metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
-        colnames(countMatrix2) = colnames(metadata(readClassList)$countMatrix) 
+        readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
         readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-        print(ncol(countMatrix2))
-        distTable = metadata(readClassDist)$distTable
-        GENEIDs = factor(unique(mcols(annotations)$GENEID))
-        GENEID.i = as.numeric(GENEIDs)
-        distTable$GENEID.i = GENEID.i[match(distTable$GENEID, GENEIDs)]
-        #check distTable and rowData match for incompatible counts
-        distTable$GENEID.match = rowData(readClassDist)$geneId[match(distTable$readClassId, rownames(rowData(readClassDist)))]
-        distTable$GENEID.match = distTable$GENEID.match == distTable$GENEID
         
+        distTable = metadata(readClassDist)$distTable
+        countMatrix.matched = metadata(readClassList)$countMatrix.matched
         rm(readClassDist)
         rm(readClassList)
         gc()
 
-        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix2)), FUN = function(i){
+        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix.matched)), FUN = function(i){
             print(i)
-            return(bambu.quantify(distTable = distTable, readClassDt = readClassDt, countMatrix = unname(countMatrix2[,i]), 
+            return(bambu.quantify(distTable = distTable, readClassDt = readClassDt, countMatrix = unname(countMatrix.matched[,i]), 
                                         txid.index = mcols(annotations)$txid, GENEIDs = GENEID.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
                                         BPPARAM = bpParameters)
-        countsSeCompressed$colnames = colnames(countMatrix)                                
+        countsSeCompressed$colnames = colnames(countMatrix.matched)                                
         countsSe <- combineCountSes(countsSeCompressed, annotations)
 
         #metadata(countsSe)$warnings = warnings
