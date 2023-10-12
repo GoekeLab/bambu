@@ -198,11 +198,11 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         rm(readClassDist)
         rm(readClassList)
         gc()
-
+        GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix.matched)), FUN = function(i){
             print(i)
             return(bambu.quantify(distTable = distTable, readClassDt = readClassDt, countMatrix = unname(countMatrix.matched[,i]), 
-                                        txid.index = mcols(annotations)$txid, GENEIDs = GENEID.i, isoreParameters = isoreParameters,
+                                        txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
                                         BPPARAM = bpParameters)

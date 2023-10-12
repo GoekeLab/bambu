@@ -228,7 +228,7 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
             rowData(readClassDist)$geneId[match(metadata(readClassDist)$distTable$readClassId, 
                                                 rownames(rowData(readClassDist)))]
         metadata(readClassDist)$distTable$GENEID.match = 
-            metadata(readClassDist)$distTable$GENEID.match == distTable$GENEID
+            metadata(readClassDist)$distTable$GENEID.match == metadata(readClassDist)$distTable$GENEID
         return(readClassDist)
 }
 
