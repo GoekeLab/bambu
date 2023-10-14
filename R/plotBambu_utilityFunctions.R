@@ -31,20 +31,16 @@ plotAnnotation <- function(se, gene_id, transcript_id) {
 #' @inheritParams plotAnnotation
 #' @noRd
 plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
+    seGene <- transcriptToGeneExpression(se)
     if (!is.null(transcript_id)) {
         if (!all(transcript_id %in% rownames(se))) stop("all(transcript_id
             %in% rownames(se)) condition is not satisfied!")
             txRanges <- rowRanges(se)[transcript_id]
-            names(txRanges) <- paste0(transcript_id, ":", unlist(lapply(
-                strand(txRanges),
-                function(x) unique(as.character(x)))))
-            p_annotation <- ggbio::autoplot(txRanges,
-                group.selfish = TRUE)
-            p_expression <-
-                ggbio::autoplot(as.matrix(log2(assays(se)$CPM[transcript_id, ] +
-                1)), axis.text.angle = 45)
-            p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression,
-                heights = c(1, 1))
+            gene_id <- unique(mcols(txRanges)$GENEID)
+            geneRange <- rowRanges(seGene)[gene_id]
+            names(txRanges) <- labelFeature(transcript_id, txRanges)
+            names(geneRange) <- labelFeature(gene_id, geneRange)
+            p <- plotAnnotation_plotFunction(geneRange, txRanges,se,transcript_id)
             return(p)
     } else {
         if (!all(gene_id %in% rowData(se)$GENEID)) stop("all(gene_id %in% 
@@ -52,18 +48,38 @@ plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
             p <- lapply(gene_id, function(g) {
                 txVec <- rowData(se)[rowData(se)$GENEID == g, ]$TXNAME
                 txRanges <- rowRanges(se)[txVec]
-                names(txRanges) <- paste0(txVec, ":", unlist(lapply(
-                    strand(txRanges), function(x) unique(as.character(x)))))
-                p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
-                p_expression <-
-                    ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec, ] + 
-                    1)), axis.text.angle = 45, hjust = 1)
-                p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression,
-                    top = g, heights = c(1, 1) )
+                geneRange <- rowRanges(seGene)[gene_id]
+                names(geneRange) <- labelFeature(gene_id, geneRange)
+                names(txRanges) <-labelFeature(txVec, txRanges)
+                p <- plotAnnotation_plotFunction(geneRange, txRanges,se,txVec)
                 return(p)
             })
         return(p)
     }
+}
+
+#' label feature wtih strand added 
+#' @inheritParams plotAnnotation_withExpression
+#' @noRd
+labelFeature <- function(feature_id,featureRange){
+    paste0(feature_id, ":", as.character(unlist(unique(strand(featureRange)))))
+}
+
+#' the plotting function 
+#' @inheritParams plotAnnotation_withExpression
+#' @noRd
+plotAnnotation_plotFunction <- function(geneRange, txRanges,se,txVec){
+    p_annotation_gene <- ggbio::autoplot(geneRange,
+                                         group.selfish = TRUE)
+    p_annotation <- ggbio::autoplot(txRanges, group.selfish = TRUE)
+    p_expression <-
+        ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec, ] + 
+                                           1)), axis.text.angle = 45, hjust = 1)
+    p <- gridExtra::grid.arrange(Gene = p_annotation_gene@ggplot, 
+                                 Transcript = p_annotation@ggplot, p_expression,
+                                 top = "", heights = c(1,min(length(txVec),4),
+                                                       min(length(txVec),5)))
+    return(p)
 }
 
 #' plot PCA
@@ -88,9 +104,9 @@ plotPCA <- function(se, count.data, group.variable) {
         p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
             ggplot2::geom_point(ggplot2::aes(col = groupVar)) +
             ggplot2::ylab(paste0("PC2 (",
-            round(pca_result$sdev[2] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[2]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::xlab(paste0("PC1 (",
-            round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[1]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::theme_minimal()
     } else {
         pca_result <- prcomp(t(as.matrix(count.data))) 
@@ -99,9 +115,9 @@ plotPCA <- function(se, count.data, group.variable) {
         p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
             ggplot2::geom_point(ggplot2::aes(col = runname)) +
             ggplot2::ylab(paste0("PC2 (",
-            round(pca_result$sdev[2] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[2]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::xlab(paste0("PC1 (",
-            round(pca_result$sdev[1] / sum(pca_result$sdev) * 100, 1), "%)")) +
+            round(pca_result$sdev[1]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::theme_minimal()
     }
     return(p)
