@@ -2,15 +2,13 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(distTable, readClassDt, countMatrix, txid.index, GENEIDs, emParameters, 
+bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, txid.index, GENEIDs, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
-    distTable$readCount <- countMatrix
-    distTable = distTable[distTable$readCount != 0,]
-    readClassDt$nobs = calculateEqClassCounts(distTable, readClassDt)
-    incompatibleCounts <- processIncompatibleCounts(distTable)
+    readClassDt$nobs = countMatrix[readClassDt$eqClass.match]
+    readClassDt$nobs[is.na(readClassDt$nobs)] = 0
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
-    incompatibleCounts <- incompatibleCounts[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
+    incompatibleCounts <- incompatibleCountMatrix[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
     incompatibleCounts[is.na(counts), counts := 0]
     compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
     counts <- compatibleCounts[match(txid.index, txid)]
@@ -19,7 +17,7 @@ bambu.quantify <- function(distTable, readClassDt, countMatrix, txid.index, GENE
                     counts = as(round(counts$counts,sig.digit), "sparseVector"),
                     CPM = as(round(counts$CPM,sig.digit), "sparseVector"),
                     fullLengthCounts = as(round(counts$fullLengthCounts,sig.digit), "sparseVector"),
-                    uniqueCounts = as(round(counts$uniqueCounts,sig.digit), "sparseVector"))                   
+                    uniqueCounts = as(round(counts$uniqueCounts,sig.digit), "sparseVector"))              
     return(seOutput)
 }
 

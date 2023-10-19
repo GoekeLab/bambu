@@ -46,7 +46,7 @@ setIsoreParameters <- function(isoreParameters){
 #' setEmParameters
 #' @noRd
 setEmParameters <- function(emParameters){
-    emParameters.default <- list(degradationBias = TRUE, maxiter = 10000, 
+    emParameters.default <- list(degradationBias = FALSE, maxiter = 10000, 
         conv = 10^(-2), minvalue = 10^(-8), sig.digit = 5)
     emParameters <- updateParameters(emParameters, emParameters.default)
     return(emParameters)
@@ -214,21 +214,17 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
                                                             min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
+                #convert string gene ids into index to save memory
+        GENEIDs = factor(unique(mcols(annotations)$GENEID))
+        GENEID.i = as.numeric(GENEIDs)
+        metadata(readClassDist)$distTable$GENEID.i = GENEID.i[match(metadata(readClassDist)$distTable$GENEID, GENEIDs)]
+        metadata(readClassDist)$distTable.incompatible = data.table(as.data.frame(metadata(readClassDist)$distTable)) %>% 
+            filter(grepl("unidentified", annotationTxId)) %>% distinct(readClassId, .keep_all = TRUE)
         metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
         #match count matrix with distTable to speed up calculations
         metadata(readClassDist)$countMatrix.matched = 
             metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
         colnames(metadata(readClassDist)$countMatrix.matched) = colnames(metadata(readClassList)$countMatrix) 
-        #convert string gene ids into index to save memory
-        GENEIDs = factor(unique(mcols(annotations)$GENEID))
-        GENEID.i = as.numeric(GENEIDs)
-        metadata(readClassDist)$distTable$GENEID.i = GENEID.i[match(metadata(readClassDist)$distTable$GENEID, GENEIDs)]
-        #check distTable and rowData match for incompatible counts
-        metadata(readClassDist)$distTable$GENEID.match = 
-            rowData(readClassDist)$geneId[match(metadata(readClassDist)$distTable$readClassId, 
-                                                rownames(rowData(readClassDist)))]
-        metadata(readClassDist)$distTable$GENEID.match = 
-            metadata(readClassDist)$distTable$GENEID.match == metadata(readClassDist)$distTable$GENEID
         return(readClassDist)
 }
 

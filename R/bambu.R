@@ -190,23 +190,23 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
 
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
         if(is.list(readClassList)) readClassList = readClassList[[1]]
-        readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
-        readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-        
-        distTable = metadata(readClassDist)$distTable
-        countMatrix.matched = metadata(readClassDist)$countMatrix.matched
-        rm(readClassDist)
+        readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
+        countMatrix = metadata(readClassList)$countMatrix
+        incompatibleCountMatrix = metadata(readClassList)$incompatibleCountMatrix
+        readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
+        metadata(readClassList)$readClassDist = NULL
         rm(readClassList)
         gc()
         GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
-        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix.matched)), FUN = function(i){
+        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix)), FUN = function(i){
             print(i)
-            return(bambu.quantify(distTable = distTable, readClassDt = readClassDt, countMatrix = unname(countMatrix.matched[,i]), 
+            return(bambu.quantify(readClassDt = readClassDt, countMatrix = unname(countMatrix[,i]), 
+                                        incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(incompatibleCountMatrix)), counts = incompatibleCountMatrix[,i]),
                                         txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
                                         BPPARAM = bpParameters)
-        countsSeCompressed$colnames = colnames(countMatrix.matched)                                
+        countsSeCompressed$colnames = colnames(countMatrix)                             
         countsSe <- combineCountSes(countsSeCompressed, annotations)
 
         #metadata(countsSe)$warnings = warnings

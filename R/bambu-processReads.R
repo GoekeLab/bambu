@@ -66,10 +66,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 
     metadata(readClassList)$samples = names(reads)
     if(demultiplexed)metadata(readClassList)$samples =  metadata(readGrgList)$CB
-    countMatrix = splitReadClassFiles(readClassList)
-    colnames(countMatrix) = metadata(readClassList)$samples
-    rownames(countMatrix) = rownames(readClassList)
-    metadata(readClassList)$countMatrix = countMatrix
+    metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
+    readClassList = splitReadClassFiles(readClassList)
 
     # TODO return output
     # if (!is.null(readClass.outputDir)) {
@@ -173,7 +171,7 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
     warnings = c() ###TODO
     # construct read classes for each chromosome seperately 
     if(lowMemory) {se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-                                                      annotations, stranded, verbose,bam.file)
+                                                      annotations, stranded, verbose,"TODO")
     } else { 
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         if(length(unlisted_junctions)==0){
@@ -222,7 +220,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se.temp <- isore.constructReadClasses(readGrgList[[i]], 
-                                              unlisted_junctions, uniqueJunctions, runName = names(bam.file)[1],
+                                              unlisted_junctions, uniqueJunctions, runName = "TODO",
                                               annotations, stranded, verbose)
         return(se.temp)
     })
@@ -250,11 +248,41 @@ seqlevelCheckReadsAnnotation <- function(reads, annotations){
 }
 
 splitReadClassFiles = function(readClassFile){
-    counts.table = lapply(rowData(readClassFile)$sampleIDs, FUN = function(x){table(x)})
+    distTable = metadata(metadata(readClassFile)$readClassDist)$distTable  
+    eqClasses = distTable %>% group_by(eqClassById) %>% 
+        distinct(eqClassById, readCount,GENEID, .keep_all = TRUE)
+    eqClasses$sampleIDs = rowData(readClassFile)$sampleIDs[match(eqClasses$readClassId, rownames(readClassFile))]
+    eqClasses = eqClasses %>% summarise(nobs = sum(readCount),
+                                                sampleIDs = list(unlist(sampleIDs)))
+    counts.table = lapply(eqClasses$sampleIDs, FUN = function(x){table(x)})
     counts = sparseMatrix(
         i = rep(seq_along(counts.table), lengths(counts.table)),
         j = as.numeric(names(unlist(counts.table))),
         x = unlist(counts.table),
-        dims = c(nrow(readClassFile), length(metadata(readClassFile)$samples)))
-    return(counts)
+        dims = c(nrow(eqClasses), length(metadata(readClassFile)$samples)))
+    #incompatible counts
+    distTable = metadata(metadata(readClassFile)$readClassDist)$distTable.incompatible
+    if(nrow(distTable)==0) {
+        counts.incompatible = sparseMatrix(i= 1, j = 1, x = 0,
+        dims = c(1, length(metadata(readClassFile)$samples)))
+        rownames(counts.incompatible) = "TODO"
+    } else{
+        distTable$sampleIDs = rowData(readClassFile)$sampleIDs[match(distTable$readClassId, rownames(readClassFile))]
+        distTable = distTable %>% group_by(GENEID.i) %>% summarise(counts = sum(readCount),
+                    sampleIDs = list(unlist(sampleIDs)))
+        counts.table = lapply(distTable$sampleIDs, FUN = function(x){table(x)})
+        counts.incompatible = sparseMatrix(
+            i = rep(seq_along(counts.table), lengths(counts.table)),
+            j = as.numeric(names(unlist(counts.table))),
+            x = unlist(counts.table),
+            dims = c(nrow(distTable), length(metadata(readClassFile)$samples)))
+        colnames(counts.incompatible) = metadata(readClassFile)$samples
+        rownames(counts.incompatible) = distTable$GENEID.i 
+    }
+    colnames(counts) = metadata(readClassFile)$samples
+    metadata(readClassFile)$eqClassById = eqClasses$eqClassById
+    #rownames(counts) = eqClasses$eqClassById
+    metadata(readClassFile)$countMatrix = counts
+    metadata(readClassFile)$incompatibleCountMatrix = counts.incompatible  
+    return(readClassFile )
 }
