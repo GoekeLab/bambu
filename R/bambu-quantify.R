@@ -5,6 +5,7 @@
 bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, txid.index, GENEIDs, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+    start.ptm <- proc.time()
     readClassDt$nobs = countMatrix[readClassDt$eqClass.match]
     readClassDt$nobs[is.na(readClassDt$nobs)] = 0
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
@@ -18,6 +19,8 @@ bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, tx
                     CPM = as(round(counts$CPM,sig.digit), "sparseVector"),
                     fullLengthCounts = as(round(counts$fullLengthCounts,sig.digit), "sparseVector"),
                     uniqueCounts = as(round(counts$uniqueCounts,sig.digit), "sparseVector"))              
+    end.ptm <- proc.time()
+    message("bambu.quantify ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
     return(seOutput)
 }
 
@@ -28,13 +31,19 @@ bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, tx
 bambu.quantDT <- function(readClassDt = readClassDt, 
                           emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
                                               minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
+  start.ptm <- proc.time()
   rcPreOut <- addAval(readClassDt, emParameters, verbose)
+  end.ptm <- proc.time()
+  message("addAval ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+  start.ptm <- proc.time()
   readClassDt <- rcPreOut[[1]]
   outIni <- initialiseOutput(readClassDt)
   readClassDt <- filterTxRc(readClassDt) 
   readClassDt <- assignGroups(readClassDt)
   inputRcDt <- getInputList(readClassDt)
   readClassDt <- split(readClassDt, by = "gene_grp_id")
+  end.ptm <- proc.time()
+ message("step2 ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
   start.ptm <- proc.time()
   outEst <- abundance_quantification(inputRcDt, readClassDt,
                                      maxiter = emParameters[["maxiter"]],
@@ -45,7 +54,8 @@ bambu.quantDT <- function(readClassDt = readClassDt,
   outEst <- modifyQuantOut(outEst,outIni)
   theta_est <- rbind(rcPreOut[[2]],outEst)
   theta_est <- removeDuplicates(theta_est)
-  return(theta_est)
+    end.ptm <- proc.time()
+   return(theta_est)
 }
 
 

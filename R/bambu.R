@@ -198,6 +198,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         rm(readClassList)
         gc()
         GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
+        start.ptm <- proc.time()
+        readClassDt <- simplifyNames(readClassDt)
+        readClassDt = readClassDt %>% group_by(eqClassId, gene_sid) %>% 
+            mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1)
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix)), FUN = function(i){
             print(i)
             return(bambu.quantify(readClassDt = readClassDt, countMatrix = unname(countMatrix[,i]), 
@@ -206,6 +210,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
                                         BPPARAM = bpParameters)
+        end.ptm <- proc.time()
+        message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
         countsSeCompressed$colnames = colnames(countMatrix)                             
         countsSe <- combineCountSes(countsSeCompressed, annotations)
 

@@ -188,15 +188,15 @@ createEqClassToTxMapping <- function(eqClassTable){
 #' Add A matrix for total, full-length, unique
 #' @noRd
 addAval <- function(readClassDt, emParameters, verbose){
-  if (is.null(readClassDt)) {
-    stop("Input object is missing.")
-  } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
-                   colnames(readClassDt)))) {
-    stop("Columns GENEID, txid, eqClassId, nobs,
-            are missing from object.")
-  }
+#   if (is.null(readClassDt)) {
+#     stop("Input object is missing.")
+#   } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
+#                    colnames(readClassDt)))) {
+#     stop("Columns GENEID, txid, eqClassId, nobs,
+#             are missing from object.")
+#   }
   ## ----step2: match to simple numbers to increase claculation efficiency
-  readClassDt <- simplifyNames(readClassDt)
+  #readClassDt <- simplifyNames(readClassDt)
   d_mode <- emParameters[["degradationBias"]]
   start.ptm <- proc.time()
   if (d_mode) {
@@ -206,10 +206,15 @@ addAval <- function(readClassDt, emParameters, verbose){
   }
   end.ptm <- proc.time()
   if (verbose) message("Finished estimate degradation bias in ",
-                       round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
-                                                  d_rateOut[1], d_mode = d_mode)
+                       round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+#   readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
+#                                                   d_rateOut[1], d_mode = d_mode)
+  start.ptm <- proc.time()
+  #readClassDt = data.table(readClassDt)
   removeList <- removeUnObservedGenes(readClassDt)
+end.ptm <- proc.time()
+  message("removeUnObservedGenes ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+  start.ptm <- proc.time()
   readClassDt <- removeList[[1]] # keep only observed genes for estimation
   outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
   readClassDt_withGeneCount <- select(readClassDt, gene_sid, eqClassId, nobs) %>%
@@ -218,8 +223,14 @@ addAval <- function(readClassDt, emParameters, verbose){
     mutate(K = sum(nobs), n.obs=nobs/K, nobs = NULL) %>% ## check if this is unique by eqClassId
     ungroup() %>%
     distinct() %>%
-    right_join(readClassDt, by = c("gene_sid","eqClassId")) %>%
-    data.table()
+    right_join(readClassDt, by = c("gene_sid","eqClassId"))
+#   readClassDt_withGeneCount <- readClassDt %>%
+#     group_by(gene_sid, eqClassId, nobs) %>% mutate(n = n(), n = replace(n,1,1)) %>%
+#     ungroup() %>% group_by(gene_sid) %>%
+#     mutate(K = sum(nobs), n.obs=(nobs)/(K)) %>%
+#     ungroup()
+  end.ptm <- proc.time()
+  message("dplyr ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
   return(list(readClassDt_withGeneCount,outList))
 }
 
@@ -293,11 +304,14 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 #' @import data.table
 #' @noRd
 removeUnObservedGenes <- function(readClassDt){
-  uoGenes <- unique(readClassDt[,.I[sum(nobs) == 0], by = gene_sid]$gene_sid)
+    uoGenes <- readClassDt %>% group_by(gene_sid) %>% 
+        summarise(nobs = sum(nobs)) %>% filter(nobs == 0) %>% 
+        select(gene_sid) %>% distinct()
   if (length(uoGenes) > 0) {
-    uo_txGeneDt <- 
-      unique(readClassDt[(gene_sid %in% uoGenes),.(txid,gene_sid)])
-    readClassDt <- readClassDt[!(gene_sid %in% uoGenes)]
+    readClassDt <- readClassDt %>% filter(gene_sid %in% uoGenes$gene_sid)
+    uo_txGeneDt <- readClassDt %>% 
+        select(txid,gene_sid) %>% distinct()
+    
     outList <- data.table(txid = uo_txGeneDt$txid,
                           counts = 0, 
                           fullLengthCounts = 0,
