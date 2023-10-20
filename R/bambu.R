@@ -201,7 +201,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         start.ptm <- proc.time()
         readClassDt <- simplifyNames(readClassDt)
         readClassDt = readClassDt %>% group_by(eqClassId, gene_sid) %>% 
-            mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1)
+            mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1) %>%
+            data.table()
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix)), FUN = function(i){
             print(i)
             return(bambu.quantify(readClassDt = readClassDt, countMatrix = unname(countMatrix[,i]), 

@@ -31,19 +31,13 @@ bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, tx
 bambu.quantDT <- function(readClassDt = readClassDt, 
                           emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
                                               minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
-  start.ptm <- proc.time()
   rcPreOut <- addAval(readClassDt, emParameters, verbose)
-  end.ptm <- proc.time()
-  message("addAval ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
-  start.ptm <- proc.time()
   readClassDt <- rcPreOut[[1]]
   outIni <- initialiseOutput(readClassDt)
   readClassDt <- filterTxRc(readClassDt) 
   readClassDt <- assignGroups(readClassDt)
   inputRcDt <- getInputList(readClassDt)
   readClassDt <- split(readClassDt, by = "gene_grp_id")
-  end.ptm <- proc.time()
- message("step2 ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
   start.ptm <- proc.time()
   outEst <- abundance_quantification(inputRcDt, readClassDt,
                                      maxiter = emParameters[["maxiter"]],

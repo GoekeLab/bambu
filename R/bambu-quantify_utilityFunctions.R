@@ -209,12 +209,7 @@ addAval <- function(readClassDt, emParameters, verbose){
                        round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
 #   readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
 #                                                   d_rateOut[1], d_mode = d_mode)
-  start.ptm <- proc.time()
-  #readClassDt = data.table(readClassDt)
   removeList <- removeUnObservedGenes(readClassDt)
-end.ptm <- proc.time()
-  message("removeUnObservedGenes ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
-  start.ptm <- proc.time()
   readClassDt <- removeList[[1]] # keep only observed genes for estimation
   outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
   readClassDt_withGeneCount <- select(readClassDt, gene_sid, eqClassId, nobs) %>%
@@ -229,8 +224,6 @@ end.ptm <- proc.time()
 #     ungroup() %>% group_by(gene_sid) %>%
 #     mutate(K = sum(nobs), n.obs=(nobs)/(K)) %>%
 #     ungroup()
-  end.ptm <- proc.time()
-  message("dplyr ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
   return(list(readClassDt_withGeneCount,outList))
 }
 
@@ -304,14 +297,11 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 #' @import data.table
 #' @noRd
 removeUnObservedGenes <- function(readClassDt){
-    uoGenes <- readClassDt %>% group_by(gene_sid) %>% 
-        summarise(nobs = sum(nobs)) %>% filter(nobs == 0) %>% 
-        select(gene_sid) %>% distinct()
+    uoGenes <- unique(readClassDt[,.I[sum(nobs) == 0], by = gene_sid]$gene_sid)
   if (length(uoGenes) > 0) {
-    readClassDt <- readClassDt %>% filter(gene_sid %in% uoGenes$gene_sid)
-    uo_txGeneDt <- readClassDt %>% 
-        select(txid,gene_sid) %>% distinct()
-    
+    uo_txGeneDt <- 
+      unique(readClassDt[(gene_sid %in% uoGenes),.(txid,gene_sid)])
+    readClassDt <- readClassDt[!(gene_sid %in% uoGenes)]
     outList <- data.table(txid = uo_txGeneDt$txid,
                           counts = 0, 
                           fullLengthCounts = 0,
