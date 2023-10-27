@@ -221,10 +221,6 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
         metadata(readClassDist)$distTable.incompatible = data.table(as.data.frame(metadata(readClassDist)$distTable)) %>% 
             filter(grepl("unidentified", annotationTxId)) %>% distinct(readClassId, .keep_all = TRUE)
         metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
-        #match count matrix with distTable to speed up calculations
-        metadata(readClassDist)$countMatrix.matched = 
-            metadata(readClassList)$countMatrix[metadata(readClassDist)$distTable$readClassId,]
-        colnames(metadata(readClassDist)$countMatrix.matched) = colnames(metadata(readClassList)$countMatrix) 
         return(readClassDist)
 }
 

@@ -190,8 +190,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
 
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
         if(is.list(readClassList)) readClassList = readClassList[[1]]
+        metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
+        readClassList = splitReadClassFiles(readClassList)
         readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
-        countMatrix = metadata(readClassList)$countMatrix
         incompatibleCountMatrix = metadata(readClassList)$incompatibleCountMatrix
         readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
         metadata(readClassList)$readClassDist = NULL

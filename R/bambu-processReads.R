@@ -66,8 +66,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 
     metadata(readClassList)$samples = names(reads)
     if(demultiplexed)metadata(readClassList)$samples =  metadata(readGrgList)$CB
-    metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
-    readClassList = splitReadClassFiles(readClassList)
 
     # TODO return output
     # if (!is.null(readClass.outputDir)) {
