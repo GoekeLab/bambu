@@ -196,17 +196,16 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         countMatrix = metadata(readClassList)$countMatrix
         incompatibleCountMatrix = metadata(readClassList)$incompatibleCountMatrix
         readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
-        metadata(readClassList)$readClassDist = NULL
         rm(readClassList)
         gc()
         GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
-        start.ptm <- proc.time()
         readClassDt <- simplifyNames(readClassDt)
         readClassDt = readClassDt %>% group_by(eqClassId, gene_sid) %>% 
             mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1) %>%
             data.table()
+        start.ptm <- proc.time()
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix)), FUN = function(i){
-            print(i)
+            #print(i)
             return(bambu.quantify(readClassDt = readClassDt, countMatrix = unname(countMatrix[,i]), 
                                         incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(incompatibleCountMatrix)), counts = incompatibleCountMatrix[,i]),
                                         txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
