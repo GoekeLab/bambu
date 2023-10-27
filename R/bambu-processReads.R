@@ -248,7 +248,7 @@ seqlevelCheckReadsAnnotation <- function(reads, annotations){
 splitReadClassFiles = function(readClassFile){
     distTable = metadata(metadata(readClassFile)$readClassDist)$distTable  
     eqClasses = distTable %>% group_by(eqClassById) %>% 
-        distinct(eqClassById, readCount,GENEID, .keep_all = TRUE)
+        distinct(eqClassById, readCount,GENEID, totalWidth, firstExonWidth, .keep_all = TRUE)
     eqClasses$sampleIDs = rowData(readClassFile)$sampleIDs[match(eqClasses$readClassId, rownames(readClassFile))]
     eqClasses = eqClasses %>% summarise(nobs = sum(readCount),
                                                 sampleIDs = list(unlist(sampleIDs)))
