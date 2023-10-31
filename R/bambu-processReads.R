@@ -147,8 +147,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
       }
       
       ## add ###
-      if (isTRUE(demultiplexed)){
-        cellBarcodeAssign <- tibble(index = mcols(readGrgList)$id, CB = mcols(readGrgList)$CB) %>% nest(.by = "CB")
+      #if (isTRUE(demultiplexed)){
+      #  cellBarcodeAssign <- tibble(index = mcols(readGrgList)$id, CB = mcols(readGrgList)$CB) %>% nest(.by = "CB")
 
         # if (!dir.exists("CB")){
         #   dir.create("CB")
@@ -158,7 +158,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         
         # invisible(lapply(seq(nrow(cellBarcodeAssign)),
         #           function(x){saveRDS(readGrgList[pull(cellBarcodeAssign$data[[x]])], paste0("CB/", cellBarcodeAssign$CB[[x]],".rds"))}))
-      } 
+      #} 
     return(readGrgList)
 }
 
@@ -284,3 +284,14 @@ splitReadClassFiles = function(readClassFile){
     metadata(readClassFile)$incompatibleCountMatrix = counts.incompatible  
     return(readClassFile )
 }
+
+splitReadClassFilesByRC = function(readClassFile){
+    counts.table = lapply(rowData(readClassFile)$sampleIDs, FUN = function(x){table(x)})
+    counts = sparseMatrix(
+        i = rep(seq_along(counts.table), lengths(counts.table)),
+        j = as.numeric(names(unlist(counts.table))),
+        x = unlist(counts.table),
+        dims = c(nrow(readClassFile), length(metadata(readClassFile)$samples)))
+    return(counts)
+}
+
