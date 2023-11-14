@@ -239,9 +239,7 @@ combineCountSes <- function(countsSe, annotations){
         if(all(countsMat==0)){return(NULL)}
         colnames(countsMat) <- sampleNames
         if (k == "incompatibleCounts"){
-            countsMat <- data.table(as.data.frame(as.matrix(countsMat)) %>%
-                                    mutate(GENEID = unique(mcols(annotations)$GENEID)) %>%
-                                    select(GENEID, everything()))
+            rownames(countsMat) = unique(mcols(annotations)$GENEID)
         }
         return(countsMat)
     })
