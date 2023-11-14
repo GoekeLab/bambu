@@ -11,30 +11,18 @@
 #' ))
 #' transcriptToGeneExpression(se)
 transcriptToGeneExpression <- function(se) {
-    counts <- as.data.table(as.matrix(assays(se)$counts), keep.rownames = TRUE)
+    counts <- assays(se)$counts
     runnames <- colnames(counts)[-1]
-    colnames(counts)[-1] <- rename_duplicatedNames(runnames)
-    colData(se)@rownames <- rename_duplicatedNames(colData(se)@rownames)
-    counts <- melt(counts, id.vars = "rn", measure.vars = colnames(counts)[-1])
-    setnames(counts, "rn", "TXNAME")
     rowDataSe <- as.data.table(rowData(se))
-    counts <- rowDataSe[, .(TXNAME, GENEID)][counts, on = "TXNAME"]
     
+    counts  = fac2sparse(rowData(se)$GENEID) %*% counts
     incompatibleCounts <- metadata(se)$incompatibleCounts
-    incompatibleCounts[, TXNAME := "incompatible"]
-    counts_incompatible <- melt(incompatibleCounts, id.vars = c("GENEID","TXNAME"), 
-        measure.vars = setdiff(colnames(incompatibleCounts), c("GENEID","TXNAME")))
-    # GENEID, TXNAME, variable, value
-    counts <- rbind(counts, counts_incompatible[variable %in% unique(counts$variable)])
-    counts[, valueGene := sum(value), by = list(variable, GENEID)]
-    counts[, valueGeneCPM := valueGene / max(sum(value), 1) * 10^6,
-           by = list(variable)]
+    incompatibleCounts = incompatibleCounts[match(rownames(counts), rownames(incompatibleCounts)),]
+    counts = counts + incompatibleCounts
+    counts.total = colSums(counts)
+    counts.total[counts.total==0] = 1
+    counts.CPM = counts/counts.total * 10^6
 
-    ## counts
-    counts_gene <- dcast(unique(counts[, .(GENEID, variable,
-        valueGene)]), GENEID ~ variable, value.var = "valueGene")
-    counts_gene_CPM <- dcast(unique(counts[, .(GENEID, variable,
-        valueGeneCPM)]), GENEID ~ variable, value.var = "valueGeneCPM")
     ## geneRanges
     exByGene <- reducedRangesByGenes(rowRanges(se))
     if ("txClassDescription" %in% colnames(rowDataSe)) {
@@ -45,29 +33,16 @@ transcriptToGeneExpression <- function(se) {
             newGeneClass)])[match(names(exByGene), GENEID)]
     }
     ## SE
-    counts_gene <- setDF(counts_gene)
-    RowNames <- counts_gene$GENEID
-    rownames(counts_gene) <- RowNames
-    counts_gene_CPM <- setDF(counts_gene_CPM)
-    rownames(counts_gene_CPM) <- RowNames
-    ColNames <- colnames(counts_gene)[-1]
+    RowNames <- rownames(counts)
+    ColNames <- colnames(counts)
     ColData <- colData(se)
     ColData@rownames <- ColNames
     ColData@listData$name <- ColNames
     seOutput <- SummarizedExperiment(
-    assays = SimpleList(counts = as.matrix(counts_gene[, -1, drop = FALSE],
-            ncol = length(ColNames),
-            dimnames = list(RowNames, ColNames)),
-            CPM = as.matrix(counts_gene_CPM[match(RowNames,
-            counts_gene_CPM$GENEID), -1, drop = FALSE], ncol = length(ColNames),
-            dimnames = list(RowNames, ColNames))),
+    assays = SimpleList(counts = counts,
+            CPM = counts.CPM),
         rowRanges = exByGene[RowNames],
         colData = ColData)
-    
-    if(is(assays(se)$counts, "sparseMatrix")) {
-        assays(seOutput)$counts <- as(assays(seOutput)$counts, "sparseMatrix")
-        assays(seOutput)$CPM <- as(assays(seOutput)$CPM, "sparseMatrix")
-    }
     
     return(seOutput)
 }
