@@ -208,7 +208,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
         GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
         start.ptm <- proc.time()
-        countsSeCompressed <- bplapply(seq_len(ncol(countMatrix)), FUN = function(i){
+        countsSeCompressed <- bplapply(seq_len(ncol(quantData$countMatrix)), FUN = function(i){
             #print(i)
             return(bambu.quantify(readClassDt = quantData$readClassDt, countMatrix = unname(quantData$countMatrix[,i]), 
                                         incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData$incompatibleCountMatrix)), counts = quantData$incompatibleCountMatrix[,i]),
@@ -218,7 +218,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                         BPPARAM = bpParameters)
         end.ptm <- proc.time()
         message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
-        countsSeCompressed$colnames = colnames(countMatrix)                             
+        countsSeCompressed$colnames = colnames(quantData$countMatrix)                             
         countsSe <- combineCountSes(countsSeCompressed, annotations)
 
         #metadata(countsSe)$warnings = warnings
