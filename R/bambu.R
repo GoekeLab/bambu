@@ -137,9 +137,9 @@
 #' @export
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
-    quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
+    assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
-    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE) {
+    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -173,41 +173,45 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
 
   #warnings = handleWarnings(readClassList, verbose)
-    if (!discovery & !quant) return(readClassList)
+    if (!discovery & !assignDist & !quant) return(readClassList)
     if (discovery) {
         message("--- Start extending annotations ---")
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                             isoreParameters, stranded, bpParameters, fusionMode, verbose)
         metadata(annotations)$warnings = warnings
         
-        if (!quant) return(annotations)
+        if (!quant & !assignDist) return(annotations)
     }
   
-    if (quant) {
-        message("--- Start isoform quantification ---")
-        if(length(annotations)==0) stop("No valid annotations, if running
-                                    de novo please try less stringent parameters")
-
+    if(assignDist){
+        message("--- Start calculate equivilance classes ---")
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
         if(is.list(readClassList)) readClassList = readClassList[[1]]
         metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
         readClassList = splitReadClassFiles(readClassList)
-        readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
-        countMatrix = metadata(readClassList)$countMatrix
-        incompatibleCountMatrix = metadata(readClassList)$incompatibleCountMatrix
-        readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
-        rm(readClassList)
-        gc()
-        GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
-        readClassDt <- simplifyNames(readClassDt)
-        readClassDt = readClassDt %>% group_by(eqClassId, gene_sid) %>% 
+        quantData = list()
+        quantData$readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
+        quantData$countMatrix = metadata(readClassList)$countMatrix
+        quantData$incompatibleCountMatrix = metadata(readClassList)$incompatibleCountMatrix
+        quantData$readClassDt$eqClass.match = match(quantData$readClassDt$eqClassById,metadata(readClassList)$eqClassById)
+        quantData$readClassDt <- simplifyNames(quantData$readClassDt)
+        quantData$readClassDt = quantData$readClassDt %>% group_by(eqClassId, gene_sid) %>% 
             mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1) %>%
             data.table()
+        if (!quant) return(quantData)
+    }
+
+    if (quant) {
+        message("--- Start isoform quantification ---")
+        if(length(annotations)==0) stop("No valid annotations, if running
+                                    de novo please try less stringent parameters")
+        if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
+        GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
         start.ptm <- proc.time()
         countsSeCompressed <- bplapply(seq_len(ncol(countMatrix)), FUN = function(i){
             #print(i)
-            return(bambu.quantify(readClassDt = readClassDt, countMatrix = unname(countMatrix[,i]), 
-                                        incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(incompatibleCountMatrix)), counts = incompatibleCountMatrix[,i]),
+            return(bambu.quantify(readClassDt = quantData$readClassDt, countMatrix = unname(quantData$countMatrix[,i]), 
+                                        incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData$incompatibleCountMatrix)), counts = quantData$incompatibleCountMatrix[,i]),
                                         txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
