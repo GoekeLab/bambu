@@ -53,8 +53,13 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
   # remove unused columns
   #eqClassTable[, eqClassById := NULL]
 
+  # correct assignment 
+  # add assignment to superset transcript for reads that assigned only to subset transcript 
+  eqClassTable <- addSupersetAssignment(eqClassTable, mcols(annotations), verbose)
+
   return(eqClassTable)
 }
+
 
 #' This function formats the distance table obtained from readClass by checking 
 #' the distance between readClass and transcripts to create equiValence read 
@@ -132,6 +137,41 @@ addEmptyRC <- function(eqClassCount, annotations){
     ungroup() %>%
     distinct()
   return(eqClassCount_final)
+}
+
+
+# add superset assignment 
+#' @import data.table
+#' @noRd 
+addSupersetAssignment <- function(eqClassTable, annoDt){
+    annoDt <- data.table(as.data.frame(annoDt))[, list(eqClassAssign = unlist(eqClassById)), by = list(TXNAME, GENEID, txid)]
+    annoDt[, ntx := .N, by = txid]
+    annoDt_subset <- annoDt[ntx>1&(txid != eqClassAssign)] # focus on those subset transcripts 
+
+    # find in eqClassTable, assignments to eqClassTable
+    eqClassTable_subset <- eqClassTable[txid %in% unique(annoDt_subset$txid)]
+
+    # for subset assigned transcripts, check if each read class is assigned to the superset transcripts
+    # if not, flag those out 
+    eqClassTable_subset_expand <- annoDt_subset[,.(txid, eqClassAssign)][eqClassTable_subset, on = "txid", allow.cartesian = TRUE]
+    eqClassTable_subset_expand2 <- eqClassTable_subset_expand[, list(eqClassAssign_obs = unlist(eqClassById)), 
+    by = list(eqClassId, eqClassAssign, nobs)]
+    eqClassTable_subset_expand2[, superset_check := !any(eqClassAssign == abs(eqClassAssign_obs)), by = list(eqClassId, eqClassAssign)]
+    eqClassTable_add <- unique(eqClassTable_subset_expand2[which(superset_check),.(eqClassId, eqClassAssign, nobs)])
+    setnames(eqClassTable_add, "eqClassAssign", "txid")
+    
+    eqClassTable_add <- unique(eqClassTable[txid %in% unique(eqClassTable_add$txid),.(txid, 
+    txlen, GENEID)])[eqClassTable_add, on = "txid"] # add tx information
+    eqClassTable_add <- eqClassTable %>% 
+    select(eqClassId, eqClassById, rcWidth, minRC) %>% 
+    distinct() %>% 
+    right_join(eqClassTable_add, by = "eqClassId") %>%
+    mutate(equal = FALSE) %>%
+    data.table()
+
+    eqClassTable <- do.call("rbind", list(eqClassTable, eqClassTable_add))
+    return(eqClassTable)
+    
 }
 
 # process minEquiRC
