@@ -55,7 +55,7 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
 
   # correct assignment 
   # add assignment to superset transcript for reads that assigned only to subset transcript 
-  eqClassTable <- addSupersetAssignment(eqClassTable, mcols(annotations), verbose)
+  eqClassTable <- addSupersetAssignment(eqClassTable, mcols(annotations))
 
   return(eqClassTable)
 }
