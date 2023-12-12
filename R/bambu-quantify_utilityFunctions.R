@@ -201,14 +201,14 @@ addAval <- function(readClassDt, emParameters, verbose){
   start.ptm <- proc.time()
   if (d_mode) {
     d_rateOut <- calculateDegradationRate(readClassDt)
+    readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
+                                                    d_rateOut[1], d_mode = d_mode)
   }else{
     d_rateOut <- rep(NA,2)
   }
   end.ptm <- proc.time()
   if (verbose) message("Finished estimate degradation bias in ",
                        round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
-#   readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
-#                                                   d_rateOut[1], d_mode = d_mode)
   removeList <- removeUnObservedGenes(readClassDt)
   readClassDt <- removeList[[1]] # keep only observed genes for estimation
   outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
