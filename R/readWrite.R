@@ -35,19 +35,7 @@ writeBambuOutput <- function(se, path, prefix = "") {
             writeCountsOutput(se, varname=d,
                              feature='transcript',outdir, prefix)
         }
-        
-        seGene <- transcriptToGeneExpression(se[,1])
-        
-        for (i in seq(ceiling(length(colnames(se)) / 100))){
-          if (i == ceiling(length(colnames(se)) / 100)){
-              seGene <- cbind(seGene, transcriptToGeneExpression(se[,(100*i-99):length(colnames(se))]))
-          } else{
-              seGene <- cbind(seGene, transcriptToGeneExpression(se[,(100*i-99):(100*i)]))
-          }
-        }
-        
-        seGene <- seGene[,-1]
-        
+        seGene <- transcriptToGeneExpression(se)
         writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
     }
 }
