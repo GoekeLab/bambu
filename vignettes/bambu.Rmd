@@ -128,8 +128,9 @@ annotation <- prepareAnnotations(gtf.file)
 ```
 The annotation object can also be created from a TxDb object:
 ```{r}
-txdb <- system.file("extdata", "Homo_sapiens.GRCh38.91_chr9_1_1000000.gtf",
+txdb_file <- system.file("extdata", "Homo_sapiens.GRCh38.91.annotations-txdb_chr9_1_1000000.sqlite",
     package = "bambu")
+txdb <- AnnotationDbi::loadDb(txdb_file)
 annotation <- prepareAnnotations(txdb)
 ```
 
