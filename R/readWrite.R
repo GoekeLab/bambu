@@ -34,9 +34,22 @@ writeBambuOutput <- function(se, path, prefix = "") {
         for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
                              feature='transcript',outdir, prefix)
+          print(d)
         }
         seGene <- transcriptToGeneExpression(se)
         writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
+        
+        txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
+        utils::write.table(txANDGenes, file = paste0(outdir, "txANDgenes.tsv"), 
+                           sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+        utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
+        utils::write.table(names(seGene), file = paste0(outdir, "genes.tsv"), 
+                           sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+        
+        R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
+        R.utils::gzip(paste0(outdir, "barcodes.tsv"))
+        R.utils::gzip(paste0(outdir, "genes.tsv"))
+        
     }
 }
 
@@ -46,8 +59,8 @@ writeBambuOutput <- function(se, path, prefix = "") {
 writeCountsOutput <- function(se, varname = "counts",
                               feature = "transcript", outdir, prefix){
   
-    estimatesfn <- paste(outdir, prefix, varname,"_",feature,".txt", sep = "")
     if(!is(assays(se)[[varname]], "sparseMatrix")){
+      estimatesfn <- paste(outdir, prefix, varname,"_",feature,".txt", sep = "")
       estimates <- data.table(as.data.frame(assays(se)[[varname]]),
                               keep.rownames = TRUE) 
       if(feature == "transcript"){
@@ -63,16 +76,14 @@ writeCountsOutput <- function(se, varname = "counts",
     } else{
         estimates <- assays(se)[[varname]]
         if (feature == "transcript"){
+          estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
           Matrix::writeMM(estimates, estimatesfn)
-          geneIDs <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
-          utils::write.table(geneIDs, file = paste0(outdir, "txANDgenes.txt"), 
-                             sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
-          utils::write.table(colnames(se), file = paste0(outdir, "barcodes.txt"), quote = FALSE, row.names = FALSE, col.names = FALSE)
+          R.utils::gzip(estimatesfn)
           
         } else{
+          estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
           Matrix::writeMM(estimates, estimatesfn)
-          utils::write.table(names(se), file = paste0(outdir, "genes.txt"), 
-                             sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+          R.utils::gzip(estimatesfn)
         }
     }
 }
