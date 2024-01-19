@@ -139,7 +139,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
-    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL) {
+    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -226,6 +226,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         #     generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
         #                              annotations)
         # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
+        
+        colData(countsSe) <- DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")) %>% 
+          filter(Barcode %in% colnames(countsSe)), row.names = colnames(countsSe))
+        
         return(countsSe)
     }
 }
