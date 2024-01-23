@@ -227,7 +227,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         #                              annotations)
         # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
         
-        colData(countsSe) <- DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")) %>% 
+        colData(countsSe) <- DataFrame(read.table(R.utils::gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")) %>% 
           filter(Barcode %in% colnames(countsSe)), row.names = colnames(countsSe))
         
         return(countsSe)
