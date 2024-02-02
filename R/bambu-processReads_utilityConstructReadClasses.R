@@ -453,9 +453,7 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
                                     ranges(geneRanges[subjectHits(ov)[multiHits]]))
         filteredMultiHits =  data.frame(queryHits = queryHits(ov)[multiHits], 
                                         intersectWidth = sum(width(rangeIntersect)), 
-                                        subjectHits = subjectHits(ov)[multiHits]) %>% 
-            group_by(queryHits) %>% summarise(subjectHits = subjectHits[which.max(intersectWidth)],
-                                                    intersectWidth = max(intersectWidth))
+                                        subjectHits = subjectHits(ov)[multiHits])
         if(fusionMode) {
         filteredMultiHits <- filteredMultiHits %>%  
             filter(intersectWidth>min.exonOverlap) %>%  
@@ -465,14 +463,52 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
         
         } else {
         filteredMultiHits <- filteredMultiHits %>% 
-            group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% 
-            dplyr::slice(1)
+            group_by(queryHits) %>% summarise(subjectHits = subjectHits[which.max(intersectWidth)],
+                                                    intersectWidth = max(intersectWidth))
         geneIds[filteredMultiHits$queryHits] <- 
             names(geneRanges)[filteredMultiHits$subjectHits]
         } 
     }
     return(geneIds)
 }
+
+# assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
+#                                      fusionMode=FALSE, prefix = 'Bambu') {
+#     # (1) assign gene Ids based on first intron match to annotations
+#     geneRanges <- reducedRangesByGenes(annotations)
+#     ov=findOverlaps(grl, geneRanges, minoverlap = min.exonOverlap)
+#     geneIds <- rep(NA, length(grl))
+#     uniqueHits <- which(queryHits(ov) %in% which(countQueryHits(ov)==1))
+#     geneIds[queryHits(ov)[uniqueHits]] <- 
+#         names(geneRanges)[subjectHits(ov)[uniqueHits]]
+    
+#     ## next for non unique hits select one gene (maximum overlap)
+#     multiHits <- which(queryHits(ov) %in% which(countQueryHits(ov)>1))
+#     expandedRanges <- expandRangesList(ranges(grl[queryHits(ov)[multiHits]]),
+#         ranges(geneRanges[subjectHits(ov)[multiHits]]))
+#     rangeIntersect <- pintersect(expandedRanges, 
+#         mcols(expandedRanges)$matchRng, resolve.empty = 'start.x')
+#     intersectById <- tapply(width(rangeIntersect), 
+#                             mcols(expandedRanges)$IdMap, sum)
+    
+#     filteredMultiHits <- as_tibble(ov[multiHits]) %>% 
+#         mutate(intersectWidth = intersectById)
+#     if(fusionMode) {
+#       filteredMultiHits <- filteredMultiHits %>%  
+#         filter(intersectWidth>min.exonOverlap) %>%  
+#         mutate(geneid = names(geneRanges)[subjectHits]) %>%  distinct() %>% 
+#         group_by(queryHits) %>% summarise(geneid = paste(geneid, collapse=':'))
+#       geneIds[filteredMultiHits$queryHits] <- filteredMultiHits$geneid
+      
+#     } else {
+#     filteredMultiHits <- filteredMultiHits %>% 
+#         group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% 
+#         dplyr::slice(1)
+#     geneIds[filteredMultiHits$queryHits] <- 
+#         names(geneRanges)[filteredMultiHits$subjectHits]
+#     } 
+#     return(geneIds)
+# }
 
 #' Create new gene ids for groups of overlapping read classes which 
 #' don't overlap with known annotations. 
