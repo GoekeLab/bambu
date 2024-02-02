@@ -74,7 +74,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence){
+checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, discovery){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
@@ -97,8 +97,8 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
         } else {
             stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
         }
-        if(any(grepl("^BambuGene", names(annotations))) | 
-            any(grepl("^BambuTx", mcols(annotations)$TXNAME))){
+        if(discovery & (any(grepl("^BambuGene", names(annotations))) | 
+            any(grepl("^BambuTx", mcols(annotations)$TXNAME)))){
                 message("Detected Bambu derived annotations in the annotations. ", 
                 "Set a new prefix with opt.discovery(list(prefix='newPrefix')) ",
                 "to prevent ambigious id assignment.")

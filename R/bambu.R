@@ -142,7 +142,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
-            readClass.outputDir = rcOutDir, genomeSequence = genome)
+            readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
