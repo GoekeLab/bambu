@@ -15,7 +15,8 @@
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
-    lowMemory=FALSE, trackReads = trackReads, fusionMode = fusionMode, demultiplexed = FALSE) {
+    lowMemory=FALSE, trackReads = trackReads, fusionMode = fusionMode, 
+    demultiplexed = FALSE, sampleNames = NULL) {
     genomeSequence <- checkInputSequence(genomeSequence)
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
@@ -39,6 +40,14 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         reads <- BamFileList(reads, yieldSize = yieldSize)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     }
+    if(!is.null(sampleNames)){
+        if(length(sampleNames==length(reads))){
+            names(reads) <- sampleNames
+        } else{
+            message("Not enough provided sample names. Using them in order of inputted files and the remaining files will use the file names")
+            names(reads)[seq_along(sampleNames)] <- sampleNames
+        }
+    }
     min.readCount = isoreParameters[["min.readCount"]]
     fitReadClassModel = isoreParameters[["fitReadClassModel"]]
     defaultModels = isoreParameters[["defaultModels"]]
@@ -54,9 +63,19 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, demultiplexed = demultiplexed, index = i)},
         BPPARAM = bpParameters)
+    
+    sampleNames = as.numeric(as.factor(sampleNames))
+    for(i in seq_along(readGrgList)){
+        if(demultiplexed){
+            mcols(readGrgList[[i]])$CB = paste0(names(reads)[i], mcols(readGrgList[[i]])$CB)
+        } else{mcols(readGrgList[[i]])$CB = sampleNames[i]}
+        mcols(readGrgList[[i]])$CB = as.factor(mcols(readGrgList[[i]])$CB)
+    }
     readGrgList = do.call(c, readGrgList)    
     mcols(readGrgList)$id <- seq_along(readGrgList) 
-
+    if(demultiplexed){ 
+        mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$CB)
+    } else {mcols(readGrgList)$sampleID = mcols(readGrgList)$CB}
     readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
@@ -65,7 +84,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
 
     metadata(readClassList)$samples = names(reads)
-    if(demultiplexed)metadata(readClassList)$samples =  metadata(readGrgList)$CB
+    if(demultiplexed)metadata(readClassList)$samples =  levels(mcols(readGrgList)$CB)
 
     # TODO return output
     # if (!is.null(readClass.outputDir)) {
@@ -121,10 +140,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         # reassign Ids after seqlevels are dropped
         mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
-    if(demultiplexed){ 
-        metadata(readGrgList)$CB = levels(mcols(readGrgList)$CB)
-        mcols(readGrgList)$sampleID = mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$CB)
-    } else {mcols(readGrgList)$sampleID = index}
     #removes reads that are outside genome coordinates
     badReads = which(max(end(ranges(readGrgList)))>=
                          seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])

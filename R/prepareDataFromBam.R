@@ -64,7 +64,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, use.n
     }
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList[width(readGrgList) > 1]
-    
+    mcols(readGrgList[[counter]])$CB
     return(readGrgList)
 }
 
