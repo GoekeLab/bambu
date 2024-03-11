@@ -56,7 +56,9 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         BPPARAM = bpParameters)
     readGrgList = do.call(c, readGrgList)    
     mcols(readGrgList)$id <- seq_along(readGrgList) 
-
+    
+    saveRDS(readGrgList, "readGrgList.rds")
+    
     readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
         readClass.outputDir = readClass.outputDir,
         stranded = stranded, min.readCount = min.readCount, 
