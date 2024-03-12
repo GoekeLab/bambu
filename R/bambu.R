@@ -72,6 +72,7 @@
 #'     defaults to 0.0001}
 #'     \item{minvalue}{specifying the minvalue for convergence consideration, 
 #'     defaults to 0.00000001}
+#'     \item{sig.digit}{specifying the maximum significant digits of the reported estimates}
 #' }
 #' @param rcOutDir A string variable specifying the path to where
 #' read class files will be saved.
@@ -143,17 +144,17 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
-    
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
     
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose)
-    if (bpParameters$workers > 1) ncore <- 1
 
     rm.readClassSe <- FALSE
     readClassList = reads
-    isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
+    isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
+    isBamFiles = !isRDSs
+    if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
     if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
@@ -186,7 +187,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         countsSe <- bplapply(readClassList, bambu.quantify,
                              annotations = annotations, isoreParameters = isoreParameters,
                              emParameters = emParameters, trackReads = trackReads, 
-                             returnDistTable = returnDistTable, ncore = ncore, verbose = verbose, 
+                             returnDistTable = returnDistTable, verbose = verbose, 
                              BPPARAM = bpParameters)
         countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
         rowRanges(countsSe) <- annotations

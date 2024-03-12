@@ -1,7 +1,7 @@
 Package: bambu
 Type: Package
 Title: Context-Aware Transcript Quantification from Long Read RNA-Seq data
-Version: 3.1.2
+Version: 3.3.5
 Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
              email = "chen_ying@gis.a-star.edu.sg"),
              person("Andre", "Sim", role = "aut",
@@ -57,6 +57,7 @@ biocViews:
     GenomeAnnotation,
     GenomeAssembly,
     ImmunoOncology,
+    LongRead,
     MultipleComparison,
     Normalization, 
     RNASeq, 

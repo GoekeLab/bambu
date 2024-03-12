@@ -3,7 +3,7 @@
 #' @import data.table
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters, 
-                           trackReads = FALSE, returnDistTable = FALSE, ncore = 1,
+                           trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
     min.exonDistance = isoreParameters[["min.exonDistance"]]
     min.primarySecondaryDist =
@@ -19,19 +19,20 @@ bambu.quantify <- function(readClass, annotations, emParameters,
     metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
     incompatibleCounts <- processIncompatibleCounts(readClassDist)
     readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 
-    compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,
-                               ncore = ncore, verbose = verbose)
+    compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
     incompatibleCounts <- incompatibleCounts[data.table(GENEID = unique(mcols(annotations)$GENEID)), on = "GENEID"]
     incompatibleCounts[is.na(counts), counts := 0]
+    compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
     setnames(incompatibleCounts, "counts", colnames(readClass))
     counts <- compatibleCounts[match(mcols(annotations)$txid, txid)]
     colNameRC <- colnames(readClass)
     colDataRC <- colData(readClass)
+    sig.digit <- emParameters[["sig.digit"]]
     seOutput <- SummarizedExperiment(
-        assays = SimpleList(counts = matrix(counts$counts, ncol = 1,
-        dimnames = list(NULL, colNameRC)), CPM = matrix(counts$CPM,
+        assays = SimpleList(counts = matrix(round(counts$counts,sig.digit), ncol = 1,
+        dimnames = list(NULL, colNameRC)), CPM = matrix(round(counts$CPM,sig.digit),
         ncol =  1, dimnames = list(NULL, colNameRC)),
-        fullLengthCounts = matrix(counts$fullLengthCounts, ncol = 1,
+        fullLengthCounts = matrix(round(counts$fullLengthCounts,sig.digit), ncol = 1,
             dimnames = list(NULL, colNameRC)),
         uniqueCounts = matrix(counts$uniqueCounts, 
             ncol = 1, dimnames = list(NULL, colNameRC))), colData = colDataRC)
@@ -61,14 +62,13 @@ bambu.quantDT <- function(readClassDt = readClassDt,
     readClassDt <- split(readClassDt, by = "gene_grp_id")
     start.ptm <- proc.time()
     outEst <- abundance_quantification(inputRcDt, readClassDt,
-                                       ncore = ncore,
                                        maxiter = emParameters[["maxiter"]],
                                        conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.ptm <- proc.time()
     if (verbose) message("Finished EM estimation in ",
                          round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     outEst <- modifyQuantOut(outEst,outIni)
-    theta_est <- formatOutput(rbind(rcPreOut[[2]],outEst))
+    theta_est <- rbind(rcPreOut[[2]],outEst)
     theta_est <- removeDuplicates(theta_est)
     return(theta_est)
 }

@@ -53,7 +53,7 @@ BiocManager::install("bambu")
 GitHub:
 ```rscript
 library(devtools)
-load_github("GoekeLab/bambu")
+install_github("GoekeLab/bambu")
 library(bambu)
 ```
 We can test if *bambu* is installed correctly and runs correctly by using a small test set that comes with the package. 
@@ -485,20 +485,51 @@ rowData(se)
 
 ### Release History
 
-**bambu version 3.0.0**
-Release date: 2022-10-25
-Major changes:
-    * Updated the input parameters of Bambu to simplify the user experience
-    * Introduced NDR threshold recommendation 
-    * Implemented trainBambu(), allowing users to train and use models on their own data
-    * Reads that cannot be assigned to any transcript are grouped as incompatible counts
-    * Partial estimates are removed from output as it can be directly obtained based on total count estimates and full-length count estimates
-    * The fusion mode is now available, which assigns read classes that align to multiple genes to a new combined fusion gene
+**bambu v3.2.5**
+
+Release date: 2023-July-07
 
 Minor changes:
-    * Novel transcripts and genes are now by default output with a Bambu prefix
-    * Updated the documentation, messages and errors output by Bambu
-    * Annotated transcripts (with unique exon-junctions) with at least 1 full-length read are assigned a NDR rank
+
+- Fix crash when extremely large datasets provided
+- Speed up read class construction 
+- Add LongRead BiocView 
+- Update release history
+
+
+**bambu v3.2.4**
+
+Release date: 2023-Apr-26
+
+Minor changes:
+
+- Fixes crash during Low Memory Mode when there are scaffolds with no reads
+- Fixes crash on windows machines caused by DNAStringSet
+- Adds NDR metadata when running discovery mode with recommended NDR, so users do not need to look at console for the recommended NDR.
+- Re-enabled GitHub actions for new devel branch name and the windows check
+- Fixed a crash that occurs with large datasets resulting in large overflow tables during novel gene id assignment
+- Remove nested bplapply in EM
+- Remove unused eqClassById list column in the readClassDist object to reduce memory usage
+- Fixed a bug that caused identical unspliced reads to not be tracked when trackReads = TRUE
+
+**bambu version 3.0.0**
+
+Release date: 2022-10-25
+
+Major changes:
+
+- Updated the input parameters of Bambu to simplify the user experience
+- Introduced NDR threshold recommendation 
+- Implemented trainBambu(), allowing users to train and use models on their own data
+- Reads that cannot be assigned to any transcript are grouped as incompatible counts
+- Partial estimates are removed from output as it can be directly obtained based on total count estimates and full-length count estimates
+- The fusion mode is now available, which assigns read classes that align to multiple genes to a new combined fusion gene
+
+Minor changes:
+
+- Novel transcripts and genes are now by default output with a Bambu prefix
+- Updated the documentation, messages and errors output by Bambu
+- Annotated transcripts (with unique exon-junctions) with at least 1 full-length read are assigned a NDR rank
 
 **bambu version 1.99.0**
 
@@ -560,7 +591,7 @@ Release date: 2020-06-18
 Release date: 2020-05-29 
 
 ### Citation
-Chen, Ying, et al. "Context-Aware Transcript Quantification from Long Read RNA-Seq data with Bambu" bioRxiv (2022). doi: https://doi.org/10.1101/2022.11.14.516358
+Chen, Y., Sim, A., Wan, Y.K. et al. Context-aware transcript quantification from long-read RNA-seq data with Bambu. Nat Methods (2023). https://doi.org/10.1038/s41592-023-01908-w
 
 ### Contributors
 

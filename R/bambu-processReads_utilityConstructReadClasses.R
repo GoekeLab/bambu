@@ -22,15 +22,17 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         warning("read Id not sorted, can result in wrong assignments.
             Please report this")
     start.ptm <- proc.time()
-    exonsByRC.spliced <- constructSplicedReadClasses(
-        uniqueJunctions = uniqueJunctions,
-        unlisted_junctions = unlisted_junctions,
-        readGrgList = readGrgList,
-        stranded = stranded)
+    if(!is.null(uniqueJunctions)){
+        exonsByRC.spliced <- constructSplicedReadClasses(
+            uniqueJunctions = uniqueJunctions,
+            unlisted_junctions = unlisted_junctions,
+            readGrgList = readGrgList,
+            stranded = stranded)}
+    else{exonsByRC.spliced = GRangesList()}
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
-        message("Finished create transcript models (read classes) for reads with ",
+        message("Finished creating transcript models (read classes) for reads with ",
     "spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) { 
         exonsByRC.unspliced <- NULL
@@ -187,8 +189,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
-        mutate(readClassId = paste("rc", row_number(), sep = ".")) %>% 
-  
+        mutate(readClassId = paste("rc", row_number(), sep = "."))
     return(readTable)
 }
 
@@ -242,16 +243,24 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
     #(1) reads fall into annotations or spliced read classes are summarised
     # by their minimum read class coordinates
     #remove duplicate ranges
-    counts = (as.data.frame(reads.singleExon) %>% 
-         count(seqnames,start,end,strand)) %>% as.data.frame()
+    counts = as.data.frame(reads.singleExon) %>% 
+        mutate(id = mcols(reads.singleExon)$id) %>% 
+        group_by(seqnames,start,end,strand) %>% 
+        summarise(n=n(), id = list(id)) %>% 
+        as.data.frame()
     reads.singleExon = unique(reads.singleExon)
     mcols(reads.singleExon)$counts <- counts$n
+    mcols(reads.singleExon)$id <- counts$id
 
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
         confidenceType = "unsplicedWithin", stranded = stranded)
-    reads.singleExon <- reads.singleExon[!mcols(reads.singleExon)$id %in%
-        unlist(mcols(rcUnsplicedAnnotation)$readIds)]
+    if(length(rcUnsplicedAnnotation)>0){
+        #remove summed reads that fell in an annotation
+        partitioning = PartitioningByEnd(mcols(reads.singleExon)$id)
+        nonRefRead = !(unlist(mcols(reads.singleExon)$id) %in% unlist(mcols(rcUnsplicedAnnotation)$readIds))
+        reads.singleExon <- reads.singleExon[all(relist(nonRefRead, partitioning))]
+    }
     if(length(reads.singleExon)==0){
       exonsByReadClass <- rcUnsplicedAnnotation
     }else{
@@ -310,11 +319,11 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(readId)) %>% 
+            readIds = list(unlist(readId))) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
-        return(list(GRangesList()))
+        return(GRangesList())
     }
     exByReadClassUnspliced <- GenomicRanges::GRanges(
         seqnames = hitsDF$chr,
@@ -376,10 +385,12 @@ assignGeneIds <-  function(grl, annotations, min.exonOverlap = 10, fusionMode = 
                                           fusionMode = fusionMode) 
     #iteratively assign gene ids for stranded granges
     newGeneSet <- is.na(mcols(grl)$GENEID) & strandedRanges
-    referenceGeneSet <- !is.na(mcols(grl)$GENEID) & strandedRanges
-    mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
-                                                                  min.exonOverlap = min.exonOverlap,
-                                                                  fusionMode = FALSE)  # fusion assignment is only done based on original annotations
+    if(sum(newGeneSet != 0)){
+        referenceGeneSet <- !is.na(mcols(grl)$GENEID) & strandedRanges
+        mcols(grl)$GENEID[newGeneSet] <- assignGeneIdsByReference(grl[newGeneSet], grl[referenceGeneSet],
+                                                                    min.exonOverlap = min.exonOverlap,
+                                                                    fusionMode = FALSE)  # fusion assignment is only done based on original annotations
+    }
     chainCount <- 1  # first iteration is outside of while loop
     while(any(!is.na(mcols(grl)$GENEID[newGeneSet])) & chainCount < maxChainIteration) {
       referenceGeneSet <- newGeneSet & !is.na(mcols(grl)$GENEID) & strandedRanges
@@ -431,32 +442,31 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
     uniqueHits <- which(queryHits(ov) %in% which(countQueryHits(ov)==1))
     geneIds[queryHits(ov)[uniqueHits]] <- 
         names(geneRanges)[subjectHits(ov)[uniqueHits]]
-    
-    ## next for non unique hits select one gene (maximum overlap)
-    multiHits <- which(queryHits(ov) %in% which(countQueryHits(ov)>1))
-    expandedRanges <- expandRangesList(ranges(grl[queryHits(ov)[multiHits]]),
-        ranges(geneRanges[subjectHits(ov)[multiHits]]))
-    rangeIntersect <- pintersect(expandedRanges, 
-        mcols(expandedRanges)$matchRng, resolve.empty = 'start.x')
-    intersectById <- tapply(width(rangeIntersect), 
-                            mcols(expandedRanges)$IdMap, sum)
-    
-    filteredMultiHits <- as_tibble(ov[multiHits]) %>% 
-        mutate(intersectWidth = intersectById)
-    if(fusionMode) {
-      filteredMultiHits <- filteredMultiHits %>%  
-        filter(intersectWidth>min.exonOverlap) %>%  
-        mutate(geneid = names(geneRanges)[subjectHits]) %>%  distinct() %>% 
-        group_by(queryHits) %>% summarise(geneid = paste(geneid, collapse=':'))
-      geneIds[filteredMultiHits$queryHits] <- filteredMultiHits$geneid
-      
-    } else {
-    filteredMultiHits <- filteredMultiHits %>% 
-        group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% 
-        dplyr::slice(1)
-    geneIds[filteredMultiHits$queryHits] <- 
-        names(geneRanges)[filteredMultiHits$subjectHits]
-    } 
+    if(length(ov)>0){
+        ## next for non unique hits select one gene (maximum overlap)
+        multiHits <- which(queryHits(ov) %in% which(countQueryHits(ov)>1))
+        rangeIntersect= intersect(ranges(grl[queryHits(ov)[multiHits]]),
+                                    ranges(geneRanges[subjectHits(ov)[multiHits]]))
+        filteredMultiHits =  data.frame(queryHits = queryHits(ov)[multiHits], 
+                                        intersectWidth = sum(width(rangeIntersect)), 
+                                        subjectHits = subjectHits(ov)[multiHits]) %>% 
+            group_by(queryHits) %>% summarise(subjectHits = subjectHits[which.max(intersectWidth)],
+                                                    intersectWidth = max(intersectWidth))
+        if(fusionMode) {
+        filteredMultiHits <- filteredMultiHits %>%  
+            filter(intersectWidth>min.exonOverlap) %>%  
+            mutate(geneid = names(geneRanges)[subjectHits]) %>%  distinct() %>% 
+            group_by(queryHits) %>% summarise(geneid = paste(geneid, collapse=':'))
+        geneIds[filteredMultiHits$queryHits] <- filteredMultiHits$geneid
+        
+        } else {
+        filteredMultiHits <- filteredMultiHits %>% 
+            group_by(queryHits) %>% arrange(desc(intersectWidth)) %>% 
+            dplyr::slice(1)
+        geneIds[filteredMultiHits$queryHits] <- 
+            names(geneRanges)[filteredMultiHits$subjectHits]
+        } 
+    }
     return(geneIds)
 }
 
@@ -531,10 +541,10 @@ assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap,
             dplyr::select(newGeneId, newExonId) %>% distinct()
     }
     # combined gene ids
-    geneGeneMap <- left_join(refGeneTxMap, dplyr::rename(refGeneTxMap, 
+    refGeneTxMapMins = refGeneTxMap %>% group_by(newTxId) %>% filter(n() > 1) %>% filter(newGeneId == min(newGeneId)) %>% ungroup()
+    refGeneTxMapNotMins = refGeneTxMap %>% group_by(newTxId) %>% filter(newGeneId != min(newGeneId)) %>% ungroup()
+    geneGeneMap <- left_join(refGeneTxMapMins, dplyr::rename(refGeneTxMapNotMins, 
         newGeneId.merge=newGeneId), by = "newTxId") %>% 
-        filter(newGeneId<newGeneId.merge) %>% 
-        filter(!(newGeneId %in% newGeneId.merge)) %>% 
         dplyr::select(newGeneId, newGeneId.merge) %>% distinct()
     refGeneTxMap <- rbind(refGeneTxMap %>% filter(!(newGeneId %in% 
         geneGeneMap$newGeneId.merge)), left_join(geneGeneMap, refGeneTxMap, 

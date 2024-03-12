@@ -47,7 +47,7 @@ setIsoreParameters <- function(isoreParameters){
 #' @noRd
 setEmParameters <- function(emParameters){
     emParameters.default <- list(degradationBias = TRUE, maxiter = 10000, 
-        conv = 10^(-2), minvalue = 10^(-8))
+        conv = 10^(-2), minvalue = 10^(-8), sig.digit = 5)
     emParameters <- updateParameters(emParameters, emParameters.default)
     return(emParameters)
 }
@@ -118,14 +118,16 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
         }
     } else{
     # ===# Check whether provided read files are all in the same format (.bam or .rds) #===#
-        if (!all(sapply(reads, class)=="RangedSummarizedExperiment") 
-            & !all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
-                stop("Reads should either be: a vector of paths to .bam files, ", 
-                "a vector of paths to Bambu RCfile .rds files, ",
-                "or a list of loaded Bambu RCfiles")
-        # if bam files are loaded in check that a genome is provided
-        if (all(grepl(".bam$", reads)) & is.null(genomeSequence)){
-            stop("A genome must be provided when running bambu from bam files")
+        isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
+        if(!isRDSs){
+            if (!all(grepl(".bam$", reads)) & !all(grepl(".rds$", reads)))
+                    stop("Reads should either be: a vector of paths to .bam files, ", 
+                    "a vector of paths to Bambu RCfile .rds files, ",
+                    "or a list of loaded Bambu RCfiles")
+            # if bam files are loaded in check that a genome is provided
+            if (all(grepl(".bam$", reads)) & is.null(genomeSequence)){
+                stop("A genome must be provided when running bambu from bam files")
+            }
         }
     }
     ## check genomeSequence can't be FaFile in Windows as faFile will be dealt
@@ -161,9 +163,9 @@ checkInputSequence <- function(genomeSequence) {
                                     "[[", 1))
         names(genomeSequence) <- newlevels
         } else {
-        indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
-        if (!indexFileExists) indexFa(genomeSequence)
-        genomeSequence <- FaFile(genomeSequence)
+            indexFileExists <- file.exists(paste0(genomeSequence,".fai"))
+            if (!indexFileExists) indexFa(genomeSequence)
+            genomeSequence <- FaFile(genomeSequence)
         }
     },
     error=function(cond) {
@@ -182,24 +184,27 @@ handleWarnings <- function(readClassList, verbose){
     sampleNames = c()
     for(i in seq_along(readClassList)){
         readClassSe = readClassList[[i]]
-        if (is.character(readClassSe)) 
-            readClassSe <- readRDS(file = readClassSe)
-        warnings[[i]] = metadata(readClassSe)$warnings
+        if (is.character(readClassSe)){
+            readClassSe <- readRDS(file = readClassSe)}
+        warnings[[i]] = NA
+        if(!is.null(metadata(readClassSe)$warnings)){
+            warnings[[i]] = metadata(readClassSe)$warnings}
         sampleNames = c(sampleNames, colnames(readClassList[[i]]))
     }
     names(warnings) = sampleNames
 
-    if(verbose & any(lengths(warnings)>0)){
+    if(verbose & any(!is.na(warnings))){
         message("--- per sample warnings during read class construction ---")
-        for(i in seq_along(warnings)){
-            if(lengths(warnings)[i]>0){
-                message("Warnings for: ", sampleNames[i])
-                sapply(warnings[[i]], message)
-            }
+        warnings.tmp = warnings[!is.na(warnings)]
+        for(i in seq_along(warnings.tmp)){
+            message("Warnings for: ", names(warnings.tmp)[i])
+            sapply(warnings.tmp[[i]], message)
         }
     } else {
-        message("Detected ", sum(lengths(warnings)), " warnings across the samples during ",
-        "read class construction. Access warnings with metadata(bambuOutput)$warnings")
+        warningCount = sum(lengths(warnings[!is.na(warnings)]))
+        if(warningCount > 0){
+            message("Detected ", warningCount, " warnings across the samples during ",
+        "read class construction. Access warnings with metadata(bambuOutput)$warnings")}
     }
     return(warnings)
 }

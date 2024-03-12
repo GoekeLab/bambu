@@ -56,6 +56,9 @@ genEquiRCs <- function(readClassDist, annotations, verbose){
   tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
                              txlen = sum(width(annotations))))
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
+
+  # remove unused columns
+  eqClassTable[, eqClassById := NULL]
   return(eqClassTable)
 }
 
@@ -233,7 +236,7 @@ addAval <- function(readClassDt, emParameters, verbose){
 simplifyNames <- function(readClassDt){
   readClassDt <- as.data.table(readClassDt)
   readClassDt[, gene_sid := match(GENEID, unique(readClassDt$GENEID))]
-  readClassDt[, `:=`(GENEID = NULL, eqClassById = NULL)]
+  readClassDt[, `:=`(GENEID = NULL)]
   return(readClassDt)
 }
 
@@ -282,7 +285,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
                                           rcWidth*d_rate/1000), by = list(gene_sid,txid)]
   if (d_rate == 0) {
     tmp[, par_status := all(!equal & multi_align),
-        by = list(eqClassById, gene_sid)]
+        by = list(eqClassId, gene_sid)]
     tmp[which(par_status), aval := 0.01]
   }
   tmp[, aval := pmax(pmin(aval,1),0)] #d_rate should be contained to 0-1
@@ -373,9 +376,8 @@ getInputList <- function(readClassDt){
 #' @param readClassDt A \code{data.table} with columns
 #' @importFrom BiocParallel bpparam bplapply
 #' @noRd
-abundance_quantification <- function(inputRcDt, readClassDt, ncore = 1,
+abundance_quantification <- function(inputRcDt, readClassDt,
                                      maxiter = 20000, conv = 10^(-2), minvalue = 10^(-8)) {
-      if (ncore == 1) {
         emResultsList <- lapply(as.list(names(inputRcDt)),
                                 run_parallel,
                                 conv = conv,
@@ -384,19 +386,6 @@ abundance_quantification <- function(inputRcDt, readClassDt, ncore = 1,
                                 inputRcDt = inputRcDt,
                                 readClassDt = readClassDt
         )
-    } else {
-        bpParameters <- bpparam()
-        bpParameters$workers <- ncore
-        emResultsList <- bplapply(as.list(names(inputRcDt)),
-                                  run_parallel,
-                                  conv = conv,
-                                  minvalue = minvalue, 
-                                  maxiter = maxiter,
-                                  inputRcDt = inputRcDt,
-                                  readClassDt = readClassDt,
-                                  BPPARAM = bpParameters
-        )
-    }
     estimates <- do.call("rbind", emResultsList)
     return(estimates)
 }
@@ -454,26 +443,14 @@ modifyQuantOut <- function(outEst, outIni){
 }
 
 
-#' This function converts transcript and gene ids back to transcript and gene 
-#' names 
-#' @noRd
-formatOutput <- function(theta_est){
-    theta_est <- theta_est[, .(txid, counts, fullLengthCounts,
-    uniqueCounts)]
-    totalCount <- sum(theta_est$counts)
-    theta_est[, `:=`(CPM = counts / totalCount * (10^6))]
-    return(theta_est)
-}
-
-
 #' Remove duplicate transcript counts originated from multiple genes
 #' @import data.table
 #' @noRd
 removeDuplicates <- function(counts){
     counts_final <- unique(counts[, list(counts = sum(counts),
                                          fullLengthCounts = sum(fullLengthCounts),
-                                         uniqueCounts = sum(uniqueCounts),
-                                         CPM = sum(CPM)), by = txid],by = NULL)
+                                         uniqueCounts = sum(uniqueCounts)), 
+                                  by = txid],by = NULL)
     return(counts_final)
 }
 
@@ -508,6 +485,15 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
   compatibleMatches = compatibleMatches$annotationTxIds[match(readClass_id, compatibleMatches$readClassId)]
   readToTranscriptMap = tibble(readId=read_id, equalMatches = equalMatches, compatibleMatches = compatibleMatches)
   return(readToTranscriptMap)
+}
+
+
+#' calculate CPM post estimation
+#' @noRd
+calculateCPM <- function(compatibleCounts, incompatibleCounts){
+    totalCount <- sum(compatibleCounts$counts)+sum(incompatibleCounts$counts)
+    compatibleCounts[, `:=`(CPM = counts / totalCount * (10^6))]
+    return(compatibleCounts)
 }
 
 #' @useDynLib bambu, .registration = TRUE

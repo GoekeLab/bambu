@@ -1,3 +1,23 @@
+bambu v3.2.0 (change date: 2023-Apr-26)
+==========================================
+Minor fixes:
+    * Fixes crash during Low Memory Mode when there are scaffolds with no reads
+    * Fixes crash on windows machines caused by DNAStringSet
+    * Adds NDR metadata when running discovery mode with recommended NDR, so users do not need to look at console for the recommended NDR.
+    * Re-enabled GitHub actions for new devel branch name and the windows check
+    * Fixed a crash that occurs with large datasets resulting in large overflow tables during novel gene id assignment
+    * Remove nested bplapply in EM
+    * Remove unused eqClassById list column in the readClassDist object to reduce memory usage
+    * Fixed a bug that caused identical unspliced reads to not be tracked when trackReads = TRUE
+
+bambu v3.0.8 (change date: 2023-02-14)
+==========================================
+Minor fixes:
+    * Bug fix for writeOutput function to remove unused argument due to dplyr package update
+    * Correct CPM calculation to incorporate incompatible reads 
+    * Round up quantification estimates to 5 digits (customisable through opt.em argument) 
+
+
 bambu v3.0.0 (Change date: 2022-10-25)
 ===========================================
 Major changes:

@@ -1,0 +1,17 @@
+citEntry(entry="article",
+         title = "Context-aware transcript quantification from long-read RNA-seq data with Bambu",
+         author = personList( as.person("Ying Chen"),
+                              as.person("Andre Sim"),
+                              as.person("Yuk Kei Wan"),
+                              as.person("Keith Yeo"),
+                              as.person("Joseph Jing Xian Lee"),
+                              as.person("Min Hao Ling"),
+                              as.person("Michael I. Love"),
+                              as.person("Jonathan Göke")),
+         year = 2023,
+         journal = "Nature Methods",
+         doi = "https://doi.org/10.1038/s41592-023-01908-w",
+         textVersion = 
+         paste("Chen, Y., Sim, A., Wan, Y. K., Yeo, K., Lee, J. J. X., Ling, M. H., Love, M. I. & Göke, J.", 
+               "Context-aware transcript quantification from long-read RNA-seq data with Bambu",
+                "Nat Methods (2023)" ) )
