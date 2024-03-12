@@ -84,18 +84,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         # readGrgList.keep = readGrgList[c(dt$ids[!dt$toFilt])]
         # readGrgList.filt = readGrgList[c(dt$ids[dt$toFilt])]
 
-        #UMI deduplication by barcode
-        start.ptm <- proc.time()
-        print(length(readGrgList))
-        df = data.frame(umi = mcols(readGrgList)$CB, 
-            barcode = mcols(readGrgList)$UMI,
-            lengths = sum(width(readGrgList)))
-        df = df %>% mutate(id = row_number()) %>% group_by(barcode, umi) %>% summarise(primary.id = id[which.max(lengths)])
-        readGrgList = unname(readGrgList[df$primary.id])
-        print(length(readGrgList))
-        end.ptm <- proc.time()
-        message("UMI deduplication Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
-        #select alignments closest to barcode
+       #select alignments closest to barcode
         start.ptm <- proc.time()
         print(length(readGrgList))
         df = data.frame(name = names(readGrgList), 
@@ -105,6 +94,19 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         print(length(readGrgList))
         end.ptm <- proc.time()
         message("Primary alignment selection Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+        
+        #UMI deduplication by barcode
+        start.ptm <- proc.time()
+        print(length(readGrgList))
+        df = data.frame(umi = mcols(readGrgList)$CB, 
+            barcode = mcols(readGrgList)$UMI,
+            lengths = sum(width(readGrgList)))
+        df = df %>% mutate(id = row_number()) %>% group_by(barcode, umi) %>% summarise(primary.id = id[which.max(lengths)])
+        readGrgList = readGrgList[df$primary.id]
+        print(length(readGrgList))
+        end.ptm <- proc.time()
+        message("UMI deduplication Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+ 
         #readGrgList = c(readGrgList.filt, unname(readGrgList.keep))
     }
     if(!use.names.OG) {names(readGrgList) <- NULL }
