@@ -6,7 +6,8 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
-                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
+                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, 
+                                    verbose = FALSE, ncore = ncore){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -34,7 +35,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     geneIds <- assignGeneIds(grl = exonRangesCombined,
                              annotations = annotationGrangesList,
                              min.exonOverlap = min.exonOverlap,
-                             fusionMode = fusionMode)
+                             fusionMode = fusionMode, ncore = ncore)
     rowDataCombined$GENEID <- geneIds[,1]
     rowDataCombined$novelGene <- geneIds[,2]
     if(fusionMode) rowDataCombined$readClassType[geneIds[,3]] <- 'fusionTranscript'
@@ -426,7 +427,7 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons,
 #' @noRd
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                       primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
-                                      ignore.strand = FALSE) {
+                                      ignore.strand = FALSE, ncore = 16) {
   # (1)  find overlaps of read classes with annotated transcripts,
   spliceOverlaps <- findSpliceOverlapsByDist(exByTx, exByTxRef,
                                              maxDist = maxDist, firstLastSeparate = TRUE,
@@ -675,7 +676,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
 isore.estimateDistanceToAnnotations <- function(seReadClass,
                                                 annotationGrangesList, min.exonDistance = 35,
                                                 min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 100000, 
-                                                additionalFiltering = FALSE, verbose = FALSE) {
+                                                additionalFiltering = FALSE, verbose = FALSE, ncore = 16) {
   start.ptm <- proc.time()
   readClassTable <-
     as_tibble(rowData(seReadClass), rownames = "readClassId") %>%
@@ -684,7 +685,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                                          annotationGrangesList, maxDist = min.exonDistance,
                                          primarySecondaryDist = min.primarySecondaryDist,
                                          primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
-                                         ignore.strand = FALSE)
+                                         ignore.strand = FALSE, ncore = ncore)
   distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId, ] 
   if (additionalFiltering) 
     distTable <- left_join(distTable, select(readClassTable,

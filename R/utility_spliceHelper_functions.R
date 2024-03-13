@@ -68,7 +68,8 @@ findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
     olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject),
                         ignore.strand = ignore.strand, type = "equal")
     query <- query[queryHits(olap)]
-    subject <- subject[subjectHits(olap)]
+    subject = split_olaps(subject, olap)
+    #subject <- subject[subjectHits(olap)]
     splice <- myGaps(query)
     compatible <- rangesDist(query, subject, splice, maxDist)
     equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
@@ -87,6 +88,13 @@ findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
     return(olap)
 }
 
+split_olaps = function(grl,ov, ncore = 16){
+    subjects = parallel::mclapply(split(subjectHits(ov),cut(1:length(subjectHits(ov)),100)),function(subjectHit){
+        grl[subjectHit]
+    },mc.cores = ncore)
+    subjects = subjects[lengths(subjects)!=0]
+    subjects = do.call("c",unlist(subjects, use.names = FALSE))  
+}
 
 #' check whether error with start sequence
 #' @noRd

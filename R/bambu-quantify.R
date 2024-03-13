@@ -4,7 +4,7 @@
 #' @noRd
 bambu.quantify <- function(readClass, annotations, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
-                           verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+                           verbose = FALSE, isoreParameters = setIsoreParameters(NULL), ncore = 16) {
     min.exonDistance = isoreParameters[["min.exonDistance"]]
     min.primarySecondaryDist =
         isoreParameters[['min.primarySecondaryDist']] 
@@ -15,7 +15,7 @@ bambu.quantify <- function(readClass, annotations, emParameters,
                                                          min.exonDistance = min.exonDistance,
                                                          min.primarySecondaryDist = min.primarySecondaryDist,
                                                          min.primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
-                                                         verbose = verbose)
+                                                         verbose = verbose, ncore = ncore)
     metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
     incompatibleCounts <- processIncompatibleCounts(readClassDist)
     readClassDt <- genEquiRCs(readClassDist, annotations, verbose) 

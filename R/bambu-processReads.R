@@ -51,7 +51,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         stranded = stranded, min.readCount = min.readCount, 
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)},
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, ncore = bpParameters$workers)},
         BPPARAM = bpParameters)
     return(readClassList)
 }
@@ -63,7 +63,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE) {
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, ncore = 16) {
     if(verbose) message(names(bam.file)[1])
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     warnings = c()
@@ -141,7 +141,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              min.readCount = min.readCount,
                              min.exonOverlap = min.exonOverlap,
                              fusionMode = fusionMode,
-                             verbose = verbose)
+                             verbose = verbose,
+                             ncore = ncore)
     if (!is.null(readClass.outputDir)) {
         readClassFile <- paste0(readClass.outputDir,names(bam.file),
                                 "_readClassSe.rds")

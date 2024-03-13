@@ -176,7 +176,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     if (discovery) {
         message("--- Start extending annotations ---")
         annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-                                               isoreParameters, stranded, bpParameters, fusionMode, verbose)
+                                               isoreParameters, stranded, bpParameters, fusionMode, verbose, ncore)
         metadata(annotations)$warnings = warnings
         if (!quant) return(annotations)
     }
@@ -187,7 +187,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         countsSe <- bplapply(readClassList, bambu.quantify,
                              annotations = annotations, isoreParameters = isoreParameters,
                              emParameters = emParameters, trackReads = trackReads, 
-                             returnDistTable = returnDistTable, verbose = verbose, 
+                             returnDistTable = returnDistTable, verbose = verbose, ncore = bpParameters$workers,
                              BPPARAM = bpParameters)
         countsSe <- combineCountSes(countsSe, trackReads, returnDistTable)
         rowRanges(countsSe) <- annotations
