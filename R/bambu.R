@@ -140,7 +140,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
-    sampleNames = NULL, cleanReads = FALSE, barcodesToFilter = NULL) {
+    sampleNames = NULL, cleanReads = FALSE, barcodesToFilter = NULL, clustering = NULL) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery)
@@ -182,6 +182,59 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                             isoreParameters, stranded, bpParameters, fusionMode, verbose)
         metadata(annotations)$warnings = warnings
         
+        #### split rcf into clusters
+        if(!is.null(clustering)){
+            message("--- Start extending annotations for clusters ---")
+            #if clustering is a csv, create a list with the barcodes for each cluster
+            #csv must have two cols with heading barcode, cluster
+            if(!is.list(clustering)){
+                clustering = read.csv(clustering)
+                clustering = clustering %>% group_by(cluster) %>% summarise(barcodes = list(barcode))
+                clusters = clustering$cluster
+                clustering = clustering$barcodes
+                names(clustering) = clusters
+            }
+            annotations.clusters = list()
+            rcfs.clusters = list()
+            clusters.rc = splitReadClassFilesByRC(readClassList[[1]])
+            txScores = c()
+            for(i in seq_along(clustering)){
+                print(names(clustering)[i])
+                ###TODO need to account for the sample name here which is added to the barcode
+                index = match(clustering[[i]],gsub('demultiplexed','',metadata(rcf[[1]])$samples)) 
+                index = index[!is.na(index)]
+                print(length(index))
+                if(length(index)<20) next
+                rcf.counts = clusters.rc[,index]
+                rcf.filt = readClassList[[1]][rowSums(rcf.counts)>0,]
+                rowData(rcf.filt)$readCount = rowSums(rcf.counts)[rowSums(rcf.counts)>0]
+                countsTBL = calculateGeneProportion(counts=mcols(rcf.filt)$readCount,
+                                                    geneIds=mcols(rcf.filt)$GENEID)
+                rowData(rcf.filt)$geneReadProp = countsTBL$geneReadProp
+                rowData(rcf.filt)$geneReadCount = countsTBL$geneReadCount
+                rowData(rcf.filt)$startSD = 0
+                rowData(rcf.filt)$endSD = 0
+                rowData(rcf.filt)$readCount.posStrand = 0
+                thresholdIndex = which(rowData(rcf.filt)$readCount>=2)
+                model = trainBambu(rcf.filt, verbose = TRUE, min.readCount = 2)
+                txScore = getTranscriptScore(rowData(rcf.filt)[thresholdIndex,], model,
+                                        defaultModels)
+                rowData(rcf.filt)$txScore = rep(NA,nrow(rcf.filt))
+                rowData(rcf.filt)$txScore[thresholdIndex] = txScore
+                #txScores = cbind(txScores, rowData(rcf.filt)$txScore)
+                rcfs.clusters[[names(clustering)[i]]] = rcf.filt
+                annotations.clusters[[names(clustering)[i]]] <- bambu.extendAnnotations(list(rcf.filt), annotations, NDR,
+                                        isoreParameters, stranded, bpParameters, fusionMode, verbose)
+            }
+            print("test")
+            if(length(rcfs.clusters)>0){
+                print("--- Merging all individual clusters ---")
+                annotations.clusters[["merged"]] <- bambu.extendAnnotations(rcfs.clusters, annotations, NDR,
+                    isoreParameters, stranded, bpParameters, fusionMode, verbose)
+            }
+            metadata(annotations)$clusters = annotations.clusters
+        }
+
         if (!quant & !assignDist) return(annotations)
     }
   
