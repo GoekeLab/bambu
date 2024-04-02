@@ -201,7 +201,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
-    readTable <- classifyReadsByFirstAndLastExon(readTable, annotations)
+    readTable <- classifyReadsByFirstAndLastExon(readTable, annotations, includeAnnoEdgeExons = TRUE, leeway = 35)
     print(3.1)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
