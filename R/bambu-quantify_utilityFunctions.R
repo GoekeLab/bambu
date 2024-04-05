@@ -20,8 +20,8 @@ modifyIncompatibleAssignment <- function(distTable){
 #' Process incompatible counts
 #' @noRd
 processIncompatibleCounts <- function(readClassDist){
-  distTable <- data.table(as.data.frame(metadata(readClassDist)$distTable))[, 
-                                                                            .(readClassId, annotationTxId, readCount, GENEID, dist,equal)]
+  distTable <- unique(data.table(as.data.frame(metadata(readClassDist)$distTable))[, 
+               .(readClassId, annotationTxId, readCount, GENEID, equal)], by = NULL)
   distTableIncompatible <- distTable[grep("unidentified", annotationTxId)]
   # filter out multiple geneIDs mapped to the same readClass using rowData(se)
   geneRCMap <- as.data.table(as.data.frame(rowData(readClassDist)),
