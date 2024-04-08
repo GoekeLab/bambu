@@ -79,3 +79,53 @@ prepareAnnotations <- function(x) {
     }
     return(exonsByTx)
 }
+
+extendAnnotationRanges = function(annotations, end5, end3, modelTable, modelTable2){
+    modelTable = read.table(modelTable, header = TRUE)
+
+    #load in the start and end ranges
+    gr_obj = import(end5)
+    gr_list = split(gr_obj, gr_obj$name)
+    getChrFromGrList(gr_list)
+    starts = gr_list[names(gr_list) %in% modelTable$end5_ID]
+
+    gr_obj = import(end3)
+    gr_list = split(gr_obj, gr_obj$name)
+    getChrFromGrList(gr_list)
+    ends = gr_list[names(gr_list) %in% modelTable$end3_ID]
+
+    #select the models (and their ends) that are present in the sample
+    modelTable2 = read.table(modelTable2, header = TRUE)
+    modelTable.tmp = modelTable[modelTable$set_ID %in% modelTable2$full_set_ID,]
+    
+    #break up the annotations so that the first and last exons can be adjusted
+    x = unlist(annotations)
+    partitioning = PartitioningByEnd(cumsum(elementNROWS(annotations)),
+                                        names = NULL)
+    firstExons = x[mcols(x)$exon_rank==1,]
+    lastExons = x[mcols(x)$exon_endRank==1,]
+    
+    modelTable.tmp = modelTable.tmp[match(names(firstExons), modelTable.tmp$model_ID_str),]
+    
+    #exnted the ranges of the first and last exons to match the maximum length of the end window
+    startPos = unlist(start(starts[modelTable.tmp$end5_ID]))
+    strand = as.character(strand(starts[modelTable.tmp$end5_ID]))
+    startPos[strand == '-'] = unlist(end(starts[modelTable.tmp$end5_ID]))[strand == '-']
+    start(firstExons[strand(firstExons) == '+']) = startPos[as.character(strand(firstExons)) == '+']
+    end(firstExons[strand(firstExons) == '-']) = startPos[as.character(strand(firstExons)) == '-']
+    
+    endPos = unlist(end(ends[modelTable.tmp$end3_ID]))
+    strand = as.character(strand(ends[modelTable.tmp$end3_ID]))
+    endPos[strand == '-'] = unlist(start(ends[modelTable.tmp$end3_ID]))[strand == '-']
+    end(lastExons[strand(lastExons) == '+']) = endPos[as.character(strand(lastExons)) == '+']
+    start(lastExons[strand(lastExons) == '-']) = endPos[as.character(strand(lastExons)) == '-']
+    
+    x[mcols(x)$exon_rank==1,] = firstExons
+    x[mcols(x)$exon_endRank==1,] = lastExons
+    
+    #return the annotations to the original formating
+    x = relist(unname(x), partitioning)
+    annotations = x
+    mcols(x) = mcols(annotations)
+    return(annotations)
+}
