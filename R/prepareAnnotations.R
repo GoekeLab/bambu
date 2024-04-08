@@ -125,7 +125,7 @@ extendAnnotationRanges = function(annotations, end5, end3, modelTable, modelTabl
     
     #return the annotations to the original formating
     x = relist(unname(x), partitioning)
-    annotations = x
     mcols(x) = mcols(annotations)
+    annotations = x
     return(annotations)
 }
