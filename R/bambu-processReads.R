@@ -44,6 +44,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     defaultModels = isoreParameters[["defaultModels"]]
     returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
+    leeway = isoreParameters[["leeway"]]
     readClassList <- bplapply(names(reads), function(bamFileName) {
         bambu.processReadsByFile(bam.file = reads[bamFileName],
         genomeSequence = genomeSequence,annotations = annotations,
@@ -51,7 +52,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         stranded = stranded, min.readCount = min.readCount, 
         fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
         defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)},
+        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, leeway = leeway)},
         BPPARAM = bpParameters)
     return(readClassList)
 }
@@ -63,7 +64,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE) {
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, leeway = 35) {
     if(verbose) message(names(bam.file)[1])
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, use.names = trackReads)
     warnings = c()
@@ -124,7 +125,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         # create SE object with reconstructed readClasses
         se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
                                          uniqueJunctions, runName = names(bam.file)[1],
-                                         annotations, stranded, verbose)
+                                         annotations, stranded, verbose, leeway)
     }
     metadata(se)$warnings = warnings
     if(trackReads){
@@ -170,7 +171,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se.temp <- isore.constructReadClasses(readGrgList[[i]], 
                                               unlisted_junctions, uniqueJunctions, runName = names(bam.file)[1],
-                                              annotations, stranded, verbose)
+                                              annotations, stranded, verbose, leeway)
         return(se.temp)
     })
     se = se[!sapply(se, FUN = is.null)]

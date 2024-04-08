@@ -36,7 +36,8 @@ setIsoreParameters <- function(isoreParameters){
         returnModel = FALSE,
         baselineFDR = 0.1,
         min.readFractionByEqClass = 0,
-        prefix = "Bambu") 
+        prefix = "Bambu",
+        leeway = 35) 
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
     return(isoreParameters)
