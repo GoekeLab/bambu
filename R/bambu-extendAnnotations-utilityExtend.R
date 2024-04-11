@@ -626,7 +626,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
-                                  "relReadCount", "relSubsetCount")]
+                                  "maxTxScore", "relReadCount", "relSubsetCount")]
     equalRanges = rowDataCombinedFiltered[!is.na(rowDataCombinedFiltered$TXNAME),]
     #remove extended ranges that are already present in annotation
     extendedAnnotationRanges <- extendedAnnotationRanges[is.na(rowDataCombinedFiltered$TXNAME)]
@@ -637,9 +637,11 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         mcols(annotationRangesToMerge)$novelTranscript <- FALSE
         mcols(annotationRangesToMerge)$novelGene <- FALSE
         mcols(annotationRangesToMerge)$NDR <- NA
+        mcols(annotationRangesToMerge)$txScore <- NA
         mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
         #copy over stats to annotations from read classes
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR = equalRanges$NDR
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore = equalRanges$maxTxScore
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
@@ -662,7 +664,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                 c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", "txClassDescription","readCount","relReadCount", "relSubsetCount", "txid", "eqClassById")]
+                 c("TXNAME", "GENEID", "NDR", "maxTxScore", "novelGene", "novelTranscript", "txClassDescription","readCount","relReadCount", "relSubsetCount", "txid", "eqClassById")]
   return(extendedAnnotationRanges)
 }
 
