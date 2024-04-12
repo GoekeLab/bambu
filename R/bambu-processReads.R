@@ -67,14 +67,14 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     
     sampleNames = as.numeric(as.factor(sampleNames))
     for(i in seq_along(readGrgList)){
-        if(demultiplexed){
+        if(!isFALSE(demultiplexed)){
             mcols(readGrgList[[i]])$CB = paste0(names(reads)[i], mcols(readGrgList[[i]])$CB)
         } else{mcols(readGrgList[[i]])$CB = sampleNames[i]}
         mcols(readGrgList[[i]])$CB = as.factor(mcols(readGrgList[[i]])$CB)
     }
     readGrgList = do.call(c, readGrgList)    
     mcols(readGrgList)$id <- seq_along(readGrgList) 
-    if(demultiplexed){ 
+    if(!isFALSE(demultiplexed)){ 
         mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$CB)
     } else {mcols(readGrgList)$sampleID = mcols(readGrgList)$CB}
     readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
@@ -85,7 +85,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
 
     metadata(readClassList)$samples = names(reads)
-    if(demultiplexed)metadata(readClassList)$samples =  levels(mcols(readGrgList)$CB)
+    if(!isFALSE(demultiplexed))metadata(readClassList)$samples =  levels(mcols(readGrgList)$CB)
 
     # TODO return output
     # if (!is.null(readClass.outputDir)) {

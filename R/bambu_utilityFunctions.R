@@ -9,7 +9,7 @@ setBiocParallelParameters <- function(reads, ncore, verbose, demultiplexed){
     "to resolve the issue that originates from the XGboost package.")
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
-    bpParameters$workers <- ifelse(length(reads) == 1 & !demultiplexed, 1, ncore)
+    bpParameters$workers <- ifelse(length(reads) == 1 & isFALSE(demultiplexed), 1, ncore)
     bpParameters$progressbar <- ifelse(length(reads) > 1 & !verbose, TRUE, FALSE)
     return(bpParameters)
 }

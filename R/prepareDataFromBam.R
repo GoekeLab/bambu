@@ -29,19 +29,28 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     cells <- c()
     umi <- c()
     use.names.OG = use.names
-    if(demultiplexed | cleanReads) use.names = TRUE
+    if(!isFALSE(demultiplexed) | cleanReads) use.names = TRUE
+    if(grepl(".[ct]sv$",demultiplexed)){
+        readMap = read.table(demultiplexed, 
+            sep = ifelse(grepl(".tsv$",demultiplexed), "\t", ","), header = FALSE)
+    }
     while (isIncomplete(bf)) {
         alignmentInfo <- readGAlignments(bf, param = ScanBamParam(tag = c("BC", "UG"), 
                                          flag = scanBamFlag(isSecondaryAlignment = FALSE)), 
                                          use.names = use.names)
         readGrgList[[counter]] <-grglist(alignmentInfo)
-        if (isTRUE(demultiplexed)){
-            mcols(readGrgList[[counter]])$CB <- ifelse(!is.na(mcols(alignmentInfo)$BC), mcols(alignmentInfo)$BC, 
-                                                       substr(names(readGrgList[[counter]]), 1, 16))
-            
-            mcols(readGrgList[[counter]])$UMI <- ifelse(!is.na(mcols(alignmentInfo)$UG), mcols(alignmentInfo)$UG, 
-                                                       substr(names(readGrgList[[counter]]), 18, 29))
-            
+        if (!isFALSE(demultiplexed)){
+            if(isTRUE(demultiplexed)){
+                mcols(readGrgList[[counter]])$CB <- ifelse(!is.na(mcols(alignmentInfo)$BC), mcols(alignmentInfo)$BC, 
+                                                        substr(names(readGrgList[[counter]]), 1, 16))
+                mcols(readGrgList[[counter]])$UMI <- ifelse(!is.na(mcols(alignmentInfo)$UG), mcols(alignmentInfo)$UG, 
+                                                        substr(names(readGrgList[[counter]]), 18, 29))
+            } else{
+                mcols(readGrgList[[counter]])$CB = "NA"
+                mcols(readGrgList[[counter]])$UMI = "NA"
+                mcols(readGrgList[[counter]])$CB = readMap[,2][match(names(readGrgList[[counter]]),readMap[,1])]
+                mcols(readGrgList[[counter]])$UMI = readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]
+            }
             cells <- unique(c(cells, mcols(readGrgList[[counter]])$CB))
             mcols(readGrgList[[counter]])$CB <- factor(mcols(readGrgList[[counter]])$CB, levels = cells)
             umi <- unique(c(umi, mcols(readGrgList[[counter]])$UMI))
