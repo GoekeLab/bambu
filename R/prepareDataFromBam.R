@@ -42,9 +42,9 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         if (!isFALSE(demultiplexed)){
             if(isTRUE(demultiplexed)){
                 mcols(readGrgList[[counter]])$CB <- ifelse(!is.na(mcols(alignmentInfo)$BC), mcols(alignmentInfo)$BC, 
-                                                        substr(names(readGrgList[[counter]]), 1, 16))
+                                                        gsub("(^[GACT]+(?=_)).*", '\\1', x, perl = TRUE))
                 mcols(readGrgList[[counter]])$UMI <- ifelse(!is.na(mcols(alignmentInfo)$UG), mcols(alignmentInfo)$UG, 
-                                                        substr(names(readGrgList[[counter]]), 18, 29))
+                                                        gsub(".*((?<=_)[GACT]*(?=#)).*", '\\1', x, perl = TRUE))
             } else{
                 mcols(readGrgList[[counter]])$CB = "NA"
                 mcols(readGrgList[[counter]])$UMI = "NA"
@@ -82,6 +82,11 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     }
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList[width(readGrgList) > 1]
+    numNoBCs = sum(mcols(readGrgList)$CB != "NA")
+    if(numNoBCs > 0){
+        message("Removing ", , " reads that were not assigned barcodes. If this is unexpected check the barcode map input")
+    readGrgList = readGrgList[mcols(readGrgList)$CB != "NA"]
+    }
     if(cleanReads){
         #extract duplicated reads from flexiplex to clean
         #leave other reads alone as supplimental alignments maybe fusion transcripts
@@ -95,26 +100,28 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
 
        #select alignments closest to barcode
         start.ptm <- proc.time()
-        print(length(readGrgList))
         df = data.frame(name = names(readGrgList), 
             clip5 = mcols(readGrgList)$clip5Prime)
         df = df %>% mutate(id = row_number()) %>% group_by(name) %>% summarise(primary.id = id[which.min(clip5)])
         readGrgList = unname(readGrgList[df$primary.id])
-        print(length(readGrgList))
         end.ptm <- proc.time()
         message("Primary alignment selection Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
         
         #UMI deduplication by barcode
         start.ptm <- proc.time()
-        print(length(readGrgList))
-        df = data.frame(umi = mcols(readGrgList)$CB, 
-            barcode = mcols(readGrgList)$UMI,
-            lengths = sum(width(readGrgList)))
-        df = df %>% mutate(id = row_number()) %>% group_by(barcode, umi) %>% summarise(primary.id = id[which.max(lengths)])
-        readGrgList = readGrgList[df$primary.id]
-        print(length(readGrgList))
-        end.ptm <- proc.time()
-        message("UMI deduplication Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+        numUMIs = length(unique(mcols(readGrgList)$UMI))
+        if(numUMIs > 100){
+            df = data.frame(umi = mcols(readGrgList)$CB, 
+                barcode = mcols(readGrgList)$UMI,
+                lengths = sum(width(readGrgList)))
+            df = df %>% mutate(id = row_number()) %>% group_by(barcode, umi) %>% summarise(primary.id = id[which.max(lengths)])
+            readGrgList = readGrgList[df$primary.id]
+            end.ptm <- proc.time()
+            message("UMI deduplication Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+        } else {
+            message("Only ", numUMIs, " detected. Not performing UMI deduplication. If this is unexpected, double check the --chemistry argument")
+        }
+
  
         #readGrgList = c(readGrgList.filt, unname(readGrgList.keep))
     }
