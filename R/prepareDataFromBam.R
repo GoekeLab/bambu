@@ -41,18 +41,18 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         readGrgList[[counter]] <-grglist(alignmentInfo)
         if (!isFALSE(demultiplexed)){
             if(isTRUE(demultiplexed)){
-                mcols(readGrgList[[counter]])$CB <- ifelse(!is.na(mcols(alignmentInfo)$BC), mcols(alignmentInfo)$BC, 
+                mcols(readGrgList[[counter]])$BC <- ifelse(!is.na(mcols(alignmentInfo)$BC), mcols(alignmentInfo)$BC, 
                                                         gsub("(^[GACT]+(?=_)).*", '\\1', x, perl = TRUE))
                 mcols(readGrgList[[counter]])$UMI <- ifelse(!is.na(mcols(alignmentInfo)$UG), mcols(alignmentInfo)$UG, 
                                                         gsub(".*((?<=_)[GACT]*(?=#)).*", '\\1', x, perl = TRUE))
             } else{
-                mcols(readGrgList[[counter]])$CB = "NA"
+                mcols(readGrgList[[counter]])$BC = "NA"
                 mcols(readGrgList[[counter]])$UMI = "NA"
-                mcols(readGrgList[[counter]])$CB = readMap[,2][match(names(readGrgList[[counter]]),readMap[,1])]
+                mcols(readGrgList[[counter]])$BC = readMap[,2][match(names(readGrgList[[counter]]),readMap[,1])]
                 mcols(readGrgList[[counter]])$UMI = readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]
             }
-            cells <- unique(c(cells, mcols(readGrgList[[counter]])$CB))
-            mcols(readGrgList[[counter]])$CB <- factor(mcols(readGrgList[[counter]])$CB, levels = cells)
+            cells <- unique(c(cells, mcols(readGrgList[[counter]])$BC))
+            mcols(readGrgList[[counter]])$BC <- factor(mcols(readGrgList[[counter]])$BC, levels = cells)
             umi <- unique(c(umi, mcols(readGrgList[[counter]])$UMI))
             mcols(readGrgList[[counter]])$UMI <- factor(mcols(readGrgList[[counter]])$UMI, levels = umi)
         }
@@ -82,10 +82,10 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     }
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList[width(readGrgList) > 1]
-    numNoBCs = sum(mcols(readGrgList)$CB != "NA")
+    numNoBCs = sum(mcols(readGrgList)$BC != "NA")
     if(numNoBCs > 0){
         message("Removing ", , " reads that were not assigned barcodes. If this is unexpected check the barcode map input")
-    readGrgList = readGrgList[mcols(readGrgList)$CB != "NA"]
+    readGrgList = readGrgList[mcols(readGrgList)$BC != "NA"]
     }
     if(cleanReads){
         #extract duplicated reads from flexiplex to clean
@@ -111,7 +111,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         start.ptm <- proc.time()
         numUMIs = length(unique(mcols(readGrgList)$UMI))
         if(numUMIs > 100){
-            df = data.frame(umi = mcols(readGrgList)$CB, 
+            df = data.frame(umi = mcols(readGrgList)$BC, 
                 barcode = mcols(readGrgList)$UMI,
                 lengths = sum(width(readGrgList)))
             df = df %>% mutate(id = row_number()) %>% group_by(barcode, umi) %>% summarise(primary.id = id[which.max(lengths)])
