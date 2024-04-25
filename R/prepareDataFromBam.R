@@ -8,7 +8,7 @@
 #' @importFrom GenomicRanges width
 #' @noRd
 prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE, 
-        use.names = FALSE, demultiplexed = FALSE, cleanReads = FALSE) {
+        use.names = FALSE, demultiplexed = FALSE, cleanReads = TRUE, dedupUMI = FALSE) {
     if (is(bamFile, "BamFile")) {
         if (!is.null(yieldSize)) {
             yieldSize(bamFile) <- yieldSize
@@ -105,8 +105,10 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         df = df %>% mutate(id = row_number()) %>% group_by(name) %>% summarise(primary.id = id[which.min(clip5)])
         readGrgList = unname(readGrgList[df$primary.id])
         end.ptm <- proc.time()
-        message("Primary alignment selection Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+        message("Primary alignment selection time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
         
+    }
+    if(dedupUMI){
         #UMI deduplication by barcode
         start.ptm <- proc.time()
         numUMIs = length(unique(mcols(readGrgList)$UMI))
@@ -117,7 +119,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
             df = df %>% mutate(id = row_number()) %>% group_by(barcode, umi) %>% summarise(primary.id = id[which.max(lengths)])
             readGrgList = readGrgList[df$primary.id]
             end.ptm <- proc.time()
-            message("UMI deduplication Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+            message("UMI deduplication time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
         } else {
             message("Only ", numUMIs, " detected. Not performing UMI deduplication. If this is unexpected, double check the --chemistry argument")
         }

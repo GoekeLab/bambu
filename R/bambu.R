@@ -140,7 +140,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
-    sampleNames = NULL, cleanReads = FALSE) {
+    sampleNames = NULL, cleanReads = TRUE, dedupUMI = FALSE) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery)
@@ -171,7 +171,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory, demultiplexed = demultiplexed,
-            sampleNames = sampleNames, cleanReads = cleanReads)
+            sampleNames = sampleNames, cleanReads = cleanReads, dedupUMI = dedupUMI)
     }
 
   #warnings = handleWarnings(readClassList, verbose)
