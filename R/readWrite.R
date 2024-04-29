@@ -30,7 +30,9 @@ writeBambuOutput <- function(se, path, prefix = "") {
             "extended_annotations.gtf", sep = "")
         gtf <- writeToGTF(annotation = transcript_grList,
             file = transcript_gtffn)
-        
+
+        utils::write.table(colData(se), file = paste0(outdir, "/sampleData.tsv"), 
+            sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
         for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
                              feature='transcript',outdir, prefix)
@@ -39,12 +41,12 @@ writeBambuOutput <- function(se, path, prefix = "") {
         seGene <- transcriptToGeneExpression(se)
         writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
         
+            utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
         txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
         utils::write.table(txANDGenes, file = paste0(outdir, "txANDgenes.tsv"), 
                            sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
-        utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
         utils::write.table(names(seGene), file = paste0(outdir, "genes.tsv"), 
-                           sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+                        sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
         
         R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
         R.utils::gzip(paste0(outdir, "barcodes.tsv"))
@@ -231,4 +233,41 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
         DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
     }
     return(grlist)
+}
+
+#' @title Read in Bambu results from writeBambuOutput() into se file
+#' @param path the destination of the output files 
+#' (gtf, transcript counts, and gene counts)
+#' @param prefixes the prefix of the output files
+#' @details The function will read in the output from Bambu as a sumerized experiment object.
+#' This SE object can be used for downstream processes. 
+#' @export
+#' @examples
+#' se <- importBambuResults(path = "/path/to/bambu/output/",
+#'     prefixes = c("rep1", "rep2")
+#' ))
+#' path <- tempdir()
+#' writeBambuOutput(se, path)
+importBambuResults <- function(path, prefixes = NA){
+    annotations = prepareAnnotations(paste0(path, "/extended_annotations.gtf"))
+    counts = readMM(paste0(path, "/counts_transcript.mtx"))
+    CPM = readMM(paste0(path, "/CPM_transcript.mtx"))
+    fullLengthCounts = readMM(paste0(path, "/fullLengthCounts_transcript.mtx"))
+    uniqueCounts = readMM(paste0(path, "/uniqueCounts_transcript.mtx"))
+    incompatibleCounts = readMM(paste0(path, "/incompatibleCounts.mtx"))
+    barcodes = read.table(paste0(path, "/barcodes.tsv"))
+    geneIds = read.table(paste0(path, "/genes.tsv"))
+    txIds = read.table(paste0(path, "/txANDgenes.tsv"))
+    colData = read.table(paste0(path, "/sampleData.tsv"), header = TRUE)
+    rownames(incompatibleCounts) = geneIds[,1]
+
+    countsSe <- SummarizedExperiment(assays = SimpleList(counts = counts, 
+                                                            CPM = CPM, 
+                                                            fullLengthCounts = fullLengthCounts, 
+                                                            uniqueCounts = uniqueCounts))
+    metadata(countsSe)$incompatibleCounts <- incompatibleCounts
+    rowRanges(countsSe) <- annotations
+    colData(countsSe) = DataFrame(colData)
+    colnames(countsSe) = colData[,1]
+    return(countsSe)
 }

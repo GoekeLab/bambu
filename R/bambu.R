@@ -229,11 +229,18 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         #                              annotations)
         # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
         
+        df = DataFrame(sampleName = colnames(countsSe))
+        if(demultiplexed){
+            df = DataFrame(id = colnames(countsSe), 
+                            sampleName = gsub("_[^_]+$","", colnames(countsSe), perl = TRUE), 
+                            Barcode = gsub(".*_(?=[^_]*$)","", colnames(countsSe), perl = TRUE))
+        }
 	    if(!is.null(spatial)){	
             colData(countsSe) <- DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")) %>% 
                 filter(Barcode %in% colnames(countsSe)), row.names = colnames(countsSe))
         }
-        
+        colData(countsSe) = df
+        colnames(countsSe) = df[,1]
         return(countsSe)
     }
 }
