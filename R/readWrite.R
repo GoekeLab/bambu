@@ -112,9 +112,29 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     } else if (!is(annotation, "CompressedGRangesList")) {
         stop("The inputted GRangesList is of the wrong class.")
     }
+    NDR = NULL
+    txScore = NULL
+    txScore.noFit = NULL
+    novelGene = NULL
+    novelTranscript = NULL
+    txClassDescription = NULL
     df <- as_tibble(annotation)
     df$exon_rank <- paste('exon_number "', df$exon_rank, '";', sep = "")
-    if (missing(geneIDs)) {
+    if(!is.null(mcols(annotation)$NDR)){
+        NDR = rep(mcols(annotation)$NDR, unname(elementNROWS(annotation)))
+        df$NDR <- paste('NDR "', as.character(NDR), '";', sep = "")
+        txScore = rep(mcols(annotation)$maxTxScore, unname(elementNROWS(annotation)))
+        df$txScore <- paste('maxTxScore "', as.character(txScore), '";', sep = "")
+        txScore.noFit = rep(mcols(annotation)$maxTxScore.noFit, unname(elementNROWS(annotation)))
+        df$txScore.noFit <- paste('maxTxScore.noFit "', as.character(txScore.noFit), '";', sep = "")
+        novelGene = rep(mcols(annotation)$novelGene, unname(elementNROWS(annotation)))
+        df$novelGene <- paste('novelGene "', as.character(novelGene), '";', sep = "")
+        novelTranscript = rep(mcols(annotation)$novelTranscript, unname(elementNROWS(annotation)))
+        df$novelTranscript <- paste('novelTranscript "', as.character(novelTranscript), '";', sep = "")
+        txClassDescription = rep(mcols(annotation)$txClassDescription, unname(elementNROWS(annotation)))
+        df$txClassDescription <- paste('txClassDescription "', as.character(txClassDescription), '";', sep = "")
+    }
+    if (is.null(geneIDs)) {
         if (!is.null(mcols(annotation, use.names = FALSE)$GENEID)) {
             geneIDs <- as_tibble(mcols(annotation, use.names = FALSE)[,
                 c("TXNAME", "GENEID")])
@@ -127,7 +147,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     df$group_name <- paste('transcript_id "', df$group_name, '";', sep = "")
     df$GENEID <- paste('gene_id "', df$GENEID, '";', sep = "")
     dfExon <- mutate(df, source = "Bambu", feature = "exon", score = ".",
-        frame = ".", attributes = paste(GENEID, group_name, exon_rank)) %>%
+        frame = ".", attributes = paste(GENEID, group_name, exon_rank, NDR, txScore, txScore.noFit, novelGene, novelTranscript, txClassDescription )) %>%
         select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
     dfTx <- as.data.frame(range(ranges(annotation)))
@@ -136,9 +156,16 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     dfTx$group_name <-
         paste('transcript_id "', dfTx$group_name, '";', sep = "")
     dfTx$GENEID <- paste('gene_id "', dfTx$GENEID, '";', sep = "")
-
+    if(!is.null(mcols(annotation)$NDR)) {
+        dfTx$NDR <- paste('NDR "', mcols(annotation)$NDR, '";', sep = "")
+        dfTx$txScore <- paste('txScore "', mcols(annotation)$txScore, '";', sep = "")
+        dfTx$txScore.noFit <- paste('txScore.noFit "', mcols(annotation)$txScore.noFit, '";', sep = "")
+        dfTx$novelGene <- paste('novelGene "', mcols(annotation)$novelGene, '";', sep = "")
+        dfTx$novelTranscript <- paste('novelTranscript "', mcols(annotation)$novelTranscript, '";', sep = "")
+        dfTx$txClassDescription <- paste('txClassDescription "', mcols(annotation)$txClassDescription, '";', sep = "")
+    }
     dfTx <- mutate(dfTx,source = "Bambu", feature = "transcript", score = ".",
-        frame = ".", attributes = paste(GENEID, group_name)) %>%
+        frame = ".", attributes = paste(GENEID, group_name, NDR, txScore, txScore.noFit, novelGene, novelTranscript, txClassDescription )) %>%
         select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
 
