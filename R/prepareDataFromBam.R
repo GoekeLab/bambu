@@ -42,9 +42,9 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         if (!isFALSE(demultiplexed)){
             if(isTRUE(demultiplexed)){
                 mcols(readGrgList[[counter]])$BC <- ifelse(!is.na(mcols(alignmentInfo)$BC), mcols(alignmentInfo)$BC, 
-                                                        gsub("(^[GACT]+(?=_)).*", '\\1', x, perl = TRUE))
+                                                        gsub("(^[GACT]+(?=_)).*", '\\1', names(readGrgList[[counter]]), perl = TRUE))
                 mcols(readGrgList[[counter]])$UMI <- ifelse(!is.na(mcols(alignmentInfo)$UG), mcols(alignmentInfo)$UG, 
-                                                        gsub(".*((?<=_)[GACT]*(?=#)).*", '\\1', x, perl = TRUE))
+                                                        gsub(".*((?<=_)[GACT]*(?=#)).*", '\\1', names(readGrgList[[counter]]), perl = TRUE))
             } else{
                 mcols(readGrgList[[counter]])$BC = "NA"
                 mcols(readGrgList[[counter]])$UMI = "NA"
