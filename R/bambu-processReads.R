@@ -68,7 +68,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     sampleNames = as.numeric(as.factor(sampleNames))
     for(i in seq_along(readGrgList)){
         if(!isFALSE(demultiplexed)){
-            mcols(readGrgList[[i]])$BC = paste0(names(reads)[i], mcols(readGrgList[[i]])$BC)
+            mcols(readGrgList[[i]])$BC = paste0(names(reads)[i], '_', mcols(readGrgList[[i]])$BC)
         } else{mcols(readGrgList[[i]])$BC = sampleNames[i]}
         mcols(readGrgList[[i]])$BC = as.factor(mcols(readGrgList[[i]])$BC)
     }
