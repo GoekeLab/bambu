@@ -236,7 +236,7 @@ combineCountSes <- function(countsSe, annotations){
                                 j = unlist(lapply(seq_along(countsVecList), function(j){rep(j, length(countsVecList[[j]]@i))})),
                                 x = unlist(lapply(countsVecList, function(j){j@x})),
                                 dims = c(length(countsVecList[[1]]), length(countsVecList)))
-        if(all(is.na(countsMat))){countsMat = matrix(0,nrow(countsMat),ncol(countsMat))}
+        if(all(is.na(countsMat))){countsMat = sparseMatrix(i=NULL, j = NULL, dims = c(length(countsVecList[[1]]), length(countsVecList)))}
         colnames(countsMat) <- sampleNames
         if (k == "incompatibleCounts"){
             rownames(countsMat) = unique(mcols(annotations)$GENEID)
