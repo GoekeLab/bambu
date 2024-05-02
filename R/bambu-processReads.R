@@ -116,9 +116,10 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
     cleanReads = TRUE, dedupUMI = FALSE, index = 0) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
+    print(paste0("Number of alignments/reads: ",length(readGrgList)))
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
-    if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))
+    if(verbose & length(warnings) > 0) {warning(paste(warnings,collapse = "\n"))}
     #check seqlevels for consistency, drop ranges not present in genomeSequence
     refSeqLevels <- seqlevels(genomeSequence)
     if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
@@ -129,14 +130,14 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                "reference genome sequence, annotations without reference genomic sequence ",
                                "are dropped")
           warnings = c(warnings, warningText)
-          if(verbose) warning(warningText)
+          if(verbose){warning(warningText)}
           annotations <- keepSeqlevels(annotations, value = refSeqLevels,
                                        pruning.mode = "coarse")
         }
         warningText = paste0("not all chromosomes from reads present in reference ",
                              "genome sequence, reads without reference chromosome sequence are dropped")
         warnings = c(warnings, warningText)
-        if(verbose) warning(warningText)
+        if(verbose){warning(warningText)}
         readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
                                      pruning.mode = "coarse")
         # reassign Ids after seqlevels are dropped
@@ -151,14 +152,14 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              "genomic regions. These reads will be dropped. Check you are using the ",
                              "same genome used for the alignment")
         warnings = c(warnings, warningText)
-        if(verbose) warning(warningText)
+        if(verbose){warning(warningText)}
       }
       
       ### add ### 
       # reassign Ids after seqlevels are dropped
       mcols(readGrgList)$id <- seq_along(readGrgList) 
       ### add ###
-      
+      print(paste0("Number of post-filter alignments/reads: ",length(readGrgList)))
       if(length(readGrgList) == 0) {
         stop("No reads left after filtering.")
       }

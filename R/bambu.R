@@ -143,7 +143,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     sampleNames = NULL, cleanReads = TRUE, dedupUMI = FALSE) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
-            readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery)
+            readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery, 
+            sampleNames = sampleNames, spatial = spatial)
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
@@ -167,9 +168,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         message("--- Start generating read class files ---")
         readClassList <- bambu.processReads(reads, annotations, 
             genomeSequence = genome, 
-            readClass.outputDir = rcOutDir, yieldSize, 
-            bpParameters, stranded, verbose,
-            isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
+            readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
+            bpParameters = bpParameters, stranded = stranded, verbose = verbose,
+            isoreParameters = isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory, demultiplexed = demultiplexed,
             sampleNames = sampleNames, cleanReads = cleanReads, dedupUMI = dedupUMI)
     }
@@ -235,9 +236,26 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                             sampleName = gsub("_[^_]+$","", colnames(countsSe), perl = TRUE), 
                             Barcode = gsub(".*_(?=[^_]*$)","", colnames(countsSe), perl = TRUE))
         }
-	    if(!is.null(spatial)){	
-            colData(countsSe) <- DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")) %>% 
-                filter(Barcode %in% colnames(countsSe)), row.names = colnames(countsSe))
+	    if(!is.null(spatial)){
+            df$x_coordinate = NA
+            df$y_coordinate = NA
+            #load in all whitelist info, is one file or a vector of paths?
+            if(length(spatial)==1){
+                bc_coords = DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+                bcMatch = match(df$Barcode, bc_coords$Barcode)
+                df$x_coordinate = bc_coords$x_coordinate[bcMatch]
+                df$y_coordinate = bc_coords$y_coordinate[bcMatch]
+            } else{
+                spatial.unique = unique(spatial)
+                for(whitelist in spatial.unique){
+                    i = which(spatial.unique==whitelist)
+                    bc_coords = DataFrame(read.table(gzfile(whitelist), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+                    bcSampleIndex = df$sampleName %in% sampleNames[i]
+                    bcMatch = match(df$Barcode[bcSampleIndex], bc_coords$Barcode)
+                    df$x_coordinate[bcSampleIndex] = bc_coords$x_coordinate[bcMatch]
+                    df$y_coordinate[bcSampleIndex] = bc_coords$y_coordinate[bcMatch]
+                }
+            }
         }
         colData(countsSe) = df
         colnames(countsSe) = df[,1]

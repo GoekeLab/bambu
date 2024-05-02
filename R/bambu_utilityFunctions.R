@@ -74,7 +74,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, discovery){
+checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, discovery, sampleNames, spatial){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
@@ -137,6 +137,24 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
             warning("Note that use of FaFile using Rsamtools in Windows is a bit
             fuzzy, recommend to provide the path as a string variable to avoid
             use of Rsamtools for opening.")
+    }
+
+    #check single-cell and spatial inputs match
+    if(!is.null(sampleNames)){
+        if(length(reads)!=length(sampleNames)){
+            stop("There are not the same number of sampleNames as input files to reads. ",
+            "Make sure these two arguments are vectors of the same length")
+        }
+    }
+
+    if(!is.null(spatial)){
+        #if(!all(grepl(".tsv^", spatial))){stop("Not all paths for spatial are .tsv files")}
+        if(length(spatial)==1 & length(reads)>1){
+            warning("Using the same whitelist and coordinates for all input samples")
+        } else if(length(reads)!=length(spatial)){
+            stop("There are not the same number spatial whitelist paths as input files to reads. ",
+            "Make sure these two arguments are vectors of the same length")
+        }
     }
     return(annotations)
 }

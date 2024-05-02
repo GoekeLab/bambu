@@ -20,7 +20,7 @@ bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, tx
                     fullLengthCounts = as(round(counts$fullLengthCounts,sig.digit), "sparseVector"),
                     uniqueCounts = as(round(counts$uniqueCounts,sig.digit), "sparseVector"))              
     end.ptm <- proc.time()
-    message("bambu.quantify ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+    if (verbose) message("bambu.quantify ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
     return(seOutput)
 }
 
