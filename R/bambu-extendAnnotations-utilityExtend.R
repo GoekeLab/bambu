@@ -64,7 +64,8 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
         combinedTranscripts$NSampleTxScore >= min.sampleNumber) & (
         combinedTranscripts$NSampleReadProp >= min.sampleNumber)
   }
-  combinedTranscripts = combinedTranscripts[filterSet,]
+  #combinedTranscripts = combinedTranscripts[filterSet,]
+  combinedTranscripts$maxTxScore[!filterSet] = 0
   return(combinedTranscripts)
 }
 
@@ -83,8 +84,10 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   if (remove.subsetTx) { # (1) based on compatibility with annotations
     notCompatibleIds <- which(!grepl("compatible", rowDataCombined$readClassType) |
         rowDataCombined$readClassType == "equal:compatible") #keep equal for FDR calculation
-    exonRangesCombined <- exonRangesCombined[notCompatibleIds]
-    rowDataCombined <- rowDataCombined[notCompatibleIds,]
+    #exonRangesCombined <- exonRangesCombined[notCompatibleIds]
+    #rowDataCombined <- rowDataCombined[notCompatibleIds,]
+    rowDataCombined$maxTxScore[grepl("compatible", rowDataCombined$readClassType) &
+        rowDataCombined$readClassType != "equal:compatible"]=0
   }
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined, 
@@ -178,6 +181,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
             "for NDR precision stabilization.")
           message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else combinedTranscripts$NDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
+    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==0] = 1
     return(combinedTranscripts)
 }
 
