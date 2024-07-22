@@ -46,10 +46,12 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
                 mcols(readGrgList[[counter]])$UMI <- ifelse(!is.na(mcols(alignmentInfo)$UG), mcols(alignmentInfo)$UG, 
                                                         gsub(".*((?<=_)[GACT]*(?=#)).*", '\\1', names(readGrgList[[counter]]), perl = TRUE))
             } else{
-                mcols(readGrgList[[counter]])$BC = "NA"
+                mcols(readGrgList[[counter]])$BC = NA
                 mcols(readGrgList[[counter]])$UMI = "NA"
                 mcols(readGrgList[[counter]])$BC = readMap[,2][match(names(readGrgList[[counter]]),readMap[,1])]
-                mcols(readGrgList[[counter]])$UMI = readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]
+                if(ncol(readMap)>2){
+                    mcols(readGrgList[[counter]])$UMI = readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]
+                }
             }
             cells <- unique(c(cells, mcols(readGrgList[[counter]])$BC))
             mcols(readGrgList[[counter]])$BC <- factor(mcols(readGrgList[[counter]])$BC, levels = cells)
@@ -82,10 +84,12 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     }
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList[width(readGrgList) > 1]
-    numNoBCs = sum(mcols(readGrgList)$BC == "NA")
+    print(head(mcols(readGrgList)))
+    numNoBCs = sum(is.na(mcols(readGrgList)$BC))
+    print(numNoBCs)
     if(numNoBCs > 0){
         message("Removing ", numNoBCs, " reads that were not assigned barcodes. If this is unexpected check the barcode map input")
-    readGrgList = readGrgList[mcols(readGrgList)$BC == "NA"]
+    readGrgList = readGrgList[!is.na(mcols(readGrgList)$BC)]
     }
     if(cleanReads){
         #extract duplicated reads from flexiplex to clean
