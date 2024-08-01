@@ -281,6 +281,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
   tmp[which(multi_align) , aval := ifelse(equal, 1 -
                                             sum(.SD[which(!equal)]$rcWidth*d_rate/1000),
                                           rcWidth*d_rate/1000), by = list(gene_sid,txid)]
+  if(is.na(d_rate)) d_rate = 0
   if (d_rate == 0) {
     tmp[, par_status := all(!equal & multi_align),
         by = list(eqClassId, gene_sid)]
