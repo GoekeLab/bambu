@@ -201,6 +201,13 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         quantData$readClassDt = quantData$readClassDt %>% group_by(eqClassId, gene_sid) %>% 
             mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1) %>%
             data.table()
+
+        #return non-em counts
+        quantData$geneCounts = geneCountsFromQuantData(quantData, annotations)
+        x = quantData$readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
+        quantData$uniqueCounts = quantData$countMatrix[x$eqClass.match,]
+        rownames(quantData$uniqueCounts) = names(annotations)[x$txid]
+        
         if (!quant) return(quantData)
     }
 

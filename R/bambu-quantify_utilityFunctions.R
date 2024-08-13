@@ -522,3 +522,32 @@ NULL
     library.dynam.unload("bambu", libpath)
 }
 
+geneCountsFromQuantData <- function(quantData, annotations){
+    x = quantData$readClassDt %>% group_by(eqClassId) %>% 
+        summarise(nobs= nobs[1], 
+                gene_sid = gene_sid[1], 
+                eqClass.match = eqClass.match[1], 
+                txid = txid[1]) %>% 
+        filter(!is.na(eqClass.match))
+
+    #combine counts by gene
+    nobs = quantData$countMatrix[x$eqClass.match,]
+    nobs.gene = sparse.model.matrix(~ factor(x$gene_sid) - 1)
+    nobs = t(nobs.gene) %*% nobs
+
+    #convert the relative gene index to the consistant gene id
+    rownames(nobs) = gsub("factor\\(x\\$gene_sid\\)", "", rownames(nobs))
+    rownames(nobs) = x$txid[match(rownames(nobs), x$gene_sid)]
+    rownames(nobs) = mcols(annotations)$GENEID[as.numeric(rownames(nobs))]
+    genes = levels(factor(unique(mcols(annotations)$GENEID)))
+    rownames(quantData$incompatibleCountMatrix) = genes[as.numeric(rownames(quantData$incompatibleCountMatrix))]
+
+    #combine the read class gene counts with incompatible counts
+    geneids = union(rownames(nobs), rownames(quantData$incompatibleCountMatrix))
+    geneMat = sparseMatrix(length(geneids), ncol(nobs), x = 0)
+    rownames(geneMat) = geneids
+    geneMat[rownames(nobs),] = nobs
+    geneMat[rownames(quantData$incompatibleCountMatrix),] = geneMat[rownames(quantData$incompatibleCountMatrix),] + quantData2$incompatibleCountMatrix
+
+    return(geneMat)
+}
