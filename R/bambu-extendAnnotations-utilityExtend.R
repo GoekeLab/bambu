@@ -495,7 +495,9 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
   } else {
     txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
       mutate(dist = uniqueLengthQuery + uniqueLengthSubject +
-               uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
+               uniqueStartLengthQuery + uniqueEndLengthQuery,
+             dist2 = dist +
+               uniqueStartLengthSubject + uniqueEndLengthSubject) %>%
       mutate(txNumber = n())
   }
   ## change query hits for step 2 and 3
@@ -691,7 +693,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                                              readClassId, confidenceType), by = "readClassId") %>%
     mutate(relativeReadCount = readCount / txNumberFiltered)
   distTable <- dplyr::select(distTable, annotationTxId, txid, readClassId,
-      readCount, compatible, equal,dist)
+      readCount, compatible, equal,dist, dist2)
   distTable <- left_join(distTable, as_tibble(mcols(annotationGrangesList)[, c("txid", "GENEID")]),
       by = c("txid" = "txid"))
   
