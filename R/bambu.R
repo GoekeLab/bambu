@@ -178,9 +178,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     if (!discovery & !assignDist & !quant) return(readClassList)
     if (discovery) {
         message("--- Start extending annotations ---")
-        annotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
+        extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                             isoreParameters, stranded, bpParameters, fusionMode, verbose)
-        metadata(annotations)$warnings = warnings
+        metadata(extendedAnnotations)$warnings = warnings
         
         #### split rcf into clusters
         if(!is.null(clustering)){
@@ -226,14 +226,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 annotations.clusters[[names(clustering)[i]]] <- bambu.extendAnnotations(list(rcf.filt), annotations, NDR,
                                         isoreParameters, stranded, bpParameters, fusionMode, verbose)
             }
-            print("test")
             if(length(rcfs.clusters)>0){
                 print("--- Merging all individual clusters ---")
                 annotations.clusters[["merged"]] <- bambu.extendAnnotations(rcfs.clusters, annotations, NDR,
                     isoreParameters, stranded, bpParameters, fusionMode, verbose)
             }
-            metadata(annotations)$clusters = annotations.clusters
+            metadata(extendedAnnotations)$clusters = annotations.clusters
         }
+        annotations = extendedAnnotations
 
         if (!quant & !assignDist) return(annotations)
     }
