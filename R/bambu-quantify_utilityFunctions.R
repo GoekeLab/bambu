@@ -547,7 +547,7 @@ geneCountsFromQuantData <- function(quantData, annotations){
     geneMat = sparseMatrix(length(geneids), ncol(nobs), x = 0)
     rownames(geneMat) = geneids
     geneMat[rownames(nobs),] = nobs
-    geneMat[rownames(quantData$incompatibleCountMatrix),] = geneMat[rownames(quantData$incompatibleCountMatrix),] + quantData2$incompatibleCountMatrix
+    geneMat[rownames(quantData$incompatibleCountMatrix),] = geneMat[rownames(quantData$incompatibleCountMatrix),] + quantData$incompatibleCountMatrix
 
     return(geneMat)
 }

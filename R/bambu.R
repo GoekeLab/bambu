@@ -140,7 +140,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
-    sampleNames = NULL, cleanReads = TRUE, dedupUMI = FALSE) {
+    sampleNames = NULL, cleanReads = TRUE, dedupUMI = FALSE, clusters = NULL) {
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery, 
@@ -206,7 +206,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         quantData$geneCounts = geneCountsFromQuantData(quantData, annotations)
         x = quantData$readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
         quantData$uniqueCounts = quantData$countMatrix[x$eqClass.match,]
-        rownames(quantData$uniqueCounts) = names(annotations)[x$txid]
+        uniqueCounts.tx = sparse.model.matrix(~ factor(x$txid) - 1)
+        quantData$uniqueCounts = t(uniqueCounts.tx) %*% quantData$uniqueCounts
+        rownames(quantData$uniqueCounts) = names(annotations)[match(as.numeric(levels(factor(x$txid))),mcols(annotations)$txid)]
         
         if (!quant) return(quantData)
     }
@@ -218,17 +220,39 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
         GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
         start.ptm <- proc.time()
-        countsSeCompressed <- bplapply(seq_len(ncol(quantData$countMatrix)), FUN = function(i){
-            #print(i)
-            return(bambu.quantify(readClassDt = quantData$readClassDt, countMatrix = unname(quantData$countMatrix[,i]), 
-                                        incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData$incompatibleCountMatrix)), counts = quantData$incompatibleCountMatrix[,i]),
+
+        #load in the barcode clustering from file if provided
+        iter = seq_len(ncol(quantData$countMatrix))
+        if(!is.null(clusters)){
+            if(!is.list(clusters)){
+                clusterMap = read.table(clusters, 
+                    sep = ifelse(grepl(".tsv$",clusters), "\t", ","), header = FALSE)
+                clusters = splitAsList(clusterMap[,1], clusterMap[,2]) 
+                rm(clusterMap)
+            }
+            iter = clusters
+        }
+
+        countsSeCompressed <- bplapply(iter, FUN = function(i){
+            countMatrix = unname(quantData$countMatrix[,i])
+            if(!is.null(dim(countMatrix))){
+                countMatrix = rowSums(countMatrix)
+                incompatibleCountMatrix = rowSums(quantData$incompatibleCountMatrix[,i])
+            }
+            return(bambu.quantify(readClassDt = quantData$readClassDt, countMatrix = countMatrix, 
+                                        incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
                                         txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
                                         BPPARAM = bpParameters)
         end.ptm <- proc.time()
         message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
-        countsSeCompressed$colnames = colnames(quantData$countMatrix)                             
+        if(!is.null(clusters)){
+            countsSeCompressed$colnames = names(clusters)   
+        } else{
+            countsSeCompressed$colnames = colnames(quantData$countMatrix)    
+        }
+                         
         countsSe <- combineCountSes(countsSeCompressed, annotations)
 
         #metadata(countsSe)$warnings = warnings
@@ -238,12 +262,12 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
         
         df = DataFrame(sampleName = colnames(countsSe))
-        if(demultiplexed){
+        if(demultiplexed & is.null(clusters)){
             df = DataFrame(id = colnames(countsSe), 
                             sampleName = gsub("_[^_]+$","", colnames(countsSe), perl = TRUE), 
                             Barcode = gsub(".*_(?=[^_]*$)","", colnames(countsSe), perl = TRUE))
         }
-	    if(!is.null(spatial)){
+	    if(!is.null(spatial & is.null(clusters))){
             df$x_coordinate = NA
             df$y_coordinate = NA
             #load in all whitelist info, is one file or a vector of paths?
