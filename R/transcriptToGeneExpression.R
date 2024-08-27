@@ -17,6 +17,9 @@ transcriptToGeneExpression <- function(se) {
     
     counts  = fac2sparse(rowData(se)$GENEID) %*% counts
     incompatibleCounts <- metadata(se)$incompatibleCounts
+    if("nonuniqueCounts" %in% names(metadata(se))){
+        incompatibleCounts = incompatibleCounts + metadata(se)$nonuniqueCounts
+    }
     incompatibleCounts = incompatibleCounts[match(rownames(counts), rownames(incompatibleCounts)),]
     counts = counts + incompatibleCounts
     counts.total = colSums(counts)

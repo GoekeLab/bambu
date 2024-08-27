@@ -522,32 +522,49 @@ NULL
     library.dynam.unload("bambu", libpath)
 }
 
-geneCountsFromQuantData <- function(quantData, annotations){
-    x = quantData$readClassDt %>% group_by(eqClassId) %>% 
-        summarise(nobs= nobs[1], 
-                gene_sid = gene_sid[1], 
-                eqClass.match = eqClass.match[1], 
-                txid = txid[1]) %>% 
-        filter(!is.na(eqClass.match))
+generateUniqueCounts <- function(readClassDt, countMatrix, annotations){
+    x = readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
+    uniqueCounts = countMatrix[x$eqClass.match,]
+    uniqueCounts.tx = sparse.model.matrix(~ factor(x$txid) - 1)
+    uniqueCounts = t(uniqueCounts.tx) %*% uniqueCounts
+    rownames(uniqueCounts) = names(annotations)[match(as.numeric(levels(factor(x$txid))),mcols(annotations)$txid)]
+    counts = sparseMatrix(length(annotations), ncol(uniqueCounts), x = 0)
+    rownames(counts) = names(annotations)
+    counts[rownames(uniqueCounts),] = uniqueCounts
+    return(counts)
 
-    #combine counts by gene
-    nobs = quantData$countMatrix[x$eqClass.match,]
-    nobs.gene = sparse.model.matrix(~ factor(x$gene_sid) - 1)
-    nobs = t(nobs.gene) %*% nobs
+    counts.total = colSums(countMatrix) + colSums(incompatibleCountMatrix)
+    counts.total[counts.total==0] = 1
+    counts.CPM = counts/counts.total * 10^6
 
-    #convert the relative gene index to the consistant gene id
-    rownames(nobs) = gsub("factor\\(x\\$gene_sid\\)", "", rownames(nobs))
-    rownames(nobs) = x$txid[match(rownames(nobs), x$gene_sid)]
-    rownames(nobs) = mcols(annotations)$GENEID[as.numeric(rownames(nobs))]
+}
+
+generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
     genes = levels(factor(unique(mcols(annotations)$GENEID)))
-    rownames(quantData$incompatibleCountMatrix) = genes[as.numeric(rownames(quantData$incompatibleCountMatrix))]
-
-    #combine the read class gene counts with incompatible counts
-    geneids = union(rownames(nobs), rownames(quantData$incompatibleCountMatrix))
-    geneMat = sparseMatrix(length(geneids), ncol(nobs), x = 0)
-    rownames(geneMat) = geneids
-    geneMat[rownames(nobs),] = nobs
-    geneMat[rownames(quantData$incompatibleCountMatrix),] = geneMat[rownames(quantData$incompatibleCountMatrix),] + quantData$incompatibleCountMatrix
-
+    rownames(incompatibleCountMatrix) = genes[as.numeric(rownames(incompatibleCountMatrix))]
+    geneMat = sparseMatrix(length(genes), ncol(incompatibleCountMatrix), x = 0)
+    rownames(geneMat) = genes
+    geneMat[rownames(incompatibleCountMatrix),] = incompatibleCountMatrix
     return(geneMat)
 }
+
+generateNonUniqueCounts <- function(readClassDt, countMatrix, annotations){
+    #fuse multi align RCs by gene
+    x = readClassDt %>% filter(multi_align & !is.na(eqClass.match))
+    x = x %>% distinct(eqClassId, .keep_all = TRUE)
+    nonuniqueCounts = countMatrix[x$eqClass.match,]
+    nonuniqueCounts.gene = sparse.model.matrix(~ factor(x$gene_sid) - 1)
+    nonuniqueCounts = t(nonuniqueCounts.gene) %*% nonuniqueCounts
+    #covert ids into gene ids
+    geneids = as.numeric(levels(factor(x$gene_sid)))
+    geneids = x$txid[match(geneids, x$gene_sid)]
+    geneids = mcols(annotations)$GENEID[as.numeric(geneids)]
+    rownames(nonuniqueCounts) = geneids
+    #create matrix for all annotated genes
+    genes = levels(factor(unique(mcols(annotations)$GENEID)))
+    geneMat = sparseMatrix(length(genes), ncol(nonuniqueCounts), x = 0)
+    rownames(geneMat) = genes
+    geneMat[rownames(nonuniqueCounts),] = nonuniqueCounts
+    return(geneMat)
+}
+

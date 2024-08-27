@@ -271,6 +271,38 @@ combineCountSes <- function(countsSe, annotations){
     return(countsSe)
 }
 
+#' Generate the coldata for se options using colnames, and other option inputs
+#' @noRd
+generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
+    ColData = DataFrame(sampleName = sampleNames)
+    if(demultiplexed & is.null(clusters)){
+        ColData = DataFrame(id = sampleNames, 
+                        sampleName = gsub("_[^_]+$","", sampleNames, perl = TRUE), 
+                        Barcode = gsub(".*_(?=[^_]*$)","", sampleNames, perl = TRUE))
+    }
+    if(!is.null(spatial) & is.null(clusters)){
+        ColData$x_coordinate = NA
+        ColData$y_coordinate = NA
+        if(length(spatial)==1){
+            bc_coords = DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+            bcMatch = match(ColData$Barcode, bc_coords$Barcode)
+            ColData$x_coordinate = bc_coords$x_coordinate[bcMatch]
+            ColData$y_coordinate = bc_coords$y_coordinate[bcMatch]
+        } else{
+            spatial.unique = unique(spatial)
+            for(whitelist in spatial.unique){
+                i = which(spatial.unique==whitelist)
+                bc_coords = DataFrame(read.table(gzfile(whitelist), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+                bcSampleIndex = ColData$sampleName %in% sampleNames[i]
+                bcMatch = match(ColData$Barcode[bcSampleIndex], bc_coords$Barcode)
+                ColData$x_coordinate[bcSampleIndex] = bc_coords$x_coordinate[bcMatch]
+                ColData$y_coordinate[bcSampleIndex] = bc_coords$y_coordinate[bcMatch]
+            }
+        }
+    }
+    return(ColData)
+}
+
 # Quick wrapper function (https://stackoverflow.com/questions/13273833/merging-multiple-data-tables)
 #' @noRd 
 merge_wrapper <- function(x,y){

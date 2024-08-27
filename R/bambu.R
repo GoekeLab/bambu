@@ -187,34 +187,53 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
   
     if(assignDist){
-        message("--- Start calculate equivilance classes ---")
+        message("--- Start calculating equivilance classes ---")
         if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
         if(is.list(readClassList)) readClassList = readClassList[[1]]
         metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
         readClassList = splitReadClassFiles(readClassList)
-        quantData = list()
-        quantData$readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
-        quantData$countMatrix = metadata(readClassList)$countMatrix
-        quantData$incompatibleCountMatrix = metadata(readClassList)$incompatibleCountMatrix
-        quantData$readClassDt$eqClass.match = match(quantData$readClassDt$eqClassById,metadata(readClassList)$eqClassById)
-        quantData$readClassDt <- simplifyNames(quantData$readClassDt)
-        quantData$readClassDt = quantData$readClassDt %>% group_by(eqClassId, gene_sid) %>% 
+        readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
+        readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
+        readClassDt <- simplifyNames(readClassDt)
+        readClassDt = readClassDt %>% group_by(eqClassId, gene_sid) %>% 
             mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1) %>%
             data.table()
 
         #return non-em counts
-        quantData$geneCounts = geneCountsFromQuantData(quantData, annotations)
-        x = quantData$readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
-        quantData$uniqueCounts = quantData$countMatrix[x$eqClass.match,]
-        uniqueCounts.tx = sparse.model.matrix(~ factor(x$txid) - 1)
-        quantData$uniqueCounts = t(uniqueCounts.tx) %*% quantData$uniqueCounts
-        rownames(quantData$uniqueCounts) = names(annotations)[match(as.numeric(levels(factor(x$txid))),mcols(annotations)$txid)]
-        
+        ColData = generateColData(colnames(metadata(readClassList)$countMatrix), clusters, demultiplexed, spatial)
+        #code to generate genecounts from quantData
+        if(FALSE){
+            quantData$geneCounts = geneCountsFromQuantData(quantData, annotations)
+            counts <- quantData$geneCounts
+            counts.total = colSums(counts)
+            counts.total[counts.total==0] = 1
+            counts.CPM = counts/counts.total * 10^6
+            exByGene <- reducedRangesByGenes(annotations)
+            RowNames <- rownames(quantData$geneCounts)
+            geneSe <- SummarizedExperiment(
+                assays = SimpleList(counts = counts,
+                    CPM = counts.CPM),
+                    rowRanges = exByGene[RowNames],
+                    colData = ColData)
+            colnames(geneSe) = colnames(quantData$countMatrix)
+        }
+        quantData <- SummarizedExperiment(assays = SimpleList(
+            counts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)),
+            rowRanges = annotations,
+            colData = ColData)
+        colnames(quantData) = ColData$id
+        metadata(quantData)$incompatibleCounts = generateIncompatibleCounts(metadata(readClassList)$incompatibleCountMatrix, annotations)       
+        metadata(quantData)$nonuniqueCounts = generateNonUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)
+        metadata(quantData)$readClassDt = readClassDt
+        metadata(quantData)$countMatrix = metadata(readClassList)$countMatrix
+        metadata(quantData)$incompatibleCountMatrix  = metadata(readClassList)$incompatibleCountMatrix                        
+
         if (!quant) return(quantData)
+
     }
 
     if (quant) {
-        message("--- Start isoform quantification ---")
+        message("--- Start isoform EM quantification ---")
         if(length(annotations)==0) stop("No valid annotations, if running
                                     de novo please try less stringent parameters")
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
@@ -222,7 +241,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         start.ptm <- proc.time()
 
         #load in the barcode clustering from file if provided
-        iter = seq_len(ncol(quantData$countMatrix))
+        iter = seq_len(ncol(metadata(quantData)$countMatrix))
         if(!is.null(clusters)){
             if(!is.list(clusters)){
                 clusterMap = read.table(clusters, 
@@ -234,13 +253,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         }
 
         countsSeCompressed <- bplapply(iter, FUN = function(i){
-            countMatrix = unname(quantData$countMatrix[,i])
+            countMatrix = unname(metadata(quantData)$countMatrix[,i])
+            incompatibleCountMatrix = unname(metadata(quantData)$incompatibleCountMatrix[,i])
             if(!is.null(dim(countMatrix))){
                 countMatrix = rowSums(countMatrix)
-                incompatibleCountMatrix = rowSums(quantData$incompatibleCountMatrix[,i])
+                incompatibleCountMatrix = rowSums(metadata(quantData)$incompatibleCountMatrix[,i])
             }
-            return(bambu.quantify(readClassDt = quantData$readClassDt, countMatrix = countMatrix, 
-                                        incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
+            return(bambu.quantify(readClassDt = metadata(quantData)$readClassDt, countMatrix = countMatrix, 
+                                        incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(metadata(quantData)$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
                                         txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                         emParameters = emParameters, trackReads = trackReads, 
                                         returnDistTable = returnDistTable, verbose = verbose))}, 
@@ -250,7 +270,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(!is.null(clusters)){
             countsSeCompressed$colnames = names(clusters)   
         } else{
-            countsSeCompressed$colnames = colnames(quantData$countMatrix)    
+            countsSeCompressed$colnames = colnames(quantData)    
         }
                          
         countsSe <- combineCountSes(countsSeCompressed, annotations)
@@ -261,35 +281,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         #                              annotations)
         # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
         
-        df = DataFrame(sampleName = colnames(countsSe))
-        if(demultiplexed & is.null(clusters)){
-            df = DataFrame(id = colnames(countsSe), 
-                            sampleName = gsub("_[^_]+$","", colnames(countsSe), perl = TRUE), 
-                            Barcode = gsub(".*_(?=[^_]*$)","", colnames(countsSe), perl = TRUE))
-        }
-	    if(!is.null(spatial & is.null(clusters))){
-            df$x_coordinate = NA
-            df$y_coordinate = NA
-            #load in all whitelist info, is one file or a vector of paths?
-            if(length(spatial)==1){
-                bc_coords = DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-                bcMatch = match(df$Barcode, bc_coords$Barcode)
-                df$x_coordinate = bc_coords$x_coordinate[bcMatch]
-                df$y_coordinate = bc_coords$y_coordinate[bcMatch]
-            } else{
-                spatial.unique = unique(spatial)
-                for(whitelist in spatial.unique){
-                    i = which(spatial.unique==whitelist)
-                    bc_coords = DataFrame(read.table(gzfile(whitelist), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-                    bcSampleIndex = df$sampleName %in% sampleNames[i]
-                    bcMatch = match(df$Barcode[bcSampleIndex], bc_coords$Barcode)
-                    df$x_coordinate[bcSampleIndex] = bc_coords$x_coordinate[bcMatch]
-                    df$y_coordinate[bcSampleIndex] = bc_coords$y_coordinate[bcMatch]
-                }
-            }
-        }
-        colData(countsSe) = df
-        colnames(countsSe) = df[,1]
+        ColData = generateColData(colnames(countsSe), clusters, demultiplexed, spatial)
+        colData(countsSe) = ColData
+        colnames(countsSe) = ColData[,1]
         return(countsSe)
     }
 }
