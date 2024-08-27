@@ -201,22 +201,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
 
         #return non-em counts
         ColData = generateColData(colnames(metadata(readClassList)$countMatrix), clusters, demultiplexed, spatial)
-        #code to generate genecounts from quantData
-        if(FALSE){
-            quantData$geneCounts = geneCountsFromQuantData(quantData, annotations)
-            counts <- quantData$geneCounts
-            counts.total = colSums(counts)
-            counts.total[counts.total==0] = 1
-            counts.CPM = counts/counts.total * 10^6
-            exByGene <- reducedRangesByGenes(annotations)
-            RowNames <- rownames(quantData$geneCounts)
-            geneSe <- SummarizedExperiment(
-                assays = SimpleList(counts = counts,
-                    CPM = counts.CPM),
-                    rowRanges = exByGene[RowNames],
-                    colData = ColData)
-            colnames(geneSe) = colnames(quantData$countMatrix)
-        }
         quantData <- SummarizedExperiment(assays = SimpleList(
             counts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)),
             rowRanges = annotations,
