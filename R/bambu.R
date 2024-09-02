@@ -206,17 +206,18 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         start.ptm <- proc.time()
         countsSeCompressed.all = NULL
         ColNames = c()
-        for(quantData in quantDatas){
+        for(i in seq_along(quantDatas)){
+            quantData = quantDatas[[i]]
             #load in the barcode clustering from file if provided
             iter = seq_len(ncol(metadata(quantData)$countMatrix))
             if(!is.null(clusters)){
                 if(!is.list(clusters)){
-                    clusterMap = read.table(clusters, 
-                        sep = ifelse(grepl(".tsv$",clusters), "\t", ","), header = FALSE)
-                    clusters = splitAsList(clusterMap[,1], clusterMap[,2]) 
+                    clusterMap = read.table(clusters[[i]], 
+                        sep = ifelse(grepl(".tsv$",clusters[[i]]), "\t", ","), header = FALSE)
+                    clustering = splitAsList(clusterMap[,1], clusterMap[,2]) 
                     rm(clusterMap)
                 }
-                iter = clusters
+                iter = clustering
             }
 
             countsSeCompressed <- bplapply(iter, FUN = function(i){
