@@ -53,39 +53,55 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     defaultModels = isoreParameters[["defaultModels"]]
     returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
-        
-    readGrgList <- bplapply(seq_along(reads), function(i) {
-        bambu.processReadsByFile(bam.file = reads[i],
-        genomeSequence = genomeSequence,annotations = annotations,
-        readClass.outputDir = readClass.outputDir,
-        stranded = stranded, min.readCount = min.readCount, 
-        fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
-        defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode, 
-        demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i)},
-        BPPARAM = bpParameters)
-    
-    sampleNames = as.numeric(as.factor(sampleNames))
-    for(i in seq_along(readGrgList)){
-        if(!isFALSE(demultiplexed)){
-            mcols(readGrgList[[i]])$BC = paste0(names(reads)[i], '_', mcols(readGrgList[[i]])$BC)
-        } else{mcols(readGrgList[[i]])$BC = sampleNames[i]}
-        mcols(readGrgList[[i]])$BC = as.factor(mcols(readGrgList[[i]])$BC)
-    }
-    readGrgList = do.call(c, readGrgList)    
-    mcols(readGrgList)$id <- seq_along(readGrgList) 
-    if(!isFALSE(demultiplexed)){ 
-        mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$BC)
-    } else {mcols(readGrgList)$sampleID = mcols(readGrgList)$BC}
-    readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
-        readClass.outputDir = readClass.outputDir,
-        stranded = stranded, min.readCount = min.readCount, 
-        fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
-        defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-        lowMemory = lowMemory, trackReads = trackReads, fusionMode = fusionMode)
 
-    metadata(readClassList)$samples = names(reads)
-    if(!isFALSE(demultiplexed))metadata(readClassList)$samples =  levels(mcols(readGrgList)$BC)
+    if(lowMemory){
+        readClassList <- bplapply(seq_along(reads), function(i) {
+            bambu.processReadsByFile(bam.file = reads[i],
+            genomeSequence = genomeSequence,annotations = annotations,
+            readClass.outputDir = readClass.outputDir,
+            stranded = stranded, min.readCount = min.readCount, 
+            fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
+            defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
+            trackReads = trackReads, fusionMode = fusionMode, 
+            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i)},
+            BPPARAM = bpParameters)
+    } else {
+        readGrgList <- bplapply(seq_along(reads), function(i) {
+            bambu.readsByFile(bam.file = reads[i],
+            genomeSequence = genomeSequence,annotations = annotations,
+            readClass.outputDir = readClass.outputDir,
+            stranded = stranded, min.readCount = min.readCount, 
+            fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
+            defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
+            trackReads = trackReads, fusionMode = fusionMode, 
+            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i)},
+            BPPARAM = bpParameters)
+        
+        sampleNames = as.numeric(as.factor(sampleNames))
+        for(i in seq_along(readGrgList)){
+            if(!isFALSE(demultiplexed)){
+                mcols(readGrgList[[i]])$BC = paste0(names(reads)[i], '_', mcols(readGrgList[[i]])$BC)
+            } else{mcols(readGrgList[[i]])$BC = sampleNames[i]}
+            mcols(readGrgList[[i]])$BC = as.factor(mcols(readGrgList[[i]])$BC)
+        }
+        readGrgList = do.call(c, readGrgList)    
+        mcols(readGrgList)$id <- seq_along(readGrgList) 
+        if(!isFALSE(demultiplexed)){ 
+            mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$BC)
+        } else {mcols(readGrgList)$sampleID = mcols(readGrgList)$BC}
+        readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
+            readClass.outputDir = readClass.outputDir,
+            stranded = stranded, min.readCount = min.readCount, 
+            fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
+            defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
+            trackReads = trackReads, fusionMode = fusionMode)
+
+        metadata(readClassList)$samples = names(reads)
+        if(!isFALSE(demultiplexed))metadata(readClassList)$samples =  levels(mcols(readGrgList)$BC)
+        readClassList = list(readClassList)
+    }
+        
+    
 
     # TODO return output
     # if (!is.null(readClass.outputDir)) {
@@ -103,7 +119,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     #     se <- readClassFile
     # }
     #TODO don't output list, current there because discovery needs it
-    return(list(readClassList))
+    return(readClassList)
 }
 
 #' Preprocess bam files and save read class files
@@ -113,10 +129,100 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
+    verbose = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
+    cleanReads = TRUE, dedupUMI = FALSE, index = 0) {
+    if(verbose) message(names(bam.file)[1])
+    readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
+    if(verbose) message(paste0("Number of alignments/reads: ",length(readGrgList)))
+    warnings = c()
+    warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
+    if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))
+    #check seqlevels for consistency, drop ranges not present in genomeSequence
+    refSeqLevels <- seqlevels(genomeSequence)
+    if (!all(seqlevels(readGrgList) %in% refSeqLevels)) {
+        refSeqLevels <- intersect(refSeqLevels, seqlevels(readGrgList))
+        if (!all(seqlevels(annotations) %in% refSeqLevels)&(!(length(annotations)==0))) {
+            refSeqLevels <- intersect(refSeqLevels, seqlevels(annotations))
+            warningText = paste0("not all chromosomes from annotations present in ", 
+            "reference genome sequence, annotations without reference genomic sequence ",
+            "are dropped")
+            warnings = c(warnings, warningText)
+            if(verbose) warning(warningText)
+            annotations <- keepSeqlevels(annotations, value = refSeqLevels,
+                                         pruning.mode = "coarse")
+        }
+        warningText = paste0("not all chromosomes from reads present in reference ",
+        "genome sequence, reads without reference chromosome sequence are dropped")
+        warnings = c(warnings, warningText)
+        if(verbose) warning(warningText)
+        readGrgList <- keepSeqlevels(readGrgList, value =  refSeqLevels,
+                                     pruning.mode = "coarse")
+        # reassign Ids after seqlevels are dropped
+        mcols(readGrgList)$id <- seq_along(readGrgList) 
+    }
+    #removes reads that are outside genome coordinates
+    badReads = which(max(end(ranges(readGrgList)))>=
+                         seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
+    if(length(badReads) > 0 ){
+        readGrgList = readGrgList[-badReads]
+        warningText = paste0(length(badReads), " reads are mapped outside the provided ",
+                       "genomic regions. These reads will be dropped. Check you are using the ",
+                       "same genome used for the alignment")
+        warnings = c(warnings, warningText)
+        if(verbose) warning(warningText)
+    }
+    if(length(readGrgList) == 0) {
+        stop("No reads left after filtering.")
+    }
+    mcols(readGrgList)$id <- seq_along(readGrgList) 
+
+    sampleName = names(bam.file)[1]
+    if(!isFALSE(demultiplexed)){
+        mcols(readGrgList)$BC = paste0(sampleName, '_', mcols(readGrgList)$BC)
+    } else{mcols(readGrgList)$BC = sampleName}
+    mcols(readGrgList)$BC = as.factor(mcols(readGrgList)$BC)
+    if(!isFALSE(demultiplexed)){ 
+        mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$BC)
+    } else {mcols(readGrgList)$sampleID = mcols(readGrgList)$BC}
+        
+    # construct read classes for each chromosome seperately 
+    se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
+                                                      annotations, stranded, verbose,bam.file)
+
+
+    metadata(se)$warnings = warnings
+    if(trackReads){
+        metadata(se)$readNames = names(readGrgList)
+        metadata(se)$readId = mcols(readGrgList)$id
+    }
+    refSeqLevels <- seqlevels(genomeSequence)
+    GenomeInfoDb::seqlevels(se) <- refSeqLevels
+    # create SE object with reconstructed readClasses
+    se <- scoreReadClasses(se, genomeSequence, annotations, 
+                             defaultModels = defaultModels,
+                             fit = fitReadClassModel,
+                             returnModel = returnModel,
+                             min.readCount = min.readCount,
+                             min.exonOverlap = min.exonOverlap,
+                             fusionMode = fusionMode,
+                             verbose = verbose)
+
+    metadata(se)$samples = names(bam.file)[1]
+    if(!isFALSE(demultiplexed))metadata(se)$samples =  levels(mcols(readGrgList)$BC)                         
+    return(se)
+}
+
+#' Preprocess bam files and save read class files
+#' @inheritParams bambu
+#' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
+#' @noRd
+bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
+    readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
+    fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
+    verbose = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
     cleanReads = TRUE, dedupUMI = FALSE, index = 0) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
-    print(paste0("Number of alignments/reads: ",length(readGrgList)))
+    if(verbose) message("Number of alignments/reads: ",length(readGrgList)))
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
     if(verbose & length(warnings) > 0) {warning(paste(warnings,collapse = "\n"))}
@@ -159,7 +265,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
       # reassign Ids after seqlevels are dropped
       mcols(readGrgList)$id <- seq_along(readGrgList) 
       ### add ###
-      print(paste0("Number of post-filter alignments/reads: ",length(readGrgList)))
+      if(verbose) message("Number of post-filter alignments/reads: ",length(readGrgList)))
       if(length(readGrgList) == 0) {
         stop("No reads left after filtering.")
       }
@@ -183,28 +289,11 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 constructReadClasses <- function(readGrgList, genomeSequence, annotations,
     readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE){
+    verbose = FALSE, trackReads = FALSE, fusionMode = FALSE){
     warnings = c() ###TODO
     # construct read classes for each chromosome seperately 
-    if(lowMemory) {se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-                                                      annotations, stranded, verbose,"TODO")
-    } else { 
-        unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
-        if(length(unlisted_junctions)==0){
-            warningText = paste0("No aligned spliced reads detected!", 
-                "Bambu expects spliced reads. If this is intended, ",
-                "see Documentation on how to handle single-exon ",
-                "transcripts")
-            warnings = c(warnings, warningText)
-            if (verbose) warning(warningText)
-        }
-        uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
-                                                         annotations,genomeSequence, stranded = stranded, verbose = verbose)
-        # create SE object with reconstructed readClasses
-        se <- isore.constructReadClasses(readGrgList, unlisted_junctions, 
-                                         uniqueJunctions, runName = "TODO",
-                                         annotations, stranded, verbose)
-    }
+    se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
+                                            annotations, stranded, verbose,"TODO")
 
     metadata(se)$warnings = warnings
     if(trackReads){
