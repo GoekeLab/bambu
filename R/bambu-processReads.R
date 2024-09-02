@@ -222,7 +222,7 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
     verbose = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
     cleanReads = TRUE, dedupUMI = FALSE, index = 0) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
-    if(verbose) message("Number of alignments/reads: ",length(readGrgList)))
+    if(verbose) message("Number of alignments/reads: ",length(readGrgList))
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
     if(verbose & length(warnings) > 0) {warning(paste(warnings,collapse = "\n"))}
@@ -265,7 +265,7 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
       # reassign Ids after seqlevels are dropped
       mcols(readGrgList)$id <- seq_along(readGrgList) 
       ### add ###
-      if(verbose) message("Number of post-filter alignments/reads: ",length(readGrgList)))
+      if(verbose) message("Number of post-filter alignments/reads: ",length(readGrgList))
       if(length(readGrgList) == 0) {
         stop("No reads left after filtering.")
       }

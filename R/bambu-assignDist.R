@@ -2,7 +2,7 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, verbose, clusters, demultiplexed, spatial) {
+assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, verbose, demultiplexed, spatial) {
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
     readClassList = splitReadClassFiles(readClassList)
     readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
@@ -13,7 +13,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
         data.table()
 
     #return non-em counts
-    ColData = generateColData(colnames(metadata(readClassList)$countMatrix), clusters, demultiplexed, spatial)
+    ColData = generateColData(colnames(metadata(readClassList)$countMatrix), clusters = NULL, demultiplexed, spatial)
     quantData <- SummarizedExperiment(assays = SimpleList(
         counts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)),
         rowRanges = annotations,
