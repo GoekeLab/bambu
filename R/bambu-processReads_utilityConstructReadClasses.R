@@ -462,11 +462,13 @@ assignGeneIdsByReference <- function(grl, annotations, min.exonOverlap = 10,
         geneIds[filteredMultiHits$queryHits] <- filteredMultiHits$geneid
         
         } else {
-        filteredMultiHits <- filteredMultiHits %>% 
-            group_by(queryHits) %>% summarise(subjectHits = subjectHits[which.max(intersectWidth)],
-                                                    intersectWidth = max(intersectWidth))
-        geneIds[filteredMultiHits$queryHits] <- 
-            names(geneRanges)[filteredMultiHits$subjectHits]
+            if(nrow(filteredMultiHits) > 0){
+                filteredMultiHits <- filteredMultiHits %>% 
+                    group_by(queryHits) %>% summarise(subjectHits = subjectHits[which.max(intersectWidth)],
+                                                            intersectWidth = max(intersectWidth))
+                geneIds[filteredMultiHits$queryHits] <- 
+                    names(geneRanges)[filteredMultiHits$subjectHits]
+            }
         } 
     }
     return(geneIds)
@@ -581,7 +583,11 @@ assignGeneIdsNonAssigned = function(geneTxMap, exonTxMap, geneExonMap,
             dplyr::select(newGeneId, newExonId) %>% distinct()
     }
     # combined gene ids
-    refGeneTxMapMins = refGeneTxMap %>% group_by(newTxId) %>% filter(n() > 1) %>% filter(newGeneId == min(newGeneId)) %>% ungroup()
+    refGeneTxMap.tmp = refGeneTxMap %>% group_by(newTxId) %>% filter(n() > 1)
+    if(nrow(refGeneTxMap.tmp) == 0){refGeneTxMapMins = refGeneTxMap[0,]
+    } else{
+        refGeneTxMapMins =  refGeneTxMap.tmp %>% filter(newGeneId == min(newGeneId)) %>% ungroup()
+    }
     refGeneTxMapNotMins = refGeneTxMap %>% group_by(newTxId) %>% filter(newGeneId != min(newGeneId)) %>% ungroup()
     geneGeneMap <- left_join(refGeneTxMapMins, dplyr::rename(refGeneTxMapNotMins, 
         newGeneId.merge=newGeneId), by = "newTxId") %>% 

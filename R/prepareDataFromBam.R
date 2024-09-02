@@ -59,10 +59,10 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
             mcols(readGrgList[[counter]])$UMI <- factor(mcols(readGrgList[[counter]])$UMI, levels = umi)
         }
         if(cleanReads){
-            softClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[S].*','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T)
-            softClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[S]$','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T)
-            hardClip5Prime <-pmax(0,as.numeric(gsub('^(\\d*)[H].*','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T)
-            hardClip3Prime <-pmax(0,as.numeric(gsub('.*\\D(\\d*)[H]$','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T)
+            softClip5Prime <-suppressWarnings(pmax(0,as.numeric(gsub('^(\\d*)[S].*','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T))
+            softClip3Prime <-suppressWarnings(pmax(0,as.numeric(gsub('.*\\D(\\d*)[S]$','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T))
+            hardClip5Prime <-suppressWarnings(pmax(0,as.numeric(gsub('^(\\d*)[H].*','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T))
+            hardClip3Prime <-suppressWarnings(pmax(0,as.numeric(gsub('.*\\D(\\d*)[H]$','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T))
             mcols(readGrgList[[counter]])$clip5Prime = pmax(softClip5Prime, hardClip5Prime)
             mcols(readGrgList[[counter]])$clip3Prime = pmax(softClip3Prime, hardClip3Prime)
             rev = as.vector(strand(alignmentInfo) == '-')
