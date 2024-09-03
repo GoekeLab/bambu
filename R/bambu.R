@@ -216,8 +216,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                         sep = ifelse(grepl(".tsv$",clusters[[i]]), "\t", ","), header = FALSE)
                     clustering = splitAsList(clusterMap[,1], clusterMap[,2]) 
                     rm(clusterMap)
+                    iter = clustering
                 }
-                iter = clustering
+                iter = clusters[[i]]
             }
 
             countsSeCompressed <- bplapply(iter, FUN = function(i){
@@ -236,7 +237,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             end.ptm <- proc.time()
             message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
             if(!is.null(clusters)){
-                ColNames = c(ColNames, names(clusters))
+                ColNames = c(ColNames, names(clusters[i]))
             } else{
                 ColNames = c(ColNames, colnames(quantData)) 
             }
