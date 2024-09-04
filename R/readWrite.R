@@ -31,7 +31,7 @@ writeBambuOutput <- function(se, path, prefix = "", seperateSamples = FALSE) {
         gtf <- writeToGTF(annotation = transcript_grList,
             file = transcript_gtffn)
 
-        utils::write.table(colData(se), file = paste0(outdir, "/sampleData.tsv"), 
+        utils::write.table(colData(se), file = paste0(outdir, "/", prefix, "sampleData.tsv"), 
             sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
         for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
@@ -71,7 +71,7 @@ writeBambuOutput <- function(se, path, prefix = "", seperateSamples = FALSE) {
                     Matrix::writeMM(estimates, estimatesfn)
                 seGene <- transcriptToGeneExpression(se)
                 writeCountsOutput(seGene, varname='counts', feature='gene',paste0(outdir, sampleName,"/"), prefix)
-                utils::write.table(colData(se), file = paste0(outdir, "/", sampleName, "/sampleData.tsv"), 
+                utils::write.table(colData(se), file = paste0(outdir, "/", sampleName, "/", prefix, "sampleData.tsv"), 
                     sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
                 #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
             }
