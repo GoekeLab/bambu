@@ -212,15 +212,23 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             iter = seq_len(ncol(metadata(quantData)$countMatrix))
             if(!is.null(clusters)){
                 if(!is.list(clusters)){
-                    clusterMap = read.table(clusters[[i]], 
-                        sep = ifelse(grepl(".tsv$",clusters[[i]]), "\t", ","), header = FALSE)
-                    clustering = splitAsList(clusterMap[,1], clusterMap[,2]) 
+                    clusterMaps = NULL
+                    for(j in seq_along(metadata(quantData)$sampleNames)){ #load in a file per sample name provided
+                        clusterMap = read.table(clusters[[j]], 
+                            sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), header = FALSE)
+                        clusterMap[,1] = paste0(metadata(quantData)$sampleNames[j],"_",clusterMap[,1])
+                        clusterMaps = rbind(clusterMaps, clusterMap)                        
+                    }
+                    clustering = splitAsList(clusterMaps[,1], clusterMaps[,2]) 
+                    rm(clusterMaps)
                     rm(clusterMap)
                     iter = clustering
-                }
-                iter = clusters[[i]]
-            }
 
+                } else{ #if clusters is a list
+                    if(length(quantDatas)>1){iter = clusters[[i]] #lowMemory mode
+                    }else(iter = do.call(c,clusters))
+                }
+            }
             countsSeCompressed <- bplapply(iter, FUN = function(i){
                 countMatrix = unname(metadata(quantData)$countMatrix[,i])
                 incompatibleCountMatrix = unname(metadata(quantData)$incompatibleCountMatrix[,i])
