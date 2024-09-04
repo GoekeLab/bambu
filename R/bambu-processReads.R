@@ -97,6 +97,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             trackReads = trackReads, fusionMode = fusionMode)
 
         metadata(readClassList)$samples = names(reads)
+        metadata(readClassList)$sampleNames = names(reads)
         if(!isFALSE(demultiplexed))metadata(readClassList)$samples =  levels(mcols(readGrgList)$BC)
         readClassList = list(readClassList)
     }
@@ -208,6 +209,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              verbose = verbose)
 
     metadata(se)$samples = names(bam.file)[1]
+    metadata(readClassList)$sampleNames = names(bam.file)[1]
     if(!isFALSE(demultiplexed))metadata(se)$samples =  levels(mcols(readGrgList)$BC)                         
     return(se)
 }
