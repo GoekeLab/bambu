@@ -237,7 +237,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             end.ptm <- proc.time()
             message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
             if(!is.null(clusters)){
-                ColNames = c(ColNames, names(clusters[i]))
+                ColNames = c(ColNames, names(iter))
             } else{
                 ColNames = c(ColNames, colnames(quantData)) 
             }
