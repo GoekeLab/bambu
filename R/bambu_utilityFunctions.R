@@ -262,9 +262,9 @@ combineCountSes <- function(countsSe, annotations){
         return(countsMat)
     })
     names(countsDataMat) = countsData
-    countsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
-                                                        CPM = countsDataMat$CPM, 
-                                                        fullLengthCounts = countsDataMat$fullLengthCounts, 
+    countsSe <- SummarizedExperiment(assays = SimpleList(EM_counts = countsDataMat$counts, 
+                                                        EM_CPM = countsDataMat$CPM, 
+                                                        EM_fullLengthCounts = countsDataMat$fullLengthCounts, 
                                                         uniqueCounts = countsDataMat$uniqueCounts))
     metadata(countsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
     rowRanges(countsSe) <- annotations
