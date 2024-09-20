@@ -19,7 +19,11 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
         rowRanges = annotations,
         colData = ColData)
     colnames(quantData) = ColData$id
-    metadata(quantData)$incompatibleCounts = generateIncompatibleCounts(metadata(readClassList)$incompatibleCountMatrix, annotations)       
+    if(sum(metadata(readClassList)$incompatibleCountMatrix)==0){
+        metadata(quantData)$incompatibleCounts = NULL
+    } else{
+        metadata(quantData)$incompatibleCounts = generateIncompatibleCounts(metadata(readClassList)$incompatibleCountMatrix, annotations)       
+    }
     metadata(quantData)$nonuniqueCounts = generateNonUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)
     metadata(quantData)$readClassDt = readClassDt
     metadata(quantData)$countMatrix = metadata(readClassList)$countMatrix
@@ -60,9 +64,11 @@ generateNonUniqueCounts <- function(readClassDt, countMatrix, annotations){
     #fuse multi align RCs by gene
     x = readClassDt %>% filter(multi_align & !is.na(eqClass.match))
     x = x %>% distinct(eqClassId, .keep_all = TRUE)
-    nonuniqueCounts = countMatrix[x$eqClass.match,]
+    nonuniqueCounts = countMatrix[x$eqClass.match,, drop = FALSE]
+    if(nrow(x)>1){
     nonuniqueCounts.gene = sparse.model.matrix(~ factor(x$gene_sid) - 1)
     nonuniqueCounts = t(nonuniqueCounts.gene) %*% nonuniqueCounts
+    }
     #covert ids into gene ids
     geneids = as.numeric(levels(factor(x$gene_sid)))
     geneids = x$txid[match(geneids, x$gene_sid)]
