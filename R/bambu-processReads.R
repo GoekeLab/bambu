@@ -295,7 +295,7 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
     warnings = c() ###TODO
     # construct read classes for each chromosome seperately 
     se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-                                            annotations, stranded, verbose,"TODO")
+                                            annotations, stranded, verbose,"TODO", fusionMode)
 
     metadata(se)$warnings = warnings
     if(trackReads){
@@ -318,8 +318,13 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
 }
 
 lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, 
-                                          annotations, stranded, verbose,bam.file){
-    readGrgList = split(readGrgList, getChrFromGrList(readGrgList))
+                                          annotations, stranded, verbose,bam.file, fusionMode = FALSE){
+    if(fusionMode){
+        readGrgList = list(readGrgList)
+        names(readGrgList) = c("fusion")
+    } else{
+        readGrgList = split(readGrgList, getChrFromGrList(readGrgList))
+    }
     se = lapply(names(readGrgList),FUN = function(i){
         if(length(readGrgList[[i]]) == 0) return(NULL)
         # create error and strand corrected junction tables
