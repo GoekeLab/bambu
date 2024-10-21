@@ -162,7 +162,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         mcols(readGrgList)$id <- seq_along(readGrgList) 
     }
     #removes reads that are outside genome coordinates
-    badReads = which(max(end(ranges(readGrgList)))>=
+    badReads = which(max(end(ranges(readGrgList)))>
                          seqlengths(genomeSequence)[as.character(getChrFromGrList(readGrgList))])
     if(length(badReads) > 0 ){
         readGrgList = readGrgList[-badReads]
