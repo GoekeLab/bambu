@@ -150,6 +150,14 @@ test_that("eqClassById is correct", {
   expect_true(all(check$validate))
 })
 
+test_that("prepareAnnotations reads in the NDR, txScore and txScore.noFit correctly", {
+    extendedAnnotationsExpected <- readRDS(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds",package = "bambu"))
+    extendedAnnotations = prepareAnnotations(system.file("extdata", "extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.gtf",package = "bambu"))
+    expect_equal(mcols(extendedAnnotations)$NDR, mcols(extendedAnnotationsExpected)$NDR)
+    expect_equal(mcols(extendedAnnotations)$txScore, mcols(extendedAnnotationsExpected)$txScore)
+    expect_equal(mcols(extendedAnnotations)$txScore.noFit, mcols(extendedAnnotationsExpected)$txScore.noFit)
+})
+
 
 # test_that("eqClass and eqClassById matches", {
 #     gr <- readRDS(test_path("fixtures", "grGTF.rds"))    

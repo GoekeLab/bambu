@@ -140,6 +140,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     fusionMode = FALSE, verbose = FALSE) {
+    message(paste0("Running Bambu-v", "3.2.4"))
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome)
@@ -154,6 +155,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     readClassList = reads
     isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
     isBamFiles = !isRDSs
+    warnings = NULL
     if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
     if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
@@ -170,8 +172,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             bpParameters, stranded, verbose,
             isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             lowMemory = lowMemory)
+        warnings = handleWarnings(readClassList, verbose)
     }
-    warnings = handleWarnings(readClassList, verbose)
     if (!discovery & !quant) return(readClassList)
     if (discovery) {
         message("--- Start extending annotations ---")
@@ -182,6 +184,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
     if (quant) {
         message("--- Start isoform quantification ---")
+        if(!is.null(NDR) & !discovery)
+            annotations = setNDR(annotations, NDR, prefix = isoreParameters$prefix, 
+                baselineFDR = isoreParameters[["baselineFDR"]], 
+                defaultModels2 = isoreParameters[["defaultModels"]])
         if(length(annotations)==0) stop("No valid annotations, if running
                                 de novo please try less stringent parameters")
         countsSe <- bplapply(readClassList, bambu.quantify,
