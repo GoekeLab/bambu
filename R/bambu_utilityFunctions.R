@@ -3,13 +3,13 @@
 #' setBiocParallelParameters
 #' @importFrom BiocParallel bpparam
 #' @noRd
-setBiocParallelParameters <- function(reads, ncore, verbose){
+setBiocParallelParameters <- function(reads, ncore, verbose, demultiplexed){
     if(ncore >= 2) message("WARNING - If you change the number of cores (ncore) ",
     "between Bambu runs and there is no progress please restart your R session ",
     "to resolve the issue that originates from the XGboost package.")
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
-    bpParameters$workers <- ifelse(length(reads) == 1, 1, ncore)
+    bpParameters$workers <- ifelse(length(reads) == 1 & isFALSE(demultiplexed), 1, ncore)
     bpParameters$progressbar <- ifelse(length(reads) > 1 & !verbose, TRUE, FALSE)
     return(bpParameters)
 }
@@ -46,7 +46,7 @@ setIsoreParameters <- function(isoreParameters){
 #' setEmParameters
 #' @noRd
 setEmParameters <- function(emParameters){
-    emParameters.default <- list(degradationBias = TRUE, maxiter = 10000, 
+    emParameters.default <- list(degradationBias = FALSE, maxiter = 10000, 
         conv = 10^(-2), minvalue = 10^(-8), sig.digit = 5)
     emParameters <- updateParameters(emParameters, emParameters.default)
     return(emParameters)
@@ -74,7 +74,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence){
+checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, discovery, sampleNames, spatial){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
@@ -97,8 +97,8 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
         } else {
             stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
         }
-        if(any(grepl("^BambuGene", names(annotations))) | 
-            any(grepl("^BambuTx", mcols(annotations)$TXNAME))){
+        if(discovery & (any(grepl("^BambuGene", names(annotations))) | 
+            any(grepl("^BambuTx", mcols(annotations)$TXNAME)))){
                 message("Detected Bambu derived annotations in the annotations. ", 
                 "Set a new prefix with opt.discovery(list(prefix='newPrefix')) ",
                 "to prevent ambigious id assignment.")
@@ -137,6 +137,24 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
             warning("Note that use of FaFile using Rsamtools in Windows is a bit
             fuzzy, recommend to provide the path as a string variable to avoid
             use of Rsamtools for opening.")
+    }
+
+    #check single-cell and spatial inputs match
+    if(!is.null(sampleNames)){
+        if(length(reads)!=length(sampleNames)){
+            stop("There are not the same number of sampleNames as input files to reads. ",
+            "Make sure these two arguments are vectors of the same length")
+        }
+    }
+
+    if(!is.null(spatial)){
+        #if(!all(grepl(".tsv^", spatial))){stop("Not all paths for spatial are .tsv files")}
+        if(length(spatial)==1 & length(reads)>1){
+            warning("Using the same whitelist and coordinates for all input samples")
+        } else if(length(reads)!=length(spatial)){
+            stop("There are not the same number spatial whitelist paths as input files to reads. ",
+            "Make sure these two arguments are vectors of the same length")
+        }
     }
     return(annotations)
 }
@@ -193,49 +211,96 @@ handleWarnings <- function(readClassList, verbose){
     names(warnings) = sampleNames
     if(verbose & any(lengths(warnings)>0)){
         message("--- per sample warnings during read class construction ---")
-        warnings.tmp = warnings[!is.na(warnings)]
-        for(i in seq_along(warnings.tmp)){
-            message("Warnings for: ", names(warnings.tmp)[i])
-            sapply(warnings.tmp[[i]], message)
+        for(i in seq_along(warnings)){
+            if(lengths(warnings)[i]>0){
+                message("Warnings for: ", sampleNames[i])
+                sapply(warnings[[i]], message)
+            }
         }
     } else {
-        warningCount = sum(lengths(warnings[!is.na(warnings)]))
-        if(warningCount > 0){
-            message("Detected ", warningCount, " warnings across the samples during ",
-        "read class construction. Access warnings with metadata(bambuOutput)$warnings")}
+        message("Detected ", sum(lengths(warnings)), " warnings across the samples during ",
+        "read class construction. Access warnings with metadata(bambuOutput)$warnings")
     }
     return(warnings)
 }
 
+#' Calculate the dist table used for Bambu Quantification
+calculateDistTable <- function(readClassList, annotations, isoreParameters, verbose){
+    readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
+                                                            min.exonDistance = isoreParameters[["min.exonDistance"]],
+                                                            min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']],
+                                                            min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
+                                                            verbose = verbose)
+        metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
+                #convert string gene ids into index to save memory
+        GENEIDs = factor(unique(mcols(annotations)$GENEID))
+        GENEID.i = as.numeric(GENEIDs)
+        metadata(readClassDist)$distTable$GENEID.i = GENEID.i[match(metadata(readClassDist)$distTable$GENEID, GENEIDs)]
+        metadata(readClassDist)$distTable.incompatible = data.table(as.data.frame(metadata(readClassDist)$distTable)) %>% 
+            filter(grepl("unidentified", annotationTxId)) %>% distinct(readClassId, .keep_all = TRUE)
+        metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
+        return(readClassDist)
+}
 
 #' Combine count se object while preserving the metadata objects
 #' @noRd
-combineCountSes <- function(countsSe, trackReads = FALSE, returnDistTable = FALSE){
-    sampleNames = sapply(countsSe, FUN = function(x){colnames(x)})
-    if(trackReads){
-        readToTranscriptMaps = lapply(countsSe, FUN = function(se){metadata(se)$readToTranscriptMap})
-        names(readToTranscriptMaps) = sampleNames
-        countsSe = lapply(countsSe, FUN = function(se){
-            metadata(se)$readToTranscriptMap=NULL
-            return(se)})
-    }
-    if(returnDistTable){
-        distTables = lapply(countsSe, FUN = function(se){metadata(se)$distTable})
-        names(distTables) = sampleNames
-        countsSe = lapply(countsSe, FUN = function(se){
-            metadata(se)$distTable=NULL
-            return(se)})
-    }
-    # combine incompatible counts
-    incompatibleCounts = Reduce(merge_wrapper, lapply(countsSe, FUN = function(se){metadata(se)$incompatibleCounts}))
-    countsSe = lapply(countsSe, FUN = function(se){
-        metadata(se)$incompatibleCounts=NULL
-        return(se)})
-    countsSe <- do.call(SummarizedExperiment::cbind, countsSe)
-    if(trackReads) metadata(countsSe)$readToTranscriptMaps = readToTranscriptMaps
-    if(returnDistTable) metadata(countsSe)$distTables = distTables
-    metadata(countsSe)$incompatibleCounts = incompatibleCounts
+combineCountSes <- function(countsSe, annotations){
+    countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
+    sampleNames = countsSe$colnames
+    countsSe$colnames = NULL
+    countsDataMat <- lapply(countsData, FUN = function(k){
+        countsVecList <- lapply(countsSe, function(j){j[[k]]})
+        countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j){j@i})),
+                                j = unlist(lapply(seq_along(countsVecList), function(j){rep(j, length(countsVecList[[j]]@i))})),
+                                x = unlist(lapply(countsVecList, function(j){j@x})),
+                                dims = c(length(countsVecList[[1]]), length(countsVecList)))
+        if(all(is.na(countsMat))){countsMat = sparseMatrix(i=NULL, j = NULL, dims = c(length(countsVecList[[1]]), length(countsVecList)))}
+        colnames(countsMat) <- sampleNames
+        if (k == "incompatibleCounts"){
+            rownames(countsMat) = unique(mcols(annotations)$GENEID)
+        }
+        return(countsMat)
+    })
+    names(countsDataMat) = countsData
+    countsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
+                                                        CPM = countsDataMat$CPM, 
+                                                        fullLengthCounts = countsDataMat$fullLengthCounts, 
+                                                        uniqueCounts = countsDataMat$uniqueCounts))
+    metadata(countsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
+    rowRanges(countsSe) <- annotations
     return(countsSe)
+}
+
+#' Generate the coldata for se options using colnames, and other option inputs
+#' @noRd
+generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
+    ColData = DataFrame(sampleName = sampleNames)
+    if(demultiplexed & is.null(clusters)){
+        ColData = DataFrame(id = sampleNames, 
+                        sampleName = gsub("_[^_]+$","", sampleNames, perl = TRUE), 
+                        Barcode = gsub(".*_(?=[^_]*$)","", sampleNames, perl = TRUE))
+    }
+    if(!is.null(spatial) & is.null(clusters)){
+        ColData$x_coordinate = NA
+        ColData$y_coordinate = NA
+        if(length(spatial)==1){
+            bc_coords = DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+            bcMatch = match(ColData$Barcode, bc_coords$Barcode)
+            ColData$x_coordinate = bc_coords$x_coordinate[bcMatch]
+            ColData$y_coordinate = bc_coords$y_coordinate[bcMatch]
+        } else{
+            spatial.unique = unique(spatial)
+            for(whitelist in spatial.unique){
+                i = which(spatial.unique==whitelist)
+                bc_coords = DataFrame(read.table(gzfile(whitelist), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+                bcSampleIndex = ColData$sampleName %in% sampleNames[i]
+                bcMatch = match(ColData$Barcode[bcSampleIndex], bc_coords$Barcode)
+                ColData$x_coordinate[bcSampleIndex] = bc_coords$x_coordinate[bcMatch]
+                ColData$y_coordinate[bcSampleIndex] = bc_coords$y_coordinate[bcMatch]
+            }
+        }
+    }
+    return(ColData)
 }
 
 # Quick wrapper function (https://stackoverflow.com/questions/13273833/merging-multiple-data-tables)

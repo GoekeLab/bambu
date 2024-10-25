@@ -19,22 +19,16 @@ modifyIncompatibleAssignment <- function(distTable){
 
 #' Process incompatible counts
 #' @noRd
-processIncompatibleCounts <- function(readClassDist){
-  distTable <- unique(data.table(as.data.frame(metadata(readClassDist)$distTable))[, 
-               .(readClassId, annotationTxId, readCount, GENEID, equal)], by = NULL)
-  distTableIncompatible <- distTable[grep("unidentified", annotationTxId)]
-  # filter out multiple geneIDs mapped to the same readClass using rowData(se)
-  geneRCMap <- as.data.table(as.data.frame(rowData(readClassDist)),
-                             keep.rownames = TRUE)
-  setnames(geneRCMap, old = c("rn", "geneId"),
-           new = c("readClassId", "GENEID"))
-  distTable <- distTable[geneRCMap[ readClassId %in% 
-                                      unique(distTableIncompatible$readClassId), .(readClassId, GENEID)],
-                         on = c("readClassId", "GENEID")]
-  distTable[, readCount := sum(readCount), by = GENEID]
-  counts <- unique(distTable[,.(GENEID, readCount)])
-  setnames(counts, "readCount", "counts")
-  return(counts)
+processIncompatibleCounts <- function(distTable){
+    distTable <- data.table(as.data.frame(distTable))[, 
+        .(readClassId, annotationTxId, readCount, GENEID, GENEID.match, GENEID.i, dist,equal)]
+    distTable <- distTable[grep("unidentified", annotationTxId)]
+    # filter out multiple geneIDs mapped to the same readClass using rowData(se)
+    distTable[GENEID.match==TRUE,]
+    distTable[, readCount := sum(readCount), by = GENEID]
+    counts <- unique(distTable[,.(GENEID, GENEID.i, readCount)])
+    setnames(counts, "readCount", "counts")
+    return(counts)
 }
 
 
@@ -44,21 +38,21 @@ processIncompatibleCounts <- function(readClassDist){
 #' @import data.table
 #' @noRd
 genEquiRCs <- function(readClassDist, annotations, verbose){
-  distTable <- genEquiRCsBasedOnObservedReads(readClassDist)
-  eqClassCount <- getUniCountPerEquiRC(distTable)
+  eqClassCount <- getUniCountPerEquiRC(metadata(readClassDist)$distTable)
   eqClassTable <- addEmptyRC(eqClassCount, annotations)
   # create equiRC id 
   eqClassTable <- eqClassTable %>% 
     group_by(eqClassById) %>%
     mutate(eqClassId = cur_group_id()) %>%
     data.table()
-  
+
   tx_len <- rbind(data.table(txid = mcols(annotations)$txid,
                              txlen = sum(width(annotations))))
   eqClassTable <- tx_len[eqClassTable, on = "txid"] %>% distinct()
-
+  
   # remove unused columns
-  eqClassTable[, eqClassById := NULL]
+  #eqClassTable[, eqClassById := NULL]
+
   return(eqClassTable)
 }
 
@@ -194,27 +188,27 @@ createEqClassToTxMapping <- function(eqClassTable){
 #' Add A matrix for total, full-length, unique
 #' @noRd
 addAval <- function(readClassDt, emParameters, verbose){
-  if (is.null(readClassDt)) {
-    stop("Input object is missing.")
-  } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
-                   colnames(readClassDt)))) {
-    stop("Columns GENEID, txid, eqClassId, nobs,
-            are missing from object.")
-  }
+#   if (is.null(readClassDt)) {
+#     stop("Input object is missing.")
+#   } else if (any(!(c("GENEID", "txid", "eqClassId","nobs") %in% 
+#                    colnames(readClassDt)))) {
+#     stop("Columns GENEID, txid, eqClassId, nobs,
+#             are missing from object.")
+#   }
   ## ----step2: match to simple numbers to increase claculation efficiency
-  readClassDt <- simplifyNames(readClassDt)
+  #readClassDt <- simplifyNames(readClassDt)
   d_mode <- emParameters[["degradationBias"]]
   start.ptm <- proc.time()
   if (d_mode) {
     d_rateOut <- calculateDegradationRate(readClassDt)
+    readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
+                                                    d_rateOut[1], d_mode = d_mode)
   }else{
     d_rateOut <- rep(NA,2)
   }
   end.ptm <- proc.time()
   if (verbose) message("Finished estimate degradation bias in ",
-                       round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  readClassDt <- modifyAvaluewithDegradation_rate(readClassDt, 
-                                                  d_rateOut[1], d_mode = d_mode)
+                       round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
   removeList <- removeUnObservedGenes(readClassDt)
   readClassDt <- removeList[[1]] # keep only observed genes for estimation
   outList <- removeList[[2]] #for unobserved genes, set estimates to 0 
@@ -224,8 +218,12 @@ addAval <- function(readClassDt, emParameters, verbose){
     mutate(K = sum(nobs), n.obs=nobs/K, nobs = NULL) %>% ## check if this is unique by eqClassId
     ungroup() %>%
     distinct() %>%
-    right_join(readClassDt, by = c("gene_sid","eqClassId")) %>%
-    data.table()
+    right_join(readClassDt, by = c("gene_sid","eqClassId"))
+#   readClassDt_withGeneCount <- readClassDt %>%
+#     group_by(gene_sid, eqClassId, nobs) %>% mutate(n = n(), n = replace(n,1,1)) %>%
+#     ungroup() %>% group_by(gene_sid) %>%
+#     mutate(K = sum(nobs), n.obs=(nobs)/(K)) %>%
+#     ungroup()
   return(list(readClassDt_withGeneCount,outList))
 }
 
@@ -283,6 +281,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
   tmp[which(multi_align) , aval := ifelse(equal, 1 -
                                             sum(.SD[which(!equal)]$rcWidth*d_rate/1000),
                                           rcWidth*d_rate/1000), by = list(gene_sid,txid)]
+  if(is.na(d_rate)) d_rate = 0
   if (d_rate == 0) {
     tmp[, par_status := all(!equal & multi_align),
         by = list(eqClassId, gene_sid)]
@@ -299,7 +298,7 @@ modifyAvaluewithDegradation_rate <- function(tmp, d_rate, d_mode){
 #' @import data.table
 #' @noRd
 removeUnObservedGenes <- function(readClassDt){
-  uoGenes <- unique(readClassDt[,.I[sum(nobs) == 0], by = gene_sid]$gene_sid)
+    uoGenes <- unique(readClassDt[,.I[sum(nobs) == 0], by = gene_sid]$gene_sid)
   if (length(uoGenes) > 0) {
     uo_txGeneDt <- 
       unique(readClassDt[(gene_sid %in% uoGenes),.(txid,gene_sid)])
@@ -487,6 +486,23 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
   return(readToTranscriptMap)
 }
 
+#' Get counts of equivilent classes from a distTable and match to a readClassDt
+#' @noRd
+calculateEqClassCounts = function(distTable, readClassDt){
+        eqClasses = distTable %>% group_by(eqClassById) %>%
+        mutate(anyEqual = any(equal)) %>%
+        select(eqClassById, firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
+        distinct() %>%
+        mutate(nobs = sum(readCount),
+                rcWidth = ifelse(anyEqual, max(totalWidth), 
+                                max(firstExonWidth))) %>%
+        select(eqClassById,GENEID,nobs,rcWidth) %>% 
+        ungroup()  %>%
+        distinct()
+        eqCounts = eqClasses$nobs[match(readClassDt$eqClassById,eqClasses$eqClassById)]
+        eqCounts[is.na(eqCounts)] = 0
+        return(eqCounts)
+    }
 
 #' calculate CPM post estimation
 #' @noRd

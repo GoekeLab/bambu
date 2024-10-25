@@ -33,13 +33,51 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
             file = transcript_gtffn, outputExtendedAnno = TRUE, 
             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE)
         
+        utils::write.table(colData(se), file = paste0(outdir, "/", prefix, "sampleData.tsv"), 
+            sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
         for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
-                             feature='transcript',outdir, prefix)
+                            feature='transcript',outdir, prefix)
+        print(d)
         }
+        #write incompatible counts
+        estimates = metadata(se)$incompatibleCounts
+        estimatesfn <- paste(outdir, prefix, "incompatibleCounts.mtx", sep = "")
+            Matrix::writeMM(estimates, estimatesfn)
         seGene <- transcriptToGeneExpression(se)
-        writeCountsOutput(seGene, varname='counts',
-                             feature='gene',outdir, prefix)
+        writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
+        #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
+        #R.utils::gzip(paste0(outdir, "barcodes.tsv"))
+        txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
+        utils::write.table(txANDGenes, file = paste0(outdir, "txANDgenes.tsv"), 
+                           sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+        utils::write.table(names(seGene), file = paste0(outdir, "genes.tsv"), 
+                        sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+        
+        #R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
+        #R.utils::gzip(paste0(outdir, "genes.tsv"))
+
+        #If there are multiple samples (when demultiplexed), seperate each sample into its own directory
+        if(seperateSamples){
+            fullSe = se
+            for(sampleName in unique(colData(fullSe)$sampleName)){
+                dir.create(file.path(outdir, sampleName), showWarnings = FALSE)
+                se = fullSe[,colData(fullSe)$sampleName == sampleName]
+                metadata(se)$incompatibleCounts = metadata(se)$incompatibleCounts[,colData(fullSe)$sampleName == sampleName]
+                for(d in names(assays(se))){
+                    writeCountsOutput(se, varname=d,
+                                feature='transcript',outdir=paste0(outdir, sampleName,"/"), prefix)
+                }
+                estimates = metadata(se)$incompatibleCounts
+                estimatesfn <- paste(outdir, "/", sampleName,"/", prefix, "incompatibleCounts.mtx", sep = "")
+                    Matrix::writeMM(estimates, estimatesfn)
+                seGene <- transcriptToGeneExpression(se)
+                writeCountsOutput(seGene, varname='counts', feature='gene',paste0(outdir, sampleName,"/"), prefix)
+                utils::write.table(colData(se), file = paste0(outdir, "/", sampleName, "/", prefix, "sampleData.tsv"), 
+                    sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+                #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
+            }
+        }
     }
 }
 
@@ -48,19 +86,34 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
 #' @noRd
 writeCountsOutput <- function(se, varname = "counts",
                               feature = "transcript", outdir, prefix){
-    estimates <- data.table(as.data.frame(assays(se)[[varname]]),
-                            keep.rownames = TRUE) 
-    if(feature == "transcript"){
+  
+    if(!is(assays(se)[[varname]], "sparseMatrix")){
+      estimatesfn <- paste(outdir, prefix, varname,"_",feature,".txt", sep = "")
+      estimates <- data.table(as.data.frame(assays(se)[[varname]]),
+                              keep.rownames = TRUE) 
+      if(feature == "transcript"){
         setnames(estimates, "rn", "TXNAME")
         geneIDs <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
         estimates <- geneIDs[estimates, on = "TXNAME"]
-    }else{
+      }else{
         setnames(estimates, "rn","GENEID")
+      } 
+      
+      utils::write.table(estimates, file = estimatesfn, sep = "\t", quote = FALSE, row.names = FALSE)
+      
+    } else{
+        estimates <- assays(se)[[varname]]
+        if (feature == "transcript"){
+          estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
+          Matrix::writeMM(estimates, estimatesfn)
+          #R.utils::gzip(estimatesfn)
+          
+        } else{
+          estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
+          Matrix::writeMM(estimates, estimatesfn)
+          #R.utils::gzip(estimatesfn)
+        }
     }
-    estimatesfn <- paste(outdir, prefix, 
-                                 varname,"_",feature,".txt", sep = "")
-    utils::write.table(estimates, file = estimatesfn,
-                       sep = "\t", quote = FALSE, row.names = FALSE)
 }
 
 #' Write annotation GRangesList into a GTF file
@@ -90,6 +143,9 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     NDR = NULL
     txScore = NULL
     txScore.noFit = NULL
+    novelGene = NULL
+    novelTranscript = NULL
+    txClassDescription = NULL
     df <- as_tibble(annotation)
     df$exon_rank <- paste('exon_number "', df$exon_rank, '";', sep = "")
     if(!is.null(mcols(annotation)$NDR)){
@@ -99,6 +155,12 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         df$txScore <- paste('maxTxScore "', as.character(txScore), '";', sep = "")
         txScore.noFit = rep(mcols(annotation)$maxTxScore.noFit, unname(elementNROWS(annotation)))
         df$txScore.noFit <- paste('maxTxScore.noFit "', as.character(txScore.noFit), '";', sep = "")
+        novelGene = rep(mcols(annotation)$novelGene, unname(elementNROWS(annotation)))
+        df$novelGene <- paste('novelGene "', as.character(novelGene), '";', sep = "")
+        novelTranscript = rep(mcols(annotation)$novelTranscript, unname(elementNROWS(annotation)))
+        df$novelTranscript <- paste('novelTranscript "', as.character(novelTranscript), '";', sep = "")
+        txClassDescription = rep(mcols(annotation)$txClassDescription, unname(elementNROWS(annotation)))
+        df$txClassDescription <- paste('txClassDescription "', as.character(txClassDescription), '";', sep = "")
     }
     if (is.null(geneIDs)) {
         if (!is.null(mcols(annotation, use.names = FALSE)$GENEID)) {
@@ -113,7 +175,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
     df$group_name <- paste('transcript_id "', df$group_name, '";', sep = "")
     df$GENEID <- paste('gene_id "', df$GENEID, '";', sep = "")
     dfExon <- mutate(df, source = "Bambu", feature = "exon", score = ".",
-        frame = ".", attributes = paste(GENEID, group_name, exon_rank, NDR, txScore, txScore.noFit)) %>%
+        frame = ".", attributes = paste(GENEID, group_name, exon_rank, NDR, txScore, txScore.noFit, novelGene, novelTranscript, txClassDescription )) %>%
         select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
     dfTx <- as.data.frame(range(ranges(annotation)))
@@ -126,9 +188,12 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         dfTx$NDR <- paste('NDR "', mcols(annotation)$NDR, '";', sep = "")
         dfTx$txScore <- paste('txScore "', mcols(annotation)$txScore, '";', sep = "")
         dfTx$txScore.noFit <- paste('txScore.noFit "', mcols(annotation)$txScore.noFit, '";', sep = "")
+        dfTx$novelGene <- paste('novelGene "', mcols(annotation)$novelGene, '";', sep = "")
+        dfTx$novelTranscript <- paste('novelTranscript "', mcols(annotation)$novelTranscript, '";', sep = "")
+        dfTx$txClassDescription <- paste('txClassDescription "', mcols(annotation)$txClassDescription, '";', sep = "")
     }
     dfTx <- mutate(dfTx,source = "Bambu", feature = "transcript", score = ".",
-        frame = ".", attributes = paste(GENEID, group_name, NDR, txScore, txScore.noFit)) %>%
+        frame = ".", attributes = paste(GENEID, group_name, NDR, txScore, txScore.noFit, novelGene, novelTranscript, txClassDescription )) %>%
         select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
 
@@ -240,4 +305,41 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
         DataFrame(geneData[(match(names(grlist), geneData$TXNAME)),])
     }
     return(grlist)
+}
+
+#' @title Read in Bambu results from writeBambuOutput() into se file
+#' @param path the destination of the output files 
+#' (gtf, transcript counts, and gene counts)
+#' @param prefixes the prefix of the output files
+#' @details The function will read in the output from Bambu as a sumerized experiment object.
+#' This SE object can be used for downstream processes. 
+#' @export
+#' @examples
+#' se <- importBambuResults(path = "/path/to/bambu/output/",
+#'     prefixes = c("rep1", "rep2")
+#' ))
+#' path <- tempdir()
+#' writeBambuOutput(se, path)
+importBambuResults <- function(path, prefixes = NA){
+    annotations = prepareAnnotations(paste0(path, "/extended_annotations.gtf"))
+    counts = readMM(paste0(path, "/counts_transcript.mtx"))
+    CPM = readMM(paste0(path, "/CPM_transcript.mtx"))
+    fullLengthCounts = readMM(paste0(path, "/fullLengthCounts_transcript.mtx"))
+    uniqueCounts = readMM(paste0(path, "/uniqueCounts_transcript.mtx"))
+    incompatibleCounts = readMM(paste0(path, "/incompatibleCounts.mtx"))
+    barcodes = read.table(paste0(path, "/barcodes.tsv"))
+    geneIds = read.table(paste0(path, "/genes.tsv"))
+    txIds = read.table(paste0(path, "/txANDgenes.tsv"))
+    colData = read.table(paste0(path, "/sampleData.tsv"), header = TRUE)
+    rownames(incompatibleCounts) = geneIds[,1]
+
+    countsSe <- SummarizedExperiment(assays = SimpleList(counts = counts, 
+                                                            CPM = CPM, 
+                                                            fullLengthCounts = fullLengthCounts, 
+                                                            uniqueCounts = uniqueCounts))
+    metadata(countsSe)$incompatibleCounts <- incompatibleCounts
+    rowRanges(countsSe) <- annotations
+    colData(countsSe) = DataFrame(colData)
+    colnames(countsSe) = colData[,1]
+    return(countsSe)
 }

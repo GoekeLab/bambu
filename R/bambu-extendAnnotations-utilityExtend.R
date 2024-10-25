@@ -67,7 +67,8 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
         combinedTranscripts$NSampleTxScore >= min.sampleNumber) & (
         combinedTranscripts$NSampleReadProp >= min.sampleNumber)
   }
-  combinedTranscripts = combinedTranscripts[filterSet,]
+  #combinedTranscripts = combinedTranscripts[filterSet,]
+  combinedTranscripts$maxTxScore[!filterSet] = 0
   return(combinedTranscripts)
 }
 
@@ -95,8 +96,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     subsetTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!notCompatibleIds,], 
         exonRangesCombined[!notCompatibleIds])
-    exonRangesCombined <- exonRangesCombined[notCompatibleIds]
-    rowDataCombined <- rowDataCombined[notCompatibleIds,]
+    rowDataCombined$maxTxScore[grepl("compatible", rowDataCombined$readClassType) &
+        rowDataCombined$readClassType != "equal:compatible"]=0
   }
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined, 
@@ -122,7 +123,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     exonRangesCombined <- exonRangesCombined[filterSet]
     rowDataCombined <- rowDataCombined[filterSet,]
   }
-  if(sum(filterSet==0) & length(annotationGrangesList)==0) stop(
+  if(sum(filterSet)==0 & length(annotationGrangesList)==0) stop(
     "WARNING - No annotations were provided. Please increase NDR threshold to use novel transcripts")
   if(sum(filterSet)==0) message("WARNING - No novel transcripts meet the given thresholds. Try a higher NDR.")
   # (3) combine novel transcripts with annotations
@@ -218,6 +219,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
             "for NDR precision stabilization.")
           message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else combinedTranscripts$NDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
+    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==0] = 1
     return(combinedTranscripts)
 }
 
@@ -750,10 +752,11 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                                          primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
                                          ignore.strand = FALSE)
   distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId, ] 
-  if (additionalFiltering) 
-    distTable <- left_join(distTable, select(readClassTable,
-                                             readClassId, confidenceType), by = "readClassId") %>%
-    mutate(relativeReadCount = readCount / txNumberFiltered)
+#   if (additionalFiltering) 
+#     distTable <- left_join(distTable, select(readClassTable,
+#                                              readClassId, confidenceType), by = "readClassId") %>%
+#     mutate(relativeReadCount = readCount / txNumberFiltered)
+
   distTable <- dplyr::select(distTable, annotationTxId, txid, readClassId,
       readCount, compatible, equal,dist)
   distTable <- left_join(distTable, as_tibble(mcols(annotationGrangesList)[, c("txid", "GENEID")]),
