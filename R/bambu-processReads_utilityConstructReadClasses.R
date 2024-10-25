@@ -20,6 +20,8 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     mcols(reads.singleExon)$softClip3Prime <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$softClip3Prime
     mcols(reads.singleExon)$hardClip5Prime <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$hardClip5Prime
     mcols(reads.singleExon)$hardClip3Prime <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$hardClip3Prime
+    mcols(reads.singleExon)$polyA5 <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$polyA5
+    mcols(reads.singleExon)$polyA3 <- mcols(readGrgList[elementNROWS(readGrgList) == 1])$polyA3
     #only keep multi exons reads in readGrgList   
     readGrgList <- readGrgList[elementNROWS(readGrgList) > 1]
     if (!identical(mcols(readGrgList)$id,unique(mcols(unlisted_junctions)$id))) 
@@ -100,7 +102,8 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         startSD = startSD, endSD = endSD, 
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount, readIds, starts, ends, readStrands,
-        softClips3Prime, softClips5Prime, hardClips3Prime, hardClips5Prime)
+        softClips3Prime, softClips5Prime, hardClips3Prime, hardClips5Prime,
+        polyA5s, polyA3s)
     mcols(exonsByReadClass) <- readTable
     options(scipen = 0)
     return(exonsByReadClass)
@@ -188,7 +191,9 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         softClip5Prime = mcols(readGrgList)$softClip5Prime,
         softClip3Prime = mcols(readGrgList)$softClip3Prime,
         hardClip5Prime = mcols(readGrgList)$hardClip5Prime,
-        hardClip3Prime = mcols(readGrgList)$hardClip3Prime)
+        hardClip3Prime = mcols(readGrgList)$hardClip3Prime,
+        polyA5 = mcols(readGrgList)$polyA5,
+        polyA3 = mcols(readGrgList)$polyA3)
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
@@ -202,7 +207,8 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), readIds = list(readId),
                 softClips3Prime = list(softClip3Prime), softClips5Prime = list(softClip5Prime), 
-            hardClips3Prime = list(hardClip3Prime), hardClips5Prime = list(hardClip5Prime), 
+                hardClips3Prime = list(hardClip3Prime), hardClips5Prime = list(hardClip5Prime), 
+                polyA5s = list(polyA5), polyA3s = list(polyA3),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -367,25 +373,30 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
       mutate(readClassId = paste0("rc", confidenceType, ".", 
                                   cur_group_id())) %>% ungroup() %>%
       mutate(alignmentStrand = as.character(strand(granges))[queryHits]=="+",
-             readStart = start(granges)[queryHits],
-             readEnd = end(granges)[queryHits],
-             counts = mcols(granges)$counts[queryHits],
-             readId = mcols(granges[queryHits])$id,
-             softClip3Prime = mcols(granges[queryHits])$softClip3Prime,
-             softClip5Prime = mcols(granges[queryHits])$softClip5Prime,
-             hardClip3Prime = mcols(granges[queryHits])$hardClip3Prime,
-             hardClip5Prime = mcols(granges[queryHits])$hardClip5Prime)
+            readStart = start(granges)[queryHits],
+            readEnd = end(granges)[queryHits],
+            counts = mcols(granges)$counts[queryHits],
+            readId = mcols(granges[queryHits])$id,
+            softClip3Prime = mcols(granges[queryHits])$softClip3Prime,
+            softClip5Prime = mcols(granges[queryHits])$softClip5Prime,
+            hardClip3Prime = mcols(granges[queryHits])$hardClip3Prime,
+            hardClip5Prime = mcols(granges[queryHits])$hardClip5Prime,
+            polyA5 = mcols(granges[queryHits])$polyA5,
+            polyA3 = mcols(granges[queryHits])$polyA3)
     hitsDF <- hitsDF %>% 
         dplyr::select(chr, start, end, readStart, readEnd, 
             strand, readClassId, alignmentStrand, 
-            counts, readId, softClip3Prime, softClip5Prime, hardClip3Prime, hardClip5Prime) %>%
+            counts, readId, softClip3Prime, softClip5Prime, hardClip3Prime, hardClip5Prime, polyA5, polyA3) %>%
         group_by(readClassId) %>% 
         summarise(start = start[1], end = end[1], starts = list(start), ends = list(end), readStrands = list(alignmentStrand),
             strand = strand[1], chr = chr[1], readCount = sum(counts),
             startSD = sd(rep(readStart,counts)), endSD = sd(rep(readEnd,counts)), 
             readCount.posStrand = sum(rep(alignmentStrand,counts)),
-            readIds = list(readId), softClips3Prime = list(softClip3Prime), softClips5Prime = list(softClip5Prime), 
-            hardClips3Prime = list(hardClip3Prime), hardClips5Prime = list(hardClip5Prime)) %>% 
+            readIds = list(readId), starts = list(readStart), 
+            ends = list(readEnd), readStrands = list(alignmentStrand),
+            softClips3Prime = list(softClip3Prime), softClips5Prime = list(softClip5Prime), 
+            hardClips3Prime = list(hardClip3Prime), hardClips5Prime = list(hardClip5Prime),
+            polyA5s = list(polyA5), polyA3s = list(polyA3)) %>% 
         mutate(confidenceType = confidenceType, intronStarts = NA,
             intronEnds = NA)
     if(nrow(hitsDF)==0){
@@ -405,7 +416,8 @@ getUnsplicedReadClassByReference <- function(granges, grangesReference,
         intronStarts, intronEnds,
         confidenceType, readCount, startSD, endSD, 
         readCount.posStrand, readIds, starts, ends, readStrands, 
-        softClips3Prime, softClips5Prime, hardClips3Prime, hardClips5Prime)
+        softClips3Prime, softClips5Prime, hardClips3Prime, hardClips5Prime,
+        polyA5s, polyA3s)
     mcols(exByReadClassUnspliced) <- hitsDF
     return(exByReadClassUnspliced)
 }
