@@ -547,6 +547,17 @@ warnings - A list containing the warnings produced by each sample
 
 ### Release History
 
+**bambu v3.3.0**
+
+Release date: 2023-October-25
+
+Minor changes:
+
+- Fix crash cause by de novo mode
+- Restore fusion mode functionality and added documentation
+- Fixed bug in plot function
+- Update release history
+
 **bambu v3.2.5**
 
 Release date: 2023-July-07
