@@ -21,15 +21,15 @@ isore.combineTranscriptCandidates <- function(readClassList,
         min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
     message("finished combineSplicedTranscriptModels")
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
-    return(combinedSplicedTranscripts)
-    # combinedUnsplicedTranscripts <- 
-    #     combineUnsplicedTranscriptModels(readClassList, bpParameters, 
-    #     stranded, min.readCount, min.readFractionByGene, 
-    #     min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
-    # combinedUnsplicedTranscripts[, confidenceType := "unsplicedNew"]
-    # combinedTranscripts <- as_tibble(rbindlist(list(combinedSplicedTranscripts,
-    #     combinedUnsplicedTranscripts), fill = TRUE))
-    # return(combinedTranscripts)
+    if (min.txScore.singleExon < 1) {return(combinedSplicedTranscripts)}
+    combinedUnsplicedTranscripts <- 
+        combineUnsplicedTranscriptModels(readClassList, bpParameters, 
+        stranded, min.readCount, min.readFractionByGene, 
+        min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
+    combinedUnsplicedTranscripts[, confidenceType := "unsplicedNew"]
+    combinedTranscripts <- as_tibble(rbindlist(list(combinedSplicedTranscripts,
+        combinedUnsplicedTranscripts), fill = TRUE))
+    return(combinedTranscripts)
 }
 
 
