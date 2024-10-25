@@ -14,11 +14,14 @@ isore.combineTranscriptCandidates <- function(readClassList,
     stranded, ## stranded used for unspliced reduce  
     min.readCount , min.readFractionByGene,
     min.txScore.multiExon, min.txScore.singleExon, bpParameters ,verbose){
+    message("starting combineSplicedTranscriptModels")
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
         min.readCount, min.readFractionByGene, 
         min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
+    message("finished combineSplicedTranscriptModels")
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
+    if (min.txScore.singleExon < 1) {return(combinedSplicedTranscripts)}
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
         stranded, min.readCount, min.readFractionByGene, 
