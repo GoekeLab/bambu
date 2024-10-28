@@ -44,7 +44,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
       remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose)
     message(paste0("Novel transcripts detected: ", sum(mcols(extendedAnnotationRanges)$novelTranscript)))
-    message(paste0("Novel genes detected: ", length(unique(mcols(se)$GENEID[mcols(se)$novelGene]))))
+    message(paste0("Novel genes detected: ", length(unique(mcols(extendedAnnotationRanges)$GENEID[mcols(extendedAnnotationRanges)$novelGene]))))
     message(paste0("Low confidence transcripts excluded: ", length(metadata(extendedAnnotationRanges)$lowConfidenceTranscripts)))
     return(extendedAnnotationRanges)
   } else {

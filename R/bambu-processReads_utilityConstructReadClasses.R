@@ -251,13 +251,11 @@ constructUnsplicedReadClasses <- function(reads.singleExon, annotations,
         mutate(id = mcols(reads.singleExon)$id,
         sampleID = mcols(reads.singleExon)$sampleID) %>% 
         group_by(seqnames,start,end,strand) %>% 
-        mutate(n=n(), id = list(id)) %>%  # change summarise to mutate as summarise will reorder the table
+        mutate(counts=n(), id = list(id), sampleID = list(sampleID)) %>% 
         ungroup() %>%
-        summarise(counts=n(), id = list(id), sampleID = list(sampleID)) %>% 
         as.data.frame()
-    mcols(reads.singleExon)$counts <- counts$n
-    mcols(reads.singleExon)$id <- counts$id
-     reads.singleExon = unique(reads.singleExon)
+    reads.singleExon = GRanges(counts)
+    reads.singleExon = unique(reads.singleExon)
 
     rcUnsplicedAnnotation <- getUnsplicedReadClassByReference(
         granges = reads.singleExon, grangesReference = referenceExons,
