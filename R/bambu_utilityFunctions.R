@@ -274,7 +274,7 @@ combineCountSes <- function(countsSe, annotations){
 #' Generate the coldata for se options using colnames, and other option inputs
 #' @noRd
 generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
-    ColData = DataFrame(sampleName = sampleNames)
+    ColData = DataFrame(id = sampleNames)
     if(demultiplexed & is.null(clusters)){
         ColData = DataFrame(id = sampleNames, 
                         sampleName = gsub("_[^_]+$","", sampleNames, perl = TRUE), 
