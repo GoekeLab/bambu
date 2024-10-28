@@ -109,6 +109,13 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
     return(combinedFeatureTibble)
 }
 
+#' Function to get median value without interpolation using certain column names
+#' @noRd
+readCountWeightedMedian <- function(dt, valuevar, timesvar){
+    sortVector <- rep(na.omit(unlist(dt[,..valuevar])), 
+                times = as.integer(na.omit(unlist(dt[,..timesvar]))))
+    return(min(sortVector[sortVector>=quantile(sortVector, probs = 0.5)]))
+}
 
 
 #' Function to combine featureTibble and create the NSample variables 
