@@ -17,7 +17,7 @@
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
 writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE, 
-                             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE) {
+                             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE, seperateSamples = FALSE) {
     if (missing(se) | missing(path)) {
         stop("Both summarizedExperiment object from bambu and
             the path for the output files are required.")
