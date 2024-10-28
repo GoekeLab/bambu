@@ -549,6 +549,30 @@ warnings - A list containing the warnings produced by each sample
 
 **bambu v3.3.0**
 
+Release date: 2024-October-28
+
+- Subset transcripts and those above the NDR threshold are placed into the metadata of the annotations in $subsetTranscripts and $lowConfidenceTranscripts respectively (when filtered out by default).
+- adds the setNDR function
+- outputs the NDR, txScore and txScore.noFit as attributes to the gtf file and these are also read in with prepareAnnotations.
+- Added setNDR as part of quant, which means that users can provide their extendedAnnotations alongside an NDR threshold when running bambu and it will automatically adjust the NDR used for quant. This means users do not need to manually filter the NDR value themselves.
+- NDR and other stats are now copied over to equal transcripts even if above the NDR threshold (previously only happened for those below the NDR threshold)
+- Read class to transcript assignment is now its own step instead of being done with quant. This is turned on and off with assignDist. 
+- Added demultiplexed argument
+- Added spatial argument
+- Added sampleNames argument
+- Added cleanReads argument
+- Added dedupUMI argument
+- Added clsuters argument
+- Updated lowMemory. The previous lowMemory mode is now always on. The new lowMemory mode is the current implementation, otherwise it will read in all bam files and process them together. 
+- Added importBambuResults
+- writeBambuOutput now outputs all information needed to import Bambu results from text files
+- Count outputs are all now in sparse matrix format
+
+Minor changes:
+- Warnings will no longer occur if there are seqlevels in the readGrgList that are not in the annotations or genome. This was done by setting seqlevels of the reads to only those in the reads. Warning was constantly occuring because all the scaffolds used in alignment were in the bam files, even if no reads from these scaffolds existed.
+
+**bambu v3.2.6**
+
 Release date: 2023-October-25
 
 Minor changes:
