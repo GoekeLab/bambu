@@ -28,7 +28,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
 
         transcript_grList <- rowRanges(se)
         transcript_gtffn <- paste(outdir, prefix,
-            "extended_annotations.gtf", sep = "")
+            "extended_annotations", sep = "")
         gtf <- writeAnnotationsToGTF(annotation = transcript_grList,
             file = transcript_gtffn, outputExtendedAnno = TRUE, 
             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE)
@@ -231,24 +231,24 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 writeAnnotationsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
                                 outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE){
     if(outputExtendedAnno){
-        writeToGTF(annotation, paste0(file, "_extendedAnnotations"), geneIDs)
+        writeToGTF(annotation, paste0(file, "_extendedAnnotations.gtf"), geneIDs)
     }
     if(outputAll){
         annotationAll = setNDR(annotation, 1)
         if(length(annotationAll) == length(annotation)) 
             message("The current NDR threshold already outputs all transcript models. This may result in reduced precision for th extendedAnnotations and supportedTranscriptModels gtfs")
-        writeToGTF(annotationAll, paste0(file, "_allTranscriptModels"), geneIDs)
+        writeToGTF(annotationAll, paste0(file, "_allTranscriptModels.gtf"), geneIDs)
     }
 
     #todo - have this write bambu start and ends for annotated transcripts
     if(outputBambuModels){
         annotationBambu = annotation[!is.na(mcols(annotation)$readCount)]
-        writeToGTF(annotationBambu, paste0(file, "_supportedTranscriptModels"), geneIDs)
+        writeToGTF(annotationBambu, paste0(file, "_supportedTranscriptModels.gtf"), geneIDs)
     }
 
     if(outputNovelOnly){
         annotationNovel = annotation[mcols(annotation)$novelTranscript]
-        writeToGTF(annotationBambu, paste0(file, "_novelTranscripts"), geneIDs)
+        writeToGTF(annotationBambu, paste0(file, "_novelTranscripts.gtf"), geneIDs)
     }
 }
 
