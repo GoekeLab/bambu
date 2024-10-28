@@ -104,7 +104,7 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
 
     combinedFeatureTibble <- startEndDt[combinedFeatureTibble[,.(intronStarts, intronEnds, chr, strand, maxTxScore, 
                                                                  maxTxScore.noFit, NSampleReadCount, NSampleReadProp, 
-                                                                 NSampleTxScore, rowID)], by = rowID]
+                                                                 NSampleTxScore, rowID)], on = "rowID"]
     combinedFeatureTibble[, rowID := NULL]
     return(combinedFeatureTibble)
 }
