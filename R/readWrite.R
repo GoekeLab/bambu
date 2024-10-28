@@ -30,8 +30,8 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         transcript_gtffn <- paste(outdir, prefix,
             "extended_annotations", sep = "")
         gtf <- writeAnnotationsToGTF(annotation = transcript_grList,
-            file = transcript_gtffn, outputExtendedAnno = TRUE, 
-            outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE)
+            file = transcript_gtffn, outputExtendedAnno = outputExtendedAnno, 
+            outputAll = outputAll, outputBambuModels = outputBambuModels, outputNovelOnly = outputNovelOnly)
         
         utils::write.table(colData(se), file = paste0(outdir, "/", prefix, "sampleData.tsv"), 
             sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
