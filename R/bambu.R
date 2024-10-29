@@ -146,18 +146,18 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         lowMemory = TRUE
     }
     if(mode == "multiplexed"){
-        if(is.null(demultiplex)) demultiplex = TRUE,
-        cleanReads = TRUE,
-        opt.em = list(degradationBias = FALSE),
+        if(is.null(demultiplex)) demultiplex = TRUE
+        cleanReads = TRUE
+        opt.em = list(degradationBias = FALSE)
         quant = FALSE
     }
     if(mode == "fusion"){
-        NDR = 1,
+        NDR = 1
         fusionMode = TRUE
     }
     if(mode == "debug"){
-        verbose = TRUE,
-        trackReads = TRUE,
+        verbose = TRUE
+        trackReads = TRUE
         returnDistTable = TRUE
     }
     if(is.null(annotations)) { annotations = GRangesList()
