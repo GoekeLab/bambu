@@ -23,7 +23,8 @@ data1 <- data.table(
     txlen = c(546,546,2356,2356),
     rcWidth = c(300,540,1800,2300),
     minRC = rep(1,4),
-    GENEID = 1
+    gene_sid = 1,
+    multi_align = c(FALSE, FALSE, FALSE, FALSE)
 )
 
 data2 <- data.table(
@@ -35,7 +36,8 @@ data2 <- data.table(
     txlen = c(546,546,2356,2356, 546,2356),
     rcWidth = c(300,540,1800,2300, 200, 200),
     minRC = rep(1,6),
-    GENEID = 2
+    gene_sid = 2,
+    multi_align = c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE)
 )
 
 data3 <- data.table(
@@ -47,7 +49,8 @@ data3 <- data.table(
     txlen = c(546,546,2356,2356,2356, 546,2356),
     rcWidth = c(540,540,540,1800,2300, 200, 200),
     minRC = c(NA,NA,1,1,1,NA,1),
-    GENEID = 3
+    gene_sid = 3,
+    multi_align = c(TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE)
 )
 
 data4 <- data.table(
@@ -59,7 +62,8 @@ data4 <- data.table(
     txlen = c(546,546,2356,2356,2356, 546,2356),
     rcWidth = c(540,540,540,1800,2300, 200, 200),
     minRC = c(NA,NA,1,1,1,NA,1),
-    GENEID = 4
+    gene_sid = 4,
+    multi_align = c(TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE)
 )
 
 data5 <- data.table(
@@ -71,7 +75,8 @@ data5 <- data.table(
     txlen = c(546,546,2356,2356, 546,2356),
     rcWidth = c(1700,2200,1800,2300, 2000, 2000),
     minRC = rep(1,6),
-    GENEID = 5
+    gene_sid = 5,
+    multi_align = c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE)
 )
 
 
@@ -104,7 +109,7 @@ seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 ## prior models to use for scoreReadClass() and junctions()
 ##to train new ones see update_xgboost_models.R
-defaultModels = list()
+defaultModels = readRDS("./inst/extdata/defaultModels.rds")
 defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.model")
 defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")  
 

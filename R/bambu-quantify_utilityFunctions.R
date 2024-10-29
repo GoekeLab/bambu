@@ -205,6 +205,7 @@ addAval <- function(readClassDt, emParameters, verbose){
                                                     d_rateOut[1], d_mode = d_mode)
   }else{
     d_rateOut <- rep(NA,2)
+    readClassDt$aval = 1
   }
   end.ptm <- proc.time()
   if (verbose) message("Finished estimate degradation bias in ",

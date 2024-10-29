@@ -31,25 +31,25 @@ bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, tx
 bambu.quantDT <- function(readClassDt = readClassDt, 
                           emParameters = list(degradationBias = TRUE, maxiter = 10000, conv = 10^(-2),
                                               minvalue = 10^(-8)), ncore = 1, verbose = FALSE) {
-  rcPreOut <- addAval(readClassDt, emParameters, verbose)
-  readClassDt <- rcPreOut[[1]]
-  outIni <- initialiseOutput(readClassDt)
-  readClassDt <- filterTxRc(readClassDt) 
-  readClassDt <- assignGroups(readClassDt)
-  inputRcDt <- getInputList(readClassDt)
-  readClassDt <- split(readClassDt, by = "gene_grp_id")
-  start.ptm <- proc.time()
-  outEst <- abundance_quantification(inputRcDt, readClassDt,
+    rcPreOut <- addAval(readClassDt, emParameters, verbose)
+    readClassDt <- rcPreOut[[1]]
+    outIni <- initialiseOutput(readClassDt)
+    readClassDt <- filterTxRc(readClassDt) 
+    readClassDt <- assignGroups(readClassDt)
+    inputRcDt <- getInputList(readClassDt)
+    readClassDt <- split(readClassDt, by = "gene_grp_id")
+    start.ptm <- proc.time()
+    outEst <- abundance_quantification(inputRcDt, readClassDt,
                                      maxiter = emParameters[["maxiter"]],
                                      conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
-  end.ptm <- proc.time()
-  if (verbose) message("Finished EM estimation in ",
-                       round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-  outEst <- modifyQuantOut(outEst,outIni)
-  theta_est <- rbind(rcPreOut[[2]],outEst)
-  theta_est <- removeDuplicates(theta_est)
     end.ptm <- proc.time()
-   return(theta_est)
+    if (verbose) message("Finished EM estimation in ",
+                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    outEst <- modifyQuantOut(outEst,outIni)
+    theta_est <- rbind(rcPreOut[[2]],outEst)
+    theta_est <- removeDuplicates(theta_est)
+    end.ptm <- proc.time()
+    return(theta_est)
 }
 
 
