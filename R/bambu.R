@@ -136,12 +136,30 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
-    opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
+    mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
-    sampleNames = NULL, cleanReads = TRUE, dedupUMI = FALSE, clusters = NULL) {
+    sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, clusters = NULL) {
     message(paste0("Running Bambu-v", "3.3.0"))
+    if(mode == "bulk"){
+        lowMemory = TRUE
+    }
+    if(mode == "multiplexed"){
+        if(is.null(demultiplex)) demultiplex = TRUE,
+        cleanReads = TRUE,
+        opt.em = list(degradationBias = FALSE),
+        quant = FALSE
+    }
+    if(mode == "fusion"){
+        NDR = 1,
+        fusionMode = TRUE
+    }
+    if(mode == "debug"){
+        verbose = TRUE,
+        trackReads = TRUE,
+        returnDistTable = TRUE
+    }
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery, 
