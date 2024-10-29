@@ -102,24 +102,17 @@ seCombinedGeneExpected <- transcriptToGeneExpression(seCombined)
 seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 
-## prior models to use for scoreReadClass()
-#se = readRDS("SGNex_HepG2_directRNA_replicate5_run1_genome.rds")
-#defaultModels = trainBambu(se)
-xgb.save(defaultModels$transcriptModelME, "./inst/extdata/read_class_ME.model")
-xgb.save(defaultModels$transcriptModelSE, "./inst/extdata/read_class_SE.model")
-defaultModels$transcriptModelME = NULL
-defaultModels$transcriptModelSE = NULL
-#saveRDS(defaultModels, "./inst/extdata/defaultModels.rds")
-defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
-                                    package = "bambu"))
+## prior models to use for scoreReadClass() and junctions()
+##to train new ones see update_xgboost_models.R
+defaultModels = list()
 defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.model")
-defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")                                    
+defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")  
 
-# How to get pre trained junction model standardJunctionModels_temp
-# added "saveRDS(junctionModel, "./inst/extdata/standardJunctionModels_temp.txt")" to junctionErrorCorrection
-# ran Bambu with GNex_HepG2_directRNA_replicate5_run1_genome
-standardJunctionModels_temp = readRDS(system.file(
-    "extdata", "standardJunctionModels_temp.txt", package = "bambu"))
+standardJunctionModels_temp = list()
+standardJunctionModels_temp$spliceSitePredictionStart.start = xgb.load("./inst/extdata/spliceSitePredictionStart.start.model")
+standardJunctionModels_temp$spliceSitePredictionStart.end = xgb.load("./inst/extdata/spliceSitePredictionStart.end.model")
+standardJunctionModels_temp$spliceSitePredictionEnd.start = xgb.load("./inst/extdata/spliceSitePredictionEnd.start.model")
+standardJunctionModels_temp$spliceSitePredictionEnd.end = xgb.load("./inst/extdata/spliceSitePredictionEnd.end.model")
 
 usethis::use_data(data1, data2, data3, data4, data5,
                   estOutput_woBC,
