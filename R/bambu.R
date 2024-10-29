@@ -142,23 +142,25 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
     sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, clusters = NULL) {
     message(paste0("Running Bambu-v", "3.3.0"))
-    if(mode == "bulk"){
-        lowMemory = TRUE
-    }
-    if(mode == "multiplexed"){
-        if(is.null(demultiplex)) demultiplex = TRUE
-        cleanReads = TRUE
-        opt.em = list(degradationBias = FALSE)
-        quant = FALSE
-    }
-    if(mode == "fusion"){
-        NDR = 1
-        fusionMode = TRUE
-    }
-    if(mode == "debug"){
-        verbose = TRUE
-        trackReads = TRUE
-        returnDistTable = TRUE
+    if(!is.null(mode)){
+        if(mode == "bulk"){
+            lowMemory = TRUE
+        }
+        if(mode == "multiplexed"){
+            if(is.null(demultiplex)) demultiplex = TRUE
+            cleanReads = TRUE
+            opt.em = list(degradationBias = FALSE)
+            quant = FALSE
+        }
+        if(mode == "fusion"){
+            NDR = 1
+            fusionMode = TRUE
+        }
+        if(mode == "debug"){
+            verbose = TRUE
+            trackReads = TRUE
+            returnDistTable = TRUE
+        }
     }
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
