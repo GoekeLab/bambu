@@ -141,7 +141,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
     sampleNames = NULL, cleanReads = TRUE, dedupUMI = FALSE, clusters = NULL) {
-    message(paste0("Running Bambu-v", "3.2.4"))
+    message(paste0("Running Bambu-v", "3.3.0"))
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery, 
