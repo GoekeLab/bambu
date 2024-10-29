@@ -229,9 +229,9 @@ saveRDS(readGrgList, file = "./inst/extdata/readGrgList_SGNex_A549_directRNA_rep
 
 annotations <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 genomeSequence <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
-se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, quant = FALSE)[[1]]
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, assignDist = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, stranded = TRUE, discovery = FALSE, quant = FALSE)[[1]]
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, stranded = TRUE, assignDist = FALSE, discovery = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence)

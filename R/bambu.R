@@ -190,7 +190,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
   
     if(assignDist){
         message("--- Start calculating equivilance classes ---")
-        if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
+        if (is.character(readClassList)) readClassList <- list(readRDS(file = readClassList))
         #if(is.list(readClassList)) readClassList = readClassList[[1]]
         quantData = bplapply(readClassList, FUN = assignReadClasstoTranscripts, 
             annotations = annotations, isoreParameters = isoreParameters, verbose = verbose, 
