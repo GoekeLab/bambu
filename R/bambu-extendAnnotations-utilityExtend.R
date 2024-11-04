@@ -68,7 +68,8 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
         combinedTranscripts$NSampleReadProp >= min.sampleNumber)
   }
   #combinedTranscripts = combinedTranscripts[filterSet,]
-  combinedTranscripts$maxTxScore[!filterSet] = 0
+  combinedTranscripts$maxTxScore[!filterSet] = -1
+  combinedTranscripts$maxTxScore.noFit[!filterSet] = -1
   return(combinedTranscripts)
 }
 
@@ -97,7 +98,9 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
         rowDataCombined[!notCompatibleIds,], 
         exonRangesCombined[!notCompatibleIds])
     rowDataCombined$maxTxScore[grepl("compatible", rowDataCombined$readClassType) &
-        rowDataCombined$readClassType != "equal:compatible"]=0
+        rowDataCombined$readClassType != "equal:compatible"]=-1
+    rowDataCombined$maxTxScore.noFit[grepl("compatible", rowDataCombined$readClassType) &
+        rowDataCombined$readClassType != "equal:compatible"]=-1
   }
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined = calculateNDROnTranscripts(rowDataCombined, 
@@ -153,16 +156,17 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 #' @noRd
 recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, defaultModels = defaultModels, verbose = FALSE){
     if(verbose) message("-- Predicting annotation completeness to determine NDR threshold --")
+    combinedTranscripts = combinedTranscripts[combinedTranscripts$maxTxScore.noFit >=0, ] #ignore filtered out read classes
     equal = combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] = FALSE
-
     #add envirnment so poly() works
     attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
     baseline = predict(defaultModels$lmNDR, newdata=data.frame(NDR=baselineFDR))
     attr(defaultModels$lmNDR[["terms"]], ".Environment") = c()
 
-    NDRscores = calculateNDR(combinedTranscripts$maxTxScore.noFit, equal)
     score = combinedTranscripts$maxTxScore.noFit
+    score[is.na(score)] = 0
+    NDRscores = calculateNDR(score, equal)
     NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
     NDR.rec = round(NDR.rec,3)
     if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.rec)
@@ -219,7 +223,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
             "for NDR precision stabilization.")
           message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else combinedTranscripts$NDR = calculateNDR(combinedTranscripts$maxTxScore, equal)
-    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==0] = 1
+    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==-1] = 1
     return(combinedTranscripts)
 }
 
