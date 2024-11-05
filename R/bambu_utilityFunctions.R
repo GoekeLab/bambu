@@ -46,7 +46,7 @@ setIsoreParameters <- function(isoreParameters){
 #' setEmParameters
 #' @noRd
 setEmParameters <- function(emParameters){
-    emParameters.default <- list(degradationBias = FALSE, maxiter = 10000, 
+    emParameters.default <- list(degradationBias = TRUE, maxiter = 10000, 
         conv = 10^(-2), minvalue = 10^(-8), sig.digit = 5)
     emParameters <- updateParameters(emParameters, emParameters.default)
     return(emParameters)
