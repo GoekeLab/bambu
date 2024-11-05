@@ -214,7 +214,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         #if(is.list(readClassList)) readClassList = readClassList[[1]]
         quantData = bplapply(readClassList, FUN = assignReadClasstoTranscripts, 
             annotations = annotations, isoreParameters = isoreParameters, verbose = verbose, 
-            demultiplexed = demultiplexed, spatial = spatial,
+            demultiplexed = demultiplexed, spatial = spatial, returnDistTable = returnDistTable,
             BPPARAM = bpParameters)                 
         if (!quant) return(quantData)
     }
