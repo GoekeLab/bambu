@@ -83,12 +83,12 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
                 mcols(readGrgList[[i]])$BC = paste0(names(reads)[i], '_', mcols(readGrgList[[i]])$BC)
             } else{mcols(readGrgList[[i]])$BC = sampleNames[i]}
             mcols(readGrgList[[i]])$BC = as.factor(mcols(readGrgList[[i]])$BC)
+            if(!isFALSE(demultiplexed)){ 
+                mcols(readGrgList[[i]])$sampleID = as.numeric(mcols(readGrgList[[i]])$BC)
+            } else {mcols(readGrgList[[i]])$sampleID = i}
         }
         readGrgList = do.call(c, readGrgList)    
         mcols(readGrgList)$id <- seq_along(readGrgList) 
-        if(!isFALSE(demultiplexed)){ 
-            mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$BC)
-        } else {mcols(readGrgList)$sampleID = mcols(readGrgList)$BC}
         readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
             readClass.outputDir = readClass.outputDir,
             stranded = stranded, min.readCount = min.readCount, 
@@ -184,7 +184,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     mcols(readGrgList)$BC = as.factor(mcols(readGrgList)$BC)
     if(!isFALSE(demultiplexed)){ 
         mcols(readGrgList)$sampleID = as.numeric(mcols(readGrgList)$BC)
-    } else {mcols(readGrgList)$sampleID = mcols(readGrgList)$BC}
+    } else {mcols(readGrgList)$sampleID = index}
         
     # construct read classes for each chromosome seperately 
     se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
