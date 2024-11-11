@@ -68,7 +68,7 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
                           width(unlisted_rowranges[unlisted_rowranges$exon_rank == 1,]),
                         totalWidth = sum(width(rowRanges(readClass))))
   distTable <- data.table(as.data.frame(metadata(readClass)$distTable))[!grepl("unidentified", annotationTxId), .(readClassId, 
-                                                                                                                  annotationTxId, readCount, GENEID, dist,equal,txid)]
+                                                                                                                  annotationTxId, readCount, GENEID, dist,equal, compatible, txid)]
   distTable <- rcWidth[distTable, on = "readClassId"]
   # filter out multiple geneIDs mapped to the same readClass using rowData(se)
   compatibleData <- as.data.table(as.data.frame(rowData(readClass)),
@@ -464,25 +464,34 @@ generateReadToTranscriptMap <- function(readClass, distTable, annotations){
   if(!is.null(metadata(readClass)$readNames)) { 
     read_id = metadata(readClass)$readNames}
   else { read_id = metadata(readClass)$readId}
+  print(1)
   #unpack and reverse the read class to read id relationship
   readOrder = order(unlist(rowData(readClass)$readIds))
   lens = lengths(rowData(readClass)$readIds)
   rcIndex = seq_along(readClass)
   readToRC = rep(rcIndex, lens)[readOrder]
   read_id = read_id[(match(unlist(rowData(readClass)$readIds)[readOrder], metadata(readClass)$readId))]
+  print(2)
   #get annotation indexs
+  distTable = metadata(distTable)$distTable
+    print(head(distTable))
   distTable$annotationTxId = match(distTable$annotationTxId, names(annotations))
+  print(2.1)
+  print(head(distTable))
   #match read classes with transcripts
   readClass_id = rownames(readClass)[readToRC]
   distTable$exClassById = NULL
+  print(3)
   equalMatches = as_tibble(distTable) %>%
     filter(equal) %>% 
     group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
   equalMatches = equalMatches$annotationTxIds[match(readClass_id, equalMatches$readClassId)]
+  print(4)
   compatibleMatches =  as_tibble(distTable) %>% 
     filter(!equal & compatible) %>% 
     group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
   compatibleMatches = compatibleMatches$annotationTxIds[match(readClass_id, compatibleMatches$readClassId)]
+  print(5)
   readToTranscriptMap = tibble(readId=read_id, equalMatches = equalMatches, compatibleMatches = compatibleMatches)
   return(readToTranscriptMap)
 }

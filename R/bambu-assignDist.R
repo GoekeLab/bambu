@@ -2,7 +2,9 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, verbose, demultiplexed, spatial, returnDistTable = FALSE) {
+assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, 
+                                        verbose, demultiplexed, spatial, 
+                                        returnDistTable = FALSE, trackReads = TRUE) {
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
     readClassList = splitReadClassFiles(readClassList)
     readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
@@ -26,12 +28,17 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     }
     metadata(quantData)$nonuniqueCounts = generateNonUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)
     metadata(quantData)$readClassDt = readClassDt
-    if(returnDistTable){
-        metadata(quantData)$distTable = metadata(readClassList)$readClassDist
-    }
     metadata(quantData)$countMatrix = metadata(readClassList)$countMatrix
     metadata(quantData)$incompatibleCountMatrix  = metadata(readClassList)$incompatibleCountMatrix 
     metadata(quantData)$sampleNames = metadata(readClassList)$sampleNames 
+    if(returnDistTable){
+        metadata(quantData)$distTable = metadata(readClassList)$readClassDist
+    }
+    if (trackReads){
+        metadata(quantData)$readToTranscriptMap = 
+            generateReadToTranscriptMap(readClassList, metadata(readClassList)$readClassDist, 
+                                  annotations)
+    } 
     return(quantData)     
 
 }

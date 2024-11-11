@@ -215,6 +215,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         quantData = bplapply(readClassList, FUN = assignReadClasstoTranscripts, 
             annotations = annotations, isoreParameters = isoreParameters, verbose = verbose, 
             demultiplexed = demultiplexed, spatial = spatial, returnDistTable = returnDistTable,
+            trackReads = trackReads,
             BPPARAM = bpParameters)                 
         if (!quant) return(quantData)
     }
@@ -277,15 +278,11 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             }
             countsSeCompressed.all = c(countsSeCompressed.all, countsSeCompressed)
         }
-        countsSeCompressed.all$colnames = ColNames
-         #return(countsSeCompressed.all)                
+        countsSeCompressed.all$colnames = ColNames            
         countsSe <- combineCountSes(countsSeCompressed.all, annotations)
 
         #metadata(countsSe)$warnings = warnings
-        # if (trackReads) metadata(seOutput)$readToTranscriptMap = 
-        #     generateReadToTranscriptMap(readClass, metadata(readClassDist)$distTable, 
-        #                              annotations)
-        # if (returnDistTable) metadata(seOutput)$distTable = metadata(readClassDist)$distTable
+
         ColData = generateColData(colnames(countsSe), clusters, demultiplexed, spatial)
         colData(countsSe) = ColData
         colnames(countsSe) = ColData[,1]
