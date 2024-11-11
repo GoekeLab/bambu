@@ -874,3 +874,55 @@ setNDR = function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 
 
   return(extendedAnnotations)
 }
+
+isore.extendAnnotations.clusters <- function(readClassList, annotations, clusters, NDR, isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE){
+    message("--- Start extending annotations for clusters ---")
+    #if clustering is a csv, create a list with the barcodes for each cluster
+    #csv must have two cols with heading barcode, cluster
+    if(!is.list(clusters)){
+        clusters = read.csv(clusters)
+        clusters = clusters %>% group_by(cluster) %>% summarise(barcodes = list(barcode))
+        clusters = clusters$cluster
+        clusters = clusters$barcodes
+        names(clusters) = clusters
+    }
+    annotations.clusters = list()
+    rcfs.clusters = list()
+    clusters.rc = splitReadClassFilesByRC(readClassList[[1]])
+    txScores = c()
+    for(i in seq_along(clusters)){
+        print(names(clusters)[i])
+        ###TODO need to account for the sample name here which is added to the barcode
+        index = match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples)) 
+        index = index[!is.na(index)]
+        print(length(index))
+        if(length(index)<20) next
+        rcf.counts = clusters.rc[,index]
+        rcf.filt = readClassList[[1]][rowSums(rcf.counts)>0,]
+        rowData(rcf.filt)$readCount = rowSums(rcf.counts)[rowSums(rcf.counts)>0]
+        countsTBL = calculateGeneProportion(counts=mcols(rcf.filt)$readCount,
+                                            geneIds=mcols(rcf.filt)$GENEID)
+        rowData(rcf.filt)$geneReadProp = countsTBL$geneReadProp
+        rowData(rcf.filt)$geneReadCount = countsTBL$geneReadCount
+        rowData(rcf.filt)$startSD = 0
+        rowData(rcf.filt)$endSD = 0
+        rowData(rcf.filt)$readCount.posStrand = 0
+        thresholdIndex = which(rowData(rcf.filt)$readCount>=isoreParameters$min.readCount)
+        model = trainBambu(rcf.filt, verbose = verbose, min.readCount = isoreParameters$min.readCount)
+        txScore = getTranscriptScore(rowData(rcf.filt)[thresholdIndex,], model,
+                                defaultModels)
+        rowData(rcf.filt)$txScore = rep(NA,nrow(rcf.filt))
+        rowData(rcf.filt)$txScore[thresholdIndex] = txScore
+        #txScores = cbind(txScores, rowData(rcf.filt)$txScore)
+        rcfs.clusters[[names(clusters)[i]]] = rcf.filt
+        annotations.clusters[[names(clusters)[i]]] <- bambu.extendAnnotations(list(rcf.filt), annotations, NDR,
+                                isoreParameters, stranded, bpParameters, fusionMode, verbose)
+    }
+    if(length(rcfs.clusters)>0){
+        print("--- Merging all individual clusters ---")
+        annotations.clusters[["merged"]] <- bambu.extendAnnotations(rcfs.clusters, annotations, NDR,
+            isoreParameters, stranded, bpParameters, fusionMode, verbose)
+    }
+      
+    return(annotations.clusters)
+}
