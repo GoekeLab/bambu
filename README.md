@@ -476,7 +476,30 @@ se <- bambu(reads = fusionAligned.bam, annotations = fusionAnnotations, genome =
 | discovery | A logical variable indicating whether annotations are to be extended for quantification, defaults to TRUE. |
 | quant | A logical variable indicating whether quantification will be performed, defaults to TRUE. |
 | verbose | A logical variable indicating whether processing messages will be printed. |
-| lowMemory | Reads will be processed by chromosomes instead of all together when lowMemory is specified. This option provides an efficient way to process big samples. |
+| lowMemory | A logical variable indicating if each input bam file will be processed seperately (TRUE) or all are read in and processed together (FALSE), defaults to TRUE |
+| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']
+bulk - lowMemory = TRUE
+multiplexed -
+            demultiplex = TRUE
+            cleanReads = TRUE
+            opt.em = list(degradationBias = FALSE)
+            quant = FALSE
+
+fusion
+            NDR = 1
+            fusionMode = TRUE
+debug
+            verbose = TRUE
+            trackReads = TRUE
+            returnDistTable = TRUE |
+| demultiplexed | A logical variable indicating whether the input bam file is demultiplexed. The barcode and umi either need to be present in the read name or the $BC and $UG tags, defaults to FALSE. Alternatively a path to a csv file can be provided where column 1 is read names, column 2 is barcodes, and column 3 is UMI. |
+| spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. |
+| assignDist | A logical variable indicating whether read class to transcript assignment will be performed, defaults to TRUE. |
+| quantData | Advanced use only. A list of se outputs from the assignDist step. Used only to run quantification |
+| sampleNames | A vector of strings representing the sample name associated with each input bam. bam files with the same sample name will be combined |
+| cleanReads | A logical variable indicating whether only the first sequenced alignment in a read should be kept. This helps to remove chimeric reads, but will remove alignments from fusion genes, defaults to FALSE. |
+| dedupUMI | A logical variable indicating whether UMI deduplication is performed. The longest read per UMI will be used and the rest discarded, defaults to FALSE.|
+| clusters | Either a list containing the barcodes for each cluster, or a path to a csv file containg the barcode to cluster mapping. When provided, clusters will be used during discovery and EM quant steps, defaults to null. |
 
 ### setNDR() arguments
 |argument|description|
