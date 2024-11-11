@@ -700,6 +700,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
         #copy over stats to annotations from read classes
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR = equalRanges$NDR
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore = equalRanges$maxTxScore
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount = equalRanges$readCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount = equalRanges$relReadCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore = equalRanges$maxTxScore

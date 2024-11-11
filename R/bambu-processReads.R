@@ -16,7 +16,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
     lowMemory=FALSE, trackReads = trackReads, fusionMode = fusionMode, 
-    demultiplexed = FALSE, cleanReads = TRUE, dedupUMI = FALSE, sampleNames = NULL) {
+    demultiplexed = FALSE, cleanReads = FALSE, dedupUMI = FALSE, sampleNames = NULL, barcodesToFilter = NULL) {
     genomeSequence <- checkInputSequence(genomeSequence)
     # ===# create BamFileList object from character #===#
     if (is(reads, "BamFile")) {
@@ -63,7 +63,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
             trackReads = trackReads, fusionMode = fusionMode, 
-            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i)},
+            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
     } else {
         readGrgList <- bplapply(seq_along(reads), function(i) {
@@ -74,7 +74,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
             trackReads = trackReads, fusionMode = fusionMode, 
-            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i)},
+            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
         
         sampleNames = as.numeric(as.factor(sampleNames))
@@ -130,12 +130,13 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
-    cleanReads = TRUE, dedupUMI = FALSE, index = 0) {
+    verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
+    cleanReads = FALSE, dedupUMI = FALSE, index = 0, barcodesToFilter = NULL) {
     if(verbose) message(names(bam.file)[1])
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
     if(verbose) message(paste0("Number of alignments/reads: ",length(readGrgList)))
     warnings = c()
+    if(!is.null(barcodesToFilter) & demultiplexed){ readGrgList = readGrgList[!mcols(readGrgList)$CB %in% barcodesToFilter]}
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
     if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))
     #check seqlevels for consistency, drop ranges not present in genomeSequence
@@ -222,8 +223,9 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
     readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
-    cleanReads = TRUE, dedupUMI = FALSE, index = 0) {
+    cleanReads = TRUE, dedupUMI = FALSE, index = 0, barcodesToFilter = NULL) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
+    if(!is.null(barcodesToFilter) & demultiplexed){ readGrgList = readGrgList[!mcols(readGrgList)$CB %in% barcodesToFilter]}
     if(verbose) message("Number of alignments/reads: ",length(readGrgList))
     warnings = c()
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
