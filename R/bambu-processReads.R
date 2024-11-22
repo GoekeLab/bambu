@@ -63,7 +63,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
             trackReads = trackReads, fusionMode = fusionMode, 
-            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i, barcodesToFilter = barcodesToFilter)},
+            demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = 1, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
     } else {
         readGrgList <- bplapply(seq_along(reads), function(i) {
