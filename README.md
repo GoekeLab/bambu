@@ -477,21 +477,7 @@ se <- bambu(reads = fusionAligned.bam, annotations = fusionAnnotations, genome =
 | quant | A logical variable indicating whether quantification will be performed, defaults to TRUE. |
 | verbose | A logical variable indicating whether processing messages will be printed. |
 | lowMemory | A logical variable indicating if each input bam file will be processed seperately (TRUE) or all are read in and processed together (FALSE), defaults to TRUE |
-| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']
-bulk - lowMemory = TRUE
-multiplexed -
-            demultiplex = TRUE
-            cleanReads = TRUE
-            opt.em = list(degradationBias = FALSE)
-            quant = FALSE
-
-fusion
-            NDR = 1
-            fusionMode = TRUE
-debug
-            verbose = TRUE
-            trackReads = TRUE
-            returnDistTable = TRUE |
+| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br> bulk - <br>&nbsp;&nbsp;&nbsp;&nbsp;lowMemory = TRUE<br>multiplexed - <br>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br>fusion - <br>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br>debug -<br>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
 | demultiplexed | A logical variable indicating whether the input bam file is demultiplexed. The barcode and umi either need to be present in the read name or the $BC and $UG tags, defaults to FALSE. Alternatively a path to a csv file can be provided where column 1 is read names, column 2 is barcodes, and column 3 is UMI. |
 | spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. |
 | assignDist | A logical variable indicating whether read class to transcript assignment will be performed, defaults to TRUE. |
