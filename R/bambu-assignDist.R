@@ -5,6 +5,7 @@
 assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, 
                                         verbose, demultiplexed, spatial, 
                                         returnDistTable = FALSE, trackReads = TRUE) {
+    if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
     readClassList = splitReadClassFiles(readClassList)
     readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 

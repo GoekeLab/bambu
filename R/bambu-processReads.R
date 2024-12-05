@@ -58,7 +58,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         readClassList <- bplapply(seq_along(reads), function(i) {
             bambu.processReadsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
-            readClass.outputDir = readClass.outputDir,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
@@ -69,7 +68,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         readGrgList <- bplapply(seq_along(reads), function(i) {
             bambu.readsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
-            readClass.outputDir = readClass.outputDir,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
@@ -90,7 +88,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         readGrgList = do.call(c, readGrgList)    
         mcols(readGrgList)$id <- seq_along(readGrgList) 
         readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
-            readClass.outputDir = readClass.outputDir,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
@@ -102,23 +99,20 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         readClassList = list(readClassList)
     }
         
-    
-
-    # TODO return output
-    # if (!is.null(readClass.outputDir)) {
-    #     readClassFile <- paste0(readClass.outputDir,names(bam.file),
-    #                             "_readClassSe.rds")
-    #     if (file.exists(readClassFile)) {
-    #         show(paste(readClassFile, "exists, will be overwritten"))
-    #         warning(readClassFile, "exists, will be overwritten")
-    #     } else {
-    #         readClassFile <- BiocFileCache::bfcnew(BiocFileCache::BiocFileCache(
-    #             readClass.outputDir, ask = FALSE),
-    #             paste0(names(bam.file),"_readClassSe"), ext = ".rds")
-    #     }
-    #     saveRDS(se, file = readClassFile)
-    #     se <- readClassFile
-    # }
+    if (!is.null(readClass.outputDir)) {
+        for(i in seq_along(readClassList)){
+            readClassFile = "combinedSamples"
+            if(lowMemory){
+                readClassFile <- metadata(readClassList[[i]])$sampleNames
+            }
+            readClassFile <- BiocFileCache::bfcnew(BiocFileCache::BiocFileCache(
+                readClass.outputDir, ask = FALSE),
+                paste0(readClassFile,"_readClassSe"), ext = ".rds")
+            saveRDS(readClassList[[i]], file = readClassFile)
+            readClassList[[i]] <- readClassFile
+        }
+        
+    }
     #TODO don't output list, current there because discovery needs it
     return(readClassList)
 }
@@ -128,7 +122,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
+    yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, lowMemory = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
     cleanReads = FALSE, dedupUMI = FALSE, index = 0, barcodesToFilter = NULL) {
@@ -220,7 +214,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
 bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
-    readClass.outputDir = NULL, yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
+    yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
     cleanReads = TRUE, dedupUMI = FALSE, index = 0, barcodesToFilter = NULL) {
@@ -291,7 +285,7 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
 }
 
 constructReadClasses <- function(readGrgList, genomeSequence, annotations,
-    readClass.outputDir = NULL, stranded = FALSE, min.readCount = 2, 
+    stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, trackReads = FALSE, fusionMode = FALSE){
     warnings = c() ###TODO
