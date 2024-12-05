@@ -260,7 +260,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                     iter = clustering
 
                 } else{ #if clusters is a list
-                    if(length(quantDatas)>1){iter = clusters[[i]] #lowMemory mode
+                    if(length(quantData)>1){iter = clusters[[i]] #lowMemory mode
                     }else(iter = do.call(c,clusters))
                 }
             }
@@ -275,7 +275,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                             incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(metadata(quantData_i)$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
                                             txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                             emParameters = emParameters, trackReads = trackReads, 
-                                            returnDistTable = returnDistTable, verbose = verbose))}, 
+                                            verbose = verbose))}, 
                                             BPPARAM = bpParameters)
             end.ptm <- proc.time()
             message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
@@ -288,7 +288,13 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         }
         countsSeCompressed.all$colnames = ColNames            
         countsSe <- combineCountSes(countsSeCompressed.all, annotations)
-
+        if(returnDistTable){
+            distTables = list()
+            for(i in seq_along(quantData)){
+                distTables[[i]] = metadata(quantData[[i]])$distTable
+            }
+            metadata(countsSe)$distTables = distTables
+        }
         #metadata(countsSe)$warnings = warnings
 
         ColData = generateColData(colnames(countsSe), clusters, demultiplexed, spatial)
