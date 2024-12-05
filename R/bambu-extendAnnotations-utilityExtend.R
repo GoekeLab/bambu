@@ -169,8 +169,9 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     NDRscores = calculateNDR(score, equal)
     NDR.rec = predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
     NDR.rec = round(NDR.rec,3)
+    if(NDR.rec > 1){NDR.rec = 0.999}
+    if (NDR.rec < 0) {NDR.rec = 0}
     if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.rec)
-    if (NDR.rec < 0) NDR.rec = 0
     if(NDR.rec > 0.5){
         message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
         "limiting the performance of the trained model")
