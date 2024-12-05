@@ -6,7 +6,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
                                         verbose, demultiplexed, spatial, 
                                         returnDistTable = FALSE, trackReads = TRUE) {
     if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
-    metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose)
+    metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose, returnDistTable)
     readClassList = splitReadClassFiles(readClassList)
     readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
     readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
@@ -33,7 +33,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     metadata(quantData)$incompatibleCountMatrix  = metadata(readClassList)$incompatibleCountMatrix 
     metadata(quantData)$sampleNames = metadata(readClassList)$sampleNames 
     if(returnDistTable){
-        metadata(quantData)$distTable = metadata(readClassList)$readClassDist
+        metadata(quantData)$distTable = metadata(metadata(readClassList)$readClassDist)$distTableOld
     }
     if (trackReads){
         metadata(quantData)$readToTranscriptMap = 

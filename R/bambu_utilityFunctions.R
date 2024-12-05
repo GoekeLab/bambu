@@ -225,13 +225,14 @@ handleWarnings <- function(readClassList, verbose){
 }
 
 #' Calculate the dist table used for Bambu Quantification
-calculateDistTable <- function(readClassList, annotations, isoreParameters, verbose){
+calculateDistTable <- function(readClassList, annotations, isoreParameters, verbose, returnDistTable){
     readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
                                                             min.exonDistance = isoreParameters[["min.exonDistance"]],
                                                             min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']],
                                                             min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
+        if(returnDistTable) metadata(readClassDist)$distTableOld = metadata(readClassDist)$distTable
                 #convert string gene ids into index to save memory
         GENEIDs = factor(unique(mcols(annotations)$GENEID))
         GENEID.i = as.numeric(GENEIDs)
