@@ -140,17 +140,20 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
-    sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL) {
+    sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
+    processByChromosome = FALSE, processByBam = TRUE) {
     message(paste0("Running Bambu-v", "3.3.0"))
     if(!is.null(mode)){
         if(mode == "bulk"){
-            lowMemory = TRUE
+            processByChromosome = FALSE
+            processByBam = TRUE
         }
         if(mode == "multiplexed"){
             if(is.null(demultiplex)) demultiplex = TRUE
             cleanReads = TRUE
             opt.em = list(degradationBias = FALSE)
             quant = FALSE
+            processByChromosome = TRUE
         }
         if(mode == "fusion"){
             NDR = 1
@@ -162,6 +165,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             returnDistTable = TRUE
         }
     }
+    if(lowMemory){message("lowMemory has been deprecated and split into processByChromosome and processByBam. Please see Documentation")}
     if(is.null(annotations)) { annotations = GRangesList()
     } else annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery, 
@@ -193,7 +197,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
             bpParameters = bpParameters, stranded = stranded, verbose = verbose,
             isoreParameters = isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
-            lowMemory = lowMemory, demultiplexed = demultiplexed,
+            processByChromosome = processByChromosome, processByBam = processByBam, 
+            demultiplexed = demultiplexed,
             sampleNames = sampleNames, cleanReads = cleanReads, dedupUMI = dedupUMI)
     }
 
