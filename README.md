@@ -234,6 +234,11 @@ writeToGTF(se.discoveryOnly.novel, "./output.gtf")
 
 If both quant and discovery are set to FALSE, *bambu* will return an intermediate object see [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
 
+To reimport the output of writeBambuOutput() use importBambuResults()
+```rscript
+se <- importBambuResults(path = "/path/to/bambu/output/")
+```
+
 ### Visualization
 You can visualize the novel genes/transcripts using plotBambu function. (Note that the visualization was done by running *bambu* on the three replicates of HepG2 cell line in the SG-NEx project)
 
@@ -476,8 +481,9 @@ se <- bambu(reads = fusionAligned.bam, annotations = fusionAnnotations, genome =
 | discovery | A logical variable indicating whether annotations are to be extended for quantification, defaults to TRUE. |
 | quant | A logical variable indicating whether quantification will be performed, defaults to TRUE. |
 | verbose | A logical variable indicating whether processing messages will be printed. |
-| lowMemory | A logical variable indicating if each input bam file will be processed seperately (TRUE) or all are read in and processed together (FALSE), defaults to TRUE |
-| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br> bulk - <br>&nbsp;&nbsp;&nbsp;&nbsp;lowMemory = TRUE<br>multiplexed - <br>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br>fusion - <br>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br>debug -<br>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
+| processByBam | A logical variable indicating if each input bam file will be processed seperately (TRUE) or all are read in and processed together (FALSE), defaults to TRUE |
+| processByChromosome | A logical variable indicating if read classes will be constructed with all reads together (FALSE), or done by chromsome which uses less memory, but provides less information for the junction correction model (TRUE), defaults to FALSE |
+| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br> bulk - <br>&nbsp;&nbsp;&nbsp;&nbsp;processByBam = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;processByChromsome = FALSE<br>multiplexed - <br>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br>&nbsp;&nbsp;&nbsp;&nbsp;processByChromosome = TRUE<br>fusion - <br>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br>debug -<br>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
 | demultiplexed | A logical variable indicating whether the input bam file is demultiplexed. The barcode and umi either need to be present in the read name or the $BC and $UG tags, defaults to FALSE. Alternatively a path to a csv file can be provided where column 1 is read names, column 2 is barcodes, and column 3 is UMI. |
 | spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. |
 | assignDist | A logical variable indicating whether read class to transcript assignment will be performed, defaults to TRUE. |
@@ -571,9 +577,11 @@ Release date: 2024-October-28
 - Added sampleNames argument
 - Added cleanReads argument
 - Added dedupUMI argument
-- Added clsuters argument
-- Updated lowMemory. The previous lowMemory mode is now always on. The new lowMemory mode is the current implementation, otherwise it will read in all bam files and process them together. 
-- Added importBambuResults
+- Added clusters argument
+- Deprecated lowMemory - This has been replaced by processByChromosome
+- Added processByChomosome (the old memory)
+- Added processByBam argument
+- Added importBambuResults()
 - writeBambuOutput now outputs all information needed to import Bambu results from text files
 - Count outputs are all now in sparse matrix format
 
