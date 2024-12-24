@@ -26,6 +26,7 @@
   - [Modulating the sensitivity of discovery (pre and post analysis)](#Modulating-the-sensitivity-of-discovery-pre-and-post-analysis)
   - [Output](#Output)
   - [Visualization](#Visualization)
+  - [Single-Cell and Spatial](#Single-Cell-and-Spatial)
 - [*bambu* Advanced Options](#Bambu-Advanced-Options)
   - [Using a pretrained model](#Using-a-pretrained-model)
   - [De-novo transcript discovery](#De-novo-transcript-discovery)
@@ -35,6 +36,7 @@
   - [Quantification of gene expression](#Quantification-of-gene-expression)
   - [Including single exons](#Including-single-exons)
   - [Fusion gene/isoform detection](#Fusion-geneisoform-detection)
+  - [Custom single-cell and spatial analysis](#Custom-Single-Cell-and-Spatial)
   - [*bambu* Arguments](#Bambu-Arguments)
   - [Output Description](#Output-Description)
 - [Release History](#Release-History)
@@ -283,6 +285,12 @@ plotBambu(se, type = "heatmap", group.var) # heatmap
 plotBambu(se, type = "pca", group.var) # PCA visualization
 ```
 
+### Single-Cell-and-Spatial
+
+There is a single-cell and spatial pipeline starting from fastq or demultiplexed bamfiles that includes demultiplexing and aligning available here https://github.com/GoekeLab/bambu-singlecell-spatial. We recommend using this pipeline where possible.
+
+For advanced users see the #[Custom single-cell and spatial analysis](#Custom-Single-Cell-and-Spatial) section under advanced options
+
 ### *Bambu* Advanced Options
 Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the [paper](https://www.biorxiv.org/content/10.1101/2022.11.14.516358v1) before attempting to use these features.
 
@@ -460,6 +468,98 @@ To use this feature, it is recommended to detect the fusion gene breakpoints usi
 
 ```rscript
 se <- bambu(reads = fusionAligned.bam, annotations = fusionAnnotations, genome = fusionFasta, fusionMode = TRUE)
+```
+
+### Custom single-cell and spatial
+
+If you want to run Bambu-Clump for single-cell or spatial analysis stand alone and not part of the Bambu-Pipe pipeline we recommend running it in 4 stages which we will describe seperately: Read Class Construction, Transcript Discovery, Read Class Assignment, and EM Quantification. Note that this section will only cover arguments that are different or unique to this analysis.
+
+Read Class Construction:
+
+reads: provided bam files must have barcodes in the read name or in the BC tag. Alternatively a csv file can be provided to demultiplexed mapping the read names to barcodes. For exact requirements see https://github.com/GoekeLab/bambu-singlecell-spatial. <br>
+demultiplexed: must be set to TRUE (or be a barcode map). This will cause bambu to look for barcodes and seperate reads by barcode rather than sample. <br>
+
+Optional:
+
+
+cleanReads: A logical TRUE/FALSE. Chimeric reads in samples can cause issues with barcode assignments. Setting this to TRUE will ensure only the first alignment per barcode is used (We recommend using this). <br>
+sampleNames: A vector of characters assigning names to each sample in the reads argument. By default the sample names are taken from the file names and appended to the barcodes in order to differentiate them. If your sample names are the same across multiple files, but matching barcodes between the samples should be counted seperately, provide them with different sample names using this argument. Similiarly if your samples have different names, but overlapping barcodes should be counted together, give them the same sample name with this argument.  <br>
+dedupUMI: A logical TRUE/FALSE.   <br>
+
+```rscript
+readClassFile = bambu(reads = samples, annotations = annotations, genome = "$genome", ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = barcode_maps, verbose = TRUE, assignDist = FALSE, lowMemory = as.logical("$params.lowMemory"), yieldSize = 10000000, sampleNames = ids, cleanReads = as.logical($cleanReads),  = as.logical($deduplicateUMIs))
+```
+
+Transcript Discovery:
+
+Transript discovery can be run as usual as typically bulk-level discovery is suitable. However cluster-level transcript discovery can be preformed using the clusters argument which can be redone done after clustering. 
+
+```rscript
+extendedAnno = bambu(reads = readClassFile, annotations = annotations, genome = "$genome", ncore = $params.ncore, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
+```
+
+Read Class Assignment:
+This step was previously performed together with the quantification, but can be done seperately so that the arguments can be passed to the quantification seperately with different clustering. If you only want barcode level gene counts or unique transcript counts you can stop here and do not need to proceed to the EM quantification.
+
+spatial: This should be a path to your barcode whitelist that also contians the x and y coordinates as extra columns. 
+
+```rscript
+quantData = bambu(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial)
+```
+
+EM quantification:
+
+If you plan to run this step with multiple processes we recommend restarting your R instance to ensure that environmental variables do not inflate the memory usage. 
+
+reads: This argument is still mandatory but not needed when performing quantification alone as long as you provide the quantData argument  <br>
+quantData:  This is the summerized experiement output from the Read Class Assignment step<br>
+clusters:  This is an optional argument which is either a path to a csv containing the barcode to cluster assignments or a list<br>
+opt.em = list(degradationBias=TRUE): We recommend including this argument if you are doing barcode level EM quantification to greatly improve runtime with only a small reduction in quantification accuracy. 
+
+```rscript
+#use Seurat to generate clusters from gene counts
+library(Seurat)
+
+clusterCells = function(counts, resolution = 0.8, dim = 15){
+  
+  cellMix <- CreateSeuratObject(counts = counts, 
+                                project = "cellMix", min.cells = 1)#, min.features = 200)
+  #cellMix <- subset(cellMix, subset = nFeature_RNA > nFeature_RNA_threshold & nFeature_RNA < nFeature_RNA_threshold_max)
+  #nFeature_RNA_threshold = 1000, nFeature_RNA_threshold_max = 9000,
+  cellMix <- NormalizeData(cellMix, normalization.method = "LogNormalize", scale.factor = 10000)
+  cellMix <- FindVariableFeatures(cellMix, selection.method = "vst", nfeatures = 2500)
+  all.genes <- rownames(cellMix)
+  cellMix <- ScaleData(cellMix, features = all.genes)
+  npcs = ifelse(ncol(counts)>50, 50, ncol(counts)-1)
+  cellMix <- RunPCA(cellMix, features = VariableFeatures(object = cellMix), npcs = npcs)
+  dim = ifelse(dim >= dim(cellMix@reductions$pca)[2], dim, dim(cellMix@reductions$pca)[2])
+  cellMix <- FindNeighbors(cellMix, dims = 1:dim)
+  cellMix <- FindClusters(cellMix, resolution = resolution)
+  cellMix <- RunUMAP(cellMix, dims = 1:dim)
+  
+  return(cellMix)
+}
+
+quantData.gene = transcriptToGeneExpression(quantData)
+counts = assays(quantData.gene)$counts[,1] #selecting first sample
+cellMix = clusterCells(counts, resolution = resolution) #resolution is dependant on sample. For larger clusters: 0.2-0.6, for higher resolution: 0.8-2
+x = setNames(names(cellMix@active.ident), cellMix@active.ident)
+clusters = splitAsList(unname(x), names(x))
+
+
+
+se = bambu( reads = "placeholder", 
+            annotations = extendedAnno, 
+            genome = "$genome", 
+            quantData = quantDatas, 
+            assignDist = FALSE, 
+            ncore = $params.ncore, 
+            discovery = FALSE, 
+            quant = TRUE, 
+            demultiplexed = TRUE, 
+            verbose = FALSE, 
+            opt.em = list(degradationBias = degBias), 
+            clusters = clusters)
 ```
 
 ### *Bambu* Arguments
