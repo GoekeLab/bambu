@@ -16,12 +16,14 @@ transcriptToGeneExpression <- function(se) {
     rowDataSe <- as.data.table(rowData(se))
     
     counts  = fac2sparse(rowData(se)$GENEID) %*% counts
-    incompatibleCounts <- metadata(se)$incompatibleCounts
-    if("nonuniqueCounts" %in% names(metadata(se))){
-        incompatibleCounts = incompatibleCounts + metadata(se)$nonuniqueCounts
+    if(!is.null(metadata(se)$incompatibleCounts)){
+        incompatibleCounts <- metadata(se)$incompatibleCounts
+        if("nonuniqueCounts" %in% names(metadata(se))){
+            incompatibleCounts = incompatibleCounts + metadata(se)$nonuniqueCounts
+        }
+        incompatibleCounts = Matrix(incompatibleCounts[match(rownames(counts), rownames(incompatibleCounts)),], sparse = TRUE)
+        counts = counts + incompatibleCounts
     }
-    incompatibleCounts = incompatibleCounts[match(rownames(counts), rownames(incompatibleCounts)),]
-    counts = counts + incompatibleCounts
     counts.total = colSums(counts)
     counts.total[counts.total==0] = 1
     counts.CPM = counts/counts.total * 10^6

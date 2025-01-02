@@ -14,7 +14,6 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     readClassDt = readClassDt %>% group_by(eqClassId, gene_sid) %>% 
         mutate(multi_align = length(unique(txid))>1) %>% ungroup() %>% mutate(aval = 1) %>%
         data.table()
-
     #return non-em counts
     ColData = generateColData(colnames(metadata(readClassList)$countMatrix), clusters = NULL, demultiplexed, spatial)
     quantData <- SummarizedExperiment(assays = SimpleList(
@@ -76,9 +75,13 @@ generateNonUniqueCounts <- function(readClassDt, countMatrix, annotations){
     x = readClassDt %>% filter(multi_align & !is.na(eqClass.match))
     x = x %>% distinct(eqClassId, .keep_all = TRUE)
     nonuniqueCounts = countMatrix[x$eqClass.match,, drop = FALSE]
-    if(nrow(x)>1){
-    nonuniqueCounts.gene = sparse.model.matrix(~ factor(x$gene_sid) - 1)
-    nonuniqueCounts = t(nonuniqueCounts.gene) %*% nonuniqueCounts
+    if(nrow(x)>1 & length(unique(x$gene_sid))>1){
+        nonuniqueCounts.gene = sparse.model.matrix(~ factor(x$gene_sid) - 1)
+        nonuniqueCounts = t(nonuniqueCounts.gene) %*% nonuniqueCounts
+    } else{
+        warning("The factor variable 'gene_sid' has only one level. Adjusting output.")
+        nonuniqueCounts.gene = Matrix(1, nrow = nrow(x), ncol = 1, sparse = TRUE)
+        nonuniqueCounts = t(nonuniqueCounts.gene) %*% nonuniqueCounts
     }
     #covert ids into gene ids
     geneids = as.numeric(levels(factor(x$gene_sid)))

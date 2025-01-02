@@ -268,6 +268,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 }
             }
             countsSeCompressed <- bplapply(iter, FUN = function(i){
+                i = i[i %in% colnames(metadata(quantData_i)$countMatrix)]
                 countMatrix = unname(metadata(quantData_i)$countMatrix[,i])
                 incompatibleCountMatrix = unname(metadata(quantData_i)$incompatibleCountMatrix[,i])
                 if(!is.null(dim(countMatrix))){
