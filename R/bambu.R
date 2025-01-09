@@ -228,7 +228,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             demultiplexed = demultiplexed, spatial = spatial, returnDistTable = returnDistTable,
             trackReads = trackReads,
             BPPARAM = bpParameters)                 
-        print(as.numeric(assays(quantData[[1]])$counts))
         if (!quant) return(quantData)
     }
 
@@ -270,7 +269,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
-                
                 countMatrix = unname(metadata(quantData_i)$countMatrix[,j]) # same here 
                 incompatibleCountMatrix = unname(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
                 if(!is.null(dim(countMatrix))){
