@@ -228,6 +228,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             demultiplexed = demultiplexed, spatial = spatial, returnDistTable = returnDistTable,
             trackReads = trackReads,
             BPPARAM = bpParameters)                 
+        print(as.numeric(assays(quantData[[1]])$counts))
         if (!quant) return(quantData)
     }
 
@@ -247,7 +248,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         for(i in seq_along(quantData)){
             quantData_i = quantData[[i]]
             #load in the barcode clustering from file if provided
-            iter = seq_len(ncol(metadata(quantData_i)$countMatrix))
+            iter = seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
             if(!is.null(clusters)){
                 if(!is.list(clusters)){
                     clusterMaps = NULL
@@ -267,13 +268,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                     }else(iter = do.call(c,clusters))
                 }
             }
-            countsSeCompressed <- bplapply(iter, FUN = function(i){
-                i = i[i %in% colnames(metadata(quantData_i)$countMatrix)]
-                countMatrix = unname(metadata(quantData_i)$countMatrix[,i])
-                incompatibleCountMatrix = unname(metadata(quantData_i)$incompatibleCountMatrix[,i])
+            countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
+                #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
+                
+                countMatrix = unname(metadata(quantData_i)$countMatrix[,j]) # same here 
+                incompatibleCountMatrix = unname(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
                 if(!is.null(dim(countMatrix))){
                     countMatrix = rowSums(countMatrix)
-                    incompatibleCountMatrix = rowSums(metadata(quantData_i)$incompatibleCountMatrix[,i])
+                    incompatibleCountMatrix = rowSums(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
                 }
                 return(bambu.quantify(readClassDt = metadata(quantData_i)$readClassDt, countMatrix = countMatrix, 
                                             incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(metadata(quantData_i)$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
