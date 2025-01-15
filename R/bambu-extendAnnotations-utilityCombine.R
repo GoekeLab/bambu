@@ -19,7 +19,7 @@ isore.combineTranscriptCandidates <- function(readClassList,
         min.readCount, min.readFractionByGene, 
         min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
-    if (min.txScore.singleExon < 1) {return(combinedSplicedTranscripts)}
+    if (min.txScore.singleExon == 1) {return(combinedSplicedTranscripts)}
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
         stranded, min.readCount, min.readFractionByGene, 
