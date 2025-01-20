@@ -54,7 +54,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     returnModel = isoreParameters[["returnModel"]]
     min.exonOverlap = isoreParameters[["min.exonOverlap"]]
 
-    if(processByBam){
+    if(processByBam){ # bulk mode
         readClassList <- bplapply(seq_along(reads), function(i) {
             bambu.processReadsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
@@ -64,7 +64,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode, 
             demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = 1, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
-    } else {
+    } else { # single cell mode 
         readGrgList <- bplapply(seq_along(reads), function(i) {
             bambu.readsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
@@ -74,7 +74,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             trackReads = trackReads, fusionMode = fusionMode, 
             demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = i, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
-        
         sampleNames = as.numeric(as.factor(sampleNames))
         for(i in seq_along(readGrgList)){
             if(!isFALSE(demultiplexed)){
@@ -92,7 +91,6 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
             processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode)
-
         metadata(readClassList)$samples = names(reads)
         metadata(readClassList)$sampleNames = names(reads)
         if(!isFALSE(demultiplexed))metadata(readClassList)$samples =  levels(mcols(readGrgList)$BC)
@@ -130,7 +128,8 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
     if(verbose) message(paste0("Number of alignments/reads: ",length(readGrgList)))
     warnings = c()
-    if(!is.null(barcodesToFilter) & demultiplexed){ readGrgList = readGrgList[!mcols(readGrgList)$CB %in% barcodesToFilter]}
+    if(!is.null(barcodesToFilter) & demultiplexed)
+        readGrgList = readGrgList[!(mcols(readGrgList)$BC %in% barcodesToFilter)]
     warnings = seqlevelCheckReadsAnnotation(readGrgList, annotations)
     if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))
     #check seqlevels for consistency, drop ranges not present in genomeSequence

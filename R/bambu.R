@@ -199,7 +199,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             isoreParameters = isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
             processByChromosome = processByChromosome, processByBam = processByBam, 
             demultiplexed = demultiplexed,
-            sampleNames = sampleNames, cleanReads = cleanReads, dedupUMI = dedupUMI)
+            sampleNames = sampleNames, cleanReads = cleanReads, dedupUMI = dedupUMI,
+            barcodesToFilter = barcodesToFilter)
     }
 
   #warnings = handleWarnings(readClassList, verbose)
