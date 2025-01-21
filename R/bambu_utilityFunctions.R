@@ -9,6 +9,7 @@ setBiocParallelParameters <- function(reads, ncore, verbose, demultiplexed){
     "to resolve the issue that originates from the XGboost package.")
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
+    # when demultiplexed is FALSE, isFALSE(demultiplexed) is TRUE
     bpParameters$workers <- ifelse(length(reads) == 1 & isFALSE(demultiplexed), 1, ncore)
     bpParameters$progressbar <- ifelse(length(reads) > 1 & !verbose, TRUE, FALSE)
     return(bpParameters)
@@ -198,17 +199,20 @@ checkInputSequence <- function(genomeSequence) {
 #' Function that gathers warnings from several read class lists and outputs the counts
 #' @noRd
 handleWarnings <- function(readClassList, verbose){
-    warnings = list()
-    sampleNames = c()
+    warnings <- list()
+    sampleNames <- c()
     for(i in seq_along(readClassList)){
-        readClassSe = readClassList[[i]]
-        if (is.character(readClassSe)) {
-            readClassSe <- readRDS(file = readClassSe)}
-        warnings[[i]] = metadata(readClassSe)$warnings
-        if(is.null(metadata(readClassSe)$warnings)) {warnings[[i]] = NA}
-        sampleNames = c(sampleNames, colnames(readClassSe))
+        readClassSe <- readClassList[[i]]
+        if (is.character(readClassSe))
+            readClassSe <- readRDS(file = readClassSe)
+        
+        warnings[[i]] <- metadata(readClassSe)$warnings
+        
+        if(is.null(metadata(readClassSe)$warnings)) 
+            warnings[[i]] <- NA
+        sampleNames <- c(sampleNames, colnames(readClassSe))
     }
-    names(warnings) = sampleNames
+    names(warnings) <- sampleNames
     if(verbose & any(lengths(warnings)>0)){
         message("--- per sample warnings during read class construction ---")
         for(i in seq_along(warnings)){
@@ -232,12 +236,12 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
                                                             min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
-        if(returnDistTable) metadata(readClassDist)$distTableOld = metadata(readClassDist)$distTable
+        if(returnDistTable) metadata(readClassDist)$distTableOld <- metadata(readClassDist)$distTable
                 #convert string gene ids into index to save memory
-        GENEIDs = factor(unique(mcols(annotations)$GENEID))
-        GENEID.i = as.numeric(GENEIDs)
-        metadata(readClassDist)$distTable$GENEID.i = GENEID.i[match(metadata(readClassDist)$distTable$GENEID, GENEIDs)]
-        metadata(readClassDist)$distTable.incompatible = data.table(as.data.frame(metadata(readClassDist)$distTable)) %>% 
+        GENEIDs <- factor(unique(mcols(annotations)$GENEID))
+        GENEID.i <- as.numeric(GENEIDs)
+        metadata(readClassDist)$distTable$GENEID.i <- GENEID.i[match(metadata(readClassDist)$distTable$GENEID, GENEIDs)]
+        metadata(readClassDist)$distTable.incompatible <- data.table(as.data.frame(metadata(readClassDist)$distTable)) %>% 
             filter(grepl("unidentified", annotationTxId)) %>% distinct(readClassId, .keep_all = TRUE)
         metadata(readClassDist)$distTable <- genEquiRCsBasedOnObservedReads(readClassDist)     
         return(readClassDist)
@@ -246,23 +250,27 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
 #' Combine count se object while preserving the metadata objects
 #' @noRd
 combineCountSes <- function(countsSe, annotations){
-    countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
-    sampleNames = countsSe$colnames
-    countsSe$colnames = NULL
+    countsData <- c("counts", "CPM", "fullLengthCounts", 
+                    "uniqueCounts", "incompatibleCounts")
+    sampleNames <- countsSe$colnames
+    countsSe$colnames <- NULL
     countsDataMat <- lapply(countsData, FUN = function(k){
         countsVecList <- lapply(countsSe, function(j){j[[k]]})
-        countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j){j@i})),
-                                j = unlist(lapply(seq_along(countsVecList), function(j){rep(j, length(countsVecList[[j]]@i))})),
-                                x = unlist(lapply(countsVecList, function(j){j@x})),
+        countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j) j@i)),
+                                j = unlist(lapply(seq_along(countsVecList), function(j) rep(j, length(countsVecList[[j]]@i)))),
+                                x = unlist(lapply(countsVecList, function(j) j@x)),
                                 dims = c(length(countsVecList[[1]]), length(countsVecList)))
-        if(all(is.na(countsMat))){countsMat = sparseMatrix(i=NULL, j = NULL, dims = c(length(countsVecList[[1]]), length(countsVecList)))}
+        if(all(is.na(countsMat)))
+            countsMat <- sparseMatrix(i=NULL, j = NULL, dims = c(length(countsVecList[[1]]), length(countsVecList)))
+        
         colnames(countsMat) <- sampleNames
-        if (k == "incompatibleCounts"){
-            rownames(countsMat) = unique(mcols(annotations)$GENEID)
-        }
+        
+        if (k == "incompatibleCounts")
+            rownames(countsMat) <- unique(mcols(annotations)$GENEID)
+        
         return(countsMat)
     })
-    names(countsDataMat) = countsData
+    names(countsDataMat) <- countsData
     countsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
                                                         CPM = countsDataMat$CPM, 
                                                         fullLengthCounts = countsDataMat$fullLengthCounts, 
@@ -275,29 +283,31 @@ combineCountSes <- function(countsSe, annotations){
 #' Generate the coldata for se options using colnames, and other option inputs
 #' @noRd
 generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
-    ColData = DataFrame(id = sampleNames)
-    if(demultiplexed & is.null(clusters)){
-        ColData = DataFrame(id = sampleNames, 
+    ColData <- DataFrame(id = sampleNames)
+    if(!isFALSE(demultiplexed) & is.null(clusters)){
+        ColData <- DataFrame(id = sampleNames, 
                         sampleName = gsub("_[^_]+$","", sampleNames, perl = TRUE), 
                         Barcode = gsub(".*_(?=[^_]*$)","", sampleNames, perl = TRUE))
     }
     if(!is.null(spatial) & is.null(clusters)){
-        ColData$x_coordinate = NA
-        ColData$y_coordinate = NA
+        ColData$x_coordinate <- NA
+        ColData$y_coordinate <- NA
         if(length(spatial)==1){
-            bc_coords = DataFrame(read.table(gzfile(spatial), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-            bcMatch = match(ColData$Barcode, bc_coords$Barcode)
-            ColData$x_coordinate = bc_coords$x_coordinate[bcMatch]
-            ColData$y_coordinate = bc_coords$y_coordinate[bcMatch]
+            bc_coords <- DataFrame(read.table(gzfile(spatial),
+                col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+            bcMatch <- match(ColData$Barcode, bc_coords$Barcode)
+            ColData$x_coordinate <- bc_coords$x_coordinate[bcMatch]
+            ColData$y_coordinate <- bc_coords$y_coordinate[bcMatch]
         } else{
-            spatial.unique = unique(spatial)
+            spatial.unique <- unique(spatial)
             for(whitelist in spatial.unique){
-                i = which(spatial.unique==whitelist)
-                bc_coords = DataFrame(read.table(gzfile(whitelist), col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-                bcSampleIndex = ColData$sampleName %in% sampleNames[i]
-                bcMatch = match(ColData$Barcode[bcSampleIndex], bc_coords$Barcode)
-                ColData$x_coordinate[bcSampleIndex] = bc_coords$x_coordinate[bcMatch]
-                ColData$y_coordinate[bcSampleIndex] = bc_coords$y_coordinate[bcMatch]
+                i <- which(spatial.unique==whitelist)
+                bc_coords <- DataFrame(read.table(gzfile(whitelist), 
+                    col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+                bcSampleIndex <- ColData$sampleName %in% sampleNames[i]
+                bcMatch <- match(ColData$Barcode[bcSampleIndex], bc_coords$Barcode)
+                ColData$x_coordinate[bcSampleIndex] <- bc_coords$x_coordinate[bcMatch]
+                ColData$y_coordinate[bcSampleIndex] <- bc_coords$y_coordinate[bcMatch]
             }
         }
     }
