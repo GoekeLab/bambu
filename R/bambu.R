@@ -175,7 +175,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, 
             genomeSequence = genome, discovery = discovery, 
-            sampleNames = sampleNames, spatial = spatial)
+            sampleNames = sampleNames, spatial = spatial,quantData = quantData)
     }
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
@@ -183,73 +183,80 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
-
-    rm.readClassSe <- FALSE
-    readClassList <- reads
-    isRDSs <- all(sapply(reads, class)=="RangedSummarizedExperiment")
-    isBamFiles <- !isRDSs
-    warnings <- NULL
-    if(!isRDSs) 
-        isBamFiles <- ifelse(!is(reads, "BamFileList"), 
-                             all(grepl(".bam$", reads)), FALSE)
-    if (isBamFiles | is(reads, "BamFileList")) {
-        if (length(reads) > 10 & (is.null(rcOutDir))) {
-            rcOutDir <- tempdir() #>=10 samples, save to temp folder
-            message("There are more than 10 samples, read class files
+    # only when reads is not NULL, this proceed, otherwise, it will jump to quant step
+    if(!is.null(reads)){ 
+        rm.readClassSe <- FALSE
+        readClassList <- reads
+        isRDSs <- all(sapply(reads, class)=="RangedSummarizedExperiment")
+        isBamFiles <- !isRDSs
+        warnings <- NULL
+        if(!isRDSs) 
+            isBamFiles <- ifelse(!is(reads, "BamFileList"), 
+                                 all(grepl(".bam$", reads)), FALSE)
+        if (isBamFiles | is(reads, "BamFileList")) {
+            if (length(reads) > 10 & (is.null(rcOutDir))) {
+                rcOutDir <- tempdir() #>=10 samples, save to temp folder
+                message("There are more than 10 samples, read class files
                 will be temporarily saved to ", rcOutDir,
-                    " for more efficient processing")
-            rm.readClassSe <- TRUE # remove temporary read class files 
+                        " for more efficient processing")
+                rm.readClassSe <- TRUE # remove temporary read class files 
+            }
+            message("--- Start generating read class files ---")
+            readClassList <- bambu.processReads(reads, annotations, 
+                                                genomeSequence = genome, 
+                                                readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
+                                                bpParameters = bpParameters, stranded = stranded, verbose = verbose,
+                                                isoreParameters = isoreParameters, trackReads = trackReads, 
+                                                fusionMode = fusionMode, 
+                                                processByChromosome = processByChromosome, processByBam = processByBam, 
+                                                demultiplexed = demultiplexed,
+                                                sampleNames = sampleNames, cleanReads = cleanReads, 
+                                                dedupUMI = dedupUMI,barcodesToFilter = barcodesToFilter)
         }
-        message("--- Start generating read class files ---")
-        readClassList <- bambu.processReads(reads, annotations, 
-            genomeSequence = genome, 
-            readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
-            bpParameters = bpParameters, stranded = stranded, verbose = verbose,
-            isoreParameters = isoreParameters, trackReads = trackReads, 
-            fusionMode = fusionMode, 
-            processByChromosome = processByChromosome, processByBam = processByBam, 
-            demultiplexed = demultiplexed,
-            sampleNames = sampleNames, cleanReads = cleanReads, 
-            dedupUMI = dedupUMI,barcodesToFilter = barcodesToFilter)
-    }
-
-  #warnings = handleWarnings(readClassList, verbose)
-    if (!discovery & !assignDist & !quant) return(readClassList)
-    if (discovery) {
-        message("--- Start extending annotations ---")
-        extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-                                            isoreParameters, stranded, bpParameters, fusionMode, verbose)
-        metadata(extendedAnnotations)$warnings = warnings
         
-        #### cluster based transcript discovery
-        if(!is.null(clusters)){
-            annotations.clusters <- isore.extendAnnotations.clusters(readClassList,
-                annotations, clusters, NDR, 
-                isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE)  
-            metadata(extendedAnnotations)$clusters <- annotations.clusters    
+        #warnings = handleWarnings(readClassList, verbose)
+        if (!discovery & !assignDist & !quant) return(readClassList)
+        if (discovery) {
+            message("--- Start extending annotations ---")
+            extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
+                                                           isoreParameters, stranded, bpParameters, fusionMode, verbose)
+            metadata(extendedAnnotations)$warnings = warnings
+            
+            #### cluster based transcript discovery
+            if(!is.null(clusters)){
+                annotations.clusters <- isore.extendAnnotations.clusters(readClassList,
+                                                                         annotations, clusters, NDR, 
+                                                                         isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE)  
+                metadata(extendedAnnotations)$clusters <- annotations.clusters    
+            }
+            annotations <- extendedAnnotations
+            
+            if (!quant & !assignDist) return(annotations)
         }
-        annotations <- extendedAnnotations
-        
-        if (!quant & !assignDist) return(annotations)
+        if(assignDist){
+            message("--- Start calculating equivilance classes ---")
+            quantData <- bplapply(readClassList, 
+                                  FUN = assignReadClasstoTranscripts, 
+                                  annotations = annotations, 
+                                  isoreParameters = isoreParameters, 
+                                  verbose = verbose, 
+                                  demultiplexed = demultiplexed, 
+                                  spatial = spatial, 
+                                  returnDistTable = returnDistTable,
+                                  trackReads = trackReads,
+                                  BPPARAM = bpParameters)
+            if (!quant) return(quantData)
+        }
     }
-  
-    if(assignDist){
-        message("--- Start calculating equivilance classes ---")
-        quantData <- bplapply(readClassList, 
-                              FUN = assignReadClasstoTranscripts, 
-                              annotations = annotations, 
-                              isoreParameters = isoreParameters, 
-                              verbose = verbose, 
-                              demultiplexed = demultiplexed, 
-                              spatial = spatial, 
-                              returnDistTable = returnDistTable,
-                              trackReads = trackReads,
-                              BPPARAM = bpParameters)
-        if (!quant) return(quantData)
-    }
+    
+   
 
     if (quant) {
         message("--- Start isoform EM quantification ---")
+        # the step below is a bit confusing but it seems to be the only way 
+        # if discovery == TRUE, extendAnnotations happen already
+        # if users want discovery at this step, assign a desired value for NDR with discovery being FALSE
+        # here also reads need to be not file or bam file or rc file
         if(!is.null(NDR) & !discovery)
             annotations <- setNDR(annotations, NDR, 
                                   prefix = isoreParameters$prefix, 
