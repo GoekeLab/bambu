@@ -145,31 +145,38 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     message(paste0("Running Bambu-v", "3.3.0"))
     if(!is.null(mode)){
         if(mode == "bulk"){
-            processByChromosome = FALSE
-            processByBam = TRUE
+            processByChromosome <- FALSE
+            processByBam <- TRUE
         }
         if(mode == "multiplexed"){
-            if(is.null(demultiplexed)) demultiplexed = TRUE
-            cleanReads = TRUE
-            opt.em = list(degradationBias = FALSE)
-            quant = FALSE
-            processByChromosome = TRUE
+            if(is.null(demultiplexed)) 
+                demultiplexed <- TRUE
+            cleanReads <- TRUE
+            opt.em <- list(degradationBias = FALSE)
+            quant <- FALSE
+            processByChromosome <- TRUE
         }
         if(mode == "fusion"){
-            NDR = 1
-            fusionMode = TRUE
+            NDR <- 1
+            fusionMode <- TRUE
         }
         if(mode == "debug"){
-            verbose = TRUE
-            trackReads = TRUE
-            returnDistTable = TRUE
+            verbose <- TRUE
+            trackReads <- TRUE
+            returnDistTable <- TRUE
         }
     }
-    if(lowMemory){message("lowMemory has been deprecated and split into processByChromosome and processByBam. Please see Documentation")}
-    if(is.null(annotations)) { annotations = GRangesList()
-    } else annotations <- checkInputs(annotations, reads,
-            readClass.outputDir = rcOutDir, genomeSequence = genome, discovery = discovery, 
+    if(lowMemory)
+        message("lowMemory has been deprecated and split into processByChromosome and processByBam. Please see Documentation")
+    
+    if(is.null(annotations)){ 
+        annotations <- GRangesList()
+    } else {
+        annotations <- checkInputs(annotations, reads,
+            readClass.outputDir = rcOutDir, 
+            genomeSequence = genome, discovery = discovery, 
             sampleNames = sampleNames, spatial = spatial)
+    }
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
@@ -178,11 +185,13 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
 
     rm.readClassSe <- FALSE
-    readClassList = reads
-    isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")
-    isBamFiles = !isRDSs
-    warnings = NULL
-    if(!isRDSs) isBamFiles = ifelse(!is(reads, "BamFileList"), all(grepl(".bam$", reads)), FALSE)
+    readClassList <- reads
+    isRDSs <- all(sapply(reads, class)=="RangedSummarizedExperiment")
+    isBamFiles <- !isRDSs
+    warnings <- NULL
+    if(!isRDSs) 
+        isBamFiles <- ifelse(!is(reads, "BamFileList"), 
+                             all(grepl(".bam$", reads)), FALSE)
     if (isBamFiles | is(reads, "BamFileList")) {
         if (length(reads) > 10 & (is.null(rcOutDir))) {
             rcOutDir <- tempdir() #>=10 samples, save to temp folder
@@ -196,11 +205,12 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             genomeSequence = genome, 
             readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
             bpParameters = bpParameters, stranded = stranded, verbose = verbose,
-            isoreParameters = isoreParameters, trackReads = trackReads, fusionMode = fusionMode, 
+            isoreParameters = isoreParameters, trackReads = trackReads, 
+            fusionMode = fusionMode, 
             processByChromosome = processByChromosome, processByBam = processByBam, 
             demultiplexed = demultiplexed,
-            sampleNames = sampleNames, cleanReads = cleanReads, dedupUMI = dedupUMI,
-            barcodesToFilter = barcodesToFilter)
+            sampleNames = sampleNames, cleanReads = cleanReads, 
+            dedupUMI = dedupUMI,barcodesToFilter = barcodesToFilter)
     }
 
   #warnings = handleWarnings(readClassList, verbose)
@@ -213,68 +223,82 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         
         #### cluster based transcript discovery
         if(!is.null(clusters)){
-            annotations.clusters = isore.extendAnnotations.clusters(readClassList, annotations, clusters, NDR, 
+            annotations.clusters <- isore.extendAnnotations.clusters(readClassList,
+                annotations, clusters, NDR, 
                 isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE)  
-                metadata(extendedAnnotations)$clusters = annotations.clusters    
+            metadata(extendedAnnotations)$clusters <- annotations.clusters    
         }
-        annotations = extendedAnnotations
+        annotations <- extendedAnnotations
         
         if (!quant & !assignDist) return(annotations)
     }
   
     if(assignDist){
         message("--- Start calculating equivilance classes ---")
-        quantData = bplapply(readClassList, FUN = assignReadClasstoTranscripts, 
-            annotations = annotations, isoreParameters = isoreParameters, verbose = verbose, 
-            demultiplexed = demultiplexed, spatial = spatial, returnDistTable = returnDistTable,
-            trackReads = trackReads,
-            BPPARAM = bpParameters)                 
+        quantData <- bplapply(readClassList, 
+                              FUN = assignReadClasstoTranscripts, 
+                              annotations = annotations, 
+                              isoreParameters = isoreParameters, 
+                              verbose = verbose, 
+                              demultiplexed = demultiplexed, 
+                              spatial = spatial, 
+                              returnDistTable = returnDistTable,
+                              trackReads = trackReads,
+                              BPPARAM = bpParameters)
         if (!quant) return(quantData)
     }
 
     if (quant) {
         message("--- Start isoform EM quantification ---")
         if(!is.null(NDR) & !discovery)
-            annotations = setNDR(annotations, NDR, prefix = isoreParameters$prefix, 
+            annotations <- setNDR(annotations, NDR, 
+                                  prefix = isoreParameters$prefix, 
                 baselineFDR = isoreParameters[["baselineFDR"]], 
                 defaultModels2 = isoreParameters[["defaultModels"]])
         if(length(annotations)==0) stop("No valid annotations, if running
                                     de novo please try less stringent parameters")
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
-        GENEIDs.i = as.numeric(factor(unique(mcols(annotations)$GENEID)))
+        GENEIDs.i <- as.numeric(factor(unique(mcols(annotations)$GENEID)))
         start.ptm <- proc.time()
-        countsSeCompressed.all = NULL
-        ColNames = c()
+        countsSeCompressed.all <- NULL
+        ColNames <- c()
         for(i in seq_along(quantData)){
-            quantData_i = quantData[[i]]
+            quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
-            iter = seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
+            iter <- seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
             if(!is.null(clusters)){
                 if(!is.list(clusters)){
-                    clusterMaps = NULL
+                    clusterMaps <- NULL
                     for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
-                        clusterMap = read.table(clusters[[j]], 
-                            sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), header = FALSE)
-                        clusterMap[,1] = paste0(metadata(quantData_i)$sampleNames[j],"_",clusterMap[,1])
-                        clusterMaps = rbind(clusterMaps, clusterMap)                        
+                        clusterMap <- fread(clusters[[j]], header = FALSE, 
+                                            data.table = FALSE)
+                        # read.table(clusters[[j]], 
+                        #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), 
+                        #     header = FALSE)
+                        clusterMap[,1] <- paste0(metadata(quantData_i)$sampleNames[j],
+                                                "_",clusterMap[,1])
+                        clusterMaps <- rbind(clusterMaps, clusterMap)                        
                     }
-                    clustering = splitAsList(clusterMaps[,1], clusterMaps[,2]) 
+                    clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2]) 
                     rm(clusterMaps)
                     rm(clusterMap)
-                    iter = clustering
+                    iter <- clustering
 
                 } else{ #if clusters is a list
-                    if(length(quantData)>1){iter = clusters[[i]] #lowMemory mode
-                    }else(iter = do.call(c,clusters))
+                    if(length(quantData)>1){
+                        iter <- clusters[[i]] #lowMemory mode
+                    }else{
+                        iter <- do.call(c,clusters)
+                    }
                 }
             }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
-                countMatrix = unname(metadata(quantData_i)$countMatrix[,j]) # same here 
-                incompatibleCountMatrix = unname(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
+                countMatrix <- unname(metadata(quantData_i)$countMatrix[,j]) # same here 
+                incompatibleCountMatrix <- unname(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
                 if(!is.null(dim(countMatrix))){
-                    countMatrix = rowSums(countMatrix)
-                    incompatibleCountMatrix = rowSums(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
+                    countMatrix <- rowSums(countMatrix)
+                    incompatibleCountMatrix <- rowSums(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
                 }
                 return(bambu.quantify(readClassDt = metadata(quantData_i)$readClassDt, countMatrix = countMatrix, 
                                             incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(metadata(quantData_i)$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
@@ -285,26 +309,26 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             end.ptm <- proc.time()
             message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
             if(!is.null(clusters)){
-                ColNames = c(ColNames, names(iter))
+                ColNames <- c(ColNames, names(iter))
             } else{
-                ColNames = c(ColNames, colnames(quantData_i)) 
+                ColNames <- c(ColNames, colnames(quantData_i)) 
             }
-            countsSeCompressed.all = c(countsSeCompressed.all, countsSeCompressed)
+            countsSeCompressed.all <- c(countsSeCompressed.all, countsSeCompressed)
         }
-        countsSeCompressed.all$colnames = ColNames            
+        countsSeCompressed.all$colnames <- ColNames            
         countsSe <- combineCountSes(countsSeCompressed.all, annotations)
         if(returnDistTable){
             distTables = list()
             for(i in seq_along(quantData)){
-                distTables[[i]] = metadata(quantData[[i]])$distTable
+                distTables[[i]] <- metadata(quantData[[i]])$distTable
             }
-            metadata(countsSe)$distTables = distTables
+            metadata(countsSe)$distTables <- distTables
         }
         #metadata(countsSe)$warnings = warnings
 
-        ColData = generateColData(colnames(countsSe), clusters, demultiplexed, spatial)
-        colData(countsSe) = ColData
-        colnames(countsSe) = ColData[,1]
+        ColData <- generateColData(colnames(countsSe), clusters, demultiplexed, spatial)
+        colData(countsSe) <- ColData
+        colnames(countsSe) <- ColData[,1]
         return(countsSe)
     }
 }
