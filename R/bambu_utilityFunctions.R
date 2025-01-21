@@ -75,7 +75,8 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, discovery, sampleNames, spatial){
+checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, 
+                        discovery, sampleNames, spatial, quantData){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
