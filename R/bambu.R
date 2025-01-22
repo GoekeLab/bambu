@@ -142,7 +142,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
     sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
-    message(paste0("Running Bambu-v", "3.3.0"))
+    message(paste0("Running Bambu-v", "3.9.0"))
     if(!is.null(mode)){
         if(mode == "bulk"){
             processByChromosome <- FALSE
@@ -249,15 +249,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         }
     }
     
-   
-
     if (quant) {
         message("--- Start isoform EM quantification ---")
-        # the step below is a bit confusing but it seems to be the only way 
-        # if discovery == TRUE, extendAnnotations happen already
-        # if users want discovery at this step, assign a desired value for NDR with discovery being FALSE
-        # here also reads need to be not file or bam file or rc file
-        if(!is.null(NDR) & !discovery)
+        if(!is.null(NDR) & !discovery)# this step is used when reset NDR is needed 
             annotations <- setNDR(annotations, NDR, 
                                   prefix = isoreParameters$prefix, 
                 baselineFDR = isoreParameters[["baselineFDR"]], 
