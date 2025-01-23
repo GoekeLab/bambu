@@ -304,8 +304,14 @@ generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
         ColData$x_coordinate <- NA
         ColData$y_coordinate <- NA
         if(length(spatial)==1){
-            bc_coords <- DataFrame(read.table(gzfile(spatial),
-                col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+            # the following line takes a regular delimited file as input
+            # it can either has header or without header
+            # it can also be compressed 
+            bc_coords <- fread(spatial, 
+                col.names = c("Barcode", "x_coordinate", "y_coordinate"),
+                data.table = FALSE)
+                # DataFrame(read.table(gzfile(spatial),
+                # col.names = c("Barcode", "x_coordinate", "y_coordinate")))
             bcMatch <- match(ColData$Barcode, bc_coords$Barcode)
             ColData$x_coordinate <- bc_coords$x_coordinate[bcMatch]
             ColData$y_coordinate <- bc_coords$y_coordinate[bcMatch]
@@ -313,8 +319,11 @@ generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
             spatial.unique <- unique(spatial)
             for(whitelist in spatial.unique){
                 i <- which(spatial.unique==whitelist)
-                bc_coords <- DataFrame(read.table(gzfile(whitelist), 
-                    col.names = c("Barcode", "x_coordinate", "y_coordinate")))
+                bc_coords <- fread(whitelist, 
+                                   col.names = c("Barcode", "x_coordinate", "y_coordinate"),
+                                   data.table = FALSE)
+                    # DataFrame(read.table(gzfile(whitelist), 
+                    # col.names = c("Barcode", "x_coordinate", "y_coordinate")))
                 bcSampleIndex <- ColData$sampleName %in% sampleNames[i]
                 bcMatch <- match(ColData$Barcode[bcSampleIndex], bc_coords$Barcode)
                 ColData$x_coordinate[bcSampleIndex] <- bc_coords$x_coordinate[bcMatch]
