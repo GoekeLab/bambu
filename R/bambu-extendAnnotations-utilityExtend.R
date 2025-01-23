@@ -878,7 +878,7 @@ setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix =
 }
 
 
-#' Extend annotations by clusters (work in progress?)
+#' Extend annotations by clusters
 #' @noRd
 isore.extendAnnotations.clusters <- function(readClassList, annotations, clusters, NDR, isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE){
     message("--- Start extending annotations for clusters ---")
