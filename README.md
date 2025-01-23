@@ -292,7 +292,7 @@ There is a single-cell and spatial pipeline starting from fastq or demultiplexed
 For advanced users see the #[Custom single-cell and spatial analysis](#Custom-Single-Cell-and-Spatial) section under advanced options
 
 ### *Bambu* Advanced Options
-Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the [paper](https://www.biorxiv.org/content/10.1101/2022.11.14.516358v1) before attempting to use these features.
+Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the [paper](https://doi.org/10.1038/s41592-023-01908-w) before attempting to use these features.
 
 ### Using a pretrained model
 
@@ -410,12 +410,12 @@ In situations where training is not or cannot be performed, and the default mode
 
 ```rscript
 # first train the model using a related annotated dataset from .bam
-se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE ([see here](#Storing-and-using-preprocessed-files-rcFiles)).
+se <- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE ([see here](#Storing-and-using-preprocessed-files-rcFiles)).
 newDefaultModel = metadata(se[[1]])$model # [[1]] will select the model trained on the first sample
 
 # alternatively train the model using an rcFile
 rcFile <- readRDS(pathToRcFile)
-newDefaultModel = trainBambu(rcFile)
+newDefaultModel <- trainBambu(rcFile)
 
 # use the trained model on another sample
 # sample2.bam and fa.file2 represent the aligned reads and genome for the poorly annotated sample
@@ -493,7 +493,7 @@ Optional:
 **barcodesToFilter**: A string vector indicating barcodes to be filtered out.  <br/> 
 
 ```rscript
-readClassFile = bambu(reads = samples, annotations = annotations, genome = fa.file, ncore = 1, discovery = FALSE, quant = FALSE, demultiplexed = barcode_maps, verbose = TRUE, assignDist = FALSE, lowMemory = as.logical("$params.lowMemory"), yieldSize = 10000000, sampleNames = ids, cleanReads = as.logical($cleanReads), dedupUMI = as.logical($deduplicateUMIs))
+readClassFile <- bambu(reads = samples, annotations = annotations, genome = fa.file, ncore = 1, discovery = FALSE, quant = FALSE, demultiplexed = barcode_maps, verbose = TRUE, assignDist = FALSE, lowMemory = as.logical("$params.lowMemory"), yieldSize = 10000000, sampleNames = ids, cleanReads = as.logical($cleanReads), dedupUMI = as.logical($deduplicateUMIs))
 ```
 
 #### Transcript Discovery:
@@ -501,17 +501,17 @@ readClassFile = bambu(reads = samples, annotations = annotations, genome = fa.fi
 Transript discovery can be run as usual as typically bulk-level discovery is suitable. However cluster-level transcript discovery can be preformed using the clusters argument which can be redone done after clustering. 
 
 ```rscript
-extendedAnno = bambu(reads = readClassFile, annotations = annotations, genome = fa.file, ncore = 1, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
+extendedAnno <- bambu(reads = readClassFile, annotations = annotations, genome = fa.file, ncore = 1, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
 ```
 
 #### Read Class Assignment:
 
 This step was previously performed together with the quantification, but can be done seperately so that the arguments can be passed to the quantification seperately with different clustering. If you only want barcode level gene counts or unique transcript counts you can stop here and do not need to proceed to the EM quantification.
 
-**spatial**: This should be a path to your barcode whitelist that also contians the x and y coordinates as extra columns. 
+**spatial**: This should be a path to your barcode whitelist that also contains the x and y coordinates as extra columns. If provided, the file should contain 3 columns with or without header, where the first column is the barcode, and the second and third column contains the x and y coordinates information accordingly. Compressed file format is accepted as well.
 
 ```rscript
-quantData = bambu(reads = readClassFile, annotations = extendedAnno, genome = fa.file, ncore = 1, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial)
+quantData <- bambu(reads = readClassFile, annotations = extendedAnno, genome = fa.file, ncore = 1, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial)
 ```
 
 #### EM quantification:
@@ -522,7 +522,7 @@ If you plan to run this step with multiple processes we recommend restarting you
 
 **quantData**:  This is the summerized experiement output from the Read Class Assignment step<br/>
 
-**clusters**:  This is an optional argument which is either a path to a csv containing the barcode to cluster assignments or a list<br/>
+**clusters**:  This is an optional argument which is either a path to a csv containing the barcode to cluster assignments or a CharacterList which can be produced using the code below.<br/>
 
 **opt.em = list(degradationBias=FALSE)**: We recommend including this argument if you are doing barcode level EM quantification to greatly improve runtime with only a small reduction in quantification accuracy. 
 
@@ -530,19 +530,19 @@ If you plan to run this step with multiple processes we recommend restarting you
 #use Seurat to generate clusters from gene counts
 library(Seurat)
 
-clusterCells = function(counts, resolution = 0.8, dim = 15){
+clusterCells <- function(counts, resolution = 0.8, dim = 15){
   
   cellMix <- CreateSeuratObject(counts = counts, 
                                 project = "cellMix", min.cells = 1)#, min.features = 200)
   #cellMix <- subset(cellMix, subset = nFeature_RNA > nFeature_RNA_threshold & nFeature_RNA < nFeature_RNA_threshold_max)
-  #nFeature_RNA_threshold = 1000, nFeature_RNA_threshold_max = 9000,
+  #nFeature_RNA_threshold <- 1000, nFeature_RNA_threshold_max = 9000,
   cellMix <- NormalizeData(cellMix, normalization.method = "LogNormalize", scale.factor = 10000)
   cellMix <- FindVariableFeatures(cellMix, selection.method = "vst", nfeatures = 2500)
   all.genes <- rownames(cellMix)
   cellMix <- ScaleData(cellMix, features = all.genes)
-  npcs = ifelse(ncol(counts)>50, 50, ncol(counts)-1)
+  npcs <- ifelse(ncol(counts)>50, 50, ncol(counts)-1)
   cellMix <- RunPCA(cellMix, features = VariableFeatures(object = cellMix), npcs = npcs)
-  dim = ifelse(dim >= dim(cellMix@reductions$pca)[2], dim, dim(cellMix@reductions$pca)[2])
+  dim <- ifelse(dim >= dim(cellMix@reductions$pca)[2], dim(cellMix@reductions$pca)[2],dim) # if data dimension is small, otherwise, cap dimension at 15
   cellMix <- FindNeighbors(cellMix, dims = 1:dim)
   cellMix <- FindClusters(cellMix, resolution = resolution)
   cellMix <- RunUMAP(cellMix, dims = 1:dim)
@@ -550,16 +550,16 @@ clusterCells = function(counts, resolution = 0.8, dim = 15){
   return(cellMix)
 }
 
-quantData.gene = transcriptToGeneExpression(quantData)
-counts = assays(quantData.gene)$counts[,1] #selecting first sample
-cellMix = clusterCells(counts, resolution = resolution) #resolution is dependant on sample. For larger clusters: 0.2-0.6, for higher resolution: 0.8-2
-x = setNames(names(cellMix@active.ident), cellMix@active.ident)
-clusters = splitAsList(unname(x), names(x))
+quantData.gene <- transcriptToGeneExpression(quantData)
+counts <- assays(quantData.gene)$counts #selecting first sample
+cellMix <- clusterCells(counts) #resolution can be customized. For larger clusters: 0.2-0.6, for higher resolution: 0.8-2
+x <- setNames(names(cellMix@active.ident), cellMix@active.ident)
+clusters_temp <- splitAsList(unname(x), paste)("cluster",names(x)))#make clusters names start with cluster, for better comprehension
 
 
 
-se = bambu( reads = "placeholder", 
-            annotations = extendedAnno, 
+se <- bambu( reads = NULL, 
+            annotations = rowRanges(quantDatas), 
             genome = "$genome", 
             quantData = quantDatas, 
             assignDist = FALSE, 
@@ -569,7 +569,7 @@ se = bambu( reads = "placeholder",
             demultiplexed = TRUE, 
             verbose = FALSE, 
             opt.em = list(degradationBias = FALSE), 
-            clusters = clusters)
+            clusters = clusters_temp)
 ```
 
 ### *Bambu* Arguments
@@ -593,7 +593,7 @@ se = bambu( reads = "placeholder",
 | verbose | A logical variable indicating whether processing messages will be printed. |
 | mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br/> bulk - <br/>&nbsp;&nbsp;&nbsp;&nbsp;processByBam = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromsome = FALSE<br/>multiplexed - <br/>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br/>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromosome = TRUE<br/>fusion - <br/>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br/>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br/>debug -<br/>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
 | demultiplexed | A logical variable indicating whether the input bam file is demultiplexed. The barcode and umi either need to be present in the read name or the $BC and $UG tags, defaults to FALSE. Alternatively a path to a csv file can be provided where column 1 is read names, column 2 is barcodes, and column 3 is UMI. |
-| spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. |
+| spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. If provided, the file should contain 3 columns with or without header, where the first column is the barcode, and the second and third column contains the x and y coordinates information accordingly. Compressed file format is accepted as well.|
 | assignDist | A logical variable indicating whether read class to transcript assignment will be performed, defaults to TRUE. |
 | quantData | Advanced use only. A list of se outputs from the assignDist step. Used only to run quantification |
 | sampleNames | A vector of strings representing the sample name associated with each input bam. bam files with the same sample name will be combined |
@@ -624,7 +624,7 @@ rowRanges(se)
 |column|description|
 |---|---|
 |seqnames|The scaffold name the transcript is found on|
-|ranges|An iRanges object containing the start and end coordinates of the transcript (not stranded)|
+|ranges|An IRanges object containing the start and end coordinates of the transcript (not stranded)|
 |strand|The strand of the transcript (+, -, *)|
 |exon_rank|The exon index of the exons in the transcript starting from the 5’ end of the transcript|
 |exon_endRank|The exon index of the exons in the transcript starting from the 3’ end of the transcript|
