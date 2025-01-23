@@ -19,9 +19,9 @@ isore.combineTranscriptCandidates <- function(readClassList,
         min.readCount, min.readFractionByGene, 
         min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
-    # when single exon min score is 1, skip unspliced transcripts combination 
-    # by right, estimated txScore will not reach 1 
-    if (min.txScore.singleExon == 1) 
+    # when single exon min score is greater than 1, skip unspliced transcripts combination
+    # this is a very customized config, useful when data is very big 
+    if (min.txScore.singleExon > 1) 
         return(combinedSplicedTranscripts)
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
