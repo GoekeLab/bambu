@@ -20,7 +20,7 @@ bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, tx
                     fullLengthCounts = as(round(counts$fullLengthCounts,sig.digit), "sparseVector"),
                     uniqueCounts = as(round(counts$uniqueCounts,sig.digit), "sparseVector"))              
     end.ptm <- proc.time()
-    if (verbose) message("bambu.quantify ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
+    # if (verbose) message("bambu.quantify ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
     return(seOutput)
 }
 
@@ -43,8 +43,8 @@ bambu.quantDT <- function(readClassDt = readClassDt,
                                      maxiter = emParameters[["maxiter"]],
                                      conv = emParameters[["conv"]], minvalue = emParameters[["minvalue"]])
     end.ptm <- proc.time()
-    if (verbose) message("Finished EM estimation in ",
-                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
+    # if (verbose) message("Finished EM estimation in ",
+    #                     round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
     outEst <- modifyQuantOut(outEst,outIni)
     theta_est <- rbind(rcPreOut[[2]],outEst)
     theta_est <- removeDuplicates(theta_est)

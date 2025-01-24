@@ -19,7 +19,10 @@ isore.combineTranscriptCandidates <- function(readClassList,
         min.readCount, min.readFractionByGene, 
         min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
-    if (min.txScore.singleExon == 1) {return(combinedSplicedTranscripts)}
+    # when single exon min score is greater than 1, skip unspliced transcripts combination
+    # this is a very customized config, useful when data is very big 
+    if (min.txScore.singleExon > 1) 
+        return(combinedSplicedTranscripts)
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
         stranded, min.readCount, min.readFractionByGene, 
@@ -36,11 +39,11 @@ isore.combineTranscriptCandidates <- function(readClassList,
 combineSplicedTranscriptModels <- function(readClassList, bpParameters, 
         min.readCount, min.readFractionByGene, min.txScore.multiExon, 
         min.txScore.singleExon, verbose){
-    bpParameters$progressbar = FALSE
+    bpParameters$progressbar <- FALSE
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.ptm <- proc.time()
     n_sample <- length(readClassList)
-    nGroups = max(ceiling(n_sample/10),min(bpworkers(bpParameters), 
+    nGroups <- max(ceiling(n_sample/10),min(bpworkers(bpParameters), 
                                             round(n_sample/2)))
     indexList <- sample(rep(seq_len(nGroups), length.out=n_sample))
     indexList <- splitAsList(seq_len(n_sample), indexList)
@@ -135,7 +138,7 @@ combineFeatureTibble <- function(combinedFeatureTibble,
             maxTxScore.noFit, NSampleReadCount, NSampleReadProp,NSampleTxScore, 
             starts_with('start'), starts_with('end'), starts_with('readCount'))
     } else { 
-        combinedTable = full_join(combinedFeatureTibble, 
+        combinedTable <- full_join(combinedFeatureTibble, 
             featureTibbleSummarised, by = c('intronStarts', 'intronEnds', 'chr',
             'strand'), suffix=c('.combined','.new')) %>% 
             mutate(NSampleReadCount=pmax0NA(NSampleReadCount.combined) + 
@@ -215,7 +218,7 @@ combineUnsplicedTranscriptModels <-
             min.readFractionByGene, min.txScore.multiExon,
             min.txScore.singleExon, verbose){
         start.ptm <- proc.time()
-        bpParameters$progressbar = FALSE
+        bpParameters$progressbar <- FALSE
         newUnsplicedSeList <- 
             bplapply(seq_along(readClassList), function(sample_id)
                 extractNewUnsplicedRanges(readClassSe = 
@@ -292,7 +295,7 @@ reduceUnsplicedRanges <- function(rangesList, stranded){
 makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         colDataNames,min.readCount, min.readFractionByGene,
         min.txScore.multiExon, min.txScore.singleExon, bpParameters){
-        bpParameters$progressbar = FALSE
+        bpParameters$progressbar <- FALSE
     newUnsplicedTibble <- as_tibble(combinedNewUnsplicedSe) %>%
         rename(chr = seqnames) %>% select(chr, start, end, strand, row_id) %>%
         separate_rows(row_id, sep = "\\+") 

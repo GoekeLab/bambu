@@ -257,8 +257,8 @@ calculateDegradationRate <- function(readClassDt){
   geneCountLength[, d_rate := dObs/nobs]
   if (length(which(geneCountLength$nobs >= 30 & 
                    ((geneCountLength$nobs - geneCountLength$dObs) >= 5))) == 0) {
-    message("There is not enough read count and full length coverage!
-            Hence degradation rate is estimated using all data!")
+    # message("There is not enough read count and full length coverage!
+    #         Hence degradation rate is estimated using all data!")
   } else {
     geneCountLength <- geneCountLength[nobs >= 30 & ((nobs - dObs) >= 5)]
   }
@@ -461,58 +461,57 @@ removeDuplicates <- function(counts){
 #' Generate read to transcript mapping
 #' @noRd
 generateReadToTranscriptMap <- function(readClass, distTable, annotations){
-  if(!is.null(metadata(readClass)$readNames)) { 
-    read_id = metadata(readClass)$readNames}
-  else { read_id = metadata(readClass)$readId}
-  print(1)
+    if(!is.null(metadata(readClass)$readNames)) { 
+        read_id <- metadata(readClass)$readNames
+    } else { 
+        read_id <- metadata(readClass)$readId
+    }
   #unpack and reverse the read class to read id relationship
-  readOrder = order(unlist(rowData(readClass)$readIds))
-  lens = lengths(rowData(readClass)$readIds)
-  rcIndex = seq_along(readClass)
-  readToRC = rep(rcIndex, lens)[readOrder]
-  read_id = read_id[(match(unlist(rowData(readClass)$readIds)[readOrder], metadata(readClass)$readId))]
-  print(2)
+  readOrder <- order(unlist(rowData(readClass)$readIds))
+  lens <- lengths(rowData(readClass)$readIds)
+  rcIndex <- seq_along(readClass)
+  readToRC <- rep(rcIndex, lens)[readOrder]
+  read_id <- read_id[(match(unlist(rowData(readClass)$readIds)[readOrder], 
+                           metadata(readClass)$readId))]
   #get annotation indexs
-  distTable = metadata(distTable)$distTable
-    print(head(distTable))
-  distTable$annotationTxId = match(distTable$annotationTxId, names(annotations))
-  print(2.1)
-  print(head(distTable))
+  distTable <- metadata(distTable)$distTable
+  distTable$annotationTxId <- match(distTable$annotationTxId, names(annotations))
   #match read classes with transcripts
-  readClass_id = rownames(readClass)[readToRC]
-  distTable$exClassById = NULL
-  print(3)
-  equalMatches = as_tibble(distTable) %>%
+  readClass_id <- rownames(readClass)[readToRC]
+  distTable$exClassById <- NULL
+  equalMatches <- as_tibble(distTable) %>%
     filter(equal) %>% 
-    group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
-  equalMatches = equalMatches$annotationTxIds[match(readClass_id, equalMatches$readClassId)]
-  print(4)
-  compatibleMatches =  as_tibble(distTable) %>% 
+    group_by(readClassId) %>% 
+      summarise(annotationTxIds = list(annotationTxId))
+  equalMatches <- equalMatches$annotationTxIds[match(readClass_id,
+                        equalMatches$readClassId)]
+  compatibleMatches <- as_tibble(distTable) %>% 
     filter(!equal & compatible) %>% 
     group_by(readClassId) %>% summarise(annotationTxIds = list(annotationTxId))
-  compatibleMatches = compatibleMatches$annotationTxIds[match(readClass_id, compatibleMatches$readClassId)]
-  print(5)
-  readToTranscriptMap = tibble(readId=read_id, equalMatches = equalMatches, compatibleMatches = compatibleMatches)
+  compatibleMatches <- compatibleMatches$annotationTxIds[match(readClass_id,
+                            compatibleMatches$readClassId)]
+  readToTranscriptMap <- tibble(readId=read_id, equalMatches = equalMatches, 
+                             compatibleMatches = compatibleMatches)
   return(readToTranscriptMap)
 }
 
 #' Get counts of equivilent classes from a distTable and match to a readClassDt
 #' @noRd
-calculateEqClassCounts = function(distTable, readClassDt){
-        eqClasses = distTable %>% group_by(eqClassById) %>%
-        mutate(anyEqual = any(equal)) %>%
-        select(eqClassById, firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
-        distinct() %>%
-        mutate(nobs = sum(readCount),
-                rcWidth = ifelse(anyEqual, max(totalWidth), 
-                                max(firstExonWidth))) %>%
-        select(eqClassById,GENEID,nobs,rcWidth) %>% 
-        ungroup()  %>%
-        distinct()
-        eqCounts = eqClasses$nobs[match(readClassDt$eqClassById,eqClasses$eqClassById)]
-        eqCounts[is.na(eqCounts)] = 0
+calculateEqClassCounts <- function(distTable, readClassDt){
+        eqClasses <- distTable %>% group_by(eqClassById) %>%
+                         mutate(anyEqual = any(equal)) %>%
+                         select(eqClassById, firstExonWidth,totalWidth,
+                                readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
+                         distinct() %>%
+                         mutate(nobs = sum(readCount),
+                             rcWidth = ifelse(anyEqual, max(totalWidth), 
+                             max(firstExonWidth))) %>%
+                         select(eqClassById,GENEID,nobs,rcWidth) %>% 
+                         ungroup() %>% distinct()
+        eqCounts <- eqClasses$nobs[match(readClassDt$eqClassById,eqClasses$eqClassById)]
+        eqCounts[is.na(eqCounts)] <- 0
         return(eqCounts)
-    }
+}
 
 #' calculate CPM post estimation
 #' @noRd

@@ -27,7 +27,7 @@
   - [Output](#Output)
   - [Visualization](#Visualization)
   - [Single-Cell and Spatial](#Single-Cell-and-Spatial)
-- [*bambu* Advanced Options](#Bambu-Advanced-Options)
+  - [*bambu* Advanced Options](#Bambu-Advanced-Options)
   - [Using a pretrained model](#Using-a-pretrained-model)
   - [De-novo transcript discovery](#De-novo-transcript-discovery)
   - [Storing and using preprocessed files (rcFiles)](#Storing-and-using-preprocessed-files-rcFiles)
@@ -287,12 +287,12 @@ plotBambu(se, type = "pca", group.var) # PCA visualization
 
 ### Single-Cell-and-Spatial
 
-There is a single-cell and spatial pipeline starting from fastq or demultiplexed bamfiles that includes demultiplexing and aligning available here https://github.com/GoekeLab/bambu-singlecell-spatial. We recommend using this pipeline where possible.
+There is a single-cell and spatial pipeline starting from fastq or demultiplexed bam files that include demultiplexing and aligning available here https://github.com/GoekeLab/bambu-singlecell-spatial. We recommend using this pipeline where possible.
 
 For advanced users see the #[Custom single-cell and spatial analysis](#Custom-Single-Cell-and-Spatial) section under advanced options
 
 ### *Bambu* Advanced Options
-Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the [paper](https://www.biorxiv.org/content/10.1101/2022.11.14.516358v1) before attempting to use these features.
+Below we include several advanced options and use-cases for *bambu*. We recommend reading and understanding the [paper](https://doi.org/10.1038/s41592-023-01908-w) before attempting to use these features.
 
 ### Using a pretrained model
 
@@ -303,13 +303,13 @@ se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, opt.d
 ```
 The default pretrained model was trained on SGNex_HepG2_directRNA_replicate5_run1 and has the following characteristics:
 
-Genome: Homo_sapiens.GRCh38.dna_sm.primary_assembly <br>
-Annotations: Homo_sapiens.GRCh38.91<br>
-Read count:  7,861,846<br>
-Technology: Nanopore (ONT)<br>
-Library preparation: directRNA<br>
-Base Calling Accuracy: 79%<br>
-Average Read Length: 1093<br>
+**Genome**: Homo_sapiens.GRCh38.dna_sm.primary_assembly <br/>
+**Annotations**: Homo_sapiens.GRCh38.91<br/>
+**Read count**:  7,861,846<br/>
+**Technology**: Nanopore (ONT)<br/>
+**Library preparation**: directRNA<br/>
+**Base Calling Accuracy**: 79%<br/>
+**Average Read Length**: 1093<br/>
 
 We have found the pretrained model works successfully across species borders (on Arabidopsis thaliana) and on different technologies (PacBio), with only small decreases in performance compared to using a sample specific model. The pretrained model is not always effective in samples with large differences in sequencing quality or if the library preparation results in biases in the overall structure of the transcriptome. In this case, we would recommend training a new model using similar data from a different sample that has quality reference annotations (See [Training a model on another species/dataset and applying it](#Training-a-model-on-another-speciesdataset-and-applying-it)).
 
@@ -365,12 +365,14 @@ rowData(se[[1]])
 |chr.rc|The chromosome name the read class is found on|
 |strand.rc|The strand of the read class|
 |startSD|The standard deviation of the aligned genomic start positions of all reads assigned to the read class|
+|endSD|The standard deviation of the aligned genomic end positions of all reads assigned to the read class|
 |readCount.posStrand|The number of reads assigned to this read class that aligned to the positive strand|
 |intronStarts|A comma separated character vector of intron start coordinates|
 |intronEnds|A comma separated character vector of intron end coordinates|
-|confidenceType|Category of confidence: <br> **highConfidenceJunctionReads** - the read class contain no low confidence junctions <br> **lowConfidenceJunctionReads** - the read class contains low confidence junctions <br> **unsplicedWithin** - single exon read class that is within the exon boundaries of an annotation <br> **unsplicedNew** - single exon read class that does not fully overlap with annotated exons|
+|confidenceType|Category of confidence: <br/> **highConfidenceJunctionReads** - the read class contain no low confidence junctions <br/> **lowConfidenceJunctionReads** - the read class contains low confidence junctions <br/> **unsplicedWithin** - single exon read class that is within the exon boundaries of an annotation <br/> **unsplicedNew** - single exon read class that does not fully overlap with annotated exons|
 |readCount|The number of reads assigned to this read class|
-|readId *only present when trackReads = TRUE|An integer list of bambu internal read ids that belong to the read class. (See the metadata of the object for full read names)|
+|readIds|An integer list of bambu internal read ids that belong to the read class. (See the metadata of the object for full read names)|
+|sampleIds|An integer list of bambu internal sample ids based on barcodes.|
 |GENEID|The gene ID the transcript is associated with|
 |novelGene|A logical that is true if the read class belongs to a novel gene (does not overlap with an annotated gene loci)|
 |numExons|The number of exons the read class has|
@@ -382,8 +384,8 @@ rowData(se[[1]])
 |numAend|An integer counting the number of A nucleotides found within a 20bp window centered on the read class genomic end position|
 |numTstart|An integer counting the number of T nucleotides found within a 20bp window centered on the read class genomic start position|
 |numTend|An integer counting the number of T nucleotides found within a 20bp window centered on the read class genomic end position|
-|txScore|This is the TPS generated by the sample trained model|
 |txScore.noFit|This is the TPS generated by the pretrained model|
+|txScore|This is the TPS generated by the sample trained model|
 
 
 ### Tracking read-to-transcript assignment
@@ -408,12 +410,12 @@ In situations where training is not or cannot be performed, and the default mode
 
 ```rscript
 # first train the model using a related annotated dataset from .bam
-se = bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE ([see here](#Storing-and-using-preprocessed-files-rcFiles)).
+se <- bambu(reads = sample1.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, opt.discovery = list(returnModel = TRUE)) # note that discovery and quant need to be set to FALSE, alternatively you can have them set to TRUE and retrieve the model from the rcFile as long as returnModel = TRUE ([see here](#Storing-and-using-preprocessed-files-rcFiles)).
 newDefaultModel = metadata(se[[1]])$model # [[1]] will select the model trained on the first sample
 
 # alternatively train the model using an rcFile
 rcFile <- readRDS(pathToRcFile)
-newDefaultModel = trainBambu(rcFile)
+newDefaultModel <- trainBambu(rcFile)
 
 # use the trained model on another sample
 # sample2.bam and fa.file2 represent the aligned reads and genome for the poorly annotated sample
@@ -474,65 +476,73 @@ se <- bambu(reads = fusionAligned.bam, annotations = fusionAnnotations, genome =
 
 If you want to run Bambu-Clump for single-cell or spatial analysis stand alone and not part of the Bambu-Pipe pipeline we recommend running it in 4 stages which we will describe seperately: Read Class Construction, Transcript Discovery, Read Class Assignment, and EM Quantification. Note that this section will only cover arguments that are different or unique to this analysis.
 
-Read Class Construction:
+#### Read Class Construction:
 
-reads: provided bam files must have barcodes in the read name or in the BC tag. Alternatively a csv file can be provided to demultiplexed mapping the read names to barcodes. For exact requirements see https://github.com/GoekeLab/bambu-singlecell-spatial. <br>
-demultiplexed: must be set to TRUE (or be a barcode map). This will cause bambu to look for barcodes and seperate reads by barcode rather than sample. <br>
+**reads**: provided bam files should have barcodes in the read name or in the BC tag ( and UG tag for UMI identifiers). In the case where both tags and read names contain barcode information, tags will be used a prior. If not, a regular delimited headerless file that contain the demultiplexing information for each read should be provided to demultiplexed argument below. For exact requirements see https://github.com/GoekeLab/bambu-singlecell-spatial.<br/>
+
+**demultiplexed**: should be either set to TRUE or the path to barcode mapping file. Otherwise, bambu will not look for barcodes and seperate reads by barcode rather than sample. <br/>
 
 Optional:
 
+**cleanReads**: A logical TRUE/FALSE. Chimeric reads in samples can cause issues with barcode assignments. Setting this to TRUE will ensure only the first alignment per barcode is used (We recommend using this). <br/>
 
-cleanReads: A logical TRUE/FALSE. Chimeric reads in samples can cause issues with barcode assignments. Setting this to TRUE will ensure only the first alignment per barcode is used (We recommend using this). <br>
-sampleNames: A vector of characters assigning names to each sample in the reads argument. By default the sample names are taken from the file names and appended to the barcodes in order to differentiate them. If your sample names are the same across multiple files, but matching barcodes between the samples should be counted seperately, provide them with different sample names using this argument. Similiarly if your samples have different names, but overlapping barcodes should be counted together, give them the same sample name with this argument.  <br>
-dedupUMI: A logical TRUE/FALSE.   <br>
+**sampleNames**: A vector of characters assigning names to each sample in the reads argument. By default the sample names are taken from the file names and appended to the barcodes in order to differentiate them. If your sample names are the same across multiple files, but matching barcodes between the samples should be counted seperately, provide them with different sample names using this argument. Similiarly if your samples have different names, but overlapping barcodes should be counted together, give them the same sample name with this argument.  <br/>
+
+**dedupUMI**: A logical TRUE/FALSE.  <br/>
+
+**barcodesToFilter**: A string vector indicating barcodes to be filtered out.  <br/> 
 
 ```rscript
-readClassFile = bambu(reads = samples, annotations = annotations, genome = "$genome", ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = barcode_maps, verbose = TRUE, assignDist = FALSE, lowMemory = as.logical("$params.lowMemory"), yieldSize = 10000000, sampleNames = ids, cleanReads = as.logical($cleanReads),  = as.logical($deduplicateUMIs))
+readClassFile <- bambu(reads = samples, annotations = annotations, genome = fa.file, ncore = 1, discovery = FALSE, quant = FALSE, demultiplexed = barcode_maps, verbose = TRUE, assignDist = FALSE, lowMemory = as.logical("$params.lowMemory"), yieldSize = 10000000, sampleNames = ids, cleanReads = as.logical($cleanReads), dedupUMI = as.logical($deduplicateUMIs))
 ```
 
-Transcript Discovery:
+#### Transcript Discovery:
 
 Transript discovery can be run as usual as typically bulk-level discovery is suitable. However cluster-level transcript discovery can be preformed using the clusters argument which can be redone done after clustering. 
 
 ```rscript
-extendedAnno = bambu(reads = readClassFile, annotations = annotations, genome = "$genome", ncore = $params.ncore, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
+extendedAnno <- bambu(reads = readClassFile, annotations = annotations, genome = fa.file, ncore = 1, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
 ```
 
-Read Class Assignment:
+#### Read Class Assignment:
+
 This step was previously performed together with the quantification, but can be done seperately so that the arguments can be passed to the quantification seperately with different clustering. If you only want barcode level gene counts or unique transcript counts you can stop here and do not need to proceed to the EM quantification.
 
-spatial: This should be a path to your barcode whitelist that also contians the x and y coordinates as extra columns. 
+**spatial**: This should be a path to your barcode whitelist that also contains the x and y coordinates as extra columns. If provided, the file should contain 3 columns with or without header, where the first column is the barcode, and the second and third column contains the x and y coordinates information accordingly. Compressed file format is accepted as well.
 
 ```rscript
-quantData = bambu(reads = readClassFile, annotations = extendedAnno, genome = "$genome", ncore = $params.ncore, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial)
+quantData <- bambu(reads = readClassFile, annotations = extendedAnno, genome = fa.file, ncore = 1, discovery = FALSE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, opt.em = list(degradationBias = FALSE), assignDist = TRUE, spatial = spatial)
 ```
 
-EM quantification:
+#### EM quantification:
 
 If you plan to run this step with multiple processes we recommend restarting your R instance to ensure that environmental variables do not inflate the memory usage. 
 
-reads: This argument is still mandatory but not needed when performing quantification alone as long as you provide the quantData argument  <br>
-quantData:  This is the summerized experiement output from the Read Class Assignment step<br>
-clusters:  This is an optional argument which is either a path to a csv containing the barcode to cluster assignments or a list<br>
-opt.em = list(degradationBias=TRUE): We recommend including this argument if you are doing barcode level EM quantification to greatly improve runtime with only a small reduction in quantification accuracy. 
+**reads**: This argument is still mandatory but not needed when performing quantification alone as long as you provide the quantData argument  <br/>
+
+**quantData**:  This is the summerized experiement output from the Read Class Assignment step<br/>
+
+**clusters**:  This is an optional argument which is either a path to a csv containing the barcode to cluster assignments or a CharacterList which can be produced using the code below.<br/>
+
+**opt.em = list(degradationBias=FALSE)**: We recommend including this argument if you are doing barcode level EM quantification to greatly improve runtime with only a small reduction in quantification accuracy. 
 
 ```rscript
 #use Seurat to generate clusters from gene counts
 library(Seurat)
 
-clusterCells = function(counts, resolution = 0.8, dim = 15){
+clusterCells <- function(counts, resolution = 0.8, dim = 15){
   
   cellMix <- CreateSeuratObject(counts = counts, 
                                 project = "cellMix", min.cells = 1)#, min.features = 200)
   #cellMix <- subset(cellMix, subset = nFeature_RNA > nFeature_RNA_threshold & nFeature_RNA < nFeature_RNA_threshold_max)
-  #nFeature_RNA_threshold = 1000, nFeature_RNA_threshold_max = 9000,
+  #nFeature_RNA_threshold <- 1000, nFeature_RNA_threshold_max = 9000,
   cellMix <- NormalizeData(cellMix, normalization.method = "LogNormalize", scale.factor = 10000)
   cellMix <- FindVariableFeatures(cellMix, selection.method = "vst", nfeatures = 2500)
   all.genes <- rownames(cellMix)
   cellMix <- ScaleData(cellMix, features = all.genes)
-  npcs = ifelse(ncol(counts)>50, 50, ncol(counts)-1)
+  npcs <- ifelse(ncol(counts)>50, 50, ncol(counts)-1)
   cellMix <- RunPCA(cellMix, features = VariableFeatures(object = cellMix), npcs = npcs)
-  dim = ifelse(dim >= dim(cellMix@reductions$pca)[2], dim, dim(cellMix@reductions$pca)[2])
+  dim <- ifelse(dim >= dim(cellMix@reductions$pca)[2], dim(cellMix@reductions$pca)[2],dim) # if data dimension is small, otherwise, cap dimension at 15
   cellMix <- FindNeighbors(cellMix, dims = 1:dim)
   cellMix <- FindClusters(cellMix, resolution = resolution)
   cellMix <- RunUMAP(cellMix, dims = 1:dim)
@@ -540,16 +550,16 @@ clusterCells = function(counts, resolution = 0.8, dim = 15){
   return(cellMix)
 }
 
-quantData.gene = transcriptToGeneExpression(quantData)
-counts = assays(quantData.gene)$counts[,1] #selecting first sample
-cellMix = clusterCells(counts, resolution = resolution) #resolution is dependant on sample. For larger clusters: 0.2-0.6, for higher resolution: 0.8-2
-x = setNames(names(cellMix@active.ident), cellMix@active.ident)
-clusters = splitAsList(unname(x), names(x))
+quantData.gene <- transcriptToGeneExpression(quantData)
+counts <- assays(quantData.gene)$counts #selecting first sample
+cellMix <- clusterCells(counts) #resolution can be customized. For larger clusters: 0.2-0.6, for higher resolution: 0.8-2
+x <- setNames(names(cellMix@active.ident), cellMix@active.ident)
+clusters_temp <- splitAsList(unname(x), paste)("cluster",names(x)))#make clusters names start with cluster, for better comprehension
 
 
 
-se = bambu( reads = "placeholder", 
-            annotations = extendedAnno, 
+se <- bambu( reads = NULL, 
+            annotations = rowRanges(quantDatas), 
             genome = "$genome", 
             quantData = quantDatas, 
             assignDist = FALSE, 
@@ -558,8 +568,8 @@ se = bambu( reads = "placeholder",
             quant = TRUE, 
             demultiplexed = TRUE, 
             verbose = FALSE, 
-            opt.em = list(degradationBias = degBias), 
-            clusters = clusters)
+            opt.em = list(degradationBias = FALSE), 
+            clusters = clusters_temp)
 ```
 
 ### *Bambu* Arguments
@@ -574,26 +584,28 @@ se = bambu( reads = "placeholder",
 | ncore | specifying number of cores used when parallel processing is used, defaults to 1. |
 | NDR | specifying the maximum NDR rate to novel transcript output among detected transcripts, defaults to 0.1 |
 | yieldSize | see Rsamtools. |
-| opt.discovery | A list of controlling parameters for isoform reconstruction process:  <br> **prefix** specifying prefix for new gene Ids (genePrefix.number), defaults to empty <br> **remove.subsetTx** indicating whether filter to remove read classes which are a subset of known transcripts, defaults to TRUE <br> **min.readCount** specifying minimun read count to consider a read class valid in a sample, defaults to 2 <br> **min.readFractionByGene** specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05 <br> **min.sampleNumber** specifying minimum sample number with minimum read count, gene read proportion, and TPS, defaults to 1 <br> **min.exonDistance** specifying minimum distance to known transcript to be considered valid as new, defaults to 35bp <br> **min.exonOverlap** specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults to 10bp <br> **min.primarySecondaryDist** specifying the minimum number of distance threshold between a read class and the annotations internal exons. Read classes with distances less than the threshold are not annotated as novel and counted with the annotations for quantification, defaults to 5bp <br> **min.primarySecondaryDistStartEnd1** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are not annotated as novel, defaults to 5bp <br> **min.primarySecondaryDistStartEnd2** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are counted with the annotations, defaults to 5bp <br> **min.txScore.multiExon** specifying the minimum transcript probility score threshold for multi-exon transcripts for min.sampleNumber, defaults to 0 <br> **min.txScore.singleExon** specifying the minimum transcript probability score threshold for single-exon transcripts for min.sampleNumber <br> **fitReadClassModel** a boolean specifying if bambu should train a model on each sample. If set to false bambu will use the default model for ranking novel transcripts. defaults to TRUE <br> **defaultModels** a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the *bambu* package <br> **returnModel** a boolean specifying if bambu will output the model it trained on the data, defaults to FALSE <br> **baselineFDR** a value between 0-1. Bambu uses this FDR on the trained model to recommend an equivilent NDR threshold to be used for the sample. By default, a baseline FDR of 0.1 is used. This does not impact the analysis if an NDR is set. <br> **min.readFractionByEqClass** indicating the minimum relative read count of a subset transcript compared to all superset transcripts (ie the relative read count within the minimum equivalent class). This filter is applied on the set of annotations across all samples using the total read count, this is not a per-sample filter. Please use with  caution. defaults to 0 |
-| opt.em | A list of controlling parameters for quantification algorithm estimation process: <br> **maxiter** specifying maximum number of run iterations, defaults to 10000 <br> **degradationBias** correcting for degradation bias, defaults to TRUE <br> **conv** specifying the covergence threshold control, defaults to 0.0001 <br> **minvalue** specifying the minvalue for convergence consideration, defaults to 0.00000001 |
+| opt.discovery | A list of controlling parameters for isoform reconstruction process:  <br/> **prefix** specifying prefix for new gene Ids (genePrefix.number), defaults to empty <br/> **remove.subsetTx** indicating whether filter to remove read classes which are a subset of known transcripts, defaults to TRUE <br/> **min.readCount** specifying minimun read count to consider a read class valid in a sample, defaults to 2 <br/> **min.readFractionByGene** specifying minimum relative read count per gene, highly expressed genes will have many high read count low relative abundance transcripts that can be filtered, defaults to 0.05 <br/> **min.sampleNumber** specifying minimum sample number with minimum read count, gene read proportion, and TPS, defaults to 1 <br/> **min.exonDistance** specifying minimum distance to known transcript to be considered valid as new, defaults to 35bp <br/> **min.exonOverlap** specifying minimum number of bases shared with annotation to be assigned to the same gene id, defaults to 10bp <br/> **min.primarySecondaryDist** specifying the minimum number of distance threshold between a read class and the annotations internal exons. Read classes with distances less than the threshold are not annotated as novel and counted with the annotations for quantification, defaults to 5bp <br/> **min.primarySecondaryDistStartEnd1** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are not annotated as novel, defaults to 5bp <br/> **min.primarySecondaryDistStartEnd2** specifying the minimum number of distance threshold between a read class and the annotations start/end exons. Read classes with distances less than the threshold are counted with the annotations, defaults to 5bp <br/> **min.txScore.multiExon** specifying the minimum transcript probility score threshold for multi-exon transcripts for min.sampleNumber, defaults to 0 <br/> **min.txScore.singleExon** specifying the minimum transcript probability score threshold for single-exon transcripts for min.sampleNumber <br/> **fitReadClassModel** a boolean specifying if bambu should train a model on each sample. If set to false bambu will use the default model for ranking novel transcripts. defaults to TRUE <br/> **defaultModels** a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the *bambu* package <br/> **returnModel** a boolean specifying if bambu will output the model it trained on the data, defaults to FALSE <br/> **baselineFDR** a value between 0-1. Bambu uses this FDR on the trained model to recommend an equivilent NDR threshold to be used for the sample. By default, a baseline FDR of 0.1 is used. This does not impact the analysis if an NDR is set. <br/> **min.readFractionByEqClass** indicating the minimum relative read count of a subset transcript compared to all superset transcripts (ie the relative read count within the minimum equivalent class). This filter is applied on the set of annotations across all samples using the total read count, this is not a per-sample filter. Please use with  caution. defaults to 0 |
+| opt.em | A list of controlling parameters for quantification algorithm estimation process: <br/> **maxiter** specifying maximum number of run iterations, defaults to 10000 <br/> **degradationBias** correcting for degradation bias, defaults to TRUE <br/> **conv** specifying the covergence threshold control, defaults to 0.0001 <br/> **minvalue** specifying the minvalue for convergence consideration, defaults to 0.00000001 |
 | trackReads | When TRUE read names will be tracked and output as metadata in the final output as readToTranscriptMaps detailing the assignment of reads to transcripts.The output is a list with an entry for each sample. |
 | returnDistTable | When TRUE the calculated distance table between read classes and annotations will be output as metadata as distTables. The output is a list with an entry for each sample. |
 | discovery | A logical variable indicating whether annotations are to be extended for quantification, defaults to TRUE. |
 | quant | A logical variable indicating whether quantification will be performed, defaults to TRUE. |
 | verbose | A logical variable indicating whether processing messages will be printed. |
-| processByBam | A logical variable indicating if each input bam file will be processed seperately (TRUE) or all are read in and processed together (FALSE), defaults to TRUE |
-| processByChromosome | A logical variable indicating if read classes will be constructed with all reads together (FALSE), or done by chromsome which uses less memory, but provides less information for the junction correction model (TRUE), defaults to FALSE |
-| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br> bulk - <br>&nbsp;&nbsp;&nbsp;&nbsp;processByBam = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;processByChromsome = FALSE<br>multiplexed - <br>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br>&nbsp;&nbsp;&nbsp;&nbsp;processByChromosome = TRUE<br>fusion - <br>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br>debug -<br>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
+| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br/> bulk - <br/>&nbsp;&nbsp;&nbsp;&nbsp;processByBam = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromsome = FALSE<br/>multiplexed - <br/>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br/>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromosome = TRUE<br/>fusion - <br/>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br/>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br/>debug -<br/>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
 | demultiplexed | A logical variable indicating whether the input bam file is demultiplexed. The barcode and umi either need to be present in the read name or the $BC and $UG tags, defaults to FALSE. Alternatively a path to a csv file can be provided where column 1 is read names, column 2 is barcodes, and column 3 is UMI. |
-| spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. |
+| spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. If provided, the file should contain 3 columns with or without header, where the first column is the barcode, and the second and third column contains the x and y coordinates information accordingly. Compressed file format is accepted as well.|
 | assignDist | A logical variable indicating whether read class to transcript assignment will be performed, defaults to TRUE. |
 | quantData | Advanced use only. A list of se outputs from the assignDist step. Used only to run quantification |
 | sampleNames | A vector of strings representing the sample name associated with each input bam. bam files with the same sample name will be combined |
 | cleanReads | A logical variable indicating whether only the first sequenced alignment in a read should be kept. This helps to remove chimeric reads, but will remove alignments from fusion genes, defaults to FALSE. |
 | dedupUMI | A logical variable indicating whether UMI deduplication is performed. The longest read per UMI will be used and the rest discarded, defaults to FALSE.|
+| barcodesToFilter | A vector of strings indicating the barcodes to be filtered out in reads.|
 | clusters | Either a list containing the barcodes for each cluster, or a path to a csv file containg the barcode to cluster mapping. When provided, clusters will be used during discovery and EM quant steps, defaults to null. |
+| processByBam | A logical variable indicating if each input bam file will be processed seperately (TRUE) or all are read in and processed together (FALSE), defaults to TRUE |
+| processByChromosome | A logical variable indicating if read classes will be constructed with all reads together (FALSE), or done by chromsome which uses less memory, but provides less information for the junction correction model (TRUE), defaults to FALSE |
 
 ### setNDR() arguments
+
 |argument|description|
 |---|---|
 |extendedAnnotations| A GRangesList object produced from bambu(quant = FALSE) or rowRanges(se) or loaded in from prepareAnnotations() of a Bambu dervived .gtf |
@@ -604,6 +616,7 @@ se = bambu( reads = "placeholder",
 |defaultModels| a bambu trained model object used to recommend an NDR threshold if no NDR is provided. Defaults to the pretrained model in the bambu package|
 
 ### Output Description
+
 Access annotations that are matched to the transcript expression estimates by rowRanges()
 ```rscript
 rowRanges(se)
@@ -611,7 +624,7 @@ rowRanges(se)
 |column|description|
 |---|---|
 |seqnames|The scaffold name the transcript is found on|
-|ranges|An iRanges object containing the start and end coordinates of the transcript (not stranded)|
+|ranges|An IRanges object containing the start and end coordinates of the transcript (not stranded)|
 |strand|The strand of the transcript (+, -, *)|
 |exon_rank|The exon index of the exons in the transcript starting from the 5’ end of the transcript|
 |exon_endRank|The exon index of the exons in the transcript starting from the 3’ end of the transcript|
@@ -630,14 +643,15 @@ rowData(se)
 |---|---|
 |TXNAME|The transcript name for the transcript. Will use either the transcript name from the provided annotations or tx.X if it is a novel transcript where X is a unique integer.|
 |GENEID|The gene name for the transcript. Will use either the gene name from the provided annotations or gene.X if it is a novel transcript where X is a unique integer.| 
-|eqClass|A character vector with the transcript names of all the equivalent transcripts (those which have this transcripts contiguous exon junctions)|
-|txId|A bambu specific transcript id used for indexing purposes
-|eqClassById|A integer list with the transcript ids of all equivalent transcripts
-|txClassDescription|A concatenated string containing the classes the transcript falls under: <br> **annotation** - Transcript matches an annotation transcript <br> **allNew** - All the intron-junctions are novel <br> **newFirstJunction** - the first junction is novel and at least one other junction matches an annotated transcript <br> **newLastJunction** - the last junction is novel and at least one other junction matches an annotated transcript <br> **newJunction** - an internal junction is novel and at least one other internal junction matches an annotated transcript <br> **newWithin** -  A novel transcript with matching junctions but is not a subset of an annotation <br> **unsplicedNew** - A single exon transcript that doesn’t completely overlap with annotations <br> **compatible** - Is a subset of an annotated transcript <br> **newFirstExon** - The first exon is novel <br> **newLastExon** - The last exon is novel|
-|readCount|The number of full length reads associated with this transcript (filtered by min.readCount)|
 |NDR|The NDR score calculated for the transcript|
+|novelGene|A logical variable that is true if transcript model is from a novel gene (does not overlap with an annotated gene loci)|
+|novelTranscript|A logical variable that is true if transcript model is novel  (passing NDR threshold)|
+|txClassDescription|A concatenated string containing the classes the transcript falls under: <br/> **annotation** - Transcript matches an annotation transcript <br/> **allNew** - All the intron-junctions are novel <br/> **newFirstJunction** - the first junction is novel and at least one other junction matches an annotated transcript <br/> **newLastJunction** - the last junction is novel and at least one other junction matches an annotated transcript <br/> **newJunction** - an internal junction is novel and at least one other internal junction matches an annotated transcript <br/> **newWithin** -  A novel transcript with matching junctions but is not a subset of an annotation <br/> **unsplicedNew** - A single exon transcript that doesn’t completely overlap with annotations <br/> **compatible** - Is a subset of an annotated transcript <br/> **newFirstExon** - The first exon is novel <br/> **newLastExon** - The last exon is novel|
+|readCount|The number of full length reads associated with this transcript (filtered by min.readCount)|
 |relReadCount|The proportion of reads this transcript has relative to all reads assigned to its gene|
 |relSubsetCount|The proportion of reads this transcript has relative to all reads that either fully or partially match this transcript|
+|txId|A bambu specific transcript id used for indexing purposes
+|eqClassById|A integer list with the transcript ids of all equivalent transcripts
 |maxTxScore|The maximum model score across samples from the sample-trained model. Used internally by Bambu to calculate NDR scores|
 |maxTxScore.noFit|The maximum model score across samples from the pretrained model. Used internally by Bambu to recommend NDR thresholds|
 
@@ -645,8 +659,8 @@ rowData(se)
 metadata(se)$incompatibleCounts
 metadata(se)$warnings
 ```
-IncompatibleCounts - A table containing counts for incompatible reads that can be assigned to a gene but to none of the provided transcripts.
-warnings - A list containing the warnings produced by each sample
+**IncompatibleCounts** - A table containing counts for incompatible reads that can be assigned to a gene but to none of the provided transcripts. <br/>
+**warnings** - A list containing the warnings produced by each sample <br/>
 
 ```rscript
 metadata(rowRanges(se))$NDRthreshold
@@ -654,17 +668,20 @@ metadata(rowRanges(se))$subsetTranscripts
 metadata(rowRanges(se))$lowConfidenceTranscripts
 metadata(rowRanges(se))$warnings
 ```
-NDRthreshold - The NDR threshold currently appled to the novel transcripts. A number between 0 and 1 
-subsetTranscripts - A GrangesList containing subset transcripts when remove.subsetTx = TRUE. readCount and txScore can be accessed from mcols.
-lowConfidenceTranscripts - A GrangesList containing novel transcripts above the NDR threshold
-warnings - A list containing the warnings produced by each sample
+**NDRthreshold** - The NDR threshold currently appled to the novel transcripts. A number between 0 and 1 <br/>
+
+**subsetTranscripts** - A GrangesList containing subset transcripts when remove.subsetTx = TRUE. readCount and txScore can be accessed from mcols. <br/>
+
+**lowConfidenceTranscripts** - A GrangesList containing novel transcripts above the NDR threshold <br/>
+
+**warnings** - A list containing the warnings produced by each sample <br/>
 
 
 ### Release History
 
-**bambu v3.3.0**
+**bambu v3.9.0**
 
-Release date: 2024-October-28
+Release date: 2025-xxx-xx
 
 - Subset transcripts and those above the NDR threshold are placed into the metadata of the annotations in $subsetTranscripts and $lowConfidenceTranscripts respectively (when filtered out by default).
 - adds the setNDR function
