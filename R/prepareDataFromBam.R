@@ -71,8 +71,8 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         if(cleanReads){
             softClip5Prime <- clipFunction(cigarData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '^(\\d*)[S].*', replace_pattern = '\\1')
             softClip3Prime <- clipFunction(cigarData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '.*\\D(\\d*)[S]$', replace_pattern = '\\1')
-            hardClip5Prime <- clipFunction(alignData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '^(\\d*)[H].*', replace_pattern = '\\1')
-            hardClip3Prime <- clipFunction(alignData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '.*\\D(\\d*)[H]$', replace_pattern = '\\1')
+            hardClip5Prime <- clipFunction(cigarData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '^(\\d*)[H].*', replace_pattern = '\\1')
+            hardClip3Prime <- clipFunction(cigarData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '.*\\D(\\d*)[H]$', replace_pattern = '\\1')
             # softClip5Prime <-suppressWarnings(pmax(0,as.numeric(gsub('^(\\d*)[S].*','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T))
             # softClip3Prime <-suppressWarnings(pmax(0,as.numeric(gsub('.*\\D(\\d*)[S]$','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T))
             # hardClip5Prime <-suppressWarnings(pmax(0,as.numeric(gsub('^(\\d*)[H].*','\\1',GenomicAlignments::cigar(alignmentInfo))), na.rm=T))
