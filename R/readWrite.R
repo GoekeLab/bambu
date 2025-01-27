@@ -232,7 +232,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 writeAnnotationsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
                                 outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE){
     if(outputExtendedAnno){
-        writeToGTF(annotation, paste0(basename(file), "extendedAnnotations.gtf"), geneIDs)
+        writeToGTF(annotation, paste0(file, "extendedAnnotations.gtf"), geneIDs)
     }
     if(outputAll){
         annotationAll = setNDR(annotation, 1)
