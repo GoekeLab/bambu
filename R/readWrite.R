@@ -327,7 +327,7 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
 #' ))
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
-importBambuResults <- function(path, prefixes = NA){
+importBambuResults <- function(path, prefixes){
     if(is.na(prefixes)){
       path <- paste0(path,"/")
     } else{
