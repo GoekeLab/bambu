@@ -249,8 +249,13 @@ writeAnnotationsToGTF <- function(annotation, file, geneIDs = NULL, outputExtend
     }
 
     if(outputNovelOnly){
+        if(all(!rowData(se)$novelTranscript)){
+          print("This is no novel transcript and novelTranscripts.gtf will not be outputed!")
+        }
+      else{
         annotationNovel = annotation[mcols(annotation)$novelTranscript]
         writeToGTF(annotationNovel, paste0(file, "novelTranscripts.gtf"), geneIDs)
+      }
     }
 }
 
