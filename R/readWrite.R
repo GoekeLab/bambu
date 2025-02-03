@@ -27,6 +27,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
             dir.create(outdir, recursive = TRUE)
 
         transcript_grList <- rowRanges(se)
+        prefix <- ifelse(prefix != "", paste0(prefix, "_"), "")
         transcript_gtffn <- paste(outdir, prefix, sep = "")
         gtf <- writeAnnotationsToGTF(annotation = transcript_grList,
             file = transcript_gtffn, outputExtendedAnno = outputExtendedAnno, 
@@ -50,9 +51,9 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
         #R.utils::gzip(paste0(outdir, "barcodes.tsv"))
         txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
-        utils::write.table(txANDGenes, file = paste0(outdir, "txANDgenes.tsv"), 
+        utils::write.table(txANDGenes, file = paste0(outdir, prefix, "txANDgenes.tsv"), 
                            sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
-        utils::write.table(names(seGene), file = paste0(outdir, "genes.tsv"), 
+        utils::write.table(names(seGene), file = paste0(outdir, prefix, "genes.tsv"), 
                         sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
         
         #R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
