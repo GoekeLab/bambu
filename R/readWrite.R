@@ -328,19 +328,26 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
 importBambuResults <- function(path, prefixes = NA){
-    annotations = prepareAnnotations(paste0(path, "/extended_annotations.gtf"))
-    counts = readMM(paste0(path, "/counts_transcript.mtx"))
-    CPM = readMM(paste0(path, "/CPM_transcript.mtx"))
-    fullLengthCounts = readMM(paste0(path, "/fullLengthCounts_transcript.mtx"))
-    uniqueCounts = readMM(paste0(path, "/uniqueCounts_transcript.mtx"))
-    incompatibleCounts = NULL
-    if(file.exists(paste0(path, "/incompatibleCounts.mtx"))){
-        incompatibleCounts = readMM(paste0(path, "/incompatibleCounts.mtx"))
+    if(is.na(prefixes)){
+      path <- paste0(path,"/")
+    } else{
+      path <- paste0(path,"/",prefixes,"_")
     }
-    barcodes = read.table(paste0(path, "/barcodes.tsv"))
-    geneIds = read.table(paste0(path, "/genes.tsv"))
-    txIds = read.table(paste0(path, "/txANDgenes.tsv"))
-    colData = read.table(paste0(path, "/sampleData.tsv"), header = TRUE)
+    annotations = prepareAnnotations(paste0(path, "extendedAnnotations.gtf"))
+    counts = readMM(paste0(path, "counts_transcript.mtx"))
+    CPM = readMM(paste0(path, "CPM_transcript.mtx"))
+    fullLengthCounts = readMM(paste0(path, "fullLengthCounts_transcript.mtx"))
+    uniqueCounts = readMM(paste0(path, "uniqueCounts_transcript.mtx"))
+    incompatibleCounts = NULL
+    if(file.exists(paste0(path, "incompatibleCounts.mtx"))){
+        incompatibleCounts = readMM(paste0(path, "incompatibleCounts.mtx"))
+    }
+    if(file.exists(paste0(path, "barcodes.tsv"))){
+         incompatibleCounts = readMM(paste0(path, "barcodes.tsv"))
+    }
+    geneIds = read.table(paste0(path, "genes.tsv"))
+    txIds = read.table(paste0(path, "txANDgenes.tsv"))
+    colData = read.table(paste0(path, "sampleData.tsv"), header = TRUE)
     rownames(incompatibleCounts) = geneIds[,1]
 
     countsSe <- SummarizedExperiment(assays = SimpleList(counts = counts, 
