@@ -107,8 +107,7 @@ writeCountsOutput <- function(se, varname = "counts",
         estimates <- assays(se)[[varname]]
         estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
         Matrix::writeMM(estimates, estimatesfn)
-          #R.utils::gzip(estimatesfn)
-        }
+        #R.utils::gzip(estimatesfn)
     }
 }
 
