@@ -33,7 +33,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
             file = transcript_gtffn, outputExtendedAnno = outputExtendedAnno, 
             outputAll = outputAll, outputBambuModels = outputBambuModels, outputNovelOnly = outputNovelOnly)
         
-        utils::write.table(colData(se), file = paste0(outdir, "/", prefix, "sampleData.tsv"), 
+        utils::write.table(colData(se), file = paste0(transcript_gtffn, "sampleData.tsv"), 
             sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
         for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
@@ -43,7 +43,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         #write incompatible counts
         if(!is.null(metadata(se)$incompatibleCounts)){
             estimates = metadata(se)$incompatibleCounts
-            estimatesfn <- paste(outdir, prefix, "incompatibleCounts.mtx", sep = "")
+            estimatesfn <- paste(transcript_gtffn, "incompatibleCounts.mtx", sep = "")
                 Matrix::writeMM(estimates, estimatesfn)
         }
         seGene <- transcriptToGeneExpression(se)
@@ -51,9 +51,9 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
         #R.utils::gzip(paste0(outdir, "barcodes.tsv"))
         txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
-        utils::write.table(txANDGenes, file = paste0(outdir, prefix, "txANDgenes.tsv"), 
+        utils::write.table(txANDGenes, file = paste0(transcript_gtffn, "txANDgenes.tsv"), 
                            sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
-        utils::write.table(names(seGene), file = paste0(outdir, prefix, "genes.tsv"), 
+        utils::write.table(names(seGene), file = paste0(transcript_gtffn, "genes.tsv"), 
                         sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
         
         #R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
@@ -105,14 +105,8 @@ writeCountsOutput <- function(se, varname = "counts",
       
     } else{
         estimates <- assays(se)[[varname]]
-        if (feature == "transcript"){
-          estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
-          Matrix::writeMM(estimates, estimatesfn)
-          #R.utils::gzip(estimatesfn)
-          
-        } else{
-          estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
-          Matrix::writeMM(estimates, estimatesfn)
+        estimatesfn <- paste(outdir, prefix, varname,"_",feature,".mtx", sep = "")
+        Matrix::writeMM(estimates, estimatesfn)
           #R.utils::gzip(estimatesfn)
         }
     }
@@ -327,8 +321,8 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
 #' ))
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
-importBambuResults <- function(path, prefixes){
-    if(is.na(prefixes)){
+importBambuResults <- function(path, prefixes = ""){
+    if(prefixes == ""){
       path <- paste0(path,"/")
     } else{
       path <- paste0(path,"/",prefixes,"_")
@@ -343,7 +337,7 @@ importBambuResults <- function(path, prefixes){
         incompatibleCounts = readMM(paste0(path, "incompatibleCounts.mtx"))
     }
     if(file.exists(paste0(path, "barcodes.tsv"))){
-         incompatibleCounts = readMM(paste0(path, "barcodes.tsv"))
+         incompatibleCounts = read.table(paste0(path, "barcodes.tsv"))
     }
     geneIds = read.table(paste0(path, "genes.tsv"))
     txIds = read.table(paste0(path, "txANDgenes.tsv"))
