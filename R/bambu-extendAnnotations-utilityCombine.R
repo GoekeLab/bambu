@@ -17,7 +17,7 @@ isore.combineTranscriptCandidates <- function(readClassList,
     combinedSplicedTranscripts <- 
         combineSplicedTranscriptModels(readClassList, bpParameters, 
         min.readCount, min.readFractionByGene, 
-        min.txScore.multiExon, min.txScore.singleExon, verbose) %>% data.table()
+        min.txScore.multiExon, min.txScore.singleExon, verbose)
     combinedSplicedTranscripts[,confidenceType := "highConfidenceJunctionReads"]
     combinedUnsplicedTranscripts <- 
         combineUnsplicedTranscriptModels(readClassList, bpParameters, 
@@ -88,40 +88,34 @@ sequentialCombineFeatureTibble <- function(readClassList,
 
 #' @noRd 
 updateStartEndReadCount <- function(combinedFeatureTibble){
-    combinedFeatureTibble <- combinedFeatureTibble %>% 
-        mutate(rowID = row_number())
+    setDT(combinedFeatureTibble)
+    combinedFeatureTibble[, rowID := .I]
     
-    startEndCountTibble <- combinedFeatureTibble %>% 
-        select(rowID, starts_with("start"),starts_with("end"),
-            starts_with("readCount")) %>%
-        tidyr::pivot_longer(c(starts_with("start"),starts_with("end"),
-            starts_with("readCount")), names_to = c(".value","set"),
-            names_pattern = "(.*)\\.(.)") %>%
-        group_by(rowID) %>% 
-        mutate(sumReadCount = sum(readCount,na.rm = TRUE))
+    colNames <- colnames(combinedFeatureTibble)
+    readCountCols <- sort(colNames[grep("^readCount", colNames)]) # to make sure it's ordered by sample name
+    startCols <- sort(colNames[grep("^start", colNames)])
+    endCols <- sort(colNames[grep("^end", colNames)])
     
-    startTibble <- select(startEndCountTibble, rowID, start, readCount, 
-        sumReadCount) %>% 
-        arrange(start) %>%
-        filter(cumsum(readCount)/sumReadCount>=0.5) %>% 
-        filter(row_number()==1)
-    endTibble <- select(startEndCountTibble, rowID, end, readCount, 
-        sumReadCount) %>% 
-        arrange(end) %>% 
-        filter(cumsum(readCount)/sumReadCount>=0.5) %>% 
-        filter(row_number()==1)
-    
-    combinedFeatureTibble <- combinedFeatureTibble %>% 
-        dplyr::select(intronStarts, intronEnds, chr, strand, maxTxScore, 
-            maxTxScore.noFit, NSampleReadCount, NSampleReadProp, 
-            NSampleTxScore, rowID) %>%
-        full_join(select(startTibble, rowID, start), by = "rowID") %>% 
-        full_join(select(endTibble, rowID, end, readCount=sumReadCount), 
-        by = "rowID") %>%
-        select(-rowID)
+    startEndDt <- combinedFeatureTibble[, 
+        .(start = readCountWeightedMedian(.SD,x,y),
+        end = readCountWeightedMedian(.SD,z,y),
+        readCount = sum(.SD[,y], na.rm = TRUE)),
+        by = rowID,  env = I(list(x = startCols, y = readCountCols,z = endCols))]
+
+    combinedFeatureTibble <- startEndDt[combinedFeatureTibble[,.(intronStarts, intronEnds, chr, strand, maxTxScore, 
+                                                                 maxTxScore.noFit, NSampleReadCount, NSampleReadProp, 
+                                                                 NSampleTxScore, rowID)], on = "rowID"]
+    combinedFeatureTibble[, rowID := NULL]
     return(combinedFeatureTibble)
 }
 
+#' Function to get median value without interpolation using certain column names
+#' @noRd
+readCountWeightedMedian <- function(dt, valuevar, timesvar){
+    sortVector <- rep(na.omit(unlist(dt[,..valuevar])), 
+                times = as.integer(na.omit(unlist(dt[,..timesvar]))))
+    return(min(sortVector[sortVector>=quantile(sortVector, probs = 0.5)]))
+}
 
 
 #' Function to combine featureTibble and create the NSample variables 

@@ -498,6 +498,16 @@ rowData(se)
 
 ### Release History
 
+**bambu v3.8.2**
+
+Release date: 2025-02-06
+
+Minor changes:
+
+- Fix large number of samples [issue](https://github.com/GoekeLab/bambu/issues/450)  
+- Fix denovo bug issue 
+
+
 **bambu v3.2.5**
 
 Release date: 2023-July-07
