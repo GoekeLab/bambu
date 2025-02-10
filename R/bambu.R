@@ -149,7 +149,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             processByBam <- TRUE
         }
         if(mode == "multiplexed"){
-            if(is.null(demultiplexed)) 
+            if(!(demultiplexed)) 
                 demultiplexed <- TRUE
             cleanReads <- TRUE
             opt.em <- list(degradationBias = FALSE)
