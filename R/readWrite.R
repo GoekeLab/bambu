@@ -173,7 +173,7 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
         frame = ".", attributes = paste(GENEID, group_name, exon_rank, NDR, txScore, txScore.noFit, novelGene, novelTranscript, txClassDescription )) %>%
         select(seqnames, source, feature, start, end, score,
         strand, frame, attributes, group_name)
-    dfTx <- as.data.frame(range(ranges(annotation)))
+    dfTx <- as_tibble(as.data.frame(range(ranges(annotation))))
     dfTx <-
         left_join(dfTx, geneIDs, by = c("group_name" = "TXNAME"))
     dfTx$group_name <-
@@ -242,13 +242,8 @@ writeAnnotationsToGTF <- function(annotation, file, geneIDs = NULL, outputExtend
     }
 
     if(outputNovelOnly){
-        if(all(!mcols(annotation)$novelTranscript)){
-          print("This is no novel transcript and novelTranscripts.gtf will not be outputed!")
-        }
-      else{
         annotationNovel = annotation[mcols(annotation)$novelTranscript]
         writeToGTF(annotationNovel, paste0(file, "novelTranscripts.gtf"), geneIDs)
-      }
     }
 }
 
