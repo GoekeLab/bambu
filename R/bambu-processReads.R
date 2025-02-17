@@ -88,9 +88,9 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         readGrgList <- do.call(c, readGrgList)    
         mcols(readGrgList)$id <- seq_along(readGrgList) 
         if(!isFALSE(demultiplexed)){ 
-          mcols(readGrgList[[i]])$sampleID <- as.numeric(mcols(readGrgList[[i]])$BC)
+          mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$BC)
         } else {
-          mcols(readGrgList[[i]])$sampleID <- i
+          mcols(readGrgList)$sampleID <- i
         }
         readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
             stranded = stranded, min.readCount = min.readCount, 
