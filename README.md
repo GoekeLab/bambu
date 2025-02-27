@@ -330,7 +330,7 @@ se <- bambu(reads = rcFiles, annotations = annotations, genome = fa.file)
 ```
 rcFiles can be generated in two ways, either as a direct output of the bambu() function when quant and discovery are FALSE, or as written outputs when a path is provided to the rcOutdir argument. When rcFiles are output using rcOutdir this is done using BiocFileCache. For more details on how to access, use, and identify these files see [here](https://bioconductor.org/packages/release/bioc/html/BiocFileCache.html). A short example is shown below.
 
-Example using rcOutDir to produce preprocessed files
+Example using rcOutDir to produce preprocessed files, and se returns to the path of files
 ```rscript
 se <- bambu(reads = test.bam, rcOutDir = "path/to/rcOutput/", annotations = annotations, genome = fa.file, assignDist = FALSE)
 ```
