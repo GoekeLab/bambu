@@ -138,7 +138,7 @@
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
-    trackReads = FALSE, returnDistTable = FALSE,
+    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE,
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
     sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
@@ -165,6 +165,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             returnDistTable <- TRUE
         }
     }
+    if(lowMemory)
+        message("lowMemory has been deprecated and split into processByChromosome and processByBam. Please see Documentation")
     if(is.null(annotations)){ 
         annotations <- GRangesList()
     } else {
