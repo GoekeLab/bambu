@@ -45,19 +45,17 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         readGrgList[[counter]] <-grglist(alignmentInfo)
         if (!isFALSE(demultiplexed)){ # if demultiplexed is TRUE or a string path 
             if(isTRUE(demultiplexed)){ # if demultiplexed is TRUE
-                mcols(readGrgList[[counter]])$BC <- ifelse(!is.na(mcols(alignmentInfo)$BC), 
-                                                           mcols(alignmentInfo)$BC, 
-                                                           ifelse(grepl("[GACT]_",names(readGrgList[[counter]])), # a checkpoint to see whether BC is contained in the name, with specific format BC_UMI#READNAME
-                                                        gsub("(^[GACT]+(?=_)).*", '\\1', 
-                                                        names(readGrgList[[counter]]), perl = TRUE),
-                                                        NA))
-                mcols(readGrgList[[counter]])$UMI <- ifelse(!is.na(mcols(alignmentInfo)$UG), mcols(alignmentInfo)$UG, 
-                                                            ifelse(grepl("[GACT]#",names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format BC_UMI#READNAME
-                                                        gsub(".*((?<=_)[GACT]*(?=#)).*", '\\1', names(readGrgList[[counter]]), perl = TRUE),
-                                                        NA))
+      
+                mcols(readGrgList[[counter]])$BC <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), # a checkpoint to see whether BC is contained in the name, with specific format BC_UMI#READNAME, 
+                                                              !is.na(mcols(alignmentInfo)$BC) ~ mcols(alignmentInfo)$BC, 
+                                                              TRUE ~ NA) 
+
+                mcols(readGrgList[[counter]])$UMI <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format BC_UMI#READNAME, 
+                                                               !is.na(mcols(alignmentInfo)$UG) ~ mcols(alignmentInfo)$UG, 
+                                                               TRUE ~ NA) 
             } else{ # if demultiplexed is a string path
                 mcols(readGrgList[[counter]])$BC <- NA
-                mcols(readGrgList[[counter]])$UMI <- "NA"
+                mcols(readGrgList[[counter]])$UMI <- NA
                 mcols(readGrgList[[counter]])$BC <- readMap[,2][match(names(readGrgList[[counter]]),readMap[,1])]
                 if(ncol(readMap)>2){
                     mcols(readGrgList[[counter]])$UMI <- readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]

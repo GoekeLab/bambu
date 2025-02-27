@@ -84,14 +84,14 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             
             mcols(readGrgList[[i]])$BC <- as.factor(mcols(readGrgList[[i]])$BC)
             
-            if(!isFALSE(demultiplexed)){ 
-                mcols(readGrgList[[i]])$sampleID <- as.numeric(mcols(readGrgList[[i]])$BC)
-            } else {
-                mcols(readGrgList[[i]])$sampleID <- i
-            }
         }
         readGrgList <- do.call(c, readGrgList)    
         mcols(readGrgList)$id <- seq_along(readGrgList) 
+        if(!isFALSE(demultiplexed)){ 
+          mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$BC)
+        } else {
+          mcols(readGrgList)$sampleID <- i
+        }
         readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
