@@ -332,7 +332,7 @@ rcFiles can be generated in two ways, either as a direct output of the bambu() f
 
 Example using rcOutDir to produce preprocessed files
 ```rscript
-se <- bambu(reads = test.bam, rcOutDir = "path/to/rcOutput/", annotations = annotations, genome = fa.file)
+se <- bambu(reads = test.bam, rcOutDir = "path/to/rcOutput/", annotations = annotations, genome = fa.file, assignDist = FALSE)
 ```
 
 This will store a preprocessed rcFile in the provided directory for each sample file provided to reads. To access these files for future use, we recommend using the BioCFileCache package which provides the metadata needed to identify the sample.
@@ -352,7 +352,7 @@ se <- bambu(reads = info$rpath[1], annotations = annotations, genome = fa.file)
 
 This output is also generated when both quant and discovery are set to false in a list form indexed by sample.
 ```rscript
-se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE)
+se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, assignDist = FALSE)
 ```
 
 As this is an intermediate object it will not be suitable to use for general use cases. We will document the object below for any potential advanced use cases that may arise.
