@@ -106,16 +106,12 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     if (!is.null(readClass.outputDir)) {
         for(i in seq_along(readClassList)){
             readClassFile <- "combinedSamples"
-            if(lowMemory){
-                readClassFile <- metadata(readClassList[[i]])$sampleNames
-            }
             readClassFile <- BiocFileCache::bfcnew(BiocFileCache::BiocFileCache(
                 readClass.outputDir, ask = FALSE),
                 paste0(readClassFile,"_readClassSe"), ext = ".rds")
             saveRDS(readClassList[[i]], file = readClassFile)
             readClassList[[i]] <- readClassFile
         }
-        
     }
     #TODO don't output list, current there because discovery needs it
     return(readClassList)
