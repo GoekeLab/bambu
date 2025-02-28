@@ -264,27 +264,34 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         ColNames <- c()
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
+            #load in the barcode clustering from file if provided
+            iter <- seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
             if(!is.null(clusters)){
-                if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
-                    clusterMaps <- NULL
-                    for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
-                        clusterMap <- fread(clusters[[j]], header = FALSE, 
-                                            data.table = FALSE)
-                        # read.table(clusters[[j]], 
-                        #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), 
-                        #     header = FALSE)
-                        clusterMap[,1] <- paste0(metadata(quantData_i)$sampleNames[j],
-                                                "_",clusterMap[,1])
-                        clusterMaps <- rbind(clusterMaps, clusterMap)                        
-                    }
-                    clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2]) 
-                    rm(clusterMaps)
-                    rm(clusterMap)
-                    iter <- clustering
-
-                } else{
-                  iter <- clusters[[i]]
+              if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
+                clusterMaps <- NULL
+                for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
+                  clusterMap <- fread(clusters[[j]], header = FALSE, 
+                                      data.table = FALSE)
+                  # read.table(clusters[[j]], 
+                  #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), 
+                  #     header = FALSE)
+                  clusterMap[,1] <- paste0(metadata(quantData_i)$sampleNames[j],
+                                           "_",clusterMap[,1])
+                  clusterMaps <- rbind(clusterMaps, clusterMap)                        
                 }
+                clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2]) 
+                rm(clusterMaps)
+                rm(clusterMap)
+                iter <- clustering
+                
+              } else{ #if clusters is a list
+                if(length(quantData)>1){
+                  iter <- clusters[[i]] #lowMemory mode
+                }else{
+                  iter <- clusters#do.call(c,clusters)
+                }
+              }
+            }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
                 countMatrix <- unname(metadata(quantData_i)$countMatrix[,j]) # same here 
@@ -325,4 +332,3 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         return(countsSe)
     }
   }
-}
