@@ -352,7 +352,7 @@ se <- bambu(reads = info$rpath[1], annotations = annotations, genome = fa.file)
 
 This output is also generated when both quant and discovery are set to false in a list form indexed by sample.
 ```rscript
-se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE)
+se <- bambu(reads = test.bam, annotations = annotations, genome = fa.file, discovery = FALSE, quant = FALSE, assignDist = FALSE)
 ```
 
 As this is an intermediate object it will not be suitable to use for general use cases. We will document the object below for any potential advanced use cases that may arise.
