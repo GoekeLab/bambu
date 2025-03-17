@@ -95,7 +95,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         readGrgList <- readGrgList[[1]]
     }
     # remove microexons of width 1bp from list
-    readGrgList <- readGrgList[width(readGrgList) > 1]
+    readGrgList <- readGrgList <- readGrgList[sum(width(readGrgList)) > 1]
     numNoBCs <- sum(is.na(mcols(readGrgList)$BC))
     if(numNoBCs > 0){
         message("Removing ", numNoBCs, " reads that were not assigned barcodes. If this is unexpected check the barcode map input")
