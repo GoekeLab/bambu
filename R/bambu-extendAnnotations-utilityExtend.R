@@ -490,7 +490,8 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
   ## initiate the table
   if (isFALSE(DistCalculated)) {
     txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
-      mutate(dist = uniqueLengthQuery + uniqueLengthSubject) %>%
+      mutate(dist = uniqueLengthQuery + uniqueLengthSubject,
+             dist2 = NA) %>%
       mutate(txNumber = n())
   } else {
     txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
