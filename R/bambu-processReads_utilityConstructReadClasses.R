@@ -249,7 +249,7 @@ classifyReadsByFirstAndLastExon <-function(readTable, annotations, includeAnnoEd
 
     annoTable = annoTable %>% distinct()
 
-    readTable = rbind(readTable, annoTable)
+    readTable = bind_rows(readTable, annoTable)
 
     readTable <- readTable %>% 
         group_by(chr, strand, firstJunction) %>% mutate(firstExonGroup = findInterval(start,sort(start[is.na(readId)]))) %>%
