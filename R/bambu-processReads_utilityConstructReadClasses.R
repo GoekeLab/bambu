@@ -29,7 +29,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
             uniqueJunctions = uniqueJunctions,
             unlisted_junctions = unlisted_junctions,
             readGrgList = readGrgList,
-            stranded = stranded)}
+            stranded = stranded, annotations)}
     else{exonsByRC.spliced = GRangesList()}
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
@@ -57,7 +57,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' @importFrom GenomicRanges match
 #' @noRd
 constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
-                                        readGrgList, stranded = FALSE) {
+                                        readGrgList, annotations, stranded = FALSE) {
     options(scipen = 999)
     allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
                                                      uniqueJunctions, ignore.strand = TRUE)
@@ -91,10 +91,11 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     rm(lowConfidenceReads, uniqueJunctions, allToUniqueJunctionMatch)
     readTable <- createReadTable(start(unlisted_junctions), 
         end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
-        readStrand, readConfidence)
+        readStrand, readConfidence, annotations)
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
+        firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup,
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount, readIds, sampleIDs)
     mcols(exonsByReadClass) <- readTable
@@ -159,7 +160,7 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #'     row_number .groups
 #' @noRd
 createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
-    unlisted_junctions_id, readGrgList,readStrand, readConfidence) {
+    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     intronStartCoordinatesInt <- 
         as.integer(min(splitAsList(unlisted_junctions_start,
@@ -180,21 +181,75 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+',
         readId = mcols(readGrgList)$id,
         sampleID = mcols(readGrgList)$sampleID)
+    readTable <- readTable %>%
+      mutate(intronStartCoordinatesInt = intronStartCoordinatesInt,
+             intronEndCoordinatesInt = intronEndCoordinatesInt,
+             firstExon5prime = ifelse(strand != "-", start, end), #assume * is +
+             firstExon3prime = ifelse(strand != "-", intronStartCoordinatesInt+1, intronEndCoordinatesInt-1),
+             lastExon5prime = ifelse(strand != "-", intronEndCoordinatesInt-1, intronStartCoordinatesInt+1),
+             lastExon3prime = ifelse(strand != "-", end, start)
+             ) %>%
+      select(-intronStartCoordinatesInt, -intronEndCoordinatesInt)
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
+    readTable <- splitReadClassByStartEnd(readTable, annotations)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
-        group_by(chr, strand, intronEnds, intronStarts, confidenceType) %>% 
+        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
+                firstExonGroup = unique(firstExonGroup), lastExonGroup =  unique(lastExonGroup),
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), 
                 readIds = list(readId), sampleIDs = list(sampleID),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
     return(readTable)
+}
+
+splitReadClassByStartEnd <- function(readTable, annotations){
+  exons <- unlist(annotations)
+  mcols(exons) <- cbind(mcols(exons),
+                        mcols(annotations)[rep(seq_along(annotations), elementNROWS(annotations)), ])
+  annoTable <- tibble(TXNAME = names(exons), 
+                      GENEID = mcols(exons)$GENEID, 
+                      exonRank = mcols(exons)$exon_rank,
+                      chr = as.character(seqnames(exons)), 
+                      start = start(exons),
+                      end = end(exons),
+                      strand = as.character(strand(exons)), 
+                      firstExon5prime = ifelse(strand != "-", start(exons), end(exons)), #assume * is +
+                      firstExon3prime = ifelse(strand != "-", end(exons), start(exons)),
+                      lastExon5prime = ifelse(strand != "-", start(exons), end(exons)), #assume * is +
+                      lastExon3prime = ifelse(strand != "-", end(exons), start(exons)))
+  annoTable <- annoTable %>%
+    group_by(firstExon3prime) %>%
+    mutate(exonGroupId = cur_group_id()) %>%
+    ungroup()
+  readTable = bind_rows(readTable, annoTable)
+  #add gene id id for mapped reads
+  readTable <- readTable %>% 
+    #filter(strand != "*") %>%
+    group_by(chr, strand, firstExon3prime) %>% 
+    mutate(exonGroupId = ifelse(is.na(exonGroupId), exonGroupId[!is.na(exonGroupId)][1], exonGroupId)) %>% # is it possible that two tx from annotation have same exon
+    ungroup() %>% 
+    group_by(chr, strand, lastExon5prime) %>% 
+    mutate(exonGroupId = ifelse(is.na(exonGroupId), exonGroupId[!is.na(exonGroupId)][1], exonGroupId)) %>% # is it possible that two tx from annotation have same exon
+    ungroup()
+  #add first exon group for reads
+  readTable <- readTable %>% 
+    group_by(exonGroupId, firstExon3prime) %>% 
+    mutate(firstExonGroup = ifelse(strand != "-", 
+                                   findInterval(start,sort(start[is.na(readId)])),
+                                   findInterval(end,sort(end[is.na(readId)]), left.open = T))) %>% ungroup() %>%
+    group_by(exonGroupId, lastExon5prime) %>% 
+    mutate(lastExonGroup = ifelse(strand != "-", 
+                                   findInterval(end,sort(end[is.na(readId)]), left.open = T),
+                                   findInterval(start,sort(start[is.na(readId)])))) %>% ungroup() %>% 
+    filter(!is.na(readId))
+  return(readTable)
 }
 
 #' @noRd
