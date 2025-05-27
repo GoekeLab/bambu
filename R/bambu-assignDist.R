@@ -103,6 +103,8 @@ generateNonUniqueCounts <- function(readClassDt, countMatrix, annotations){
     genes <- levels(factor(unique(mcols(annotations)$GENEID)))
     geneMat <- sparseMatrix(length(genes), ncol(nonuniqueCounts), x = 0)
     rownames(geneMat) <- genes
-    geneMat[rownames(nonuniqueCounts),] <- nonuniqueCounts
+    if(!is.null(rownames(nonuniqueCounts))){
+      geneMat[rownames(nonuniqueCounts),] <- nonuniqueCounts
+    }
     return(geneMat)
 }
