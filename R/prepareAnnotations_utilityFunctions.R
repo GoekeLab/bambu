@@ -25,7 +25,7 @@ prepareAnnotationsFromGTF <- function(file) {
             "score", "strand", "frame", "attribute")
         data <- data[data$type == "exon", ]
         data$strand[data$strand == "."] <- "*"
-        data$GENEID <- gsub("gene_id (.*?);.*", "\\1", data$attribute)
+        data$GENEID <- gsub(".*gene_id (.*?);.*", "\\1", data$attribute)
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
         multiTxCheck <- as_tibble(data) %>% select(seqname, GENEID) %>% distinct() %>% group_by(GENEID) %>% 
             mutate(n=n(), id=paste0('-',row_number()))
