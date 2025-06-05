@@ -188,9 +188,9 @@ If you are only interested in the novel transcripts, one can filter this 'se' ob
 se.novel = se[mcols(se)$novelTranscript,]
 writeBambuOutput(se.novel, path = "./bambu/")
 ```
-If you are only interested in full-length transcripts that were detected by Bambu.
+If you are only interested in full-length transcripts that were detected by Bambu in at least 1 sample.
 ```rscript
-se.novel = se[assays(se)$fullLengthCounts >= 1,]
+se.novel = se[mcols(se)$novelTranscript&(apply(assays(se)$fullLengthCounts >= 1,1,sum)>=1),]
 writeBambuOutput(se.novel, path = "./bambu/")
 ```
 
