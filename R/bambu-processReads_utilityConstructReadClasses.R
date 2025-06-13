@@ -209,7 +209,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     return(readTable)
 }
 
-splitReadClassByStartEnd <- function(readTable, annotations){
+splitReadClassByStartEnd <- function(readTable, annotations, startEndWindowSize = 35 ){
   exons <- unlist(annotations)
   mcols(exons) <- cbind(mcols(exons),
                         mcols(annotations)[rep(seq_along(annotations), elementNROWS(annotations)), ])
@@ -224,30 +224,16 @@ splitReadClassByStartEnd <- function(readTable, annotations){
                       firstExon3prime = ifelse(strand != "-", end(exons), start(exons)),
                       lastExon5prime = ifelse(strand != "-", start(exons), end(exons)), #assume * is +
                       lastExon3prime = ifelse(strand != "-", end(exons), start(exons)))
-  annoTable <- annoTable %>%
-    group_by(firstExon3prime) %>%
-    mutate(exonGroupId = cur_group_id()) %>%
-    ungroup()
   readTable = bind_rows(readTable, annoTable)
-  #add gene id id for mapped reads
   readTable <- readTable %>% 
-    #filter(strand != "*") %>%
-    group_by(chr, strand, firstExon3prime) %>% 
-    mutate(exonGroupId = ifelse(is.na(exonGroupId), exonGroupId[!is.na(exonGroupId)][1], exonGroupId)) %>% # is it possible that two tx from annotation have same exon
-    ungroup() %>% 
-    group_by(chr, strand, lastExon5prime) %>% 
-    mutate(exonGroupId = ifelse(is.na(exonGroupId), exonGroupId[!is.na(exonGroupId)][1], exonGroupId)) %>% # is it possible that two tx from annotation have same exon
-    ungroup()
-  #add first exon group for reads
-  readTable <- readTable %>% 
-    group_by(exonGroupId, firstExon3prime) %>% 
+    group_by(firstExon3prime) %>% 
     mutate(firstExonGroup = ifelse(strand != "-", 
-                                   findInterval(start,sort(start[is.na(readId)])),
-                                   findInterval(end,sort(end[is.na(readId)]), left.open = T))) %>% ungroup() %>%
-    group_by(exonGroupId, lastExon5prime) %>% 
+                                   findInterval(start,sort(start[is.na(readId)]) - startEndWindowSize),
+                                   findInterval(-end,sort(-end[is.na(readId)]) - startEndWindowSize))) %>% ungroup() %>%
+    group_by(lastExon5prime) %>% 
     mutate(lastExonGroup = ifelse(strand != "-", 
-                                   findInterval(end,sort(end[is.na(readId)]), left.open = T),
-                                   findInterval(start,sort(start[is.na(readId)])))) %>% ungroup() %>% 
+                                   findInterval(-end,sort(-end[is.na(readId)]) - startEndWindowSize),
+                                   findInterval(start,sort(start[is.na(readId)]) - startEndWindowSize))) %>% ungroup() %>% 
     filter(!is.na(readId))
   return(readTable)
 }
