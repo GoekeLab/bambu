@@ -10,7 +10,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit")
+                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "firstExonGroup", "lastExonGroup")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -343,6 +343,16 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
   # annotate with compatible gene id,
   rowDataFilteredSpliced$GENEID[equalQhits[!duplicated(equalQhits)]] <-
     mcols(annotationGrangesList[equalSubHits[!duplicated(equalQhits)]])$GENEID
+  
+  # remove TXNAME, GENEID, equal and compatible for 
+  idx_startEnd <- which(rowDataFilteredSpliced$firstExonGroup == 0 |
+                          rowDataFilteredSpliced$lastExonGroup == 0)
+  if (length(idx_startEnd) > 0) {
+    classificationTable$compatible[idx_startEnd] <- ""
+    classificationTable$equal[idx_startEnd] <- ""
+    rowDataFilteredSpliced$GENEID[idx_startEnd] <- NA
+    rowDataFilteredSpliced$TXNAME[idx_startEnd] <- NA
+  }
   # annotate as identical, using intron matches
   unlistedIntrons <- unlist(intronsByReadClass, use.names = TRUE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)),
@@ -355,7 +365,8 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     updateWIntronMatches(unlistedIntrons, unlistedIntronsAnnotations,
                          partitioning, classificationTable, annotationGrangesList,
                          rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
-                         min.primarySecondaryDist, min.primarySecondaryDistStartEnd)             
+                         min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
+  classificationTable <- updateWStartEnd(rowDataFilteredSpliced, classificationTable)
   rowDataFilteredSpliced$readClassType <-
     apply(classificationTable, 1, function(x){paste(x[x!=""], collapse = ":")})
   rowDataFilteredSpliced$novelTranscript = TRUE
@@ -419,6 +430,19 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
   return(classificationTable)
 }
 
+
+#' update classificationTable by start and end
+#' @importFrom GenomicRanges match
+#' @noRd
+updateWStartEnd <- function(rowDataSplicedTibble, classificationTable) {
+  idx <- which(rowDataSplicedTibble$firstExonGroup == 0 | 
+                 rowDataSplicedTibble$lastExonGroup == 0)
+  if (length(idx) > 0) {
+    classificationTable$compatible[idx] <- ""
+    classificationTable$equal[idx] <- ""
+  }
+  return(classificationTable)
+}
 
 
 #' assign gene id by maximum match
