@@ -284,11 +284,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 iter <- clustering
                 
               } else{ #if clusters is a list
-                if(length(quantData)>1){
-                  iter <- clusters[[i]] #lowMemory mode
-                }else{
-                  iter <- clusters#do.call(c,clusters)
-                }
+                iter <- clusters[[i]]
               }
             }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
