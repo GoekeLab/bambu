@@ -84,6 +84,8 @@ calculateGeneProportion = function(counts, geneIds){
 #' returns number of ref anno each read class is a subset of
 #' @noRd
 isReadClassCompatible =  function(query, subject){
+  idx_startEnd <- which(mcols(query)$firstExonGroup == 0 |
+                          mcols(query)$lastExonGroup == 0)
     outData <- data.frame(compatible=rep(0, length(query)), 
                           equal = rep(FALSE, length(query)))
     query <- cutStartEndFromGrangesList(query)
@@ -114,7 +116,10 @@ isReadClassCompatible =  function(query, subject){
     
     outData$compatible[allIntronMatchQuery] <- countQueryHits(olap[comp])
     outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
-    
+    if (length(idx_startEnd) > 0) {
+      outData$compatible[idx_startEnd] <- 0
+      outData$equal[idx_startEnd] <- FALSE
+    }
     return(outData)
 }
 
