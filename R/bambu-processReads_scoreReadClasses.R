@@ -42,15 +42,18 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     
     #calculate using the pretrained model for NDR recommendation
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
+    rowData(se)$spliceJunctionScore.noFit = rep(NA,nrow(se))
     if(length(thresholdIndex)>0){
         txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                     model = NULL, defaultModels)
-        
         rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+        spliceJunctionScore.noFit = getSpliceJunctionScore(rowData(se)[thresholdIndex,],
+                                                           model = NULL, defaultModels)
+        rowData(se)$spliceJunctionScore.noFit[thresholdIndex] = spliceJunctionScore.noFit
     }
-
     model = NULL
     rowData(se)$txScore = rowData(se)$txScore.noFit
+    rowData(se)$spliceJunctionScore = rowData(se)$spliceJunctionScore.noFit
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
         if(returnModel) metadata(se)$model = model
@@ -58,6 +61,11 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                                  defaultModels)
         rowData(se)$txScore = rep(NA,nrow(se))
         if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
+        
+        spliceJunctionScore = getSpliceJunctionScore(rowData(se)[thresholdIndex,], model,
+                                                     defaultModels)
+        rowData(se)$spliceJunctionScore = rep(NA,nrow(se))
+        if(!is.null(spliceJunctionScore))  rowData(se)$spliceJunctionScore[thresholdIndex] = spliceJunctionScore
     }
     if(is.null(model) & fit) {
         warningText = "Bambu was unable to train a model on this sample, and is using a pretrained model"
@@ -181,6 +189,39 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
         txScoreSE[which(rowData$numExons==1)]
     return(txScore)
 }
+
+
+#' calculates a spliceJunctionScore based on same splice junction (ignore start/end)
+#' @noRd
+getSpliceJunctionScore <- function(rowData, model = NULL, defaultModels){
+  rowData<- as_tibble(rowData) %>%
+    group_by(chr.rc, strand.rc, intronStarts, intronEnds, confidenceType, GENEID) %>%
+    mutate(spliceJunctionId = cur_group_id()) %>%
+    ungroup()
+  combinedRowData <- rowData %>%
+    group_by(spliceJunctionId) %>%
+    summarise(startSD = weightedMean(startSD, readCount), endSD = weightedMean(endSD, readCount),
+              readCount.posStrand = sum(readCount.posStrand, na.rm = TRUE), 
+              confidenceType = unique(confidenceType), novelGene = unique(novelGene), 
+              numExons = unique(numExons),
+              geneReadProp = sum(geneReadProp), geneReadCount = unique(geneReadCount),
+              equal = ifelse(any(equal), TRUE, FALSE), compatible = max(compatible),
+              numAstart = weightedMean(numAstart, readCount),
+              numAend = weightedMean(numAend, readCount),
+              numTstart = weightedMean(numTstart, readCount), 
+              numTend = weightedMean(numTend, readCount), 
+              readIds = list(readIds), sampleIDs = list(sampleIDs),
+              readCount = sum(readCount), 
+              intronStarts = unique(intronEnds), intronEnds = unique(intronEnds),
+              .groups = 'keep') 
+  spliceJunctionScore <- getTranscriptScore(combinedRowData, 
+                                            model = model, defaultModels)
+  assign("combinedRowData", combinedRowData, envir = .GlobalEnv)
+  names(spliceJunctionScore) <- combinedRowData$spliceJunctionId
+  spliceJunctionScoreFinal <- spliceJunctionScore[rowData$spliceJunctionId]
+  return(spliceJunctionScoreFinal)
+}
+
 
 #' Function to train a model for use on other data
 #' @title Function to train a model for use on other data

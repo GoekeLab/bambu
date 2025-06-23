@@ -10,7 +10,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "firstExonGroup", "lastExonGroup")
+                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "maxSpliceJunctionScore", "maxSpliceJunctionScore.noFit", "firstExonGroup", "lastExonGroup")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -144,7 +144,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                  c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", 
                  "txClassDescription","readCount","relReadCount", 
-                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit")]
+                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", "maxSpliceJunctionScore", "maxSpliceJunctionScore.noFit")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
   metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
@@ -222,7 +222,9 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
             "for NDR precision stabilization.")
           message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else {
-        combinedTranscripts$NDR <- calculateNDR(combinedTranscripts$maxTxScore, equal)
+        combinedTranscripts$txNDR <- calculateNDR(combinedTranscripts$maxTxScore, equal)
+        combinedTranscripts$sjNDR <- calculateNDR(combinedTranscripts$maxSpliceJunctionScore, equal)
+        combinedTranscripts$NDR <- rowMeans(cbind(combinedTranscripts$txNDR, combinedTranscripts$sjNDR)) 
     }
     combinedTranscripts$NDR[combinedTranscripts$maxTxScore==-1] <- 1
     return(combinedTranscripts)
@@ -698,11 +700,11 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
     if("NDR" %in% colnames(rowDataCombinedFiltered)){
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
-                                  "maxTxScore", "maxTxScore.noFit", "relReadCount")]
+                                  "maxTxScore", "maxTxScore.noFit", "maxSpliceJunctionScore", "maxSpliceJunctionScore.noFit", "relReadCount")]
     } else{
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount",
-                                  "maxTxScore", "maxTxScore.noFit", "relReadCount")]
+                                  "maxTxScore", "maxTxScore.noFit", "maxSpliceJunctionScore", "maxSpliceJunctionScore.noFit", "relReadCount")]
     }
     return(extendedAnnotationRanges)
 }
@@ -723,6 +725,8 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         mcols(annotationRangesToMerge)$NDR <- NA
         mcols(annotationRangesToMerge)$maxTxScore <- NA
         mcols(annotationRangesToMerge)$maxTxScore.noFit <- NA
+        mcols(annotationRangesToMerge)$maxSpliceJunctionScore <- NA
+        mcols(annotationRangesToMerge)$maxSpliceJunctionScore.noFit <- NA
         mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
         #copy over stats to annotations from read classes
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR <- equalRanges$NDR
@@ -731,6 +735,8 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount <- equalRanges$relReadCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore <- equalRanges$maxTxScore
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore.noFit <- equalRanges$maxTxScore.noFit
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxSpliceJunctionScore <- equalRanges$maxSpliceJunctionScore
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxSpliceJunctionScore.noFit <- equalRanges$maxSpliceJunctionScore.noFit
         #mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
     }
     if (length(extendedAnnotationRanges)) {
