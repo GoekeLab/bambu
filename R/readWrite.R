@@ -58,6 +58,17 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         
         #R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
         #R.utils::gzip(paste0(outdir, "genes.tsv"))
+        
+        #write tss
+        #write tss count
+        se <- addTssId(se)
+        seTss <- transcriptToTssExpression(se)
+        writeCountsOutput(seTss, varname='counts', feature='tss',outdir, prefix)
+        txANDTss <- data.table(as.data.frame(rowData(se))[,c("TXNAME","TSSID")])
+        #write ts to tss and the bed file for tss
+        utils::write.table(txANDTss, file = paste0(transcript_gtffn, "txANDTss.tsv"),
+                           sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+        export(rowRanges(seTss), paste0(transcript_gtffn, "tss.bed"), format = "BED")
 
         #If there are multiple samples (when demultiplexed), seperate each sample into its own directory
         if(seperateSamples){
@@ -98,8 +109,10 @@ writeCountsOutput <- function(se, varname = "counts",
         setnames(estimates, "rn", "TXNAME")
         geneIDs <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
         estimates <- geneIDs[estimates, on = "TXNAME"]
-      }else{
+      } else if(feature == "gene"){
         setnames(estimates, "rn","GENEID")
+      } else if(feature == "tss"){
+        setnames(estimates, "rn","TSSID")
       } 
       utils::write.table(estimates, file = estimatesfn, sep = "\t", quote = FALSE, row.names = FALSE)
       
