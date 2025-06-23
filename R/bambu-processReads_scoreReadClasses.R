@@ -7,6 +7,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                             fit = TRUE, returnModel = FALSE, 
                             min.readCount = 2, min.exonOverlap = 10,
                             fusionMode = FALSE, verbose = FALSE){
+    message(paste0("Number of Read Classes - ", nrow(se)))
     start.ptm <- proc.time()
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     geneIds = assignGeneIds(rowRanges(se), annotations, min.exonOverlap, fusionMode)
@@ -196,6 +197,7 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
 #' @return It returns a model object to use in \link{bambu}
 #' @export
 trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.threshold = 0.1, verbose = TRUE) {
+    if(verbose) message(paste0("Read Classes used for training", nrow(rowData)))
     rowData = rowData(rcFile)[which(rowData(rcFile)$readCount>=min.readCount),]
     txFeatures = prepareTranscriptModelFeatures(rowData)
     features = dplyr::select(txFeatures,!c(labels))

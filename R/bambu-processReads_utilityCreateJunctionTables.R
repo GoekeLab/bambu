@@ -9,7 +9,7 @@
 #' @importFrom dplyr tibble %>% mutate select
 #' @noRd
 isore.constructJunctionTables <- function(unlisted_junctions, annotations,
-    genomeSequence, stranded = FALSE, verbose = FALSE) {
+    genomeSequence, stranded = FALSE, verbose = FALSE, returnModel = FALSE) {
     start.ptm <- proc.time()
     if(length(unlisted_junctions)==0) return(NULL)
     #summarise junction counts and strand for all reads
@@ -35,7 +35,7 @@ isore.constructJunctionTables <- function(unlisted_junctions, annotations,
             junctionEndName, startScore, endScore, id, annotatedJunction,
             annotatedStart, annotatedEnd)
     # correct junction coordinates using logistic regression classifier
-    uniqueJunctions <- junctionErrorCorrection(uniqueJunctions, verbose)
+    uniqueJunctions <- junctionErrorCorrection(uniqueJunctions, verbose, returnModel)
     return(uniqueJunctions)
 }
 
