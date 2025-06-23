@@ -10,7 +10,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "firstExonGroup", "lastExonGroup")
+                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "firstExonGroup", "lastExonGroup")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -112,7 +112,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   } else if(is.null(NDR)) {
           NDR <- 0.5
   }
-  filterSet <- (rowDataCombined$NDR <= NDR | rowDataCombined$readClassType == "equal:compatible")
+  filterSet <- (rowDataCombined$NDR.tx <= NDR | rowDataCombined$readClassType == "equal:compatible")
   lowConfidenceTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!filterSet,], 
         exonRangesCombined[!filterSet])
@@ -142,9 +142,9 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   extendedAnnotationRanges <- calculateRelSubsetCount(extendedAnnotationRanges, minEqClasses$eqClassById, min.readFractionByEqClass)
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                 c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", 
+                 c("TXNAME", "GENEID", "NDR.tx", "NDR.ic", "novelGene", "novelTranscript", 
                  "txClassDescription","readCount","relReadCount", 
-                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit")]
+                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
   metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
@@ -165,16 +165,15 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
     baseline <- predict(defaultModels$lmNDR, newdata=data.frame(NDR=baselineFDR))
     attr(defaultModels$lmNDR[["terms"]], ".Environment") <- c()
-
     score <- combinedTranscripts$maxTxScore.noFit
     score[is.na(score)] <- 0
-    NDRscores <- calculateNDR(score, equal)
-    NDR.rec <- predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
-    NDR.rec <- round(NDR.rec,3)
-    if(NDR.rec > 1) NDR.rec <- 0.999
-    if (NDR.rec < 0) NDR.rec <- 0
-    if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.rec)
-    if(NDR.rec > 0.5){
+    NDR.txScores <- calculateNDR(score, equal)
+    NDR.tx.rec <- predict(lm(NDR.txScores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
+    NDR.tx.rec <- round(NDR.tx.rec,3)
+    if(NDR.tx.rec > 1) NDR.tx.rec <- 0.999
+    if (NDR.tx.rec < 0) NDR.tx.rec <- 0
+    if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.tx.rec)
+    if(NDR.tx.rec > 0.5){
         message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
         "limiting the performance of the trained model")
         message("We recommend training a new model on similiar but well annotated dataset if available ",
@@ -184,10 +183,10 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     
     #if users are using an NDR let them know if the recommended NDR is different
     if(is.null(NDR)) {
-        NDR <- NDR.rec
+        NDR <- NDR.tx.rec
         message("Using a novel discovery rate (NDR) of: ", NDR)
-    } else if(abs(NDR.rec-NDR)>=0.1){
-            message(paste0("For your combination of sample and reference annotations we recommend an NDR of ", NDR.rec,
+    } else if(abs(NDR.tx.rec-NDR)>=0.1){
+            message(paste0("For your combination of sample and reference annotations we recommend an NDR of ", NDR.tx.rec,
             ". You are currently using an NDR threshold of ", NDR, 
             ". A higher NDR is suited for samples where the reference annotations are poor and more novel transcripts are expected,", 
             "whereas a lower NDR is suited for samples with already high quality annotations"))
@@ -200,13 +199,13 @@ recommendNDR.onAnnotations <- function(annotations, prefix = "Bambu", baselineFD
     equal <- !grepl(prefix, mcols$TXNAME)
     #add envirnment so poly() works
     attr(defaultModels2$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
-    baseline <- predict(defaultModels2$lmNDR, newdata=data.frame(NDR=baselineFDR))
+    baseline <- predict(defaultModels2$lmNDR, newdata=data.frame(NDR.tx=baselineFDR))
     attr(defaultModels2$lmNDR[["terms"]], ".Environment") <- c()
     score <- mcols$maxTxScore.noFit
-    NDRscores <- calculateNDR(score, equal)
-    NDR.rec <- predict(lm(NDRscores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
-    NDR.rec <- round(NDR.rec,3)
-    return(NDR.rec)
+    NDR.txScores <- calculateNDR(score, equal)
+    NDR.tx.rec <- predict(lm(NDR.txScores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
+    NDR.tx.rec <- round(NDR.tx.rec,3)
+    return(NDR.tx.rec)
 }
 
 
@@ -217,14 +216,22 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
     equal <- combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] <- FALSE
     if(sum(equal, na.rm = TRUE)<50 | sum(!equal, na.rm = TRUE)<50 | useTxScore){
-          combinedTranscripts$NDR <- 1 - combinedTranscripts$maxTxScore
+          combinedTranscripts$NDR.tx <- 1 - combinedTranscripts$maxTxScore
+          combinedTranscripts$NDR.ic <- 1 - combinedTranscripts$maxIntronChainScore
           if(!useTxScore) message("WARNING - Less than 50 TRUE or FALSE read classes ",
             "for NDR precision stabilization.")
           message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else {
-        combinedTranscripts$NDR <- calculateNDR(combinedTranscripts$maxTxScore, equal)
+        combinedTranscripts$NDR.tx <- calculateNDR(combinedTranscripts$maxTxScore, equal)
+        message("check point 1: maxIntronChainScore")
+        print(combinedTranscripts$maxIntronChainScore[1:10])
+        combinedTranscripts$NDR.ic <- calculateNDR(combinedTranscripts$maxIntronChainScore, equal)
+        message("check point 2: NDR.ic")
+        print(combinedTranscripts$NDR.ic[1:10])
+        #combinedTranscripts$NDR <- rowMeans(cbind(combinedTranscripts$txNDR, combinedTranscripts$sjNDR)) 
     }
-    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==-1] <- 1
+    combinedTranscripts$NDR.tx[combinedTranscripts$maxTxScore==-1] <- 1
+    combinedTranscripts$NDR.ic[combinedTranscripts$maxIntronChainScore==-1] <- 1
     return(combinedTranscripts)
 }
 
@@ -697,12 +704,12 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     if("NDR" %in% colnames(rowDataCombinedFiltered)){
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
-                                  "maxTxScore", "maxTxScore.noFit", "relReadCount")]
+      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR.tx","NDR.ic",
+                                  "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "relReadCount")]
     } else{
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount",
-                                  "maxTxScore", "maxTxScore.noFit", "relReadCount")]
+                                  "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "relReadCount")]
     }
     return(extendedAnnotationRanges)
 }
@@ -720,17 +727,23 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         mcols(annotationRangesToMerge)$txClassDescription <- "annotation"
         mcols(annotationRangesToMerge)$novelTranscript <- FALSE
         mcols(annotationRangesToMerge)$novelGene <- FALSE
-        mcols(annotationRangesToMerge)$NDR <- NA
+        mcols(annotationRangesToMerge)$NDR.tx <- NA
+        mcols(annotationRangesToMerge)$NDR.ic <- NA
         mcols(annotationRangesToMerge)$maxTxScore <- NA
         mcols(annotationRangesToMerge)$maxTxScore.noFit <- NA
+        mcols(annotationRangesToMerge)$maxIntronChainScore <- NA
+        mcols(annotationRangesToMerge)$maxIntronChainScore.noFit <- NA
         mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
         #copy over stats to annotations from read classes
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR <- equalRanges$NDR
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tx <- equalRanges$NDR.tx
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.ic <- equalRanges$NDR.ic
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore <- equalRanges$maxTxScore
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount <- equalRanges$readCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount <- equalRanges$relReadCount
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore <- equalRanges$maxTxScore
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore.noFit <- equalRanges$maxTxScore.noFit
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore <- equalRanges$maxIntronChainScore
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore.noFit <- equalRanges$maxIntronChainScore.noFit
         #mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
     }
     if (length(extendedAnnotationRanges)) {

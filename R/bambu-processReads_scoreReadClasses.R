@@ -42,15 +42,18 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     
     #calculate using the pretrained model for NDR recommendation
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
+    rowData(se)$intronChainScore.noFit = rep(NA,nrow(se))
     if(length(thresholdIndex)>0){
         txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                     model = NULL, defaultModels)
-        
         rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
+        intronChainScore.noFit = getIntronChainScore(rowData(se)[thresholdIndex,],
+                                                           model = NULL, defaultModels)
+        rowData(se)$intronChainScore.noFit[thresholdIndex] = intronChainScore.noFit
     }
-
     model = NULL
     rowData(se)$txScore = rowData(se)$txScore.noFit
+    rowData(se)$intronChainScore = rowData(se)$intronChainScore.noFit
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
         if(returnModel) metadata(se)$model = model
@@ -58,6 +61,11 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                                  defaultModels)
         rowData(se)$txScore = rep(NA,nrow(se))
         if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
+        
+        intronChainScore = getIntronChainScore(rowData(se)[thresholdIndex,], model,
+                                                     defaultModels)
+        rowData(se)$intronChainScore = rep(NA,nrow(se))
+        if(!is.null(intronChainScore))  rowData(se)$intronChainScore[thresholdIndex] = intronChainScore
     }
     if(is.null(model) & fit) {
         warningText = "Bambu was unable to train a model on this sample, and is using a pretrained model"
@@ -182,6 +190,39 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
     return(txScore)
 }
 
+
+#' calculates a intronChainScore based on same splice junction (ignore start/end)
+#' @noRd
+getIntronChainScore <- function(rowData, model = NULL, defaultModels){
+  rowData<- as_tibble(rowData) %>%
+    group_by(chr.rc, strand.rc, intronStarts, intronEnds, confidenceType, GENEID) %>%
+    mutate(spliceJunctionId = cur_group_id()) %>%
+    ungroup()
+  combinedRowData <- rowData %>%
+    group_by(spliceJunctionId) %>%
+    summarise(startSD = weightedMean(startSD, readCount), endSD = weightedMean(endSD, readCount),
+              readCount.posStrand = sum(readCount.posStrand, na.rm = TRUE), 
+              confidenceType = unique(confidenceType), novelGene = unique(novelGene), 
+              numExons = unique(numExons),
+              geneReadProp = sum(geneReadProp), geneReadCount = unique(geneReadCount),
+              equal = ifelse(any(equal), TRUE, FALSE), compatible = max(compatible),
+              numAstart = weightedMean(numAstart, readCount),
+              numAend = weightedMean(numAend, readCount),
+              numTstart = weightedMean(numTstart, readCount), 
+              numTend = weightedMean(numTend, readCount), 
+              readIds = list(readIds), sampleIDs = list(sampleIDs),
+              readCount = sum(readCount), 
+              intronStarts = unique(intronEnds), intronEnds = unique(intronEnds),
+              .groups = 'keep') 
+  intronChainScore <- getTranscriptScore(combinedRowData, 
+                                            model = model, defaultModels)
+  assign("combinedRowData", combinedRowData, envir = .GlobalEnv)
+  names(intronChainScore) <- combinedRowData$spliceJunctionId
+  intronChainScoreFinal <- intronChainScore[rowData$spliceJunctionId]
+  return(intronChainScoreFinal)
+}
+
+
 #' Function to train a model for use on other data
 #' @title Function to train a model for use on other data
 #' @description This function train a model for use on other data
@@ -226,10 +267,10 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
         txScore = predict(transcriptModelME, as.matrix(features))[indexME]
 
         ##Calculate the txScore baseline
-        NDR = calculateNDR(txScore, txFeatures$labels[indexME])
+        NDR.tx = calculateNDR(txScore, txFeatures$labels[indexME])
         #lm of NDR vs txScore
-        lmNDR = lm(txScore~poly(NDR,3,raw=TRUE))
-        txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR=NDR.threshold))
+        lmNDR = lm(txScore~poly(NDR.tx,3,raw=TRUE))
+        txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR.tx=NDR.threshold))
 
         ## Compare the trained model AUC to the default model AUC
         txScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
