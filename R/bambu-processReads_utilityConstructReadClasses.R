@@ -95,6 +95,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
+        start.rc = start, end.rc = end, 
         firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup,
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount, readIds, sampleIDs)

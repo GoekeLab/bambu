@@ -135,7 +135,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   extendedAnnotationRanges <- combindRowDataWithRanges(rowDataCombined, exonRangesCombined)
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, extendedAnnotationRanges, 
-    annotationGrangesList, prefix)
+    annotationGrangesList, prefix, trustReads = TRUE)
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
@@ -710,8 +710,11 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
 #' combine annotations with predicted transcripts
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
-                                        extendedAnnotationRanges,annotationGrangesList, prefix){
+                                        extendedAnnotationRanges,annotationGrangesList, prefix, trustReads = TRUE){
     equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
+    if(trustReads == TRUE){
+      annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
+    }
     #remove extended ranges that are already present in annotation
     extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
     annotationRangesToMerge <- annotationGrangesList
