@@ -10,7 +10,7 @@
 #' @noRd
 isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                                        uniqueJunctions, runName = "sample1",
-                                       annotations, stranded = FALSE, verbose = FALSE) {
+                                       annotations, stranded = FALSE, verbose = FALSE, referenceTss = referenceTss) {
     #split reads into single exon and multi exon reads
     reads.singleExon <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
                                use.names = FALSE)
@@ -29,7 +29,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
             uniqueJunctions = uniqueJunctions,
             unlisted_junctions = unlisted_junctions,
             readGrgList = readGrgList,
-            stranded = stranded, annotations)}
+            stranded = stranded, annotations, referenceTss = referenceTss)}
     else{exonsByRC.spliced = GRangesList()}
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
@@ -57,7 +57,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' @importFrom GenomicRanges match
 #' @noRd
 constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
-                                        readGrgList, annotations, stranded = FALSE) {
+                                        readGrgList, annotations, stranded = FALSE, referenceTss = referenceTss) {
     options(scipen = 999)
     allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
                                                      uniqueJunctions, ignore.strand = TRUE)
@@ -91,12 +91,12 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     rm(lowConfidenceReads, uniqueJunctions, allToUniqueJunctionMatch)
     readTable <- createReadTable(start(unlisted_junctions), 
         end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
-        readStrand, readConfidence, annotations)
+        readStrand, readConfidence, annotations, referenceTss = referenceTss)
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         start.rc = start, end.rc = end, 
-        firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup,
+        firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup, tssId = tssId, tssNumber = tssNumber,
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount, readIds, sampleIDs)
     mcols(exonsByReadClass) <- readTable
@@ -161,7 +161,7 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #'     row_number .groups
 #' @noRd
 createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
-    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations) {
+    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations, referenceTss = referenceTss) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     intronStartCoordinatesInt <- 
         as.integer(min(splitAsList(unlisted_junctions_start,
@@ -182,6 +182,11 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         alignmentStrand = as.character(getStrandFromGrList(readGrgList))=='+',
         readId = mcols(readGrgList)$id,
         sampleID = mcols(readGrgList)$sampleID)
+    #assign tssId
+    tssList <- prepareTss(annotations, referenceTss)
+    #print("Tss list has been prepared!")
+    readTable <- assignTssToReads(readTable, tssList = tssList)
+    
     readTable <- readTable %>%
       mutate(intronStartCoordinatesInt = intronStartCoordinatesInt,
              intronEndCoordinatesInt = intronEndCoordinatesInt,
@@ -197,18 +202,74 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     readTable <- splitReadClassByStartEnd(readTable, annotations)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
-        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
+        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup, tssId) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
                 firstExonGroup = unique(firstExonGroup), lastExonGroup =  unique(lastExonGroup),
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), 
-                readIds = list(readId), sampleIDs = list(sampleID),
+                readIds = list(readId), sampleIDs = list(sampleID), 
+                tssNumber = length(unique(tssId[!is.na(tssId)])),
+                tssId = paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
     return(readTable)
 }
+
+#prepare tss list based on annotations and referenceTss
+prepareTss <- function(annotations, referenceTss = NULL){
+  if (!is.null(referenceTss)) {
+    if (is.character(referenceTss) && grepl("\\.bed(\\.gz)?$", referenceTss)) {
+      referenceTss <- import(referenceTss, format = "BED")
+      #referenceTss <- split(referenceTss, referenceTss$name)
+    } else if (inherits(referenceTss, "CompressedGRangesList")) {
+      referenceTss <- referenceTss
+    } else if (inherits(referenceTss, "GRanges")) {
+      #referenceTss <- split(referenceTss, names(referenceTss))
+    } else {
+      stop("`referenceTss` must be a .bed/.bed.gz path, GRanges, or GRangesList.")
+    }
+    seqlevelsStyle(referenceTss) <- seqlevelsStyle(annotations) 
+    mcols(referenceTss)$tssId <-paste0("referenceTss", c(1:length(referenceTss)))
+  }
+  starts <- as.integer(endoapply(start(annotations), function(x) x[1]))
+  ends <- as.integer(endoapply(end(annotations), function(x) x[length(x)]))
+  strands <- as.character(runValue(strand(annotations)))
+  seqnames_list <- as.character(runValue(seqnames(annotations)))
+  tss <- ifelse(strands != "-", starts + 5, ends - 5)
+  annoTssRanges <- GRanges(
+    seqnames = seqnames_list,
+    ranges = IRanges(start = tss, width = 10),
+    strand = strands
+  ) 
+  annoTssRanges <- unique(annoTssRanges)
+  mcols(annoTssRanges)$tssId <- paste0("annotationTss", c(1:length(annoTssRanges)))
+  #combine tss together
+  tssList <- unique(c(referenceTss, annoTssRanges))
+  names(tssList) <- mcols(tssList)$tssId
+  return(tssList)
+}
+
+assignTssToReads <- function(readTable, tssList){
+  readTable <- readTable %>%
+    mutate(tssRanges = ifelse(strand != "-", start, end))
+  readTss <- GRanges(
+    seqnames = readTable$chr,
+    ranges = IRanges(start = readTable$tssRanges, width = 1),
+    strand = readTable$strand)
+  mcols(readTss)$readId <- readTable$readId
+  readTss_withTss <- join_nearest_upstream(readTss, tssList, suffix = c(".x", ".y"), distance = TRUE)
+  readTss_withTss <- readTss_withTss[mcols(readTss_withTss)$distance <= 50]
+  idx <- match(readTable$readId, mcols(readTss_withTss)$readId)
+  readTable$tssId <- NA_character_
+  #readTable$distance <- NA_integer_
+  matched <- which(!is.na(idx))
+  readTable$tssId[matched] <- mcols(readTss_withTss)$tssId[idx[matched]]
+  return(readTable)
+}
+
+
 
 splitReadClassByStartEnd <- function(readTable, annotations, startEndWindowSize = 35 ){
   exons <- unlist(annotations)

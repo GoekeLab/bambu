@@ -12,7 +12,7 @@
 #' @importFrom BiocParallel bplapply
 #' @importFrom BiocGenerics basename
 #' @noRd
-bambu.processReads <- function(reads, annotations, genomeSequence,
+bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss = referenceTss,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
     processByChromosome = FALSE, processByBam = TRUE, trackReads = trackReads, fusionMode = fusionMode, 
@@ -92,7 +92,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         } else {
           mcols(readGrgList)$sampleID <- i
         }
-        readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence,annotations = annotations,
+        readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence, referenceTss = referenceTss, annotations = annotations,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
@@ -196,7 +196,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se <- isore.constructReadClasses(readGrgList, 
                                               unlisted_junctions, uniqueJunctions, runName = "TODO",
-                                              annotations, stranded, verbose)
+                                              annotations, stranded, verbose, referenceTss = referenceTss)
 
     }
 
@@ -319,7 +319,7 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se <- isore.constructReadClasses(readGrgList, 
                                               unlisted_junctions, uniqueJunctions, runName = "TODO",
-                                              annotations, stranded, verbose)
+                                              annotations, stranded, verbose, referenceTss = referenceTss)
 
     }
     metadata(se)$warnings <- warnings
@@ -361,7 +361,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se.temp <- isore.constructReadClasses(readGrgList[[i]], 
                                               unlisted_junctions, uniqueJunctions, runName = "TODO",
-                                              annotations, stranded, verbose)
+                                              annotations, stranded, verbose, referenceTss = referenceTss)
         return(se.temp)
     })
     se <- se[!sapply(se, FUN = is.null)]
