@@ -201,7 +201,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
             }
             message("--- Start generating read class files ---")
             readClassList <- bambu.processReads(reads, annotations, 
-                                                genomeSequence = genome, referenceTss = referenceTss, 
+                                                genomeSequence = genome, referenceTss, 
                                                 readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
                                                 bpParameters = bpParameters, stranded = stranded, verbose = verbose,
                                                 isoreParameters = isoreParameters, trackReads = trackReads, 

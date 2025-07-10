@@ -10,7 +10,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "firstExonGroup", "lastExonGroup")
+                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "firstExonGroup", "lastExonGroup", "tssId")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -144,7 +144,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                  c("TXNAME", "GENEID", "NDR", "novelGene", "novelTranscript", 
                  "txClassDescription","readCount","relReadCount", 
-                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit")]
+                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", "tssId")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
   metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
@@ -697,11 +697,11 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     if("NDR" %in% colnames(rowDataCombinedFiltered)){
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR",
+      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR", "tssId",
                                   "maxTxScore", "maxTxScore.noFit", "relReadCount")]
     } else{
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount",
+      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "tssId",
                                   "maxTxScore", "maxTxScore.noFit", "relReadCount")]
     }
     return(extendedAnnotationRanges)

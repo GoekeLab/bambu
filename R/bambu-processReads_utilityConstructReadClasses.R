@@ -224,14 +224,13 @@ prepareTss <- function(annotations, referenceTss = NULL){
   strands <- as.character(runValue(strand(annotations)))
   seqnames_list <- as.character(runValue(seqnames(annotations)))
   tss <- ifelse(strands != "-", starts + 5, ends - 5)
-  annoTssRanges <- GRanges(
+  annotationTss <- GRanges(
     seqnames = seqnames_list,
     ranges = IRanges(start = tss, width = 10),
     strand = strands
   ) 
-  annoTssRanges <- unique(annoTssRanges)
-  mcols(annoTssRanges)$tssId <- paste0("annotationTss", c(1:length(annoTssRanges)))
-  
+  annotationTss <- unique(annotationTss)
+  mcols(annotationTss)$tssId <- paste0("annotationTss", c(1:length(annotationTss)))
   if (!is.null(referenceTss)) {
     if (is.character(referenceTss) && grepl("\\.bed(\\.gz)?$", referenceTss)) {
       referenceTss <- import(referenceTss, format = "BED")
@@ -245,10 +244,25 @@ prepareTss <- function(annotations, referenceTss = NULL){
     }
     seqlevelsStyle(referenceTss) <- seqlevelsStyle(annotations) 
     mcols(referenceTss)$tssId <-paste0("referenceTss", c(1:length(referenceTss)))
-    tssList <- unique(c(referenceTss, annoTssRanges))
+
+    #merge overlaped tss ranges 
+    hits <- findOverlaps(annotationTss, referenceTss)
+    consensusTSS <- GRanges(
+      seqnames = seqnames(annotationTss)[queryHits(hits)],
+      ranges = IRanges(
+        start = pmin(start(annotationTss)[queryHits(hits)], start(referenceTss)[subjectHits(hits)]),
+        end   = pmax(end(annotationTss)[queryHits(hits)],   end(referenceTss)[subjectHits(hits)])
+      ),
+      strand = strand(annotationTss)[queryHits(hits)]
+    )
+    mcols(consensusTSS)$tssId <-paste0("consensusTSS", c(1:length(consensusTSS)))
+    #Remove merged elements from original ranges
+    annotationTss <- annotationTss[-unique(queryHits(hits))]
+    referenceTss <- referenceTss[-unique(subjectHits(hits))]
+    tssList <- unique(c(annotationTss, referenceTss, consensusTSS))
   } else {
     message("No reference Tss provided!")
-    tssList <- annoTssRanges
+    tssList <- annotationTss
   }
   names(tssList) <- mcols(tssList)$tssId
   return(tssList)
@@ -256,19 +270,16 @@ prepareTss <- function(annotations, referenceTss = NULL){
 
 assignTssToReads <- function(readTable, tssList){
   readTable <- readTable %>%
-    mutate(tssRanges = ifelse(strand != "-", start, end))
+    mutate(tssRanges = ifelse(strand != "-", start - 25 , end - 25))
   readTss <- GRanges(
     seqnames = readTable$chr,
-    ranges = IRanges(start = readTable$tssRanges, width = 1),
+    ranges = IRanges(start = readTable$tssRanges, width = 50),
     strand = readTable$strand)
   mcols(readTss)$readId <- readTable$readId
-  readTss_withTss <- join_nearest_upstream(readTss, tssList, suffix = c(".x", ".y"), distance = TRUE)
-  readTss_withTss <- readTss_withTss[mcols(readTss_withTss)$distance <= 50]
-  idx <- match(readTable$readId, mcols(readTss_withTss)$readId)
+  #find the start of reads within the tssList
   readTable$tssId <- NA_character_
-  #readTable$distance <- NA_integer_
-  matched <- which(!is.na(idx))
-  readTable$tssId[matched] <- mcols(readTss_withTss)$tssId[idx[matched]]
+  within_index <- findOverlaps(readTss, tssList)
+  readTable$tssId[queryHits(within_index)] <- mcols(tssList)$tssId[subjectHits(within_index)]
   return(readTable)
 }
 

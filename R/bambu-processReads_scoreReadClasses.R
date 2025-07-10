@@ -214,9 +214,6 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
     ## Multi-Exon
     indexME = which(!rowData$novelGene & rowData$numExons>1)
     if(length(indexME)>0){
-        saveRDS(features, "/home/suiyue/Documents/promoter_activity/modelFeature/features.rds")
-        saveRDS(txFeatures, "/home/suiyue/Documents/promoter_activity/modelFeature/txFeatures.rds")
-        
         transcriptModelME = fitXGBoostModel(
             data.train=as.matrix(features[indexME,]),
             labels.train=txFeatures$labels[indexME], 
