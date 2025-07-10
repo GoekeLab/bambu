@@ -3,7 +3,7 @@
 #' @inheritParams bambu
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations, NDR,
-    isoreParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE) {
+    isoreParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE, trustReads = FALSE) {
     start.ptm_all <- proc.time()
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClassList,
         stranded, ## stranded used for unspliced reduce  
@@ -35,7 +35,8 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
         prefix = isoreParameters[["prefix"]],
         baselineFDR = isoreParameters[["baselineFDR"]],
         defaultModels = isoreParameters[["defaultModels"]],
-        verbose = verbose)
+        verbose = verbose,
+        trustReads = trustReads)
     end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",
                          round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")

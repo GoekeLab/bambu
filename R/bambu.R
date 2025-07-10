@@ -135,7 +135,7 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
-bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenceTss = NULL, 
+bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenceTss = NULL, trustReads = FALSE,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE,
@@ -201,7 +201,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
             }
             message("--- Start generating read class files ---")
             readClassList <- bambu.processReads(reads, annotations, 
-                                                genomeSequence = genome, referenceTss, 
+                                                genomeSequence = genome, referenceTss = referenceTss, 
                                                 readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
                                                 bpParameters = bpParameters, stranded = stranded, verbose = verbose,
                                                 isoreParameters = isoreParameters, trackReads = trackReads, 
@@ -217,7 +217,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
         if (discovery) {
             message("--- Start extending annotations ---")
             extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-                                                           isoreParameters, stranded, bpParameters, fusionMode, verbose)
+                                                           isoreParameters, stranded, bpParameters, fusionMode, verbose, trustReads = trustReads)
             metadata(extendedAnnotations)$warnings = warnings
             
             #### cluster based transcript discovery

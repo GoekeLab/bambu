@@ -10,7 +10,7 @@
 #' @noRd
 isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                                        uniqueJunctions, runName = "sample1",
-                                       annotations, stranded = FALSE, verbose = FALSE, referenceTss = referenceTss) {
+                                       annotations, stranded = FALSE, verbose = FALSE, referenceTss = NULL) {
     #split reads into single exon and multi exon reads
     reads.singleExon <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
                                use.names = FALSE)
@@ -57,7 +57,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' @importFrom GenomicRanges match
 #' @noRd
 constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
-                                        readGrgList, annotations, stranded = FALSE, referenceTss = referenceTss) {
+                                        readGrgList, annotations, stranded = FALSE, referenceTss = NULL) {
     options(scipen = 999)
     allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
                                                      uniqueJunctions, ignore.strand = TRUE)
@@ -161,7 +161,7 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #'     row_number .groups
 #' @noRd
 createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
-    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations, referenceTss = referenceTss) {
+    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations, referenceTss = NULL) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     intronStartCoordinatesInt <- 
         as.integer(min(splitAsList(unlisted_junctions_start,
@@ -219,6 +219,19 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
 
 #prepare tss list based on annotations and referenceTss
 prepareTss <- function(annotations, referenceTss = NULL){
+  starts <- as.integer(endoapply(start(annotations), function(x) x[1]))
+  ends <- as.integer(endoapply(end(annotations), function(x) x[length(x)]))
+  strands <- as.character(runValue(strand(annotations)))
+  seqnames_list <- as.character(runValue(seqnames(annotations)))
+  tss <- ifelse(strands != "-", starts + 5, ends - 5)
+  annoTssRanges <- GRanges(
+    seqnames = seqnames_list,
+    ranges = IRanges(start = tss, width = 10),
+    strand = strands
+  ) 
+  annoTssRanges <- unique(annoTssRanges)
+  mcols(annoTssRanges)$tssId <- paste0("annotationTss", c(1:length(annoTssRanges)))
+  
   if (!is.null(referenceTss)) {
     if (is.character(referenceTss) && grepl("\\.bed(\\.gz)?$", referenceTss)) {
       referenceTss <- import(referenceTss, format = "BED")
@@ -232,21 +245,11 @@ prepareTss <- function(annotations, referenceTss = NULL){
     }
     seqlevelsStyle(referenceTss) <- seqlevelsStyle(annotations) 
     mcols(referenceTss)$tssId <-paste0("referenceTss", c(1:length(referenceTss)))
+    tssList <- unique(c(referenceTss, annoTssRanges))
+  } else {
+    message("No reference Tss provided!")
+    tssList <- annoTssRanges
   }
-  starts <- as.integer(endoapply(start(annotations), function(x) x[1]))
-  ends <- as.integer(endoapply(end(annotations), function(x) x[length(x)]))
-  strands <- as.character(runValue(strand(annotations)))
-  seqnames_list <- as.character(runValue(seqnames(annotations)))
-  tss <- ifelse(strands != "-", starts + 5, ends - 5)
-  annoTssRanges <- GRanges(
-    seqnames = seqnames_list,
-    ranges = IRanges(start = tss, width = 10),
-    strand = strands
-  ) 
-  annoTssRanges <- unique(annoTssRanges)
-  mcols(annoTssRanges)$tssId <- paste0("annotationTss", c(1:length(annoTssRanges)))
-  #combine tss together
-  tssList <- unique(c(referenceTss, annoTssRanges))
   names(tssList) <- mcols(tssList)$tssId
   return(tssList)
 }
