@@ -107,6 +107,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
   rowDataCombined <- calculateNDROnTranscripts(rowDataCombined, 
                         useTxScore = length(annotationGrangesList)==0)
+
   if(length(annotationGrangesList)>0){ #only recommend an NDR if its possible to calculate an NDR
       NDR <- recommendNDR(rowDataCombined, baselineFDR, NDR, defaultModels, verbose)
   } else if(is.null(NDR)) {
@@ -223,13 +224,11 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
           message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else {
         combinedTranscripts$NDR.tx <- calculateNDR(combinedTranscripts$maxTxScore, equal)
-        message("check point 1: maxIntronChainScore")
-        print(combinedTranscripts$maxIntronChainScore[1:10])
         combinedTranscripts$NDR.ic <- calculateNDR(combinedTranscripts$maxIntronChainScore, equal)
-        message("check point 2: NDR.ic")
-        print(combinedTranscripts$NDR.ic[1:10])
         #combinedTranscripts$NDR <- rowMeans(cbind(combinedTranscripts$txNDR, combinedTranscripts$sjNDR)) 
+        combinedTranscripts <<- combinedTranscripts
     }
+    
     combinedTranscripts$NDR.tx[combinedTranscripts$maxTxScore==-1] <- 1
     combinedTranscripts$NDR.ic[combinedTranscripts$maxIntronChainScore==-1] <- 1
     return(combinedTranscripts)
@@ -702,7 +701,7 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
                                        == "allNew" & rowDataCombinedFiltered$novelGene] <-
       "newGene-spliced"
     extendedAnnotationRanges <- exonRangesCombinedFiltered
-    if("NDR" %in% colnames(rowDataCombinedFiltered)){
+    if(any(grepl("NDR", colnames(rowDataCombinedFiltered)))){
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR.tx","NDR.ic", "tssId",
                                   "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "relReadCount")]
