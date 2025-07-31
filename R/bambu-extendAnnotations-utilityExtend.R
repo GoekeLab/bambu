@@ -6,11 +6,11 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
-                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE){
+                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE, trustReads = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "firstExonGroup", "lastExonGroup")
+                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "firstExonGroup", "lastExonGroup", "tssId")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -44,7 +44,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     # ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose)
+      remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose, trustReads = trustReads)
     message(paste0("Novel transcripts detected: ", sum(mcols(extendedAnnotationRanges)$novelTranscript)))
     message(paste0("Novel genes detected: ", length(unique(mcols(extendedAnnotationRanges)$GENEID[mcols(extendedAnnotationRanges)$novelGene]))))
     message(paste0("Low confidence transcripts excluded: ", length(metadata(extendedAnnotationRanges)$lowConfidenceTranscripts)))
@@ -82,7 +82,7 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
                                           exonRangesCombined, prefix,  remove.subsetTx, 
                                           min.readFractionByEqClass, baselineFDR = 0.1, 
-                                          NDR = NULL, defaultModels = NULL, verbose) {
+                                          NDR = NULL, defaultModels = NULL, verbose, trustReads = FALSE) {
   start.ptm <- proc.time() # (1) based on transcript usage
   
   #calculate relative read count before any filtering
@@ -135,7 +135,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   extendedAnnotationRanges <- combindRowDataWithRanges(rowDataCombined, exonRangesCombined)
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, extendedAnnotationRanges, 
-    annotationGrangesList, prefix)
+    annotationGrangesList, prefix, trustReads = trustReads)
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
@@ -144,7 +144,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                  c("TXNAME", "GENEID", "NDR.tx", "NDR.ic", "novelGene", "novelTranscript", 
                  "txClassDescription","readCount","relReadCount", 
-                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit")]
+                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "tssId")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
   metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
@@ -704,11 +704,11 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
     extendedAnnotationRanges <- exonRangesCombinedFiltered
     if("NDR" %in% colnames(rowDataCombinedFiltered)){
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR.tx","NDR.ic",
+      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "NDR.tx","NDR.ic", "tssId",
                                   "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "relReadCount")]
     } else{
     mcols(extendedAnnotationRanges) <-
-      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount",
+      rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "tssId",
                                   "maxTxScore", "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit", "relReadCount")]
     }
     return(extendedAnnotationRanges)
@@ -717,8 +717,11 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
 #' combine annotations with predicted transcripts
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
-                                        extendedAnnotationRanges,annotationGrangesList, prefix){
+                                        extendedAnnotationRanges,annotationGrangesList, prefix, trustReads = FALSE){
     equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
+    if(trustReads == TRUE){
+      annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
+    }
     #remove extended ranges that are already present in annotation
     extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
     annotationRangesToMerge <- annotationGrangesList

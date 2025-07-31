@@ -51,3 +51,40 @@ transcriptToGeneExpression <- function(se) {
     
     return(seOutput)
 }
+
+addTssId <- function(se){
+  seTssTable <- tibble(start = unlist(endoapply(start(rowRanges(se)), function(x) x[1])), 
+                       end = unlist(endoapply(end(rowRanges(se)), function(x) x[length(x)])),
+                       strand = as.character(getStrandFromGrList(rowRanges(se))),
+                       chr = as.character(getChrFromGrList(rowRanges(se)))) %>%
+    mutate(tssRanges = ifelse(strand != "-", start, end)) %>%
+    group_by(chr, strand, tssRanges) %>% 
+    mutate(TSSID = paste0("BambuTss", cur_group_id())) %>%
+    ungroup()
+  rowData(se)$TSSID <- seTssTable$TSSID
+  rowData(se)$tssRanges <- seTssTable$tssRanges
+  return(se)
+}
+
+transcriptToTssExpression <- function(se){
+  counts <- assays(se)$counts
+  counts  <- fac2sparse(rowData(se)$TSSID) %*% counts
+  tssRanges <- GRanges(
+    seqnames = as.character(getChrFromGrList(rowRanges(se))),
+    ranges = IRanges(start = rowData(se)$tssRanges, width = 1),
+    strand = as.character(getStrandFromGrList(rowRanges(se)))
+  )
+  names(tssRanges) <- rowData(se)$TSSID
+  ## SE
+  RowNames <- rownames(counts)
+  ColNames <- colnames(counts)
+  ColData <- colData(se)
+  ColData@rownames <- ColNames
+  ColData@listData$name <- ColNames
+  seOutput <- SummarizedExperiment(
+    assays = SimpleList(counts = counts),
+    rowRanges = tssRanges[RowNames],
+    colData = ColData)
+  rowRanges(seOutput) <- split(rowRanges(seOutput), names(rowRanges(seOutput)))
+  return(seOutput)
+}
