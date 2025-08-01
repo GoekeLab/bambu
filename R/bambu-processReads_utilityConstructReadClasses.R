@@ -202,7 +202,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     readTable <- splitReadClassByStartEnd(readTable, annotations)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
-        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup, tssId) %>% 
+        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
@@ -230,7 +230,8 @@ prepareTss <- function(annotations, referenceTss = NULL){
     strand = strands
   ) 
   annotationTss <- unique(annotationTss)
-  mcols(annotationTss)$tssId <- paste0("annotationTss", c(1:length(annotationTss)))
+
+  mcols(annotationTss)$source <- "annotation"
   if (!is.null(referenceTss)) {
     if (is.character(referenceTss) && grepl("\\.bed(\\.gz)?$", referenceTss)) {
       referenceTss <- import(referenceTss, format = "BED")
@@ -243,7 +244,7 @@ prepareTss <- function(annotations, referenceTss = NULL){
       stop("`referenceTss` must be a .bed/.bed.gz path, GRanges, or GRangesList.")
     }
     seqlevelsStyle(referenceTss) <- seqlevelsStyle(annotations) 
-    mcols(referenceTss)$tssId <-paste0("referenceTss", c(1:length(referenceTss)))
+    mcols(referenceTss)$source <- "reference"
 
     #merge overlaped tss ranges 
     hits <- findOverlaps(annotationTss, referenceTss)
@@ -255,15 +256,19 @@ prepareTss <- function(annotations, referenceTss = NULL){
       ),
       strand = strand(annotationTss)[queryHits(hits)]
     )
-    mcols(consensusTSS)$tssId <-paste0("consensusTSS", c(1:length(consensusTSS)))
+    mcols(consensusTSS)$source <- "consensus"
     #Remove merged elements from original ranges
     annotationTss <- annotationTss[-unique(queryHits(hits))]
     referenceTss <- referenceTss[-unique(subjectHits(hits))]
     tssList <- unique(c(annotationTss, referenceTss, consensusTSS))
+    
   } else {
     message("No reference Tss provided!")
     tssList <- annotationTss
   }
+  seqlevels(tssList) <- sortSeqlevels(seqlevels(tssList))
+  tssList <- GenomicRanges::sort(tssList, ignore.strand = TRUE)
+  mcols(tssList)$tssId <- c(1:length(tssList))
   names(tssList) <- mcols(tssList)$tssId
   return(tssList)
 }
@@ -280,6 +285,7 @@ assignTssToReads <- function(readTable, tssList){
   readTable$tssId <- NA_character_
   within_index <- findOverlaps(readTss, tssList)
   readTable$tssId[queryHits(within_index)] <- mcols(tssList)$tssId[subjectHits(within_index)]
+  #readTable$tssId[queryHits(within_index)] <- TRUE
   return(readTable)
 }
 

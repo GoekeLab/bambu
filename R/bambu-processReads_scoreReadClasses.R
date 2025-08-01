@@ -43,6 +43,10 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     #calculate using the pretrained model for NDR recommendation
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$intronChainScore.noFit = rep(NA,nrow(se))
+    rowData(se)$tssScore.noFit = rep(NA,nrow(se))
+
+    message("check point 1!!!")
+    
     if(length(thresholdIndex)>0){
         txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                     model = NULL, defaultModels)
@@ -50,23 +54,40 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
         intronChainScore.noFit = getIntronChainScore(rowData(se)[thresholdIndex,],
                                                            model = NULL, defaultModels)
         rowData(se)$intronChainScore.noFit[thresholdIndex] = intronChainScore.noFit
+
+        tssScore.noFit = getTssScore(rowData(se)[thresholdIndex,], 
+                                    model = NULL, defaultModels)
+        rowData(se)$tssScore.noFit[thresholdIndex] = tssScore.noFit    
     }
     model = NULL
     rowData(se)$txScore = rowData(se)$txScore.noFit
     rowData(se)$intronChainScore = rowData(se)$intronChainScore.noFit
+    rowData(se)$tssScore = rowData(se)$tssScore.noFit
+
+    message("check point 2!!!")
+
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
         if(returnModel) metadata(se)$model = model
         txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
                                  defaultModels)
         rowData(se)$txScore = rep(NA,nrow(se))
+
         if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
-        
         intronChainScore = getIntronChainScore(rowData(se)[thresholdIndex,], model,
                                                      defaultModels)
         rowData(se)$intronChainScore = rep(NA,nrow(se))
         if(!is.null(intronChainScore))  rowData(se)$intronChainScore[thresholdIndex] = intronChainScore
+        message("intronChainScore finished!!!")
+
+        tssScore = getTssScore(rowData(se)[thresholdIndex,], model,
+                                                     defaultModels)
+        rowData(se)$tssScore = rep(NA,nrow(se))
+        if(!is.null(tssScore))  rowData(se)$tssScore[thresholdIndex] = tssScore
+        message("tssScore finished!!!")
     }
+    message("check point 3!!!")
+
     if(is.null(model) & fit) {
         warningText = "Bambu was unable to train a model on this sample, and is using a pretrained model"
         metadata(se)$warnings = c(metadata(se)$warnings, warningText)
@@ -212,16 +233,44 @@ getIntronChainScore <- function(rowData, model = NULL, defaultModels){
               numTend = weightedMean(numTend, readCount), 
               readIds = list(readIds), sampleIDs = list(sampleIDs),
               readCount = sum(readCount), 
-              intronStarts = unique(intronEnds), intronEnds = unique(intronEnds),
+              intronStarts = unique(intronStarts), intronEnds = unique(intronEnds),
               .groups = 'keep') 
   intronChainScore <- getTranscriptScore(combinedRowData, 
                                             model = model, defaultModels)
-  assign("combinedRowData", combinedRowData, envir = .GlobalEnv)
   names(intronChainScore) <- combinedRowData$spliceJunctionId
   intronChainScoreFinal <- intronChainScore[rowData$spliceJunctionId]
   return(intronChainScoreFinal)
 }
 
+#' calculates a tssScore based on same splice junction and same firstExon
+#' @noRd
+getTssScore <- function(rowData, model = NULL, defaultModels){
+  rowData<- as_tibble(rowData) %>%
+    group_by(chr.rc, strand.rc, intronStarts, intronEnds, confidenceType, firstExonGroup, GENEID) %>%
+    mutate(tssInternalId = cur_group_id()) %>%
+    ungroup()
+  combinedRowData <- rowData %>%
+    group_by(tssInternalId) %>%
+    summarise(startSD = weightedMean(startSD, readCount), endSD = weightedMean(endSD, readCount),
+              readCount.posStrand = sum(readCount.posStrand, na.rm = TRUE), 
+              confidenceType = unique(confidenceType), novelGene = unique(novelGene), 
+              numExons = unique(numExons),
+              geneReadProp = sum(geneReadProp), geneReadCount = unique(geneReadCount),
+              equal = ifelse(any(equal), TRUE, FALSE), compatible = max(compatible),
+              numAstart = weightedMean(numAstart, readCount),
+              numAend = weightedMean(numAend, readCount),
+              numTstart = weightedMean(numTstart, readCount), 
+              numTend = weightedMean(numTend, readCount), 
+              readIds = list(readIds), sampleIDs = list(sampleIDs),
+              readCount = sum(readCount), 
+              #intronStarts = list(intronStarts), intronEnds = list(intronEnds),
+              .groups = 'keep') 
+  tssScore <- getTranscriptScore(combinedRowData, 
+                                        model = model, defaultModels)
+  names(tssScore) <- combinedRowData$tssInternalId
+  tssScoreScoreFinal <- tssScore[rowData$tssInternalId]
+  return(tssScoreScoreFinal)
+}
 
 #' Function to train a model for use on other data
 #' @title Function to train a model for use on other data
@@ -332,17 +381,17 @@ trim_lm = function(lm){
 
 #' calculate and format read class features for model training
 #' @noRd
-prepareTranscriptModelFeatures = function(rowData){
-    scalingFactor = sum(rowData$readCount)/1000000
-    outData <- as_tibble(rowData) %>%  
-        dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
-                      numAstart, numAend, numTstart,numTend, 
-                      tx_strand_bias = readCount.posStrand, labels = equal) %>%
-        mutate(
-            tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
-            numReads = log2(pmax(1,1+(numReads/scalingFactor)))
-        )
-    return(outData)
+prepareTranscriptModelFeatures = function(rowData, labels = "equal"){
+  scalingFactor = sum(rowData$readCount)/1000000
+  outData <- as_tibble(rowData) %>%  
+    dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
+                  numAstart, numAend, numTstart,numTend, 
+                  tx_strand_bias = readCount.posStrand, labels = labels) %>%
+    mutate(
+      tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
+      numReads = log2(pmax(1,1+(numReads/scalingFactor)))
+    )
+  return(outData)
 }
 
 #' ensures that the data is trainable after filtering
