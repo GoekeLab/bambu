@@ -135,7 +135,7 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
-bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenceTss = NULL, trustReads = FALSE,
+bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenceTss = NULL, startEndWindowSize = 0, trustReads = FALSE,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE,
@@ -201,7 +201,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
             }
             message("--- Start generating read class files ---")
             readClassList <- bambu.processReads(reads, annotations, 
-                                                genomeSequence = genome, referenceTss, 
+                                                genomeSequence = genome, referenceTss, startEndWindowSize,
                                                 readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
                                                 bpParameters = bpParameters, stranded = stranded, verbose = verbose,
                                                 isoreParameters = isoreParameters, trackReads = trackReads, 
