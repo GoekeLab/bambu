@@ -96,7 +96,8 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
         start.rc = start, end.rc = end, 
-        firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup, tssId = tssId, tssNumber = tssNumber,
+        firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup, tssNumber = tssNumber,
+        startRegionId = startRegionId, endRegionId = endRegionId,
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount, readIds, sampleIDs)
     mcols(exonsByReadClass) <- readTable
@@ -199,7 +200,8 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     rm(readRanges, readStrand, unlisted_junctions_start, 
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
-    readTable <- splitReadClassByStartEnd(readTable, annotations, startEndWindowSize)
+    annoTable <- createAnnoTable(annotations)
+    readTable <- splitReadClassByStartEnd(readTable, annoTable, startEndWindowSize, alternativeStartEnd = F)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
@@ -214,6 +216,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
+    readTable <- assignRegionIdToRc(readTable, annoTable, startEndWindowSize)
     return(readTable)
 }
 
@@ -289,15 +292,14 @@ assignTssToReads <- function(readTable, tssList){
   return(readTable)
 }
 
-
-
-splitReadClassByStartEnd <- function(readTable, annotations, startEndWindowSize = 0 ){
+createAnnoTable <- function(annotations){
   exons <- unlist(annotations)
   mcols(exons) <- cbind(mcols(exons),
                         mcols(annotations)[rep(seq_along(annotations), elementNROWS(annotations)), ])
   annoTable <- tibble(TXNAME = names(exons), 
                       GENEID = mcols(exons)$GENEID, 
                       exonRank = mcols(exons)$exon_rank,
+                      exon_endRank = mcols(exons)$exon_endRank,
                       chr = as.character(seqnames(exons)), 
                       start = start(exons),
                       end = end(exons),
@@ -305,18 +307,56 @@ splitReadClassByStartEnd <- function(readTable, annotations, startEndWindowSize 
                       firstExon5prime = ifelse(strand != "-", start(exons), end(exons)), #assume * is +
                       firstExon3prime = ifelse(strand != "-", end(exons), start(exons)),
                       lastExon5prime = ifelse(strand != "-", start(exons), end(exons)), #assume * is +
-                      lastExon3prime = ifelse(strand != "-", end(exons), start(exons)))
+                      lastExon3prime = ifelse(strand != "-", end(exons), start(exons))) 
+  return(annoTable)
+}
+
+
+splitReadClassByStartEnd <- function(readTable, annoTable, startEndWindowSize = 0, alternativeStartEnd = FALSE){
+  if(!alternativeStartEnd){
+    annoTable <- annoTable %>%
+      filter(exonRank > 1 & exon_endRank > 1)
+  }
   readTable = bind_rows(readTable, annoTable)
   readTable <- readTable %>% 
-    group_by(firstExon3prime) %>% 
-    mutate(firstExonGroup = ifelse(strand != "-", 
-                                   findInterval(start,sort(start[is.na(readId)]) - startEndWindowSize),
-                                   findInterval(-end,sort(-end[is.na(readId)]) - startEndWindowSize))) %>% ungroup() %>%
-    group_by(lastExon5prime) %>% 
-    mutate(lastExonGroup = ifelse(strand != "-", 
-                                   findInterval(-end,sort(-end[is.na(readId)]) - startEndWindowSize),
-                                   findInterval(start,sort(start[is.na(readId)]) - startEndWindowSize))) %>% ungroup() %>% 
+    group_by(chr, strand, firstExon3prime) %>% 
+    mutate(firstExonGroup = ifelse(
+      strand != "-",
+      safeFind(start, start[is.na(readId)], startEndWindowSize),
+      safeFind(-end, -end[is.na(readId)], startEndWindowSize)
+    )) %>% 
+    ungroup() %>%
+    group_by(chr, strand, lastExon5prime) %>% 
+    mutate(lastExonGroup = ifelse(
+      strand != "-",
+      safeFind(-end, -end[is.na(readId)], startEndWindowSize),
+      safeFind(start, start[is.na(readId)], startEndWindowSize)
+    )) %>% 
+    ungroup() %>% 
     filter(!is.na(readId))
+  return(readTable)
+}
+
+safeFind <- function(x, ref, window) {
+  if (length(ref) == 0) {
+    return(rep(NA_integer_, length(x)))
+  } else {
+    return(findInterval(x, sort(ref) - window))
+  }
+}
+
+assignRegionIdToRc <- function(readTable, annoTable, startEndWindowSize = 0){
+  readTable <- bind_rows(readTable, annoTable)
+  readTable <- readTable %>% 
+    group_by(chr, strand) %>% 
+    mutate(startRegionId = ifelse(strand != "-", 
+                                   findInterval(start,sort(start[is.na(readClassId)]) - startEndWindowSize),
+                                   findInterval(-end,sort(-end[is.na(readClassId)]) - startEndWindowSize))) %>% ungroup() %>%
+    group_by(chr, strand) %>% 
+    mutate(endRegionId = ifelse(strand != "-", 
+                                  findInterval(-end,sort(-end[is.na(readClassId)]) - startEndWindowSize),
+                                  findInterval(start,sort(start[is.na(readClassId)]) - startEndWindowSize))) %>% ungroup() %>% 
+    filter(!is.na(readClassId))
   return(readTable)
 }
 

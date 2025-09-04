@@ -44,8 +44,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$intronChainScore.noFit = rep(NA,nrow(se))
     rowData(se)$tssScore.noFit = rep(NA,nrow(se))
-
-    message("check point 1!!!")
     
     if(length(thresholdIndex)>0){
         txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
@@ -63,8 +61,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)$txScore = rowData(se)$txScore.noFit
     rowData(se)$intronChainScore = rowData(se)$intronChainScore.noFit
     rowData(se)$tssScore = rowData(se)$tssScore.noFit
-
-    message("check point 2!!!")
 
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
@@ -86,7 +82,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
         if(!is.null(tssScore))  rowData(se)$tssScore[thresholdIndex] = tssScore
         message("tssScore finished!!!")
     }
-    message("check point 3!!!")
 
     if(is.null(model) & fit) {
         warningText = "Bambu was unable to train a model on this sample, and is using a pretrained model"
@@ -246,7 +241,7 @@ getIntronChainScore <- function(rowData, model = NULL, defaultModels){
 #' @noRd
 getTssScore <- function(rowData, model = NULL, defaultModels){
   rowData<- as_tibble(rowData) %>%
-    group_by(chr.rc, strand.rc, intronStarts, intronEnds, confidenceType, firstExonGroup, GENEID) %>%
+    group_by(chr.rc, strand.rc, intronStarts, intronEnds, confidenceType, startRegionId, GENEID) %>%
     mutate(tssInternalId = cur_group_id()) %>%
     ungroup()
   combinedRowData <- rowData %>%
