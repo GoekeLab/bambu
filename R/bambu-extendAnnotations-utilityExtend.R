@@ -7,6 +7,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
                                     prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE, trustReads = FALSE){
+  combinedTranscripts <<- combinedTranscripts
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -14,7 +15,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                    "maxIntronChainScore", "maxIntronChainScore.noFit", 
                    "maxTssScore", "maxTssScore.noFit", 
                    "firstExonGroup", "lastExonGroup", 
-                   "startRegionId", "endRegionId")
+                   "startRegionId", "endRegionId", "compatible", "equal")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
     rowDataSplicedTibble <- filter(rowDataTibble,
@@ -44,7 +45,6 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     rowDataCombined$GENEID <- geneIds[,1]
     rowDataCombined$novelGene <- geneIds[,2]
     if(fusionMode) rowDataCombined$readClassType[geneIds[,3]] <- 'fusionTranscript'
-    
     # ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
@@ -123,6 +123,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
         exonRangesCombined[!filterSet])
   exonRangesCombined <- exonRangesCombined[filterSet]
   rowDataCombined <- rowDataCombined[filterSet,]
+ 
+  
 
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
   minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
@@ -137,10 +139,23 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     "WARNING - No annotations were provided. Please increase NDR threshold to use novel transcripts")
   if(sum(filterSet)==0) message("WARNING - No novel transcripts meet the given thresholds. Try a higher NDR.")
   # (3) combine novel transcripts with annotations
+  
+  
+  message("Debug 1")
+
+
   extendedAnnotationRanges <- combindRowDataWithRanges(rowDataCombined, exonRangesCombined)
+  
+  message("Debug 2")
+
+  rowDataCombined <<- rowDataCombined
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, extendedAnnotationRanges, 
     annotationGrangesList, prefix, trustReads = trustReads)
+  
+  
+  message("Debug 3")
+
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
@@ -233,7 +248,6 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
         combinedTranscripts$NDR.tx <- calculateNDR(combinedTranscripts$maxTxScore, equal)
         combinedTranscripts$NDR.ic <- calculateNDR(combinedTranscripts$maxIntronChainScore, equal)
         combinedTranscripts$NDR.tss <- calculateNDR(combinedTranscripts$maxTssScore, equal)
-        combinedTranscripts <<- combinedTranscripts
     }
     
     combinedTranscripts$NDR.tx[combinedTranscripts$maxTxScore==-1] <- 1
@@ -361,13 +375,20 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
   # remove TXNAME, GENEID, equal and compatible for 
   idx_startEnd <- which(rowDataFilteredSpliced$firstExonGroup == 0 |
                           rowDataFilteredSpliced$lastExonGroup == 0)
-  if (length(idx_startEnd) > 0) {
-    classificationTable$compatible[idx_startEnd] <- ""
-    classificationTable$equal[idx_startEnd] <- ""
-    rowDataFilteredSpliced$GENEID[idx_startEnd] <- NA
-    rowDataFilteredSpliced$TXNAME[idx_startEnd] <- NA
-  }
-  # annotate as identical, using intron matches
+  #if (length(idx_startEnd) > 0) {
+  #  classificationTable$compatible[idx_startEnd] <- ""
+  #  classificationTable$equal[idx_startEnd] <- ""
+  #  rowDataFilteredSpliced$GENEID[idx_startEnd] <- NA
+  #  rowDataFilteredSpliced$TXNAME[idx_startEnd] <- NA
+  #}
+
+  
+  rowDataFilteredSpliced$GENEID[which(rowDataFilteredSpliced$compatible == 0)] = NA
+  rowDataFilteredSpliced$TXNAME[which(rowDataFilteredSpliced$compatible == 0)] = NA
+
+  rowDataFilteredSpliced_0 <<- rowDataFilteredSpliced
+  
+
   unlistedIntrons <- unlist(intronsByReadClass, use.names = TRUE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)),
                                     names = NULL)
@@ -380,11 +401,19 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
                          partitioning, classificationTable, annotationGrangesList,
                          rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
                          min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
-  classificationTable <- updateWStartEnd(rowDataFilteredSpliced, classificationTable)
+  #classificationTable <- updateWStartEnd(rowDataFilteredSpliced, classificationTable)
+
+  classificationTable$compatible[which(rowDataFilteredSpliced$compatible == 0)] = ""
+  classificationTable$equal[which(rowDataFilteredSpliced$compatible == 0)] = ""
+
   rowDataFilteredSpliced$readClassType <-
     apply(classificationTable, 1, function(x){paste(x[x!=""], collapse = ":")})
+
+  rowDataFilteredSpliced <<- rowDataFilteredSpliced
+  classificationTable <<- classificationTable
+
   rowDataFilteredSpliced$novelTranscript = TRUE
-  rowDataFilteredSpliced$novelTranscript[classificationTable$equal=="equal"] = FALSE
+  rowDataFilteredSpliced$novelTranscript[which(rowDataFilteredSpliced$compatible >= 1)] = FALSE
   end.ptm <- proc.time()
   if (verbose) message("extended annotations for spliced reads in ",
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
@@ -728,9 +757,20 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
                                         extendedAnnotationRanges,annotationGrangesList, prefix, trustReads = FALSE){
+    
+    message("before rowDataCombinedFiltered")                                     
+    rowDataCombinedFiltered <<- rowDataCombinedFiltered
     equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
+    
+    message("before trustRead")
+    
     if(trustReads == TRUE){
+      annotationGrangesList <<- annotationGrangesList
+      extendedAnnotationRanges<<- extendedAnnotationRanges
+
+
       annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
+      message("Debug trustRead")
     }
     #remove extended ranges that are already present in annotation
     extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]

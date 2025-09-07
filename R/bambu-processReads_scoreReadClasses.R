@@ -27,7 +27,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
         if(verbose) warning(warningText)
     }
 
-    compTable <- isReadClassCompatible(rowRanges(se[thresholdIndex,]), 
+    compTable <- newIsReadClassCompatible(rowRanges(se[thresholdIndex,]), 
                                        annotations)
     polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
                                          genomeSequence)
@@ -40,11 +40,15 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     
+    se_0 <<- se
+
     #calculate using the pretrained model for NDR recommendation
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$intronChainScore.noFit = rep(NA,nrow(se))
     rowData(se)$tssScore.noFit = rep(NA,nrow(se))
     
+    se_1 <<- se
+
     if(length(thresholdIndex)>0){
         txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
                                     model = NULL, defaultModels)
@@ -61,6 +65,8 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)$txScore = rowData(se)$txScore.noFit
     rowData(se)$intronChainScore = rowData(se)$intronChainScore.noFit
     rowData(se)$tssScore = rowData(se)$tssScore.noFit
+
+    se_2 <<- se
 
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
@@ -83,6 +89,8 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
         message("tssScore finished!!!")
     }
 
+    se_3 <<- se
+
     if(is.null(model) & fit) {
         warningText = "Bambu was unable to train a model on this sample, and is using a pretrained model"
         metadata(se)$warnings = c(metadata(se)$warnings, warningText)
@@ -92,6 +100,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     if (verbose) 
         message("Finished generating scores for read classes in ", 
                 round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
+    se_4 <<- se
     return(se)
 }
 
@@ -145,6 +154,91 @@ isReadClassCompatible =  function(query, subject){
       outData$equal[idx_startEnd] <- FALSE
     }
     return(outData)
+}
+
+
+newIsReadClassCompatible <- function(query, subject){
+  message("Using newIsReadClassCompatible!!!")
+  
+  outData <- data.frame(compatible.ic = rep(0, length(query)), 
+                        compatible.firstExon = rep(FALSE, length(query)), 
+                        compatible.lastExon = rep(FALSE, length(query)), 
+                        compatible = rep(FALSE, length(query)), 
+                        equal.ic = rep(FALSE, length(query)),
+                        equal = rep(FALSE, length(query)))
+
+ outData_0 <<- outData
+
+
+
+  queryFirstExon = selectStartExonsFromGrangesList(query, exonNumber = 1)
+  queryLastExon = selectEndExonsFromGrangesList(query, exonNumber = 1)
+  query <- cutStartEndFromGrangesList(query)
+  subject <- cutStartEndFromGrangesList(subject)
+  unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, 
+                                      use.ids = FALSE)
+  intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
+                                                              use.names = FALSE, use.ids = FALSE)
+  
+  partitioningQuery <- 
+    PartitioningByEnd(cumsum(elementNROWS(gaps(ranges(query)))),
+                      names = NULL)
+  allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
+  olap = findOverlaps(query[allIntronMatchQuery],subject, 
+                      ignore.strand = FALSE, type = 'within')
+  query <- query[allIntronMatchQuery][queryHits(olap)]
+  queryFirstExon <- queryFirstExon[allIntronMatchQuery][queryHits(olap)]
+  queryLastExon <- queryLastExon[allIntronMatchQuery][queryHits(olap)]
+  
+  subject <- subject[subjectHits(olap)]
+  querySplice <- myGaps(query)
+  subjectSplice <- myGaps(subject)
+  
+  comp <- myCompatibleTranscription(query = query, subject = subject,
+                                    splice = querySplice)
+  equal <- elementNROWS(query)==elementNROWS(subject) & comp
+  
+  match_firstexon <- isfirstEndExonCompatible(queryFirstExon[comp], subjectSplice[comp])
+  match_lastexon <-  isfirstEndExonCompatible(queryLastExon[comp], subjectSplice[comp])
+  outData$compatible.ic[allIntronMatchQuery] <- countQueryHits(olap[comp])
+  outData$compatible.firstExon[allIntronMatchQuery][queryHits(olap)][comp] <- match_firstexon
+  outData$compatible.lastExon[allIntronMatchQuery][queryHits(olap)][comp] <- match_lastexon
+  
+  
+  #outData$compatible <- outData$compatible.ic
+  outData$compatible <- ifelse(outData$compatible.ic >= 1 & outData$compatible.firstExon == TRUE & outData$compatible.lastExon == TRUE, 
+                               outData$compatible.ic, 0)
+  print(table(outData$compatible.ic))
+  print(table(outData$compatible))
+  
+  outData$equal.ic[allIntronMatchQuery] <- (countQueryHits(olap[equal]) > 0)
+  print(table(outData$equal.ic))
+  outData$equal <- outData$equal.ic & (outData$compatible.ic > 0) & outData$compatible.firstExon & outData$compatible.lastExon
+  print(table(outData$equal))
+  
+  outData <- outData %>%
+    select(compatible, equal)
+
+    outData_1 <<- outData
+
+  return(outData)
+}
+
+isfirstEndExonCompatible <- function(exonRanges, subjectSplice){
+  exonRanges <<- exonRanges
+  subjectSplice <<- subjectSplice
+
+  gr <- unlist(exonRanges)
+  is_long <- width(gr) > 100
+  start(gr[is_long]) <- start(gr[is_long]) + 50
+  end(gr[is_long])   <- end(gr[is_long]) - 50
+  midpoint <- round((start(gr[!is_long]) + end(gr[!is_long])) / 2)
+  start(gr[!is_long]) <- midpoint
+  end(gr[!is_long])   <- midpoint
+  gr <- split(gr)
+
+  exonCompatible <- elementNROWS(GenomicRanges::intersect(gr, subjectSplice)) == 0L
+  return(exonCompatible)
 }
 
 #' returns number of A/T's each read class aligned 5' and 3' end
