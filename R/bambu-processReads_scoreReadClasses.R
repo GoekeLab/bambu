@@ -28,7 +28,8 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     }
 
     compTable <- newIsReadClassCompatible(rowRanges(se[thresholdIndex,]), 
-                                       annotations)
+                                       annotations)                          
+    
     polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
                                          genomeSequence)
     newRowData = data.frame(equal = compTable$equal,
@@ -39,15 +40,10 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                             numTend = polyATerminals$numTend)
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
-    
-    se_0 <<- se
-
     #calculate using the pretrained model for NDR recommendation
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$intronChainScore.noFit = rep(NA,nrow(se))
     rowData(se)$tssScore.noFit = rep(NA,nrow(se))
-    
-    se_1 <<- se
 
     if(length(thresholdIndex)>0){
         txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
@@ -66,8 +62,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)$intronChainScore = rowData(se)$intronChainScore.noFit
     rowData(se)$tssScore = rowData(se)$tssScore.noFit
 
-    se_2 <<- se
-
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
         if(returnModel) metadata(se)$model = model
@@ -80,16 +74,12 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                                                      defaultModels)
         rowData(se)$intronChainScore = rep(NA,nrow(se))
         if(!is.null(intronChainScore))  rowData(se)$intronChainScore[thresholdIndex] = intronChainScore
-        message("intronChainScore finished!!!")
 
         tssScore = getTssScore(rowData(se)[thresholdIndex,], model,
                                                      defaultModels)
         rowData(se)$tssScore = rep(NA,nrow(se))
         if(!is.null(tssScore))  rowData(se)$tssScore[thresholdIndex] = tssScore
-        message("tssScore finished!!!")
     }
-
-    se_3 <<- se
 
     if(is.null(model) & fit) {
         warningText = "Bambu was unable to train a model on this sample, and is using a pretrained model"
@@ -100,7 +90,6 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     if (verbose) 
         message("Finished generating scores for read classes in ", 
                 round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
-    se_4 <<- se
     return(se)
 }
 
@@ -158,28 +147,27 @@ isReadClassCompatible =  function(query, subject){
 
 
 newIsReadClassCompatible <- function(query, subject){
-  message("Using newIsReadClassCompatible!!!")
-  
-  outData <- data.frame(compatible.ic = rep(0, length(query)), 
-                        compatible.firstExon = rep(FALSE, length(query)), 
-                        compatible.lastExon = rep(FALSE, length(query)), 
-                        compatible = rep(FALSE, length(query)), 
-                        equal.ic = rep(FALSE, length(query)),
+  query_cp <<- query
+  subject_cp <<- subject
+  outData <- data.frame(#compatible.ic = rep(0, length(query)), 
+                        #match.firstExon = rep(FALSE, length(query)), 
+                        #match.lastExon = rep(FALSE, length(query)), 
+                        #match.5prime = rep(0, length(query)), 
+                        #match.3prime = rep(0, length(query)), 
+                        compatible = rep(0, length(query)), 
+                        #equal.ic = rep(FALSE, length(query)),
                         equal = rep(FALSE, length(query)))
-
- outData_0 <<- outData
-
-
-
   queryFirstExon = selectStartExonsFromGrangesList(query, exonNumber = 1)
   queryLastExon = selectEndExonsFromGrangesList(query, exonNumber = 1)
+  subjectFirstExon = selectStartExonsFromGrangesList(subject, exonNumber = 1)
+  subjectLastExon = selectEndExonsFromGrangesList(subject, exonNumber = 1)
+  subject_withStartEnd <- subject
   query <- cutStartEndFromGrangesList(query)
   subject <- cutStartEndFromGrangesList(subject)
   unlistIntronsQuery <- unlistIntrons(query, use.names = FALSE, 
                                       use.ids = FALSE)
   intronMatchesQuery <- unlistIntronsQuery %in% unlistIntrons(subject,
                                                               use.names = FALSE, use.ids = FALSE)
-  
   partitioningQuery <- 
     PartitioningByEnd(cumsum(elementNROWS(gaps(ranges(query)))),
                       names = NULL)
@@ -189,37 +177,46 @@ newIsReadClassCompatible <- function(query, subject){
   query <- query[allIntronMatchQuery][queryHits(olap)]
   queryFirstExon <- queryFirstExon[allIntronMatchQuery][queryHits(olap)]
   queryLastExon <- queryLastExon[allIntronMatchQuery][queryHits(olap)]
-  
   subject <- subject[subjectHits(olap)]
+  subject_withStartEnd <- subject_withStartEnd[subjectHits(olap)]
+  subjectFirstExon <- subjectFirstExon[subjectHits(olap)]
+  subjectLastExon <- subjectLastExon[subjectHits(olap)]
   querySplice <- myGaps(query)
-  subjectSplice <- myGaps(subject)
-  
+  #subjectSplice <- myGaps(subject)
   comp <- myCompatibleTranscription(query = query, subject = subject,
                                     splice = querySplice)
+  
+  #comp_firstexon <- isfirstEndExonCompatible(queryFirstExon[comp], subjectFirstExon[comp])
+  #comp_lastexon <-  isStartEndExonMatch(queryLastExon[comp], subjectLastExon[comp])
+  
+  match_firstexon <- isStartEndExonMatch(queryFirstExon[comp], subjectFirstExon[comp])
+  match_lastexon <-  isStartEndExonMatch(queryLastExon[comp], subjectLastExon[comp])
+  dist_5 <- calculateStartEndDist(queryFirstExon[comp], subject_withStartEnd[comp], whichSide = "5prime")
+  dist_3 <- calculateStartEndDist(queryLastExon[comp], subject_withStartEnd[comp], whichSide = "3prime")
+  
+  match_5 <- ifelse(!is.na(dist_5) & dist_5 >= -50, TRUE, FALSE)
+  match_3 <- ifelse(!is.na(dist_3) & dist_3 >= -50, TRUE, FALSE)
+  
+  comp[comp] <- (match_3 & match_5) | (elementNROWS(query[comp])==elementNROWS(subject[comp]))
   equal <- elementNROWS(query)==elementNROWS(subject) & comp
-  
-  match_firstexon <- isfirstEndExonCompatible(queryFirstExon[comp], subjectSplice[comp])
-  match_lastexon <-  isfirstEndExonCompatible(queryLastExon[comp], subjectSplice[comp])
-  outData$compatible.ic[allIntronMatchQuery] <- countQueryHits(olap[comp])
-  outData$compatible.firstExon[allIntronMatchQuery][queryHits(olap)][comp] <- match_firstexon
-  outData$compatible.lastExon[allIntronMatchQuery][queryHits(olap)][comp] <- match_lastexon
-  
-  
-  #outData$compatible <- outData$compatible.ic
-  outData$compatible <- ifelse(outData$compatible.ic >= 1 & outData$compatible.firstExon == TRUE & outData$compatible.lastExon == TRUE, 
-                               outData$compatible.ic, 0)
-  print(table(outData$compatible.ic))
-  print(table(outData$compatible))
-  
-  outData$equal.ic[allIntronMatchQuery] <- (countQueryHits(olap[equal]) > 0)
-  print(table(outData$equal.ic))
-  outData$equal <- outData$equal.ic & (outData$compatible.ic > 0) & outData$compatible.firstExon & outData$compatible.lastExon
-  print(table(outData$equal))
-  
-  outData <- outData %>%
-    select(compatible, equal)
+ 
+  #outData$compatible.ic[allIntronMatchQuery] <- countQueryHits(olap[comp])
+  #outData$match.firstExon[allIntronMatchQuery] <- countQueryHits(olap[comp][match_firstexon])
 
-    outData_1 <<- outData
+  #outData$match.lastExon[allIntronMatchQuery] <- countQueryHits(olap[comp][match_lastexon])
+  
+  #outData$match5prime[allIntronMatchQuery] <- countQueryHits(olap[comp][match_5])
+  #outData$match3prime[allIntronMatchQuery] <- countQueryHits(olap[comp][match_3])
+  
+  #outData$compatible <- ifelse(outData$compatible.ic >= 1 & outData$match5prime >= 1 & outData$match3prime >= 1, 
+  #                             outData$compatible.ic, 0)
+  #outData$equal.ic[allIntronMatchQuery] <- (countQueryHits(olap[equal]) > 0)
+  #outData$equal <- outData$equal.ic & (outData$compatible >= 0)
+  #outData <- outData %>%
+  #  select(compatible, equal)
+
+  outData$compatible[allIntronMatchQuery] <- countQueryHits(olap[comp])
+  outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
 
   return(outData)
 }
@@ -227,7 +224,6 @@ newIsReadClassCompatible <- function(query, subject){
 isfirstEndExonCompatible <- function(exonRanges, subjectSplice){
   exonRanges <<- exonRanges
   subjectSplice <<- subjectSplice
-
   gr <- unlist(exonRanges)
   is_long <- width(gr) > 100
   start(gr[is_long]) <- start(gr[is_long]) + 50
@@ -236,10 +232,49 @@ isfirstEndExonCompatible <- function(exonRanges, subjectSplice){
   start(gr[!is_long]) <- midpoint
   end(gr[!is_long])   <- midpoint
   gr <- split(gr)
-
-  exonCompatible <- elementNROWS(GenomicRanges::intersect(gr, subjectSplice)) == 0L
+  exonCompatible <- elementNROWS(GenomicRanges::intersect(gr, subjectSplice)) == 0L 
   return(exonCompatible)
 }
+
+
+isStartEndExonMatch <- function(queryExonRanges, subjectExonRanges){
+  exonCompatible <- elementNROWS(GenomicRanges::intersect(queryExonRanges, subjectExonRanges)) > 0L
+  return(exonCompatible)
+}
+
+calculateStartEndDist <- function(exonRanges, subject, whichSide = "5prime"){
+  subjectTable <- createAnnoTable(subject) %>% 
+    mutate(id = rep(seq_along(exonRanges), elementNROWS(subject)),
+           query = FALSE)
+  queryTable <- createAnnoTable(exonRanges) %>% 
+    mutate(id = seq_along(exonRanges),
+           query = TRUE)
+  Table = bind_rows(subjectTable, queryTable)
+  if(whichSide == "5prime"){
+    Table <- Table %>% 
+      group_by(chr, strand, id , firstExon3prime) %>% 
+      mutate(dist5prime = ifelse(
+        strand != "-", 
+        start[query] - start[!query],
+        end[!query] - end[query]
+      )) %>% 
+      ungroup() %>%
+      filter(query)
+    return(Table$dist5prime)
+  } else if(whichSide == "3prime"){
+    Table <- Table %>% 
+      group_by(chr, strand, id , lastExon5prime) %>% 
+      mutate(dist3prime = ifelse(
+        strand != "-",
+        end[!query] - end[query],
+        start[query] - start[!query]
+      )) %>% 
+      ungroup() %>% 
+      filter(query)
+    return(Table$dist3prime)
+  }
+}
+
 
 #' returns number of A/T's each read class aligned 5' and 3' end
 #' @noRd

@@ -71,7 +71,6 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
 sequentialCombineFeatureTibble <- function(readClassList,
         indexList,intraGroup,min.readCount,min.readFractionByGene,
         min.txScore.multiExon, min.txScore.singleExon){
-    readClassList <<- readClassList
     combinedFeatureTibble <- NULL
     for (s in seq_along(readClassList)){
         combinedListNew <- readClassList[[s]]
@@ -86,7 +85,6 @@ sequentialCombineFeatureTibble <- function(readClassList,
         combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
             combinedListNew, index = indexList[s], intraGroup)
     }
-    combinedFeatureTibble <<- combinedFeatureTibble
     return(combinedFeatureTibble)
 }
 
@@ -200,9 +198,7 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
     rowData <- as_tibble(rowData(readClassSe)) %>% 
         mutate(start = unname(min(start(rowRangesSe))), 
                 end= unname(max(end(rowRangesSe))))
-    
-    print("before group_var")
-    print(colnames(rowData))
+
     group_var <- c("intronStarts", "intronEnds", "chr", "strand", "firstExonGroup", "lastExonGroup", 
         "startRegionId", "endRegionId", "compatible", "equal")
     sum_var <- c("start","end","NSampleReadCount", "maxTxScore", 
