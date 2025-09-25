@@ -66,16 +66,16 @@ addTssId <- function(se){
   return(se)
 }
 
-transcriptToTssExpression <- function(se){
+transcriptToTssTesExpression <- function(se, feature = "tss") {
   counts <- assays(se)$counts
-  counts  <- fac2sparse(rowData(se)$TSSID) %*% counts
-  tssRanges <- GRanges(
-    seqnames = as.character(getChrFromGrList(rowRanges(se))),
-    ranges = IRanges(start = rowData(se)$tssRanges, width = 1),
-    strand = as.character(getStrandFromGrList(rowRanges(se)))
-  )
-  names(tssRanges) <- rowData(se)$TSSID
-  ## SE
+  if(feature == "tss"){
+      counts  <- fac2sparse(rowData(se)$globleTssId) %*% counts
+      ranges <- metadata(rowRanges(se))$tss_clusters
+  }
+  if(feature == "tes"){
+      counts  <- fac2sparse(rowData(se)$globleTesId) %*% counts
+      ranges <- metadata(rowRanges(se))$tes_clusters
+  }
   RowNames <- rownames(counts)
   ColNames <- colnames(counts)
   ColData <- colData(se)
@@ -83,7 +83,7 @@ transcriptToTssExpression <- function(se){
   ColData@listData$name <- ColNames
   seOutput <- SummarizedExperiment(
     assays = SimpleList(counts = counts),
-    rowRanges = tssRanges[RowNames],
+    rowRanges = ranges[RowNames],
     colData = ColData)
   rowRanges(seOutput) <- split(rowRanges(seOutput), names(rowRanges(seOutput)))
   return(seOutput)

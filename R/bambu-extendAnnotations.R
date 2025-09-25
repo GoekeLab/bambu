@@ -40,5 +40,6 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
     end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",
                          round((end.ptm_all - start.ptm_all)[3] / 60, 1)," mins.")
+    annotations <- assignGlobalTssTesId(annotations)
     return(annotations)
 }

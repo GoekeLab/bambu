@@ -61,14 +61,24 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         
         #write tss
         #write tss count
-        se <- addTssId(se)
-        seTss <- transcriptToTssExpression(se)
+        #se <- addTssId(se)
+        seTss <- transcriptToTssTesExpression(se, feature = "tss")
         writeCountsOutput(seTss, varname='counts', feature='tss',outdir, prefix)
-        txANDTss <- data.table(as.data.frame(rowData(se))[,c("TXNAME","TSSID")])
+        txANDTss <- data.table(as.data.frame(rowData(se))[,c("TXNAME","globleTssId")])
         #write ts to tss and the bed file for tss
         utils::write.table(txANDTss, file = paste0(transcript_gtffn, "txANDTss.tsv"),
                            sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
         export(rowRanges(seTss), paste0(transcript_gtffn, "tss.bed"), format = "BED")
+
+        
+        seTes <- transcriptToTssTesExpression(se, feature = "tes")
+        writeCountsOutput(seTes, varname='counts', feature='tes',outdir, prefix)
+        txANDTes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","globleTesId")])
+        #write ts to tss and the bed file for tss
+        utils::write.table(txANDTes, file = paste0(transcript_gtffn, "txANDTes.tsv"),
+                           sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
+        export(rowRanges(seTes), paste0(transcript_gtffn, "tes.bed"), format = "BED")
+
 
         #If there are multiple samples (when demultiplexed), seperate each sample into its own directory
         if(seperateSamples){
@@ -112,8 +122,11 @@ writeCountsOutput <- function(se, varname = "counts",
       } else if(feature == "gene"){
         setnames(estimates, "rn","GENEID")
       } else if(feature == "tss"){
-        setnames(estimates, "rn","TSSID")
+        setnames(estimates, "rn","globleTssId")
+      } else if(feature == "tes"){
+        setnames(estimates, "rn","globleTesId")
       } 
+      
       utils::write.table(estimates, file = estimatesfn, sep = "\t", quote = FALSE, row.names = FALSE)
       
     } else{
