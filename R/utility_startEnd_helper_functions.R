@@ -1,34 +1,31 @@
 #helper function to identify and quantify tss and tes after Tx discovery
-getTss <- function(grList){
+getTss <- function(grList, width = 20){
   starts <- as.integer(endoapply(start(grList), function(x) x[1]))
   ends <- as.integer(endoapply(end(grList), function(x) x[length(x)]))
   strands <- as.character(getStrandFromGrList(grList))
   seqnames_list <- as.character(getChrFromGrList(grList))
-  tss <- ifelse(strands == "+", starts - 10, ends - 10)
+  tss <- ifelse(strands == "+", starts - ceiling(width/2), ends - ceiling(width/2))
   tssGranges <- GRanges(
     seqnames = seqnames_list,
-    ranges = IRanges(start = tss, width = 20),
+    ranges = IRanges(start = tss, width = width),
     strand = strands
   )
   return(tssGranges)
 }
 
-
-getTes <- function(grList){
+getTes <- function(grList, width = 20){
   starts <- as.integer(endoapply(start(grList), function(x) x[1]))
   ends <- as.integer(endoapply(end(grList), function(x) x[length(x)]))
   strands <- as.character(getStrandFromGrList(grList))
   seqnames_list <- as.character(getChrFromGrList(grList))
-  tes <- ifelse(strands == "+", ends - 10, starts - 10)
+  tes <- ifelse(strands == "+", ends - ceiling(width/2), starts - ceiling(width/2))
   tesGranges <- GRanges(
     seqnames = seqnames_list,
-    ranges = IRanges(start = tes, width = 20),
+    ranges = IRanges(start = tes, width = width),
     strand = strands
   )
   return(tesGranges)
 }
-
-
 
 cluster_and_assign <- function(gr, prefix) {
   clusters <- reduce(gr, min.gapwidth = 50, ignore.strand = FALSE, with.revmap = TRUE)
