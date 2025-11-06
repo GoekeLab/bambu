@@ -6,7 +6,8 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
                                     min.readFractionByEqClass = 0, fusionMode = FALSE,
-                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE, trustReads = FALSE){
+                                    prefix = "Bambu", baselineFDR = 0.1, defaultModels = NULL, verbose = FALSE, 
+                                    predictStart = FALSE, predictEnd = FALSE){
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
@@ -47,7 +48,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     # ## filter out transcripts
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
-      remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose, trustReads = trustReads)
+      remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose, predictStart, predictEnd)
     message(paste0("Novel transcripts detected: ", sum(mcols(extendedAnnotationRanges)$novelTranscript)))
     message(paste0("Novel genes detected: ", length(unique(mcols(extendedAnnotationRanges)$GENEID[mcols(extendedAnnotationRanges)$novelGene]))))
     message(paste0("Low confidence transcripts excluded: ", length(metadata(extendedAnnotationRanges)$lowConfidenceTranscripts)))
@@ -85,7 +86,8 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
                                           exonRangesCombined, prefix,  remove.subsetTx, 
                                           min.readFractionByEqClass, baselineFDR = 0.1, 
-                                          NDR = NULL, defaultModels = NULL, verbose, trustReads = FALSE) {
+                                          NDR = NULL, defaultModels = NULL, verbose, 
+                                          predictStart = FALSE, predictEnd = FALSE) {
   start.ptm <- proc.time() # (1) based on transcript usage
   
   #calculate relative read count before any filtering
@@ -141,7 +143,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   extendedAnnotationRanges <- combindRowDataWithRanges(rowDataCombined, exonRangesCombined)
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, extendedAnnotationRanges, 
-    annotationGrangesList, prefix, trustReads = trustReads)
+    annotationGrangesList, prefix, predictStart, predictEnd)
   minEqClasses <-
     getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
@@ -738,13 +740,53 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
 #' combine annotations with predicted transcripts
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
-                                        extendedAnnotationRanges,annotationGrangesList, prefix, trustReads = FALSE){
+                                        extendedAnnotationRanges,annotationGrangesList, prefix, 
+                                     predictStart = FALSE, predictEnd = FALSE){
+    
+    rowDataCombinedFiltered <<- rowDataCombinedFiltered
+    extendedAnnotationRanges <<- extendedAnnotationRanges
+    annotationGrangesList <<- annotationGrangesList
 
+    print("-------predictStart is ------------")
+    print(predictStart)
+    print("------------------------------------")
+    print("-------predictEnd is ------------")
+    print(predictEnd)
     equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
+    #use 5' and 3' ends from data to overwrite annotation starts and ends
+    
+    mcols(annotationGrangesList)$equalRc.Tss <- NA
+    mcols(annotationGrangesList)$equalRc.Tes <- NA
 
-    if(trustReads == TRUE){
-      annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
-    }
+    mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tss <- start(getTss(selectStartExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
+    mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tes <- end(getTes(selectEndExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
+
+    mcols(annotationGrangesList[equalRanges$TXNAME])$anno.Tss <- start(getTss(selectStartExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
+    mcols(annotationGrangesList[equalRanges$TXNAME])$anno.Tes <- end(getTes(selectEndExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
+
+
+    #pos_index <- which(strand(annotationGrangesList[equalRanges$TXNAME]) == "+")
+    #neg_index <- which(strand(annotationGrangesList[equalRanges$TXNAME]) == "-")   
+
+
+if(predictStart == TRUE){
+  annotationGrangesList[equalRanges$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges$TXNAME], 
+                                                              mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tss, 
+                                                              feature = "tss")
+  
+  #annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
+  #start(annotationGrangesList[equalRanges$TXNAME][pos_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][pos_index])$equalRc.Tss
+  #end(annotationGrangesList[equalRanges$TXNAME][neg_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][neg_index])$equalRc.Tss
+}
+
+if(predictEnd == TRUE){
+  annotationGrangesList[equalRanges$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges$TXNAME], 
+                                                              mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tes, 
+                                                              feature = "tes")
+  #annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
+  #end(annotationGrangesList[equalRanges$TXNAME][pos_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][pos_index])$equalRc.Tes
+  #start(annotationGrangesList[equalRanges$TXNAME][neg_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][neg_index])$equalRc.Tes
+}
     #remove extended ranges that are already present in annotation
     extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
     annotationRangesToMerge <- annotationGrangesList
@@ -779,7 +821,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
         #mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
     }
     if (length(extendedAnnotationRanges)) {
-      mcols(extendedAnnotationRanges)$TXNAME <- rowDataCombinedFiltered[rowDataCombinedFiltered$novelTranscript,]$TXNAME
+    mcols(extendedAnnotationRanges)$TXNAME <- rowDataCombinedFiltered[rowDataCombinedFiltered$novelTranscript,]$TXNAME
     names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
     extendedAnnotationRanges <-
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
@@ -790,7 +832,34 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       mcols(extendedAnnotationRanges)$relReadCount <- NA
       #mcols(extendedAnnotationRanges)$relSubsetCount = NA
     }
+    print(colnames(mcols(extendedAnnotationRanges[[1]])))
   return(extendedAnnotationRanges)
+}
+
+#' update the start or end of annotated tx based one the read class
+updateStartEnd <- function(grlist, newSites, feature) {
+  if (length(grlist) != length(newSites))
+    stop("`grlist` and `newSites` must have the same length")  
+  gr_unlisted <- unlist(grlist, use.names = FALSE)
+  gr_partition <- PartitioningByEnd(grlist)
+  first_idx <- start(gr_partition)
+  last_idx  <- end(gr_partition) 
+  strand_vec <- as.character(strand(gr_unlisted)[first_idx])
+  if (feature == "tss") {
+    # For + strand → update first exon start
+    start(gr_unlisted)[first_idx[strand_vec == "+"]] <- newSites[strand_vec == "+"]
+    # For - strand → update last exon end
+    end(gr_unlisted)[last_idx[strand_vec == "-"]] <- newSites[strand_vec == "-"]
+  }
+  if (feature == "tes") {
+    # For + strand → update last exon end
+    end(gr_unlisted)[last_idx[strand_vec == "+"]] <- newSites[strand_vec == "+"]
+    # For - strand → update first exon start
+    start(gr_unlisted)[first_idx[strand_vec == "-"]] <- newSites[strand_vec == "-"]
+  }
+  new_grlist <- relist(gr_unlisted, gr_partition)
+  mcols(new_grlist) <- mcols(grlist)
+  return(new_grlist)
 }
 
 #' calculate relative subset read count after filtering (increase speed, subsets are not considered here)'
@@ -843,6 +912,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   readClassTable <- addGeneIdsToReadClassTable(readClassTable, distTable, 
                                                seReadClass, verbose)
+  readClassTable <<- readClassTable
   distTable <- DataFrame(distTable)
   distTable$eqClassById <- as.list(mcols(annotationGrangesList)$eqClassById)[distTable$txid]
   

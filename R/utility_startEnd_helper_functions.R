@@ -4,7 +4,7 @@ getTss <- function(grList, width = 20){
   ends <- as.integer(endoapply(end(grList), function(x) x[length(x)]))
   strands <- as.character(getStrandFromGrList(grList))
   seqnames_list <- as.character(getChrFromGrList(grList))
-  tss <- ifelse(strands == "+", starts - ceiling(width/2), ends - ceiling(width/2))
+  tss <- ifelse(strands == "+", starts - floor(width/2), ends - floor(width/2))
   tssGranges <- GRanges(
     seqnames = seqnames_list,
     ranges = IRanges(start = tss, width = width),
@@ -18,7 +18,7 @@ getTes <- function(grList, width = 20){
   ends <- as.integer(endoapply(end(grList), function(x) x[length(x)]))
   strands <- as.character(getStrandFromGrList(grList))
   seqnames_list <- as.character(getChrFromGrList(grList))
-  tes <- ifelse(strands == "+", ends - ceiling(width/2), starts - ceiling(width/2))
+  tes <- ifelse(strands == "+", ends - floor(width/2), starts - floor(width/2))
   tesGranges <- GRanges(
     seqnames = seqnames_list,
     ranges = IRanges(start = tes, width = width),

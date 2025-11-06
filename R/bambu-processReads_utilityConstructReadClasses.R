@@ -10,7 +10,7 @@
 #' @noRd
 isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                                        uniqueJunctions, runName = "sample1",
-                                       annotations, stranded = FALSE, verbose = FALSE, referenceTss = NULL, startEndWindowSize = 0) {
+                                       annotations, stranded = FALSE, verbose = FALSE, referenceTss = NULL, rcSplitThreshold = 0) {
     #split reads into single exon and multi exon reads
     reads.singleExon <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
                                use.names = FALSE)
@@ -29,7 +29,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
             uniqueJunctions = uniqueJunctions,
             unlisted_junctions = unlisted_junctions,
             readGrgList = readGrgList,
-            stranded = stranded, annotations, referenceTss = referenceTss, startEndWindowSize = startEndWindowSize)}
+            stranded = stranded, annotations, referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)}
     else{exonsByRC.spliced = GRangesList()}
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
@@ -57,7 +57,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' @importFrom GenomicRanges match
 #' @noRd
 constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
-                                        readGrgList, annotations, stranded = FALSE, referenceTss = NULL, startEndWindowSize = 0) {
+                                        readGrgList, annotations, stranded = FALSE, referenceTss = NULL, rcSplitThreshold = 0) {
     options(scipen = 999)
     allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
                                                      uniqueJunctions, ignore.strand = TRUE)
@@ -91,7 +91,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     rm(lowConfidenceReads, uniqueJunctions, allToUniqueJunctionMatch)
     readTable <- createReadTable(start(unlisted_junctions), 
         end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
-        readStrand, readConfidence, annotations, referenceTss = referenceTss, startEndWindowSize)
+        readStrand, readConfidence, annotations, referenceTss = referenceTss, rcSplitThreshold)
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
         startSD = startSD, endSD = endSD, 
@@ -162,7 +162,7 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #'     row_number .groups
 #' @noRd
 createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
-    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations, referenceTss = NULL, startEndWindowSize = 0) {
+    unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations, referenceTss = NULL, rcSplitThreshold = 0) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     intronStartCoordinatesInt <- 
         as.integer(min(splitAsList(unlisted_junctions_start,
@@ -201,7 +201,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         unlisted_junctions_end, unlisted_junctions_id, readConfidence, 
         intronStartCoordinatesInt, intronEndCoordinatesInt)
     annoTable <- createAnnoTable(annotations)
-    readTable <- splitReadClassByStartEnd(readTable, annoTable, startEndWindowSize, alternativeStartEnd = F)
+    readTable <- splitReadClassByStartEnd(readTable, annoTable, rcSplitThreshold, alternativeStartEnd = F)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
         group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
@@ -216,7 +216,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
-    readTable <- assignRegionIdToRc(readTable, annoTable, startEndWindowSize)
+    readTable <- assignRegionIdToRc(readTable, annoTable, rcSplitThreshold)
     return(readTable)
 }
 
@@ -312,7 +312,7 @@ createAnnoTable <- function(annotations){
 }
 
 
-splitReadClassByStartEnd <- function(readTable, annoTable, startEndWindowSize = 0, alternativeStartEnd = FALSE){
+splitReadClassByStartEnd <- function(readTable, annoTable, rcSplitThreshold = 0, alternativeStartEnd = FALSE){
   if(!alternativeStartEnd){
     annoTable <- annoTable %>%
       filter(exonRank > 1 & exon_endRank > 1)
@@ -322,15 +322,15 @@ splitReadClassByStartEnd <- function(readTable, annoTable, startEndWindowSize = 
     group_by(chr, strand, firstExon3prime) %>% 
     mutate(firstExonGroup = ifelse(
       strand != "-",
-      safeFind(start, start[is.na(readId)], startEndWindowSize),
-      safeFind(-end, -end[is.na(readId)], startEndWindowSize)
+      safeFind(start, start[is.na(readId)], rcSplitThreshold),
+      safeFind(-end, -end[is.na(readId)], rcSplitThreshold)
     )) %>% 
     ungroup() %>%
     group_by(chr, strand, lastExon5prime) %>% 
     mutate(lastExonGroup = ifelse(
       strand != "-",
-      safeFind(-end, -end[is.na(readId)], startEndWindowSize),
-      safeFind(start, start[is.na(readId)], startEndWindowSize)
+      safeFind(-end, -end[is.na(readId)], rcSplitThreshold),
+      safeFind(start, start[is.na(readId)], rcSplitThreshold)
     )) %>% 
     ungroup() %>% 
     filter(!is.na(readId))
@@ -345,17 +345,17 @@ safeFind <- function(x, ref, window) {
   }
 }
 
-assignRegionIdToRc <- function(readTable, annoTable, startEndWindowSize = 0){
+assignRegionIdToRc <- function(readTable, annoTable, rcSplitThreshold = 0){
   readTable <- bind_rows(readTable, annoTable)
   readTable <- readTable %>% 
     group_by(chr, strand) %>% 
     mutate(startRegionId = ifelse(strand != "-", 
-                                   findInterval(start,sort(start[is.na(readClassId)]) - startEndWindowSize),
-                                   findInterval(-end,sort(-end[is.na(readClassId)]) - startEndWindowSize))) %>% ungroup() %>%
+                                   findInterval(start,sort(start[is.na(readClassId)]) - rcSplitThreshold),
+                                   findInterval(-end,sort(-end[is.na(readClassId)]) - rcSplitThreshold))) %>% ungroup() %>%
     group_by(chr, strand) %>% 
     mutate(endRegionId = ifelse(strand != "-", 
-                                  findInterval(-end,sort(-end[is.na(readClassId)]) - startEndWindowSize),
-                                  findInterval(start,sort(start[is.na(readClassId)]) - startEndWindowSize))) %>% ungroup() %>% 
+                                  findInterval(-end,sort(-end[is.na(readClassId)]) - rcSplitThreshold),
+                                  findInterval(start,sort(start[is.na(readClassId)]) - rcSplitThreshold))) %>% ungroup() %>% 
     filter(!is.na(readClassId))
   return(readTable)
 }

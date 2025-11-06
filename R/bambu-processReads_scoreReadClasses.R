@@ -147,8 +147,6 @@ isReadClassCompatible =  function(query, subject){
 
 
 newIsReadClassCompatible <- function(query, subject){
-  query_cp <<- query
-  subject_cp <<- subject
   outData <- data.frame(#compatible.ic = rep(0, length(query)), 
                         #match.firstExon = rep(FALSE, length(query)), 
                         #match.lastExon = rep(FALSE, length(query)), 

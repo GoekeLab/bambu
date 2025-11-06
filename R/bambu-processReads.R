@@ -12,7 +12,7 @@
 #' @importFrom BiocParallel bplapply
 #' @importFrom BiocGenerics basename
 #' @noRd
-bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss = NULL, startEndWindowSize = 0,
+bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss = NULL,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
     processByChromosome = FALSE, processByBam = TRUE, trackReads = trackReads, fusionMode = fusionMode, 
@@ -53,10 +53,11 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
     defaultModels <- isoreParameters[["defaultModels"]]
     returnModel <- isoreParameters[["returnModel"]]
     min.exonOverlap <- isoreParameters[["min.exonOverlap"]]
+    rcSplitThreshold <- isoreParameters[["rcSplitThreshold"]]
 
     if(processByBam){ # bulk mode
         readClassList <- bplapply(seq_along(reads), function(i) {
-            bambu.processReadsByFile(bam.file = reads[i], referenceTss = referenceTss, startEndWindowSize = startEndWindowSize,
+            bambu.processReadsByFile(bam.file = reads[i], referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold,
             genomeSequence = genomeSequence,annotations = annotations, 
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
@@ -93,7 +94,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
           mcols(readGrgList)$sampleID <- i
         }
         readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence, annotations = annotations,
-            referenceTss = referenceTss, startEndWindowSize = startEndWindowSize,
+            referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
@@ -122,7 +123,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
 #' @inheritParams bambu
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
-bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, referenceTss = NULL, startEndWindowSize = 0,
+bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, referenceTss = NULL, rcSplitThreshold = 0,
     yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
@@ -190,7 +191,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, refe
     # construct read classes for each chromosome seperately 
     if(processByChromosome){
         se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, annotations, stranded, verbose,bam.file,
-                                            referenceTss = referenceTss, startEndWindowSize = startEndWindowSize)
+                                            referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)
     } else{
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
@@ -198,7 +199,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, refe
         se <- isore.constructReadClasses(readGrgList, 
                                               unlisted_junctions, uniqueJunctions, runName = "TODO",
                                               annotations, stranded, verbose, 
-                                              referenceTss = referenceTss, startEndWindowSize = startEndWindowSize)
+                                              referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)
 
     }
 
@@ -305,7 +306,7 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
 
 #' Construct read classes
 #' @noRd
-constructReadClasses <- function(readGrgList, genomeSequence, annotations, referenceTss = NULL, startEndWindowSize = 0,
+constructReadClasses <- function(readGrgList, genomeSequence, annotations, referenceTss = NULL, rcSplitThreshold = 0,
     stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE){
@@ -322,7 +323,7 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations, refer
         se <- isore.constructReadClasses(readGrgList, 
                                         unlisted_junctions, uniqueJunctions, runName = "TODO",
                                         annotations, stranded, verbose, 
-                                        referenceTss = referenceTss, startEndWindowSize = startEndWindowSize)
+                                        referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)
 
     }
     metadata(se)$warnings <- warnings
@@ -348,7 +349,7 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations, refer
 
 #' Low memory mode for construct read classes (processByChromosome)
 #' @noRd
-lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, referenceTss = NULL, startEndWindowSize = 0,
+lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, referenceTss = NULL, rcSplitThreshold = 0,
                                           annotations, stranded, verbose,bam.file, fusionMode = FALSE){
     if(fusionMode){
         readGrgList <- list(readGrgList)
@@ -365,7 +366,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, reference
         se.temp <- isore.constructReadClasses(readGrgList[[i]], 
                                               unlisted_junctions, uniqueJunctions, runName = "TODO",
                                               annotations, stranded, verbose, 
-                                              referenceTss = referenceTss, startEndWindowSize = startEndWindowSize)
+                                              referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)
         return(se.temp)
     })
     se <- se[!sapply(se, FUN = is.null)]

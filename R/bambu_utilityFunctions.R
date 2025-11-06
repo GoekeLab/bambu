@@ -32,6 +32,9 @@ setIsoreParameters <- function(isoreParameters){
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
+        predictStart = FALSE,
+        predictEnd = FALSE,
+        rcSplitThreshold = 0,
         fitReadClassModel = TRUE,
         defaultModels = defaultModels,
         returnModel = FALSE,
