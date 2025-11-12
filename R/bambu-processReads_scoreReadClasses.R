@@ -220,8 +220,6 @@ newIsReadClassCompatible <- function(query, subject){
 }
 
 isfirstEndExonCompatible <- function(exonRanges, subjectSplice){
-  exonRanges <<- exonRanges
-  subjectSplice <<- subjectSplice
   gr <- unlist(exonRanges)
   is_long <- width(gr) > 100
   start(gr[is_long]) <- start(gr[is_long]) + 50

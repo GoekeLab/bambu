@@ -154,7 +154,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
                  "txClassDescription","readCount","relReadCount", 
                  "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", 
                  "maxTssScore", "maxTssScore.noFit", 
-                 "maxIntronChainScore", "maxIntronChainScore.noFit", "startRegionId", "endRegionId")]
+                 "maxIntronChainScore", "maxIntronChainScore.noFit", "startRegionId", "endRegionId", "equalRc.Tss", "equalRc.Tes", "anno.Tss", "anno.Tes")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
   metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
@@ -742,50 +742,28 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
                                         extendedAnnotationRanges,annotationGrangesList, prefix, 
                                      predictStart = FALSE, predictEnd = FALSE){
-    
-    rowDataCombinedFiltered <<- rowDataCombinedFiltered
-    extendedAnnotationRanges <<- extendedAnnotationRanges
-    annotationGrangesList <<- annotationGrangesList
-
-    print("-------predictStart is ------------")
-    print(predictStart)
-    print("------------------------------------")
-    print("-------predictEnd is ------------")
-    print(predictEnd)
     equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
     #use 5' and 3' ends from data to overwrite annotation starts and ends
-    
     mcols(annotationGrangesList)$equalRc.Tss <- NA
     mcols(annotationGrangesList)$equalRc.Tes <- NA
+    mcols(annotationGrangesList)$anno.Tss <- NA
+    mcols(annotationGrangesList)$anno.Tes <- NA
 
-    mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tss <- start(getTss(selectStartExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
-    mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tes <- end(getTes(selectEndExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
-
-    mcols(annotationGrangesList[equalRanges$TXNAME])$anno.Tss <- start(getTss(selectStartExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
-    mcols(annotationGrangesList[equalRanges$TXNAME])$anno.Tes <- end(getTes(selectEndExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
-
-
-    #pos_index <- which(strand(annotationGrangesList[equalRanges$TXNAME]) == "+")
-    #neg_index <- which(strand(annotationGrangesList[equalRanges$TXNAME]) == "-")   
-
+    equalRanges$equalRc.Tss <- start(getTss(selectStartExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
+    equalRanges$equalRc.Tes <- end(getTes(selectEndExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
+    equalRanges$anno.Tss <- start(getTss(selectStartExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
+    equalRanges$anno.Tes <- end(getTes(selectEndExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
 
 if(predictStart == TRUE){
   annotationGrangesList[equalRanges$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges$TXNAME], 
-                                                              mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tss, 
+                                                              equalRanges$equalRc.Tss, 
                                                               feature = "tss")
-  
-  #annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
-  #start(annotationGrangesList[equalRanges$TXNAME][pos_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][pos_index])$equalRc.Tss
-  #end(annotationGrangesList[equalRanges$TXNAME][neg_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][neg_index])$equalRc.Tss
 }
 
 if(predictEnd == TRUE){
   annotationGrangesList[equalRanges$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges$TXNAME], 
-                                                              mcols(annotationGrangesList[equalRanges$TXNAME])$equalRc.Tes, 
+                                                              equalRanges$equalRc.Tes,
                                                               feature = "tes")
-  #annotationGrangesList[equalRanges$TXNAME] <- extendedAnnotationRanges[equalRanges$TXNAME]
-  #end(annotationGrangesList[equalRanges$TXNAME][pos_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][pos_index])$equalRc.Tes
-  #start(annotationGrangesList[equalRanges$TXNAME][neg_index]) <- mcols(annotationGrangesList[equalRanges$TXNAME][neg_index])$equalRc.Tes
 }
     #remove extended ranges that are already present in annotation
     extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
@@ -804,6 +782,13 @@ if(predictEnd == TRUE){
         mcols(annotationRangesToMerge)$maxTssScore.noFit <- NA
         mcols(annotationRangesToMerge)$maxIntronChainScore <- NA
         mcols(annotationRangesToMerge)$maxIntronChainScore.noFit <- NA
+        mcols(annotationRangesToMerge)$startRegionId <- NA
+        mcols(annotationRangesToMerge)$endRegionId <- NA
+        mcols(annotationRangesToMerge)$equalRc.Tss <- NA
+        mcols(annotationRangesToMerge)$equalRc.Tes <- NA
+        mcols(annotationRangesToMerge)$anno.Tss <- NA
+        mcols(annotationRangesToMerge)$anno.Tes <- NA
+
         mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
         #copy over stats to annotations from read classes
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tx <- equalRanges$NDR.tx
@@ -818,6 +803,12 @@ if(predictEnd == TRUE){
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore.noFit <- equalRanges$maxIntronChainScore.noFit
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore <- equalRanges$maxTssScore
         mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore.noFit <- equalRanges$maxTssScore.noFit
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$startRegionId <- equalRanges$startRegionId
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$endRegionId <- equalRanges$endRegionId
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$equalRc.Tss <- equalRanges$equalRc.Tss
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$equalRc.Tes <- equalRanges$equalRc.Tes
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$anno.Tss <- equalRanges$anno.Tss
+        mcols(annotationRangesToMerge[equalRanges$TXNAME])$anno.Tes <- equalRanges$anno.Tes
         #mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
     }
     if (length(extendedAnnotationRanges)) {
@@ -826,13 +817,12 @@ if(predictEnd == TRUE){
     extendedAnnotationRanges <-
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
     mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
-    }else{
+    } else{
       extendedAnnotationRanges <- annotationRangesToMerge
       mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
       mcols(extendedAnnotationRanges)$relReadCount <- NA
       #mcols(extendedAnnotationRanges)$relSubsetCount = NA
     }
-    print(colnames(mcols(extendedAnnotationRanges[[1]])))
   return(extendedAnnotationRanges)
 }
 
@@ -912,7 +902,6 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                        round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
   readClassTable <- addGeneIdsToReadClassTable(readClassTable, distTable, 
                                                seReadClass, verbose)
-  readClassTable <<- readClassTable
   distTable <- DataFrame(distTable)
   distTable$eqClassById <- as.list(mcols(annotationGrangesList)$eqClassById)[distTable$txid]
   
@@ -1035,11 +1024,9 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
     clusters.rc <- splitReadClassFilesByRC(readClassList[[1]])
     txScores <- c()
     for(i in seq_along(clusters)){
-        print(names(clusters)[i])
         ###TODO need to account for the sample name here which is added to the barcode
         index <- match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples)) 
         index <- index[!is.na(index)]
-        print(length(index))
         if(length(index)<20) next
         rcf.counts <- clusters.rc[,index]
         rcf.filt <- readClassList[[1]][rowSums(rcf.counts)>0,]

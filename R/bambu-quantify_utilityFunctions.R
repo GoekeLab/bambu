@@ -122,6 +122,7 @@ getUniCountPerEquiRC <- function(distTable){
 addEmptyRC <- function(eqClassCount, annotations){
   minEquiRC <- processMinEquiRC(annotations)
   eqClassCount <- createEqClassToTxMapping(eqClassCount)
+  eqClassCount$eqClassById <- as.list(eqClassCount$eqClassById)
   eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassById","GENEID","txid","equal"))
   eqClassCountJoin[is.na(eqClassCountJoin)] <- 0
   eqClassCount_final <- eqClassCountJoin %>% 
