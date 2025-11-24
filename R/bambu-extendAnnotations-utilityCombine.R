@@ -119,7 +119,7 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
         dplyr::select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, 
             startRegionId, endRegionId,compatible, equal,
             maxTxScore, maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
-            maxTssScore, maxTssScore.noFit, 
+            maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit,
             NSampleReadCount, NSampleReadProp, NSampleTxScore, rowID) %>%
         full_join(select(startTibble, rowID, start), by = "rowID") %>% 
         full_join(select(endTibble, rowID, end, readCount=sumReadCount), 
@@ -138,7 +138,7 @@ combineFeatureTibble <- function(combinedFeatureTibble,
         combinedTable <- featureTibbleSummarised %>% 
             select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, startRegionId, endRegionId, compatible, equal,
             maxTxScore, maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
-            maxTssScore, maxTssScore.noFit, 
+            maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit,
             NSampleReadCount, NSampleReadProp,NSampleTxScore, 
             starts_with('start'), starts_with('end'), starts_with('readCount'))
     } else { 
@@ -162,10 +162,16 @@ combineFeatureTibble <- function(combinedFeatureTibble,
                     maxTssScore = pmax(maxTssScore.combined,
                                                   maxTssScore.new, na.rm = TRUE), 
                     maxTssScore.noFit = pmax(maxTssScore.noFit.combined,
-                                                        maxTssScore.noFit.new, na.rm = TRUE)) %>% 
+                                                        maxTssScore.noFit.new, na.rm = TRUE),
+                    maxTesScore = pmax(maxTesScore.combined,
+                                                  maxTesScore.new, na.rm = TRUE), 
+                    maxTesScore.noFit = pmax(maxTesScore.noFit.combined,
+                                                        maxTesScore.noFit.new, na.rm = TRUE)) %>% 
             select(intronStarts, intronEnds, chr, strand,
             NSampleReadCount, NSampleReadProp, NSampleTxScore, maxTxScore, 
-            maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, maxTssScore, maxTssScore.noFit, starts_with('start'), starts_with('end'), 
+            maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
+            maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit, 
+            starts_with('start'), starts_with('end'), 
             starts_with('readCount'), firstExonGroup, lastExonGroup, startRegionId, endRegionId, compatible, equal) 
     } 
     if(intraGroup) 
@@ -203,13 +209,13 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
         "startRegionId", "endRegionId", "compatible", "equal")
     sum_var <- c("start","end","NSampleReadCount", "maxTxScore", 
                 "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit",
-                "maxTssScore", "maxTssScore.noFit", "readCount", "NSampleReadProp",
+                "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", "readCount", "NSampleReadProp",
                 "NSampleTxScore")
     featureTibble <- rowData %>% 
         dplyr::select(chr = chr.rc, start, end, strand = strand.rc, firstExonGroup, lastExonGroup, 
             startRegionId, endRegionId, compatible, equal,
             intronStarts, intronEnds, confidenceType, readCount, geneReadProp, 
-            txScore, txScore.noFit, intronChainScore, intronChainScore.noFit, tssScore, tssScore.noFit, numExons) %>%
+            txScore, txScore.noFit, intronChainScore, intronChainScore.noFit, tssScore, tssScore.noFit, tesScore, tesScore.noFit, numExons) %>%
         filter(readCount >= 1, # only use readCount>1 and highconfidence reads
             confidenceType == "highConfidenceJunctionReads") %>% 
         mutate(NSampleReadCount = (readCount >= min.readCount), 
@@ -219,7 +225,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
             (txScore > min.txScore.singleExon & numExons == 1)), 
             maxTxScore = txScore, maxTxScore.noFit = txScore.noFit,
             maxIntronChainScore = intronChainScore, maxIntronChainScore.noFit = intronChainScore.noFit,
-            maxTssScore = tssScore, maxTssScore.noFit = tssScore.noFit) %>%
+            maxTssScore = tssScore, maxTssScore.noFit = tssScore.noFit, maxTesScore = tssScore, maxTesScore.noFit = tssScore.noFit,
+            maxTssScore = tesScore, maxTssScore.noFit = tesScore.noFit, maxTesScore = tesScore, maxTesScore.noFit = tesScore.noFit) %>%
         select(all_of(c(group_var, sum_var))) 
     return(featureTibble)
 }
@@ -322,7 +329,8 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
             rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
                                         newUnsplicedTibble$row_id)])
             rr <- as_tibble(rr) %>% select(confidenceType,readCount, 
-                    geneReadProp, txScore, txScore.noFit, intronChainScore, intronChainScore.noFit, tssScore, tssScore.noFit) %>%
+                    geneReadProp, txScore, txScore.noFit, intronChainScore, intronChainScore.noFit, 
+                    tssScore, tssScore.noFit, tesScore, tesScore.noFit) %>%
                 mutate(row_id = rownames(rr))
             return(rr)
         } , BPPARAM = bpParameters))
@@ -341,7 +349,9 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                     intronChainScore = weighted.mean(intronChainScore, readCount_tmp),
                     intronChainScore.noFit = weighted.mean(intronChainScore.noFit, readCount_tmp),
                     tssScore = weighted.mean(tssScore, readCount_tmp),
-                    tssScore.noFit = weighted.mean(tssScore.noFit, readCount_tmp)) %>%
+                    tssScore.noFit = weighted.mean(tssScore.noFit, readCount_tmp),
+                    tesScore = weighted.mean(tesScore, readCount_tmp),
+                    tesScore.noFit = weighted.mean(tesScore.noFit, readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
         summarise(readCount = sum(readCount),
                     maxTxScore = txScore,
@@ -349,7 +359,9 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                     maxIntronChainScore = intronChainScore,
                     maxIntronChainScore.noFit = intronChainScore.noFit,
                     maxTssScore = tssScore,
-                    maxTssScore.noFit = tssScore.noFit,                    
+                    maxTssScore.noFit = tssScore.noFit, 
+                    maxTesScore = tesScore,
+                    maxTesScore.noFit = tesScore.noFit,                    
                     NSampleReadCount = sum(readCount >= min.readCount), 
                     NSampleReadProp = sum(geneReadProp >= 
                                             min.readFractionByGene),

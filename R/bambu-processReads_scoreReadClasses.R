@@ -44,6 +44,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$intronChainScore.noFit = rep(NA,nrow(se))
     rowData(se)$tssScore.noFit = rep(NA,nrow(se))
+    rowData(se)$tesScore.noFit = rep(NA,nrow(se))
 
     if(length(thresholdIndex)>0){
         txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
@@ -55,12 +56,17 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
 
         tssScore.noFit = getTssScore(rowData(se)[thresholdIndex,], 
                                     model = NULL, defaultModels)
-        rowData(se)$tssScore.noFit[thresholdIndex] = tssScore.noFit    
+        rowData(se)$tssScore.noFit[thresholdIndex] = tssScore.noFit
+
+        tesScore.noFit = getTesScore(rowData(se)[thresholdIndex,], 
+                                    model = NULL, defaultModels)
+        rowData(se)$tesScore.noFit[thresholdIndex] = tesScore.noFit     
     }
     model = NULL
     rowData(se)$txScore = rowData(se)$txScore.noFit
     rowData(se)$intronChainScore = rowData(se)$intronChainScore.noFit
     rowData(se)$tssScore = rowData(se)$tssScore.noFit
+    rowData(se)$tesScore = rowData(se)$tesScore.noFit
 
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
@@ -79,6 +85,11 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
                                                      defaultModels)
         rowData(se)$tssScore = rep(NA,nrow(se))
         if(!is.null(tssScore))  rowData(se)$tssScore[thresholdIndex] = tssScore
+                
+        tesScore = getTesScore(rowData(se)[thresholdIndex,], model,
+                                                     defaultModels)
+        rowData(se)$tesScore = rep(NA,nrow(se))
+        if(!is.null(tesScore))  rowData(se)$tesScore[thresholdIndex] = tesScore
     }
 
     if(is.null(model) & fit) {
@@ -391,6 +402,36 @@ getTssScore <- function(rowData, model = NULL, defaultModels){
   tssScoreScoreFinal <- tssScore[rowData$tssInternalId]
   return(tssScoreScoreFinal)
 }
+
+getTesScore <- function(rowData, model = NULL, defaultModels){
+  rowData<- as_tibble(rowData) %>%
+    group_by(chr.rc, strand.rc, intronStarts, intronEnds, confidenceType, endRegionId, GENEID) %>%
+    mutate(tesInternalId = cur_group_id()) %>%
+    ungroup()
+  combinedRowData <- rowData %>%
+    group_by(tesInternalId) %>%
+    summarise(startSD = weightedMean(startSD, readCount), endSD = weightedMean(endSD, readCount),
+              readCount.posStrand = sum(readCount.posStrand, na.rm = TRUE), 
+              confidenceType = unique(confidenceType), novelGene = unique(novelGene), 
+              numExons = unique(numExons),
+              geneReadProp = sum(geneReadProp), geneReadCount = unique(geneReadCount),
+              equal = ifelse(any(equal), TRUE, FALSE), compatible = max(compatible),
+              numAstart = weightedMean(numAstart, readCount),
+              numAend = weightedMean(numAend, readCount),
+              numTstart = weightedMean(numTstart, readCount), 
+              numTend = weightedMean(numTend, readCount), 
+              readIds = list(readIds), sampleIDs = list(sampleIDs),
+              readCount = sum(readCount), 
+              #intronStarts = list(intronStarts), intronEnds = list(intronEnds),
+              .groups = 'keep') 
+  tesScore <- getTranscriptScore(combinedRowData, 
+                                        model = model, defaultModels)
+  names(tesScore) <- combinedRowData$tesInternalId
+  tesScoreScoreFinal <- tesScore[rowData$tesInternalId]
+  return(tesScoreScoreFinal)
+}
+
+
 
 #' Function to train a model for use on other data
 #' @title Function to train a model for use on other data
