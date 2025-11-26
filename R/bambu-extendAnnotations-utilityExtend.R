@@ -743,91 +743,117 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
 #' combine annotations with predicted transcripts
 #' @noRd
 combineWithAnnotations <- function(rowDataCombinedFiltered, 
-                                        extendedAnnotationRanges,annotationGrangesList, prefix, 
-                                     predictStart = FALSE, predictEnd = FALSE){
-    equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
-    #use 5' and 3' ends from data to overwrite annotation starts and ends
-    mcols(annotationGrangesList)$equalRc.Tss <- NA
-    mcols(annotationGrangesList)$equalRc.Tes <- NA
-    mcols(annotationGrangesList)$anno.Tss <- NA
-    mcols(annotationGrangesList)$anno.Tes <- NA
+                                   extendedAnnotationRanges,annotationGrangesList, prefix, 
+                                   predictStart = FALSE, predictEnd = FALSE){
+  equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
+  #use 5' and 3' ends from data to overwrite annotation starts and ends
+  mcols(annotationGrangesList)$equalRc.Tss <- NA
+  mcols(annotationGrangesList)$equalRc.Tes <- NA
+  mcols(annotationGrangesList)$anno.Tss <- NA
+  mcols(annotationGrangesList)$anno.Tes <- NA
+  
+  equalRanges$equalRc.Tss <- ifelse(equalRanges$strand == "+",
+                                    equalRanges$start,
+                                    equalRanges$end)
+  equalRanges$equalRc.Tes <- ifelse(equalRanges$strand == "+",
+                                    equalRanges$end,
+                                    equalRanges$start)
+  equalRanges$anno.Tss <- start(getTss(selectStartExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
+  equalRanges$anno.Tes <- end(getTes(selectEndExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
+  #unique the equalRanges by TXNAME to avoid multiple updates for TSS and TES
+  equalRanges <<- equalRanges
+  equalRanges_unique <- equalRanges %>%
+    group_by(TXNAME) %>%
+    summarise(
+      equalRc.Tss = equalRc.Tss[which.max(readCount)],
+      equalRc.Tes = equalRc.Tes[which.max(readCount)],
+      maxTxScore = weightedMean(maxTxScore, readCount),
+      maxTxScore.noFit = weightedMean(maxTxScore.noFit, readCount),
+      maxIntronChainScore = weightedMean(maxIntronChainScore, readCount),
+      maxIntronChainScore.noFit = weightedMean(maxIntronChainScore.noFit, readCount),
+      maxTssScore = weightedMean(maxTssScore, readCount),
+      maxTssScore.noFit = weightedMean(maxTssScore.noFit, readCount),
+      maxTesScore = weightedMean(maxTesScore, readCount),
+      maxTesScore.noFit = weightedMean(maxTesScore.noFit, readCount),
+      readCount = sum(readCount),
+      relReadCount = sum(relReadCount),
+      intronStarts = list(unique(intronStarts)),
+      intronEnds = list(unique(intronEnds)),
+      chr = list(unique(chr)),
+      strand = list(unique(strand)),
+      confidenceType = list(unique(confidenceType)),
+      .groups = "drop")
 
-    equalRanges$equalRc.Tss <- start(getTss(selectStartExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
-    equalRanges$equalRc.Tes <- end(getTes(selectEndExonsFromGrangesList(extendedAnnotationRanges[equalRanges$TXNAME], exonNumber = 1), width = 1))
-    equalRanges$anno.Tss <- start(getTss(selectStartExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
-    equalRanges$anno.Tes <- end(getTes(selectEndExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
+  equalRanges_unique <<- equalRanges_unique
 
-if(predictStart == TRUE){
-  annotationGrangesList[equalRanges$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges$TXNAME], 
-                                                              equalRanges$equalRc.Tss, 
-                                                              feature = "tss")
-}
-
-if(predictEnd == TRUE){
-  annotationGrangesList[equalRanges$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges$TXNAME], 
-                                                              equalRanges$equalRc.Tes,
-                                                              feature = "tes")
-}
-    #remove extended ranges that are already present in annotation
-    extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
-    annotationRangesToMerge <- annotationGrangesList
-    if(length(annotationGrangesList)){
-        mcols(annotationRangesToMerge)$readCount <- NA
-        mcols(annotationRangesToMerge)$txClassDescription <- "annotation"
-        mcols(annotationRangesToMerge)$novelTranscript <- FALSE
-        mcols(annotationRangesToMerge)$novelGene <- FALSE
-        mcols(annotationRangesToMerge)$NDR.tx <- NA
-        mcols(annotationRangesToMerge)$NDR.ic <- NA
-        mcols(annotationRangesToMerge)$NDR.tss <- NA
-        mcols(annotationRangesToMerge)$NDR.tes <- NA
-        mcols(annotationRangesToMerge)$maxTxScore <- NA
-        mcols(annotationRangesToMerge)$maxTxScore.noFit <- NA
-        mcols(annotationRangesToMerge)$maxTssScore <- NA
-        mcols(annotationRangesToMerge)$maxTssScore.noFit <- NA
-        mcols(annotationRangesToMerge)$maxIntronChainScore <- NA
-        mcols(annotationRangesToMerge)$maxIntronChainScore.noFit <- NA
-        mcols(annotationRangesToMerge)$startRegionId <- NA
-        mcols(annotationRangesToMerge)$endRegionId <- NA
-        mcols(annotationRangesToMerge)$equalRc.Tss <- NA
-        mcols(annotationRangesToMerge)$equalRc.Tes <- NA
-        mcols(annotationRangesToMerge)$anno.Tss <- NA
-        mcols(annotationRangesToMerge)$anno.Tes <- NA
-
-        mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
-        #copy over stats to annotations from read classes
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tx <- equalRanges$NDR.tx
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.ic <- equalRanges$NDR.ic
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tss <- equalRanges$NDR.tss
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tes <- equalRanges$NDR.tes
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore <- equalRanges$maxTxScore
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount <- equalRanges$readCount
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount <- equalRanges$relReadCount
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore <- equalRanges$maxTxScore
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore.noFit <- equalRanges$maxTxScore.noFit
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore <- equalRanges$maxIntronChainScore
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore.noFit <- equalRanges$maxIntronChainScore.noFit
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore <- equalRanges$maxTssScore
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore.noFit <- equalRanges$maxTssScore.noFit
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$startRegionId <- equalRanges$startRegionId
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$endRegionId <- equalRanges$endRegionId
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$equalRc.Tss <- equalRanges$equalRc.Tss
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$equalRc.Tes <- equalRanges$equalRc.Tes
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$anno.Tss <- equalRanges$anno.Tss
-        mcols(annotationRangesToMerge[equalRanges$TXNAME])$anno.Tes <- equalRanges$anno.Tes
-        #mcols(annotationRangesToMerge[equalRanges$TXNAME])$relSubsetCount = equalRanges$relSubsetCount
-    }
-    if (length(extendedAnnotationRanges)) {
+  if(predictStart == TRUE){
+    annotationGrangesList[equalRanges_unique$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges_unique$TXNAME], 
+                                                                equalRanges_unique$equalRc.Tss, 
+                                                                feature = "tss")
+  }
+  
+  if(predictEnd == TRUE){
+    annotationGrangesList[equalRanges_unique$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges_unique$TXNAME], 
+                                                                       equalRanges_unique$equalRc.Tes,
+                                                                feature = "tes")
+  }
+  #remove extended ranges that are already present in annotation
+  extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
+  annotationRangesToMerge <- annotationGrangesList
+  if(length(annotationGrangesList)){
+    mcols(annotationRangesToMerge)$readCount <- NA
+    mcols(annotationRangesToMerge)$txClassDescription <- "annotation"
+    mcols(annotationRangesToMerge)$novelTranscript <- FALSE
+    mcols(annotationRangesToMerge)$novelGene <- FALSE
+    mcols(annotationRangesToMerge)$NDR.tx <- NA
+    mcols(annotationRangesToMerge)$NDR.ic <- NA
+    mcols(annotationRangesToMerge)$NDR.tss <- NA
+    mcols(annotationRangesToMerge)$NDR.tes <- NA
+    mcols(annotationRangesToMerge)$maxTxScore <- NA
+    mcols(annotationRangesToMerge)$maxTxScore.noFit <- NA
+    mcols(annotationRangesToMerge)$maxTssScore <- NA
+    mcols(annotationRangesToMerge)$maxTssScore.noFit <- NA
+    mcols(annotationRangesToMerge)$maxIntronChainScore <- NA
+    mcols(annotationRangesToMerge)$maxIntronChainScore.noFit <- NA
+    mcols(annotationRangesToMerge)$startRegionId <- NA
+    mcols(annotationRangesToMerge)$endRegionId <- NA
+    mcols(annotationRangesToMerge)$equalRc.Tss <- NA
+    mcols(annotationRangesToMerge)$equalRc.Tes <- NA
+    mcols(annotationRangesToMerge)$anno.Tss <- NA
+    mcols(annotationRangesToMerge)$anno.Tes <- NA
+    
+    mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
+    #copy over stats to annotations from read classes
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.tx <- equalRanges_unique$NDR.tx
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.ic <- equalRanges_unique$NDR.ic
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.tss <- equalRanges_unique$NDR.tss
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.tes <- equalRanges_unique$NDR.tes
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$readCount <- equalRanges_unique$readCount
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$relReadCount <- equalRanges_unique$relReadCount
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTxScore <- equalRanges_unique$maxTxScore
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTxScore.noFit <- equalRanges_unique$maxTxScore.noFit
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxIntronChainScore <- equalRanges_unique$maxIntronChainScore
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxIntronChainScore.noFit <- equalRanges_unique$maxIntronChainScore.noFit
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTssScore <- equalRanges_unique$maxTssScore
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTssScore.noFit <- equalRanges_unique$maxTssScore.noFit
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$startRegionId <- equalRanges_unique$startRegionId
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$endRegionId <- equalRanges_unique$endRegionId
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$equalRc.Tss <- equalRanges_unique$equalRc.Tss
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$equalRc.Tes <- equalRanges_unique$equalRc.Tes
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$anno.Tss <- equalRanges_unique$anno.Tss
+    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$anno.Tes <- equalRanges_unique$anno.Tes
+  }
+  if (length(extendedAnnotationRanges)) {
     mcols(extendedAnnotationRanges)$TXNAME <- rowDataCombinedFiltered[rowDataCombinedFiltered$novelTranscript,]$TXNAME
     names(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)$TXNAME
     extendedAnnotationRanges <-
       c(extendedAnnotationRanges, annotationRangesToMerge) # this will throw error in line 648-649 when extendedAnnotationRanges is empty 
     mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
-    } else{
-      extendedAnnotationRanges <- annotationRangesToMerge
-      mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
-      mcols(extendedAnnotationRanges)$relReadCount <- NA
-      #mcols(extendedAnnotationRanges)$relSubsetCount = NA
-    }
+  } else{
+    extendedAnnotationRanges <- annotationRangesToMerge
+    mcols(extendedAnnotationRanges)$txid <- seq_along(extendedAnnotationRanges)
+    mcols(extendedAnnotationRanges)$relReadCount <- NA
+  }
   return(extendedAnnotationRanges)
 }
 
