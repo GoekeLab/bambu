@@ -39,30 +39,30 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         }
     }
     while (isIncomplete(bf)) {
-        alignmentInfo <- readGAlignments(bf, param = ScanBamParam(tag = c("BC", "UG"), 
+        alignmentInfo <- readGAlignments(bf, param = ScanBamParam(tag = c("CB", "UB"), 
                                          flag = scanBamFlag(isSecondaryAlignment = FALSE)), 
                                          use.names = use.names)
         readGrgList[[counter]] <-grglist(alignmentInfo)
         if (!isFALSE(demultiplexed)){ # if demultiplexed is TRUE or a string path 
             if(isTRUE(demultiplexed)){ # if demultiplexed is TRUE
       
-                mcols(readGrgList[[counter]])$BC <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), # a checkpoint to see whether BC is contained in the name, with specific format BC_UMI#READNAME, 
-                                                              !is.na(mcols(alignmentInfo)$BC) ~ mcols(alignmentInfo)$BC, 
+                mcols(readGrgList[[counter]])$CB <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), # a checkpoint to see whether CB is contained in the name, with specific format CB_UMI#READNAME, 
+                                                              !is.na(mcols(alignmentInfo)$CB) ~ mcols(alignmentInfo)$CB, 
                                                               TRUE ~ NA) 
 
-                mcols(readGrgList[[counter]])$UMI <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format BC_UMI#READNAME, 
-                                                               !is.na(mcols(alignmentInfo)$UG) ~ mcols(alignmentInfo)$UG, 
+                mcols(readGrgList[[counter]])$UMI <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format CB_UMI#READNAME, 
+                                                               !is.na(mcols(alignmentInfo)$UB) ~ mcols(alignmentInfo)$UB, 
                                                                TRUE ~ NA) 
             } else{ # if demultiplexed is a string path
-                mcols(readGrgList[[counter]])$BC <- NA
+                mcols(readGrgList[[counter]])$CB <- NA
                 mcols(readGrgList[[counter]])$UMI <- NA
-                mcols(readGrgList[[counter]])$BC <- readMap[,2][match(names(readGrgList[[counter]]),readMap[,1])]
+                mcols(readGrgList[[counter]])$CB <- readMap[,2][match(names(readGrgList[[counter]]),readMap[,1])]
                 if(ncol(readMap)>2){
                     mcols(readGrgList[[counter]])$UMI <- readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]
                 }
             }
-            cells <- unique(c(cells, mcols(readGrgList[[counter]])$BC))
-            mcols(readGrgList[[counter]])$BC <- factor(mcols(readGrgList[[counter]])$BC, levels = cells)
+            cells <- unique(c(cells, mcols(readGrgList[[counter]])$CB))
+            mcols(readGrgList[[counter]])$CB <- factor(mcols(readGrgList[[counter]])$CB, levels = cells)
             umi <- unique(c(umi, mcols(readGrgList[[counter]])$UMI))
             mcols(readGrgList[[counter]])$UMI <- factor(mcols(readGrgList[[counter]])$UMI, levels = umi)
         }
@@ -96,10 +96,10 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     }
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList <- readGrgList[sum(width(readGrgList)) > 1]
-    numNoBCs <- sum(is.na(mcols(readGrgList)$BC))
-    if(numNoBCs > 0){
-        message("Removing ", numNoBCs, " reads that were not assigned barcodes. If this is unexpected check the barcode map input")
-        readGrgList <- readGrgList[!is.na(mcols(readGrgList)$BC)]
+    numNoCBs <- sum(is.na(mcols(readGrgList)$CB))
+    if(numNoCBs > 0){
+        message("Removing ", numNoCBs, " reads that were not assigned barcodes. If this is unexpected check the barcode map input")
+        readGrgList <- readGrgList[!is.na(mcols(readGrgList)$CB)]
     }
     if(cleanReads){
         #extract duplicated reads from flexiplex to clean
@@ -127,8 +127,8 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         start.ptm <- proc.time()
         numUMIs <- length(na.omit(unique(mcols(readGrgList)$UMI))) # remove NA UMIs
         if(numUMIs > 100){
-            df <- data.frame(umi = mcols(readGrgList)$BC, 
-                barcode = mcols(readGrgList)$UMI,
+            df <- data.frame(umi = mcols(readGrgList)$UMI, 
+                barcode = mcols(readGrgList)$CB,
                 lengths = sum(width(readGrgList)))
             df <- df %>% mutate(id = row_number()) %>% group_by(barcode, umi) %>% summarise(primary.id = id[which.max(lengths)])
             readGrgList <- readGrgList[df$primary.id]
