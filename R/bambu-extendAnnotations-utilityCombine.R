@@ -116,7 +116,7 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
         filter(row_number()==1)
     
     combinedFeatureTibble <- combinedFeatureTibble %>% 
-        dplyr::select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, 
+        dplyr::select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, tesId,
             startRegionId, endRegionId,compatible, equal,
             maxTxScore, maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
             maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit,
@@ -136,7 +136,7 @@ combineFeatureTibble <- function(combinedFeatureTibble,
         featureTibbleSummarised, index=1, intraGroup = TRUE){ 
     if (is.null(combinedFeatureTibble)) { 
         combinedTable <- featureTibbleSummarised %>% 
-            select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, startRegionId, endRegionId, compatible, equal,
+            select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, tesId, startRegionId, endRegionId, compatible, equal,
             maxTxScore, maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
             maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit,
             NSampleReadCount, NSampleReadProp,NSampleTxScore, 
@@ -144,7 +144,7 @@ combineFeatureTibble <- function(combinedFeatureTibble,
     } else { 
         combinedTable <- full_join(combinedFeatureTibble, 
             featureTibbleSummarised, by = c('intronStarts', 'intronEnds', 'chr',
-            'strand', 'firstExonGroup', 'lastExonGroup', "startRegionId", "endRegionId", "compatible", "equal"), suffix=c('.combined','.new')) %>% 
+            'strand', 'firstExonGroup', 'lastExonGroup', "startRegionId", "tesId","endRegionId", "compatible", "equal"), suffix=c('.combined','.new')) %>% 
             mutate(NSampleReadCount=pmax0NA(NSampleReadCount.combined) + 
                         pmax0NA(NSampleReadCount.new), 
                     NSampleReadProp = pmax0NA(NSampleReadProp.combined) + 
@@ -172,7 +172,7 @@ combineFeatureTibble <- function(combinedFeatureTibble,
             maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
             maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit, 
             starts_with('start'), starts_with('end'), 
-            starts_with('readCount'), firstExonGroup, lastExonGroup, startRegionId, endRegionId, compatible, equal) 
+            starts_with('readCount'), firstExonGroup, lastExonGroup, tesId, startRegionId, endRegionId, compatible, equal) 
     } 
     if(intraGroup) 
         combinedTable <- 
@@ -205,14 +205,14 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
         mutate(start = unname(min(start(rowRangesSe))), 
                 end= unname(max(end(rowRangesSe))))
 
-    group_var <- c("intronStarts", "intronEnds", "chr", "strand", "firstExonGroup", "lastExonGroup", 
+    group_var <- c("intronStarts", "intronEnds", "chr", "strand", "firstExonGroup", "lastExonGroup", "tesId",
         "startRegionId", "endRegionId", "compatible", "equal")
     sum_var <- c("start","end","NSampleReadCount", "maxTxScore", 
                 "maxTxScore.noFit", "maxIntronChainScore", "maxIntronChainScore.noFit",
                 "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", "readCount", "NSampleReadProp",
                 "NSampleTxScore")
     featureTibble <- rowData %>% 
-        dplyr::select(chr = chr.rc, start, end, strand = strand.rc, firstExonGroup, lastExonGroup, 
+        dplyr::select(chr = chr.rc, start, end, strand = strand.rc, firstExonGroup, lastExonGroup, tesId,
             startRegionId, endRegionId, compatible, equal,
             intronStarts, intronEnds, confidenceType, readCount, geneReadProp, 
             txScore, txScore.noFit, intronChainScore, intronChainScore.noFit, tssScore, tssScore.noFit, tesScore, tesScore.noFit, numExons) %>%

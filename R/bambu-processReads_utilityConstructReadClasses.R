@@ -97,6 +97,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         startSD = startSD, endSD = endSD, 
         start.rc = start, end.rc = end, 
         firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup, tssNumber = tssNumber,
+        tesId = tesId,
         startRegionId = startRegionId, endRegionId = endRegionId,
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount, readIds, sampleIDs)
@@ -185,8 +186,12 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
         sampleID = mcols(readGrgList)$sampleID)
     #assign tssId
     tssList <- prepareTss(annotations, referenceTss)
+    tesList <- prepareTesFromReads(readGrgList)
+
     #print("Tss list has been prepared!")
     readTable <- assignTssToReads(readTable, tssList = tssList)
+    readTable <- assignTesToReads(readTable, tesList = tesList)
+    
     
     readTable <- readTable %>%
       mutate(intronStartCoordinatesInt = intronStartCoordinatesInt,
@@ -204,11 +209,11 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     readTable <- splitReadClassByStartEnd(readTable, annoTable, rcSplitThreshold, alternativeStartEnd = F)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     readTable <- readTable %>% 
-        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup) %>% 
+        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup, tesId) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
-                firstExonGroup = unique(firstExonGroup), lastExonGroup =  unique(lastExonGroup),
+                firstExonGroup = unique(firstExonGroup), lastExonGroup =  unique(lastExonGroup), tesId = unique(tesId),
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), 
                 readIds = list(readId), sampleIDs = list(sampleID), 
                 tssNumber = length(unique(tssId[!is.na(tssId)])),
@@ -289,6 +294,48 @@ assignTssToReads <- function(readTable, tssList){
   within_index <- findOverlaps(readTss, tssList)
   readTable$tssId[queryHits(within_index)] <- mcols(tssList)$tssId[subjectHits(within_index)]
   #readTable$tssId[queryHits(within_index)] <- TRUE
+  return(readTable)
+}
+
+
+###The function is used after reads have been stranded, so can be grouped by strand
+prepareTesFromReads <- function(readGrgList, max_dist = 100){
+  ends_df <- getTes(readGrgList, width = 1)
+  ends_df <- as_tibble(ends_df)
+  collapsed_tes <- as_tibble(ends_df) %>%
+    select(seqnames, end, strand) %>%
+    group_by(seqnames, end, strand) %>%
+    summarise(N = n(), .groups = "drop") %>%
+    filter(N > 10) %>%
+    arrange(seqnames, end) %>%
+    group_by(seqnames) %>%
+    mutate(cluster = cumsum(c(0, diff(end)) > max_dist)) %>%
+    group_by(seqnames, cluster) %>%
+    summarise(
+      end = end[which.max(N)],   # choose the TES with the highest N
+      N = sum(N),              # sum N across the cluster
+      .groups = "drop"
+    ) %>%
+    filter(N >= 10)
+  referenceTES <- GRanges(seqnames = collapsed_tes$seqnames,
+                          ranges = IRanges(end = collapsed_tes$end, width = 1),
+                          strand = collapsed_tes$strand)
+  return(referenceTES)
+}
+
+
+assignTesToReads <- function(readTable, tesList){
+  readTable <- readTable %>%
+    mutate(tesRanges = ifelse(strand != "-", end + 25 , start + 25))
+  readTes <- GRanges(
+    seqnames = readTable$chr,
+    ranges = IRanges(end = readTable$tesRanges, width = 50),
+    strand = readTable$strand)
+  mcols(readTes)$readId <- readTable$readId
+  readTable$tesId <- NA_character_
+  mcols(tesList)$tesId <- c(1:length(tesList))
+  within_index <- findOverlaps(readTes, tesList)
+  readTable$tesId[queryHits(within_index)] <- mcols(tesList)$tesId[subjectHits(within_index)]
   return(readTable)
 }
 

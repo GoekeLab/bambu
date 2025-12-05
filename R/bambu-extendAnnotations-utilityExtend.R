@@ -14,7 +14,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                    "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", 
                    "maxIntronChainScore", "maxIntronChainScore.noFit", 
                    "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", 
-                   "firstExonGroup", "lastExonGroup", 
+                   "firstExonGroup", "lastExonGroup", "tesId",
                    "startRegionId", "endRegionId", "compatible", "equal")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
@@ -761,7 +761,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   equalRanges$anno.Tss <- start(getTss(selectStartExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
   equalRanges$anno.Tes <- end(getTes(selectEndExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
   #unique the equalRanges by TXNAME to avoid multiple updates for TSS and TES
-  equalRanges <<- equalRanges
+
   equalRanges_unique <- equalRanges %>%
     group_by(TXNAME) %>%
     summarise(
@@ -784,7 +784,6 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
       confidenceType = list(unique(confidenceType)),
       .groups = "drop")
 
-  equalRanges_unique <<- equalRanges_unique
 
   if(predictStart == TRUE){
     annotationGrangesList[equalRanges_unique$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges_unique$TXNAME], 
