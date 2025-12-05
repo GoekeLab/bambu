@@ -86,5 +86,7 @@ transcriptToTssTesExpression <- function(se, feature = "tss") {
     rowRanges = ranges[RowNames],
     colData = ColData)
   rowRanges(seOutput) <- split(rowRanges(seOutput), names(rowRanges(seOutput)))
+  #only output the TES with read support!
+  seOutput <- seOutput[rowSums(assays(seOutput)$counts) > 0, ]
   return(seOutput)
 }
