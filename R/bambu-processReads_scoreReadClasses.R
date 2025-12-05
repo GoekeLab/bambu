@@ -203,10 +203,10 @@ newIsReadClassCompatible <- function(query, subject){
   dist_5 <- calculateStartEndDist(queryFirstExon[comp], subject_withStartEnd[comp], whichSide = "5prime")
   dist_3 <- calculateStartEndDist(queryLastExon[comp], subject_withStartEnd[comp], whichSide = "3prime")
   
-  match_5 <- ifelse(!is.na(dist_5) & dist_5 >= -50, TRUE, FALSE)
-  match_3 <- ifelse(!is.na(dist_3) & dist_3 >= -50, TRUE, FALSE)
+  match_5 <- ifelse(!is.na(dist_5) & (abs(dist_5) >= 50), FALSE, TRUE)
+  match_3 <- ifelse(!is.na(dist_3) & (abs(dist_3) >= 50), FALSE, TRUE)
   
-  comp[comp] <- (match_3 & match_5) | (elementNROWS(query[comp])==elementNROWS(subject[comp]))
+  comp[comp] <- match_3 & (elementNROWS(query[comp])==elementNROWS(subject[comp]))
   equal <- elementNROWS(query)==elementNROWS(subject) & comp
  
   #outData$compatible.ic[allIntronMatchQuery] <- countQueryHits(olap[comp])
