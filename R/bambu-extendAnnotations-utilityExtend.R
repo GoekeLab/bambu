@@ -767,6 +767,8 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     summarise(
       equalRc.Tss = equalRc.Tss[which.max(readCount)],
       equalRc.Tes = equalRc.Tes[which.max(readCount)],
+      anno.Tss = unique(anno.Tss),
+      anno.Tes = unique(anno.Tes),
       maxTxScore = weightedMean(maxTxScore, readCount),
       maxTxScore.noFit = weightedMean(maxTxScore.noFit, readCount),
       maxIntronChainScore = weightedMean(maxIntronChainScore, readCount),
