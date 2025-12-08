@@ -72,7 +72,6 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
         unlisted_junctions = unlisted_junctions[-toRemove]
         allToUniqueJunctionMatch = allToUniqueJunctionMatch[-toRemove]
     }
-
     if (isFALSE(stranded)) {
         readStrand <- correctReadStrandById(
             as.factor(strand(unlisted_junctions)),
@@ -191,7 +190,6 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     #print("Tss list has been prepared!")
     readTable <- assignTssToReads(readTable, tssList = tssList)
     readTable <- assignTesToReads(readTable, tesList = tesList)
-    
     
     readTable <- readTable %>%
       mutate(intronStartCoordinatesInt = intronStartCoordinatesInt,
@@ -333,7 +331,7 @@ assignTesToReads <- function(readTable, tesList){
     strand = readTable$strand)
   mcols(readTes)$readId <- readTable$readId
   readTable$tesId <- NA_character_
-  mcols(tesList)$tesId <- c(1:length(tesList))
+  mcols(tesList)$tesId <- seq_along(tesList)
   within_index <- findOverlaps(readTes, tesList)
   readTable$tesId[queryHits(within_index)] <- mcols(tesList)$tesId[subjectHits(within_index)]
   return(readTable)
