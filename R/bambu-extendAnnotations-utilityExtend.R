@@ -907,6 +907,8 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                                                 annotationGrangesList, min.exonDistance = 35,
                                                 min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 100000, 
                                                 additionalFiltering = FALSE, verbose = FALSE) {
+  seReadClass <<- seReadClass
+  annotationGrangesList <<- annotationGrangesList
   start.ptm <- proc.time()
   readClassTable <-
     as_tibble(rowData(seReadClass), rownames = "readClassId") %>%
@@ -916,6 +918,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                                          primarySecondaryDist = min.primarySecondaryDist,
                                          primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
                                          ignore.strand = FALSE)
+  
   distTable$readCount <- assays(seReadClass)$counts[distTable$readClassId, ] 
 #   if (additionalFiltering) 
 #     distTable <- left_join(distTable, select(readClassTable,
