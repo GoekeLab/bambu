@@ -40,14 +40,14 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
                             feature='transcript',outdir, prefix)
         print(d)
         }
-        seGene <- transcriptToGeneExpression(se)
-        writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
         #write incompatible counts
         if(!is.null(metadata(se)$incompatibleCounts)){
-            estimates <- metadata(se)$incompatibleCounts[rownames(seGene), , drop = FALSE]
+            estimates <- metadata(se)$incompatibleCounts
             estimatesfn <- paste(transcript_gtffn, "incompatibleCounts.mtx", sep = "")
                 Matrix::writeMM(estimates, estimatesfn)
         }
+        seGene <- transcriptToGeneExpression(se)
+        writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
         #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
         #R.utils::gzip(paste0(outdir, "barcodes.tsv"))
         txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])

@@ -15,7 +15,7 @@ transcriptToGeneExpression <- function(se) {
     runnames <- colnames(counts)[-1]
     rowDataSe <- as.data.table(rowData(se))
     
-    counts  = fac2sparse(rowData(se)$GENEID) %*% counts
+    counts  = fac2sparse(factor(rowData(se)$GENEID, levels = unique(rowData(se)$GENEID))) %*% counts
     if(!is.null(metadata(se)$incompatibleCounts)){
         incompatibleCounts <- metadata(se)$incompatibleCounts
         if("nonuniqueCounts" %in% names(metadata(se))){
