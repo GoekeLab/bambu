@@ -312,6 +312,11 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations, refer
     verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE){
     warnings <- c() ###TODO
     
+    print("Saving the objects in the constructReadClasses")
+    readGrgList <<- readGrgList
+    genomeSequence <<- genomeSequence 
+    annotations <<- annotations
+
     if(processByChromosome){
         # construct read classes for each chromosome seperately 
         se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 

@@ -138,12 +138,12 @@ annotateExonSplice <- function(spliceRng, fullRng, startRng, endRng, strand){
     splice.FullSplice.Rng <- expandRangesList(spliceRng, fullRng)
     start.Splice.Rng <- expandRanges(startRng, spliceRng)
     end.Splice.Rng <- rep(endRng, elementNROWS(spliceRng))
-    startMatch <- poverlaps(start(splice.FullSplice.Rng),
+    firstExonMatch <- poverlaps(start(splice.FullSplice.Rng),
         mcols(splice.FullSplice.Rng)$matchRng) 
-    endMatch <- poverlaps(end(splice.FullSplice.Rng),
+    lastExonMatch <- poverlaps(end(splice.FullSplice.Rng),
         mcols(splice.FullSplice.Rng)$matchRng)
-    exonStart <- endMatch & !startMatch
-    exonEnd <- startMatch & !endMatch
+    exonStart <- lastExonMatch & !firstExonMatch
+    exonEnd <- firstExonMatch & !lastExonMatch
     exon5Prime <- tapply(exonStart, mcols(splice.FullSplice.Rng)$IdMap, sum)
     exon3Prime <- tapply(exonEnd, mcols(splice.FullSplice.Rng)$IdMap, sum)
     match.startSplice.start <- start(mcols(start.Splice.Rng)$matchRng)

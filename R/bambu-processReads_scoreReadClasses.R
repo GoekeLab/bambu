@@ -200,6 +200,7 @@ newIsReadClassCompatible <- function(query, subject){
   
   match_firstexon <- isStartEndExonMatch(queryFirstExon[comp], subjectFirstExon[comp])
   match_lastexon <-  isStartEndExonMatch(queryLastExon[comp], subjectLastExon[comp])
+  
   dist_5 <- calculateStartEndDist(queryFirstExon[comp], subject_withStartEnd[comp], whichSide = "5prime")
   dist_3 <- calculateStartEndDist(queryLastExon[comp], subject_withStartEnd[comp], whichSide = "3prime")
   
@@ -260,26 +261,25 @@ calculateStartEndDist <- function(exonRanges, subject, whichSide = "5prime"){
   if(whichSide == "5prime"){
     Table <- Table %>% 
       group_by(chr, strand, id , firstExon3prime) %>% 
-      mutate(dist5prime = ifelse(
+      mutate(dist = ifelse(
         strand != "-", 
         start[query] - start[!query],
         end[!query] - end[query]
       )) %>% 
       ungroup() %>%
       filter(query)
-    return(Table$dist5prime)
   } else if(whichSide == "3prime"){
     Table <- Table %>% 
       group_by(chr, strand, id , lastExon5prime) %>% 
-      mutate(dist3prime = ifelse(
+      mutate(dist = ifelse(
         strand != "-",
         end[!query] - end[query],
         start[query] - start[!query]
       )) %>% 
       ungroup() %>% 
       filter(query)
-    return(Table$dist3prime)
-  }
+  }    
+  return(Table$dist)
 }
 
 

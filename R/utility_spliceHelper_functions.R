@@ -44,79 +44,122 @@ calculateFirstLastExonsDist <- function(queryExon, subjectExon,
 #' @importFrom S4Vectors match
 #' @noRd
 findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
-        maxDist = 5, type = "within", firstLastSeparate = TRUE,
-        dropRangesByMinLength = FALSE, cutStartEnd = TRUE) {
-    if (firstLastSeparate) {
-        queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
-        queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
-        subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
-        subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
-        subjectFull <- subject
-    }
-    if (dropRangesByMinLength) {
-        queryForOverlap <- dropGrangesListElementsByWidth(query,
-            minWidth = maxDist, cutStartEnd = cutStartEnd)
-    } else if (cutStartEnd) {
-        queryForOverlap <- cutStartEndFromGrangesList(query)
-    } else {
-        queryForOverlap <- query
-    }
-    query <- cutStartEndFromGrangesList(query)
-    subjectExtend <- extendGrangesListElements(subject, by = maxDist)
-    olap <- findOverlaps(queryForOverlap, subjectExtend,
-                        ignore.strand = ignore.strand, type = type)
-    olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject),
-                        ignore.strand = ignore.strand, type = "equal")
-    query <- query[queryHits(olap)]
-    subject <- subject[subjectHits(olap)]
-    splice <- myGaps(query)
-    compatible <- rangesDist(query, subject, splice, maxDist)
-    equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
-    unique <- myOneMatch(compatible$compatible, queryHits(olap))
-    strandSpecific <- all(strand(query) != "*")
-    strandedMatch <- ((all(strand(query) == "-") & 
-                        all(strand(subject) == "-")) | 
-                        (all(strand(query) == "+") & 
-                        all(strand(subject) == "+")))
-    mcols(olap) <- DataFrame(compatible, equal, unique,
-                        strandSpecific, strandedMatch)
-    ## NOTE: Check if there is an error with the start sequence ##
-    if (firstLastSeparate)
-    olap <- checkStartSequence(olap, firstLastSeparate, queryStart,
-        subjectStart, queryEnd,subjectEnd, subjectFull, subjectList)
-    return(olap)
-}
+                                     maxDist = 5, type = "within", firstLastSeparate = TRUE,
+                                     dropRangesByMinLength = FALSE, cutStartEnd = TRUE, match_5 = FALSE, match_3 = TRUE) {
+  if (firstLastSeparate) {
+    queryStart <- selectStartExonsFromGrangesList(query, exonNumber = 1)
+    queryEnd <- selectEndExonsFromGrangesList(query, exonNumber = 1)
+    subjectStart <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
+    subjectEnd <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
+    subjectFull <- subject
+  }
+  if (dropRangesByMinLength) {
+    queryForOverlap <- dropGrangesListElementsByWidth(query,
+                                                      minWidth = maxDist, cutStartEnd = cutStartEnd)
+  } else if (cutStartEnd) {
+    queryForOverlap <- cutStartEndFromGrangesList(query)
+  } else {
+    queryForOverlap <- query
+  }
+  query <- cutStartEndFromGrangesList(query)
+  subjectExtend <- extendGrangesListElements(subject, by = maxDist)
+  olap <- findOverlaps(queryForOverlap, subject,
+                       ignore.strand = ignore.strand, type = type)
+  olapEqual <- findOverlaps(query, cutStartEndFromGrangesList(subject),
+                            ignore.strand = ignore.strand, type = "equal")
 
+  query <- query[queryHits(olap)]
+  subject <- subject[subjectHits(olap)]
+  splice <- myGaps(query)
+  compatible <- rangesDist(query, subject, splice, maxDist)
+  equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
+  unique <- myOneMatch(compatible$compatible, queryHits(olap))
+  strandSpecific <- all(strand(query) != "*")
+  strandedMatch <- ((all(strand(query) == "-") & 
+                       all(strand(subject) == "-")) | 
+                      (all(strand(query) == "+") & 
+                         all(strand(subject) == "+")))
+   mcols(olap) <- DataFrame(compatible, equal, unique,
+                           strandSpecific, strandedMatch)
+  
+   mcols(olap)$dist_5 <- NA
+   mcols(olap)$dist_3 <- NA
+   
+  
+   if (match_5) {
+     comp_idx <- which(mcols(olap)$compatible)
+     
+     if (!isEmpty(comp_idx)) {
+       dist_5 <- calculateStartEndDist(
+         queryStart[queryHits(olap)][comp_idx],
+         subject[comp_idx],
+         whichSide = "5prime"
+       )
+       
+       mcols(olap)$dist_5[comp_idx] <- dist_5
+       
+       bad <- abs(dist_5) > 100
+       mcols(olap)$compatible[comp_idx[bad]] <- FALSE
+       mcols(olap)$equal[comp_idx[bad]] <- FALSE
+     }
+   }
+   
+   if (match_3) {
+     ## IMPORTANT: recompute after 5′ filtering
+     comp_idx <- which(mcols(olap)$compatible)
+     
+     if (!isEmpty(comp_idx)) {
+       dist_3 <- calculateStartEndDist(
+         queryEnd[queryHits(olap)[comp_idx]],
+         subject[comp_idx],
+         whichSide = "3prime"
+       )
+       
+       mcols(olap)$dist_3[comp_idx] <- dist_3
+       
+       bad <- abs(dist_3) > 100
+       mcols(olap)$compatible[comp_idx[bad]] <- FALSE
+       mcols(olap)$equal[comp_idx[bad]] <- FALSE
+     }
+   }
+   
+  
+  ## NOTE: Check if there is an error with the start sequence ##
+  if (firstLastSeparate)
+    olap <- checkStartSequence(olap, firstLastSeparate, queryStart,
+                               subjectStart, queryEnd,subjectEnd, subjectFull)
+  return(olap)
+}
 
 #' check whether error with start sequence
 #' @noRd
 checkStartSequence <- function(olap, firstLastSeparate, queryStart,
-        subjectStart, queryEnd,subjectEnd, subjectFull, subjectList){
-    if (length(olap)) {
-        qHits <- queryHits(olap)
-        subHits <- subjectHits(olap)
-        queryStart <- ranges(queryStart[qHits])
-        subjectStart <- ranges(subjectStart[subHits])
-        queryEnd <- ranges(queryEnd[qHits])
-        subjectEnd <- ranges(subjectEnd[subHits])
-        subjectFull <- ranges(subjectFull[subHits])
-        subjectList <- unlist(subjectFull)
-        startList <- calculateFirstLastExonsDist(queryStart, subjectStart,
-                                            subjectFull, subjectList)
-        endList <- calculateFirstLastExonsDist(queryEnd, subjectEnd,
-                                            subjectFull, subjectList)
-    } else {
-        startList <- NULL
-        endList <- NULL
-    }
-    mcols(olap) <- DataFrame(mcols(olap),
-        startMatch = startList$match,
-        uniqueStartLengthQuery = startList$uniqueExonLengthQuery,
-        uniqueStartLengthSubject = startList$uniqueExonLengthSubject,
-        endMatch = endList$match,
-        uniqueEndLengthQuery = endList$uniqueExonLengthQuery,
-        uniqueEndLengthSubject = endList$uniqueExonLengthSubject)
-    return(olap)
+                               subjectStart, queryEnd, subjectEnd, subjectFull){
+  if (length(olap)) {
+    qHits <- queryHits(olap)
+    subHits <- subjectHits(olap)
+    queryStart <- ranges(queryStart[qHits])
+    subjectStart <- ranges(subjectStart[subHits])
+    queryEnd <- ranges(queryEnd[qHits])
+    subjectEnd <- ranges(subjectEnd[subHits])
+    subjectFull <- ranges(subjectFull[subHits])
+    subjectList <- unlist(subjectFull)
+    startList <- calculateFirstLastExonsDist(queryStart, subjectStart,
+                                             subjectFull, subjectList)
+    endList <- calculateFirstLastExonsDist(queryEnd, subjectEnd,
+                                           subjectFull, subjectList)
+  } else {
+    startList <- NULL
+    endList <- NULL
+  }
+  mcols(olap) <- DataFrame(mcols(olap),
+                           firstExonMatch = startList$match,
+                           uniqueFirstExonLengthQuery = startList$uniqueExonLengthQuery,
+                           uniqueFirstExonLengthSubject = startList$uniqueExonLengthSubject,
+                           lastExonMatch = endList$match,
+                           uniqueLastExonLengthQuery = endList$uniqueExonLengthQuery,
+                           uniqueLastExonLengthSubject = endList$uniqueExonLengthSubject)
+  return(olap)
 }
 
 

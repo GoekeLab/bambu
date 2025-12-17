@@ -5,6 +5,7 @@
 assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, 
                                         verbose, demultiplexed, spatial, 
                                         returnDistTable = FALSE, trackReads = TRUE) {
+    print("Running assignReadClasstoTranscripts !!!")
     if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose, returnDistTable)
     readClassList <- splitReadClassFiles(readClassList)

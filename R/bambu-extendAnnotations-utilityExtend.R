@@ -340,12 +340,24 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
   colnames(classificationTable) <- c("equal", "compatible", "newWithin",
                                      "newLastJunction","newFirstJunction","newJunction", "allNew", 
                                      "newFirstExon", "newLastExon")
+  
+  
+  
   equalQhits <- queryHits(ovExon[mcols(ovExon)$equal])
   classificationTable$equal[equalQhits[!duplicated(equalQhits)]] <- "equal"
+  
   compatibleQhits <- queryHits(ovExon[mcols(ovExon)$compatible])
   classificationTable$compatible[
     compatibleQhits[!duplicated(compatibleQhits)]] <- "compatible"
   classificationTable$compatible[classificationTable$equal == "equal"] <- ""
+  
+  
+  #add filtering based one what we have in 
+  classificationTable$equal[which(rowDataFilteredSpliced$equal == FALSE)] <- ""
+  classificationTable$compatible[which(rowDataFilteredSpliced$compatible == 0)] <- ""
+  
+  
+  
   # annotate with transcript and gene Ids
   equalSubHits <- subjectHits(ovExon[mcols(ovExon)$equal])
   rowDataFilteredSpliced$TXNAME <- NA
@@ -449,11 +461,11 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
     classificationTable$compatible[distNewTxByQuery$queryHits[
       distNewTxByQuery$compatible]] <- "compatible"
     classificationTable$newFirstExon[distNewTxByQuery$queryHits[
-      !distNewTxByQuery$startMatch]] <- "newFirstExon"
+      !distNewTxByQuery$firstExonMatch]] <- "newFirstExon"
     classificationTable$newFirstExon[
       classificationTable$newFirstJunction != "newFirstJunction"] <- ""
     classificationTable$newLastExon[distNewTxByQuery$queryHits[
-      !distNewTxByQuery$endMatch]] <- "newLastExon"
+      !distNewTxByQuery$lastExonMatch]] <- "newLastExon"
     classificationTable$newLastExon[
       classificationTable$newLastJunction != "newLastJunction"] <- ""
   }
@@ -510,8 +522,8 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons,
     group_by(queryHits) %>%
     summarise(
       minDist = min(dist),
-      startMatch = any(startMatch),
-      endMatch = any(endMatch),
+      firstExonMatch = any(firstExonMatch),
+      lastExonMatch = any(lastExonMatch),
       compatible = any(compatible))
   ## note: here is more information that can be used to filter and annotate!
   return(distNewTxByQuery)
@@ -529,11 +541,14 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons,
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                       primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
                                       ignore.strand = FALSE) {
+  exByTx <<- exByTx
+  exByTxRef <<- exByTxRef
   # (1)  find overlaps of read classes with annotated transcripts,
   spliceOverlaps <- findSpliceOverlapsByDist(exByTx, exByTxRef,
                                              maxDist = maxDist, firstLastSeparate = TRUE,
                                              dropRangesByMinLength = TRUE, cutStartEnd = TRUE,
                                              ignore.strand = ignore.strand)
+  print("check point 1!!! after findSpliceOverlapsByDist")
   txToAnTableFiltered <- genFilteredAnTable(spliceOverlaps,
       primarySecondaryDist, primarySecondaryDistStartEnd, DistCalculated = FALSE)
   # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
@@ -543,6 +558,8 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                                     exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                                     dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
                                                     ignore.strand = ignore.strand)
+  print("check point 2!!! after findSpliceOverlapsByDist")
+
   if(length(spliceOverlaps_rest) > 0){
     txToAnTableRest <-
       genFilteredAnTable(spliceOverlaps_rest, primarySecondaryDist,primarySecondaryDistStartEnd,
@@ -556,6 +573,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                 maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                 dropRangesByMinLength = FALSE,
                                 cutStartEnd = FALSE, ignore.strand = ignore.strand)
+        print("check point 3!!! after findSpliceOverlapsByDist")
       if (length(spliceOverlaps_restStartEnd)) {
         txToAnTableRestStartEnd <-
           genFilteredAnTable(spliceOverlaps_restStartEnd,
@@ -597,7 +615,7 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
   } else {
     txToAnTable <- as_tibble(spliceOverlaps) %>% group_by(queryHits) %>%
       mutate(dist = uniqueLengthQuery + uniqueLengthSubject +
-               uniqueStartLengthQuery + uniqueEndLengthQuery) %>%
+               uniqueFirstExonLengthQuery + uniqueLastExonLengthQuery) %>%
       mutate(txNumber = n())
   }
   ## change query hits for step 2 and 3
@@ -615,10 +633,10 @@ genFilteredAnTable <- function(spliceOverlaps, primarySecondaryDist = 5,
                subjectElementsOutsideMaxDist == 
                min(queryElementsOutsideMaxDist +
                      subjectElementsOutsideMaxDist)) %>% 
-      filter((uniqueStartLengthQuery <= primarySecondaryDistStartEnd &
-                uniqueEndLengthQuery <= primarySecondaryDistStartEnd) ==
-               max(uniqueStartLengthQuery <=
-                     primarySecondaryDistStartEnd & uniqueEndLengthQuery <=
+      filter((uniqueFirstExonLengthQuery <= primarySecondaryDistStartEnd &
+                uniqueLastExonLengthQuery <= primarySecondaryDistStartEnd) ==
+               max(uniqueFirstExonLengthQuery <=
+                     primarySecondaryDistStartEnd & uniqueLastExonLengthQuery <=
                      primarySecondaryDistStartEnd)) %>%
       mutate(txNumberFiltered = n())
   } else {
@@ -909,12 +927,13 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
                                                 annotationGrangesList, min.exonDistance = 35,
                                                 min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 100000, 
                                                 additionalFiltering = FALSE, verbose = FALSE) {
-  seReadClass <<- seReadClass
-  annotationGrangesList <<- annotationGrangesList
   start.ptm <- proc.time()
   readClassTable <-
     as_tibble(rowData(seReadClass), rownames = "readClassId") %>%
     dplyr::select(readClassId, confidenceType)
+  seReadClass <<- seReadClass
+  annotationGrangesList <<- annotationGrangesList
+
   distTable <- calculateDistToAnnotation(rowRanges(seReadClass),
                                          annotationGrangesList, maxDist = min.exonDistance,
                                          primarySecondaryDist = min.primarySecondaryDist,
