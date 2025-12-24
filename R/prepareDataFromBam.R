@@ -117,7 +117,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         df <- data.frame(name = names(readGrgList), 
             clip5 = mcols(readGrgList)$clip5Prime)
         df <- df %>% mutate(id = row_number()) %>% group_by(name) %>% summarise(primary.id = id[which.min(clip5)])
-        readGrgList <- unname(readGrgList[df$primary.id])
+        readGrgList <- readGrgList[df$primary.id]
         end.ptm <- proc.time()
         message("Primary alignment selection time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
         
