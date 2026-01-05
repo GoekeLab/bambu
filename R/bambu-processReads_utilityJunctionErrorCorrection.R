@@ -2,7 +2,7 @@
 #' @param uniqueJunctions uniqueJunctions
 #' @param verbose verbose
 #' @noRd
-junctionErrorCorrection <- function(uniqueJunctions, verbose, returnModel = TRUE) {
+junctionErrorCorrection <- function(uniqueJunctions, verbose) {
     start.ptm <- proc.time()
     if (sum(uniqueJunctions$annotatedJunction) > 5000 &
         sum(!uniqueJunctions$annotatedJunction) > 4000) {
@@ -37,7 +37,6 @@ junctionErrorCorrection <- function(uniqueJunctions, verbose, returnModel = TRUE
     if (verbose) 
         message("Finished correcting junction based on set of high confidence ",
             "junctions in ", round((end.ptm - start.ptm)[3] / 60, 1), " mins.")
-    if(returnModel) {metadata(uniqueJunctions)$junctionModel = junctionModel}
     return(uniqueJunctions)
 }
 

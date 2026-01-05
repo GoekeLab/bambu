@@ -23,8 +23,7 @@ data1 <- data.table(
     txlen = c(546,546,2356,2356),
     rcWidth = c(300,540,1800,2300),
     minRC = rep(1,4),
-    gene_sid = 1,
-    multi_align = c(FALSE, FALSE, FALSE, FALSE)
+    GENEID = 1
 )
 
 data2 <- data.table(
@@ -36,8 +35,7 @@ data2 <- data.table(
     txlen = c(546,546,2356,2356, 546,2356),
     rcWidth = c(300,540,1800,2300, 200, 200),
     minRC = rep(1,6),
-    gene_sid = 2,
-    multi_align = c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE)
+    GENEID = 2
 )
 
 data3 <- data.table(
@@ -49,8 +47,7 @@ data3 <- data.table(
     txlen = c(546,546,2356,2356,2356, 546,2356),
     rcWidth = c(540,540,540,1800,2300, 200, 200),
     minRC = c(NA,NA,1,1,1,NA,1),
-    gene_sid = 3,
-    multi_align = c(TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE)
+    GENEID = 3
 )
 
 data4 <- data.table(
@@ -62,8 +59,7 @@ data4 <- data.table(
     txlen = c(546,546,2356,2356,2356, 546,2356),
     rcWidth = c(540,540,540,1800,2300, 200, 200),
     minRC = c(NA,NA,1,1,1,NA,1),
-    gene_sid = 4,
-    multi_align = c(TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE)
+    GENEID = 4
 )
 
 data5 <- data.table(
@@ -75,8 +71,7 @@ data5 <- data.table(
     txlen = c(546,546,2356,2356, 546,2356),
     rcWidth = c(1700,2200,1800,2300, 2000, 2000),
     minRC = rep(1,6),
-    gene_sid = 5,
-    multi_align = c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE)
+    GENEID = 5
 )
 
 
@@ -107,17 +102,24 @@ seCombinedGeneExpected <- transcriptToGeneExpression(seCombined)
 seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 
-## prior models to use for scoreReadClass() and junctions()
-##to train new ones see update_xgboost_models.R
-defaultModels = readRDS("./inst/extdata/defaultModels.rds")
+## prior models to use for scoreReadClass()
+#se = readRDS("SGNex_HepG2_directRNA_replicate5_run1_genome.rds")
+#defaultModels = trainBambu(se)
+xgb.save(defaultModels$transcriptModelME, "./inst/extdata/read_class_ME.model")
+xgb.save(defaultModels$transcriptModelSE, "./inst/extdata/read_class_SE.model")
+defaultModels$transcriptModelME = NULL
+defaultModels$transcriptModelSE = NULL
+#saveRDS(defaultModels, "./inst/extdata/defaultModels.rds")
+defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
+                                    package = "bambu"))
 defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.model")
-defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")  
+defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")                                    
 
-standardJunctionModels_temp = list()
-standardJunctionModels_temp$spliceSitePredictionStart.start = xgb.load("./inst/extdata/spliceSitePredictionStart.start.model")
-standardJunctionModels_temp$spliceSitePredictionStart.end = xgb.load("./inst/extdata/spliceSitePredictionStart.end.model")
-standardJunctionModels_temp$spliceSitePredictionEnd.start = xgb.load("./inst/extdata/spliceSitePredictionEnd.start.model")
-standardJunctionModels_temp$spliceSitePredictionEnd.end = xgb.load("./inst/extdata/spliceSitePredictionEnd.end.model")
+# How to get pre trained junction model standardJunctionModels_temp
+# added "saveRDS(junctionModel, "./inst/extdata/standardJunctionModels_temp.txt")" to junctionErrorCorrection
+# ran Bambu with GNex_HepG2_directRNA_replicate5_run1_genome
+standardJunctionModels_temp = readRDS(system.file(
+    "extdata", "standardJunctionModels_temp.txt", package = "bambu"))
 
 usethis::use_data(data1, data2, data3, data4, data5,
                   estOutput_woBC,
@@ -229,9 +231,9 @@ saveRDS(readGrgList, file = "./inst/extdata/readGrgList_SGNex_A549_directRNA_rep
 
 annotations <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds", package = "bambu"))
 genomeSequence <- system.file("extdata", "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa", package = "bambu")
-se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, assignDist = FALSE, quant = FALSE)[[1]]
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, discovery = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
-se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, stranded = TRUE, assignDist = FALSE, discovery = FALSE, quant = FALSE)[[1]]
+se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence, stranded = TRUE, discovery = FALSE, quant = FALSE)[[1]]
 saveRDS(se, file = "./inst/extdata/seReadClassStranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", compress = "xz")
 
 se <- bambu(reads = test.bam, annotations = annotations, genome = genomeSequence)
@@ -298,12 +300,12 @@ gr <- readRDS(system.file("extdata", "annotationGranges_txdbGrch38_91_chr9_1_100
 
 extendedAnnotations <- isore.extendAnnotations(combinedTranscripts=seIsoReCombined,
                                                annotationGrangesList=gr,
-                                               remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.7, 
+                                               remove.subsetTx = TRUE, min.sampleNumber = 1, NDR = 0.1, 
                                                min.exonDistance = 35, min.exonOverlap = 10,
                                                min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
-                                               prefix='Bambu', verbose=FALSE, defaultModels = defaultModels)
+                                               prefix='', verbose=FALSE, defaultModels = defaultModels)
 saveRDS(extendedAnnotations, file = "./inst/extdata/extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.rds", compress = "xz")
-writeToGTF(extendedAnnotations, "./inst/extdata/extendedAnnotationGranges_txdbGrch38_91_chr9_1_1000000.gtf")
+
 ## expected output for test isore
 
 seReadClass1 <- readRDS(system.file("extdata", "seReadClassUnstranded_SGNex_A549_directRNA_replicate5_run1_chr9_1_1000000.rds", package = "bambu"))
