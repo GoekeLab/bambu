@@ -292,6 +292,7 @@ prepareTranscriptModelFeatures = function(rowData){
                       tx_strand_bias = readCount.posStrand, labels = equal) %>%
         mutate(
             tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
+			labels = as.logical(labels),
             numReads = log2(pmax(1,1+(numReads/scalingFactor)))
         )
     return(outData)
