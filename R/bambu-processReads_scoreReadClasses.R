@@ -158,9 +158,9 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
         } else txScoreSE = NULL
     } else {
         if (!is.null(defaultModels)){
-            txScore = predict(defaultModels$transcriptModelME, 
+			txScore = predict(defaultModels$transcriptModelME, 
                 as.matrix(features))
-            txScoreSE = predict(defaultModels$transcriptModelSE, 
+			txScoreSE = predict(defaultModels$transcriptModelSE, 
                 as.matrix(features))
         } else {
             warning("Transcript model not trained. ",

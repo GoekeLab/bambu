@@ -130,7 +130,12 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     equal[is.na(equal)] = FALSE
 
     #add envirnment so poly() works
-    attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
+	if(is.null(defaultModels$lmNDR[["terms"]])){
+		frm <- defaultModels$lmNDR$call$formula
+        defaultModels$lmNDR[["terms"]] <- terms(as.formula(frm))
+        attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
+	}
+    #attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
     baseline = predict(defaultModels$lmNDR, newdata=data.frame(NDR=baselineFDR))
     attr(defaultModels$lmNDR[["terms"]], ".Environment") = c()
 
