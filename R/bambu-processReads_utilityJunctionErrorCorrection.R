@@ -210,8 +210,8 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
         data.train.cv.test <- data.train[-mySample,]
         labels.train.cv.test <- labels.train[-mySample]
         
-        cv.fit <- xgboost(data = data.train.cv, 
-            label = labels.train.cv, nthread = 1, nrounds = nrounds, 
+        cv.fit <- xgboost(x = data.train.cv, 
+            y = labels.train.cv, nthread = 1, nrounds = nrounds, 
             objective = "binary:logistic", 
             eval_metric = 'error',
             verbose = 0)
