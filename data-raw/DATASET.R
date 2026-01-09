@@ -110,14 +110,14 @@ seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 ## prior models to use for scoreReadClass() and junctions()
 ##to train new ones see update_xgboost_models.R
 defaultModels = readRDS("./inst/extdata/defaultModels.rds")
-defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.model")
-defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")  
+defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.ubj")
+defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.ubj")  
 
 standardJunctionModels_temp = list()
-standardJunctionModels_temp$spliceSitePredictionStart.start = xgb.load("./inst/extdata/spliceSitePredictionStart.start.model")
-standardJunctionModels_temp$spliceSitePredictionStart.end = xgb.load("./inst/extdata/spliceSitePredictionStart.end.model")
-standardJunctionModels_temp$spliceSitePredictionEnd.start = xgb.load("./inst/extdata/spliceSitePredictionEnd.start.model")
-standardJunctionModels_temp$spliceSitePredictionEnd.end = xgb.load("./inst/extdata/spliceSitePredictionEnd.end.model")
+standardJunctionModels_temp$spliceSitePredictionStart.start = xgb.load("./inst/extdata/model_spliceSitePredictionStart.start.ubj")
+standardJunctionModels_temp$spliceSitePredictionStart.end = xgb.load("./inst/extdata/model_spliceSitePredictionStart.end.ubj")
+standardJunctionModels_temp$spliceSitePredictionEnd.start = xgb.load("./inst/extdata/model_spliceSitePredictionEnd.start.ubj")
+standardJunctionModels_temp$spliceSitePredictionEnd.end = xgb.load("./inst/extdata/model_spliceSitePredictionEnd.end.ubj")
 
 usethis::use_data(data1, data2, data3, data4, data5,
                   estOutput_woBC,
