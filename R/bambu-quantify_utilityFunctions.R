@@ -117,6 +117,7 @@ getUniCountPerEquiRC <- function(distTable){
                             max(firstExonWidth))) %>%
     select(eqClassById,GENEID,nobs,rcWidth) %>% #eqClassByIdTemp,
     ungroup()  %>%
+    mutate(eqClassById = if (is.list(eqClassById)) eqClassById else as.list(eqClassById)) %>%
     distinct()
   return(eqClassCount)
 }
