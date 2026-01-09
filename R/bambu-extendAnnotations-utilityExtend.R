@@ -199,7 +199,12 @@ recommendNDR.onAnnotations <- function(annotations, prefix = "Bambu", baselineFD
     mcols <- mcols(annotations)[!is.na(mcols(annotations)$maxTxScore),]
     equal <- !grepl(prefix, mcols$TXNAME)
     #add envirnment so poly() works
-    attr(defaultModels2$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
+    if(is.null(defaultModels$lmNDR[["terms"]])){
+		frm <- defaultModels$lmNDR$call$formula
+        defaultModels$lmNDR[["terms"]] <- terms(as.formula(frm))
+        attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
+	}
+    #attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
     baseline <- predict(defaultModels2$lmNDR, newdata=data.frame(NDR=baselineFDR))
     attr(defaultModels2$lmNDR[["terms"]], ".Environment") <- c()
     score <- mcols$maxTxScore.noFit
