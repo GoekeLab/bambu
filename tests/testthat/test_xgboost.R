@@ -7,7 +7,7 @@ test_that("fitXGBoostModel returns expected model for splice junction correction
   data_train <- matrix(seq(1:300000), nrow=100000)
   # Test matrix representing 16,000 examples with 3 features
   data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
-  labels_train <- c(rep(1,50000), rep(0,50000))
+  labels_train <- as.logical(c(rep(1,50000), rep(0,50000)))
   
   xgb_model <- fitXGBoostModel(labels_train, data_train, show.cv=TRUE)
   # Compute the predictions

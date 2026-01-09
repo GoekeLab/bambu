@@ -4,7 +4,7 @@
 # fitXGBoostModel() in test_xgboost.R 
 data_train <- matrix(seq(1:300000), nrow=100000)
 data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
-labels_train <- c(rep(1,50000), rep(0,50000))
+labels_train <- as.logical(c(rep(1,50000), rep(0,50000)))
 xgb_model <- fitXGBoostModel(labels_train, data_train, show.cv=TRUE)
 # Extract the predictions and results from the list
 xgb_predictions = predict(xgb_model, data_test)
