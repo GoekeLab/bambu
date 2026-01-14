@@ -214,8 +214,7 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
         cv.fit <- xgboost(x = data.train.cv, 
             y = labels.train.cv, nthread = 1, nrounds = nrounds, 
             objective = "binary:logistic", 
-            eval_metric = 'error',
-            verbose = 0)
+            eval_metric = 'error')
         predictions <- predict(cv.fit, data.train.cv.test)
         message('prediction accuracy (CV) (higher for splice ',
                 'donor than splice acceptor)')
@@ -229,11 +228,10 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
         message("AUC: ", evaluatePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
     
-    cv.fit <- xgboost(data = data.train, 
-                      label = labels.train, nthread=1, nrounds=nrounds, 
+    cv.fit <- xgboost(x = data.train, 
+                      y = labels.train, nthread=1, nrounds=nrounds, 
                       objective = "binary:logistic", 
-                      eval_metric='error',
-                      verbose = 0)
+                      eval_metric='error')
     
     return(cv.fit)
 }
