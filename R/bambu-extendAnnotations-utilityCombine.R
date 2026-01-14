@@ -311,7 +311,7 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
                     txScore = weighted.mean(txScore, readCount_tmp),
                     txScore.noFit = weighted.mean(txScore.noFit, readCount_tmp)) %>%
         group_by(chr, strand, start, end) %>% 
-        summarise(readCount = sum(readCount),
+        mutate(readCount = sum(readCount),
                     maxTxScore = txScore,
                     maxTxScore.noFit = txScore.noFit,
                     NSampleReadCount = sum(readCount >= min.readCount), 
