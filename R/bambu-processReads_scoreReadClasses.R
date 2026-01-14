@@ -158,9 +158,9 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
         } else txScoreSE = NULL
     } else {
         if (!is.null(defaultModels)){
-            txScore = predict(defaultModels$transcriptModelME, 
+			txScore = predict(defaultModels$transcriptModelME, 
                 as.matrix(features))
-            txScoreSE = predict(defaultModels$transcriptModelSE, 
+			txScoreSE = predict(defaultModels$transcriptModelSE, 
                 as.matrix(features))
         } else {
             warning("Transcript model not trained. ",
@@ -292,6 +292,7 @@ prepareTranscriptModelFeatures = function(rowData){
                       tx_strand_bias = readCount.posStrand, labels = equal) %>%
         mutate(
             tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
+			labels = as.logical(labels),
             numReads = log2(pmax(1,1+(numReads/scalingFactor)))
         )
     return(outData)

@@ -498,6 +498,18 @@ rowData(se)
 
 ### Release History
 
+**bambu v3.12.1**
+
+Release date: 2026-01-14
+
+Minor changes:
+
+- Resolve xgboost object incompatibility error [issue](https://github.com/GoekeLab/bambu/issues/447)  
+- Resolve process.y.margin.and.object error [issue](https://github.com/GoekeLab/bambu/issues/505)  
+- Resolve xgboost warnings related to argument updates in the recent xgboost version
+- Resolve the dplyr warning related to summarise usage [issue](https://github.com/GoekeLab/bambu/issues/380) 
+
+
 **bambu v3.8.2**
 
 Release date: 2025-02-06
