@@ -304,23 +304,14 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         } , BPPARAM = bpParameters))
     newUnsplicedTibble <- newUnsplicedTibble %>% 
         left_join(rowDataCombined, by =  "row_id") %>%
-        separate(row_id, c("sample","rcName"), sep = "\\-") %>%
-        mutate(sample_id = as.integer(gsub("s","",sample))) %>%
-        mutate(sample_name = colDataNames[sample_id]) %>%
-        select(-sample, -sample_id) %>%
         mutate(readCount_tmp = readCount) %>%
-        group_by(chr,strand, start, end, sample_name) %>%
+        group_by(chr,strand, start, end) %>%
         summarise(readCount = sum(readCount),
-                    geneReadProp = sum(geneReadProp),
-                    txScore = weighted.mean(txScore, readCount_tmp),
-                    txScore.noFit = weighted.mean(txScore.noFit, readCount_tmp)) %>%
-        group_by(chr, strand, start, end) %>% 
-        mutate(readCount = sum(readCount),
-                    maxTxScore = txScore,
-                    maxTxScore.noFit = txScore.noFit,
-                    NSampleReadCount = sum(readCount >= min.readCount), 
-                    NSampleReadProp = sum(geneReadProp >= 
-                                            min.readFractionByGene),
-                    NSampleTxScore = sum(maxTxScore > min.txScore.singleExon))
+                  maxTxScore = weighted.mean(txScore, readCount_tmp),
+                  maxTxScore.noFit = weighted.mean(txScore.noFit, readCount_tmp),
+                  NSampleReadCount = sum(readCount_tmp >= min.readCount), 
+                  NSampleReadProp = sum(geneReadProp >= 
+                                          min.readFractionByGene),
+                  NSampleTxScore = sum(txScore > min.txScore.singleExon))
     return(newUnsplicedTibble)
 }
