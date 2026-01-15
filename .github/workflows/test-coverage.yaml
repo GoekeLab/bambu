@@ -2,10 +2,9 @@
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
   push:
-    branches: 
-      - devel
+    branches: [devel, devel_pre, devel_pre_v4]
   pull_request:
-    branches: [main, devel]
+    branches: [devel, devel_pre, devel_pre_v4]
 
 name: test-coverage
 
