@@ -149,7 +149,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose)
-
+    xgb.set.config(nthread = 1)
     rm.readClassSe <- FALSE
     readClassList = reads
     isRDSs = all(sapply(reads, class)=="RangedSummarizedExperiment")

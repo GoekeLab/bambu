@@ -508,6 +508,7 @@ Minor changes:
 - Resolve process.y.margin.and.object error [issue](https://github.com/GoekeLab/bambu/issues/505)  
 - Resolve xgboost warnings related to argument updates in the recent xgboost version
 - Resolve the dplyr warning related to summarise usage [issue](https://github.com/GoekeLab/bambu/issues/380) 
+- Resolve the xgboost related parallel processing restarting with no progress issue 
 
 
 **bambu v3.8.2**
