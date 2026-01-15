@@ -92,7 +92,7 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
             model = fitXGBoostModel(labels.train = 
-                as.integer(annotatedSplice)[mySet.all][mySet.training], 
+                as.logical(annotatedSplice)[mySet.all][mySet.training], 
                 data.train = modelmatrix[mySet.training,],
                 show.cv = verbose, maxSize.cv = 10000)
             

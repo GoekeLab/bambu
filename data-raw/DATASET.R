@@ -4,7 +4,7 @@
 # fitXGBoostModel() in test_xgboost.R 
 data_train <- matrix(seq(1:300000), nrow=100000)
 data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
-labels_train <- c(rep(1,50000), rep(0,50000))
+labels_train <- as.logical(c(rep(1,50000), rep(0,50000)))
 xgb_model <- fitXGBoostModel(labels_train, data_train, show.cv=TRUE)
 # Extract the predictions and results from the list
 xgb_predictions = predict(xgb_model, data_test)
@@ -110,14 +110,14 @@ seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 ## prior models to use for scoreReadClass() and junctions()
 ##to train new ones see update_xgboost_models.R
 defaultModels = readRDS("./inst/extdata/defaultModels.rds")
-defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.model")
-defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")  
+defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.ubj")
+defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.ubj")  
 
 standardJunctionModels_temp = list()
-standardJunctionModels_temp$spliceSitePredictionStart.start = xgb.load("./inst/extdata/spliceSitePredictionStart.start.model")
-standardJunctionModels_temp$spliceSitePredictionStart.end = xgb.load("./inst/extdata/spliceSitePredictionStart.end.model")
-standardJunctionModels_temp$spliceSitePredictionEnd.start = xgb.load("./inst/extdata/spliceSitePredictionEnd.start.model")
-standardJunctionModels_temp$spliceSitePredictionEnd.end = xgb.load("./inst/extdata/spliceSitePredictionEnd.end.model")
+standardJunctionModels_temp$spliceSitePredictionStart.start = xgb.load("./inst/extdata/model_spliceSitePredictionStart.start.ubj")
+standardJunctionModels_temp$spliceSitePredictionStart.end = xgb.load("./inst/extdata/model_spliceSitePredictionStart.end.ubj")
+standardJunctionModels_temp$spliceSitePredictionEnd.start = xgb.load("./inst/extdata/model_spliceSitePredictionEnd.start.ubj")
+standardJunctionModels_temp$spliceSitePredictionEnd.end = xgb.load("./inst/extdata/model_spliceSitePredictionEnd.end.ubj")
 
 usethis::use_data(data1, data2, data3, data4, data5,
                   estOutput_woBC,
