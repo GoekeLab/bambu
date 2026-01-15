@@ -4,7 +4,7 @@
 # fitXGBoostModel() in test_xgboost.R 
 data_train <- matrix(seq(1:300000), nrow=100000)
 data_test <- matrix(c(seq(1:28000), seq(280001:300000)), nrow=16000)
-labels_train <- c(rep(1,50000), rep(0,50000))
+labels_train <- as.logical(c(rep(1,50000), rep(0,50000)))
 xgb_model <- fitXGBoostModel(labels_train, data_train, show.cv=TRUE)
 # Extract the predictions and results from the list
 xgb_predictions = predict(xgb_model, data_test)
@@ -102,24 +102,33 @@ seCombinedGeneExpected <- transcriptToGeneExpression(seCombined)
 seCombinedExtendedGeneExpected <- transcriptToGeneExpression(seCombinedExtended)
 
 
+defaultModels$transcriptModelME = NULL
+defaultModels$transcriptModelSE = NULL
+saveRDS(defaultModels, "./inst/extdata/defaultModels.rds")
 ## prior models to use for scoreReadClass()
 #se = readRDS("SGNex_HepG2_directRNA_replicate5_run1_genome.rds")
 #defaultModels = trainBambu(se)
-xgb.save(defaultModels$transcriptModelME, "./inst/extdata/read_class_ME.model")
-xgb.save(defaultModels$transcriptModelSE, "./inst/extdata/read_class_SE.model")
+xgb.save(defaultModels$transcriptModelME, "./inst/extdata/read_class_ME.ubj")
+xgb.save(defaultModels$transcriptModelSE, "./inst/extdata/read_class_SE.ubj")
 defaultModels$transcriptModelME = NULL
 defaultModels$transcriptModelSE = NULL
 #saveRDS(defaultModels, "./inst/extdata/defaultModels.rds")
 defaultModels = readRDS(system.file("extdata", "defaultModels.rds",
                                     package = "bambu"))
-defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.model")
-defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.model")                                    
 
-# How to get pre trained junction model standardJunctionModels_temp
-# added "saveRDS(junctionModel, "./inst/extdata/standardJunctionModels_temp.txt")" to junctionErrorCorrection
-# ran Bambu with GNex_HepG2_directRNA_replicate5_run1_genome
-standardJunctionModels_temp = readRDS(system.file(
-    "extdata", "standardJunctionModels_temp.txt", package = "bambu"))
+
+defaultModels$transcriptModelME = xgb.load("./inst/extdata/read_class_ME.ubj")
+defaultModels$transcriptModelSE = xgb.load("./inst/extdata/read_class_SE.ubj")   
+
+
+
+standardJunctionModels_temp_new <- lapply(seq_along(standardJunctionModels_temp), function(i){
+	xgb.load(paste0("./inst/extdata/model_", names(standardJunctionModels_temp)[i], ".ubj"))
+})
+names(standardJunctionModels_temp_new) <-   names(standardJunctionModels_temp)
+standardJunctionModels_temp <- standardJunctionModels_temp_new
+standardJunctionModels_temp_new <- NULL
+
 
 usethis::use_data(data1, data2, data3, data4, data5,
                   estOutput_woBC,

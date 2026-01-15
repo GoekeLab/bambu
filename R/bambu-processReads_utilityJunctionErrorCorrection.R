@@ -91,7 +91,7 @@ testSpliceSites <- function(data, splice = "Start", prime = "start",
         predSplice.prime <- NULL
         if (is.null(junctionModel)) { 
             model = fitXGBoostModel(labels.train = 
-                as.integer(annotatedSplice)[mySet.all][mySet.training], 
+                as.logical(annotatedSplice)[mySet.all][mySet.training], 
                 data.train = modelmatrix[mySet.training,],
                 show.cv = verbose, maxSize.cv = 10000)
             
@@ -210,11 +210,10 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
         data.train.cv.test <- data.train[-mySample,]
         labels.train.cv.test <- labels.train[-mySample]
         
-        cv.fit <- xgboost(data = data.train.cv, 
-            label = labels.train.cv, nthread = 1, nrounds = nrounds, 
+        cv.fit <- xgboost(x = data.train.cv, 
+            y = labels.train.cv, nthread = 1, nrounds = nrounds, 
             objective = "binary:logistic", 
-            eval_metric = 'error',
-            verbose = 0)
+            eval_metric = 'error')
         predictions <- predict(cv.fit, data.train.cv.test)
         message('prediction accuracy (CV) (higher for splice ',
                 'donor than splice acceptor)')
@@ -228,11 +227,10 @@ fitXGBoostModel <- function(labels.train, data.train, nrounds = 50,
         message("AUC: ", evaluatePerformance(labels.train.cv.test == 1,predictions)$AUC)
     }
     
-    cv.fit <- xgboost(data = data.train, 
-                      label = labels.train, nthread=1, nrounds=nrounds, 
+    cv.fit <- xgboost(x = data.train, 
+                      y = labels.train, nthread=1, nrounds=nrounds, 
                       objective = "binary:logistic", 
-                      eval_metric='error',
-                      verbose = 0)
+                      eval_metric='error')
     
     return(cv.fit)
 }
