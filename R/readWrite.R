@@ -42,7 +42,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         }
         #write incompatible counts
         if(!is.null(metadata(se)$incompatibleCounts)){
-            estimates = metadata(se)$incompatibleCounts
+            estimates <- metadata(se)$incompatibleCounts
             estimatesfn <- paste(transcript_gtffn, "incompatibleCounts.mtx", sep = "")
                 Matrix::writeMM(estimates, estimatesfn)
         }
