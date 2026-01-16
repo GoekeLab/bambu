@@ -78,18 +78,18 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
         sampleNames <- as.numeric(as.factor(sampleNames))
         for(i in seq_along(readGrgList)){
             if(!isFALSE(demultiplexed)){
-                mcols(readGrgList[[i]])$BC <- paste0(names(reads)[i], '_', mcols(readGrgList[[i]])$BC)
+                mcols(readGrgList[[i]])$CB <- paste0(names(reads)[i], '_', mcols(readGrgList[[i]])$CB)
             } else{
-                mcols(readGrgList[[i]])$BC <- sampleNames[i]
+                mcols(readGrgList[[i]])$CB <- sampleNames[i]
             }
             
-            mcols(readGrgList[[i]])$BC <- as.factor(mcols(readGrgList[[i]])$BC)
+            mcols(readGrgList[[i]])$CB <- as.factor(mcols(readGrgList[[i]])$CB)
             
         }
         readGrgList <- do.call(c, readGrgList)    
         mcols(readGrgList)$id <- seq_along(readGrgList) 
         if(!isFALSE(demultiplexed)){ 
-          mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$BC)
+          mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$CB)
         } else {
           mcols(readGrgList)$sampleID <- i
         }
@@ -101,7 +101,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
             processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode)
         metadata(readClassList)$samples <- names(reads)
         metadata(readClassList)$sampleNames <- names(reads)
-        if(!isFALSE(demultiplexed)) metadata(readClassList)$samples <- levels(mcols(readGrgList)$BC)
+        if(!isFALSE(demultiplexed)) metadata(readClassList)$samples <- levels(mcols(readGrgList)$CB)
         readClassList <- list(readClassList)
     }
         
@@ -133,7 +133,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, refe
     if(verbose) message(paste0("Number of alignments/reads: ",length(readGrgList)))
     warnings <- c()
     if(!is.null(barcodesToFilter) & !isFALSE(demultiplexed))
-        readGrgList <- readGrgList[!(mcols(readGrgList)$BC %in% barcodesToFilter)]
+        readGrgList <- readGrgList[!(mcols(readGrgList)$CB %in% barcodesToFilter)]
     warnings <- seqlevelCheckReadsAnnotation(readGrgList, annotations)
     if(verbose & length(warnings) > 0) warning(paste(warnings,collapse = "\n"))
     #check seqlevels for consistency, drop ranges not present in genomeSequence
@@ -177,13 +177,13 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, refe
 
     sampleName <- names(bam.file)[1]
     if(!isFALSE(demultiplexed)){
-        mcols(readGrgList)$BC <- paste0(sampleName, '_', mcols(readGrgList)$BC)
+        mcols(readGrgList)$CB <- paste0(sampleName, '_', mcols(readGrgList)$CB)
     } else{
-        mcols(readGrgList)$BC <- sampleName
+        mcols(readGrgList)$CB <- sampleName
         }
-    mcols(readGrgList)$BC <- as.factor(mcols(readGrgList)$BC)
+    mcols(readGrgList)$CB <- as.factor(mcols(readGrgList)$CB)
     if(!isFALSE(demultiplexed)){ 
-        mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$BC)
+        mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$CB)
     } else {
         mcols(readGrgList)$sampleID <- index
     }
@@ -222,7 +222,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, refe
 
     metadata(se)$samples <- names(bam.file)[1]
     metadata(se)$sampleNames <- names(bam.file)[1]
-    if(!isFALSE(demultiplexed)) metadata(se)$samples <- levels(mcols(readGrgList)$BC)                         
+    if(!isFALSE(demultiplexed)) metadata(se)$samples <- levels(mcols(readGrgList)$CB)                         
     return(se)
 }
 
@@ -237,7 +237,7 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
     cleanReads = TRUE, dedupUMI = FALSE, index = 0, barcodesToFilter = NULL) {
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
     
-    if(!is.null(barcodesToFilter) & !isFALSE(demultiplexed)) readGrgList <- readGrgList[!mcols(readGrgList)$BC %in% barcodesToFilter]
+    if(!is.null(barcodesToFilter) & !isFALSE(demultiplexed)) readGrgList <- readGrgList[!mcols(readGrgList)$CB %in% barcodesToFilter]
     
     if(verbose) message("Number of alignments/reads: ",length(readGrgList))
     

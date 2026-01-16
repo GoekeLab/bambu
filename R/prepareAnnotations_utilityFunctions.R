@@ -25,7 +25,7 @@ prepareAnnotationsFromGTF <- function(file) {
             "score", "strand", "frame", "attribute")
         data <- data[data$type == "exon", ]
         data$strand[data$strand == "."] <- "*"
-        data$GENEID <- gsub("gene_id (.*?);.*", "\\1", data$attribute)
+        data$GENEID <- gsub(".*gene_id (.*?);.*", "\\1", data$attribute)
         data$TXNAME <- gsub(".*transcript_id (.*?);.*", "\\1", data$attribute)
         data$NDR <- NULL
         data$maxTxScore <- NULL

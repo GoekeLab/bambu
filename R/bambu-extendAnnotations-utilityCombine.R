@@ -92,42 +92,37 @@ sequentialCombineFeatureTibble <- function(readClassList,
 
 #' @noRd 
 updateStartEndReadCount <- function(combinedFeatureTibble){
-    combinedFeatureTibble <- combinedFeatureTibble %>% 
-        mutate(rowID = row_number())
+    setDT(combinedFeatureTibble)
+    combinedFeatureTibble[, rowID := .I]
     
-    startEndCountTibble <- combinedFeatureTibble %>% 
-        select(rowID, starts_with("start"),starts_with("end"),
-            starts_with("readCount")) %>%
-        tidyr::pivot_longer(c(starts_with("start"),starts_with("end"),
-            starts_with("readCount")), names_to = c(".value","set"),
-            names_pattern = "(.*)\\.(.)") %>%
-        group_by(rowID) %>% 
-        mutate(sumReadCount = sum(readCount,na.rm = TRUE))
-    
-    startTibble <- select(startEndCountTibble, rowID, start, readCount, 
-        sumReadCount) %>% 
-        arrange(start) %>%
-        filter(cumsum(readCount)/sumReadCount>=0.5) %>% 
-        filter(row_number()==1)
-    endTibble <- select(startEndCountTibble, rowID, end, readCount, 
-        sumReadCount) %>% 
-        arrange(end) %>% 
-        filter(cumsum(readCount)/sumReadCount>=0.5) %>% 
-        filter(row_number()==1)
-    
-    combinedFeatureTibble <- combinedFeatureTibble %>% 
-        dplyr::select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, tesId,
-            startRegionId, endRegionId,compatible, equal,
-            maxTxScore, maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
-            maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit,
-            NSampleReadCount, NSampleReadProp, NSampleTxScore, rowID) %>%
-        full_join(select(startTibble, rowID, start), by = "rowID") %>% 
-        full_join(select(endTibble, rowID, end, readCount=sumReadCount), 
-        by = "rowID") %>%
-        select(-rowID)
+    colNames <- colnames(combinedFeatureTibble)
+    readCountCols <- sort(colNames[grep("^readCount", colNames)]) # to make sure it's ordered by sample name
+    startCols <- sort(colNames[grep("^start\\.[0-9]", colNames)])
+    endCols <- sort(colNames[grep("^end\\.[0-9]", colNames)])
+
+    startEndDt <- combinedFeatureTibble[, 
+        .(start = readCountWeightedMedian(.SD,x,y),
+        end = readCountWeightedMedian(.SD,z,y),
+        readCount = sum(.SD[,y], na.rm = TRUE)),
+        by = rowID,  env = I(list(x = startCols, y = readCountCols, z = endCols))]
+    combinedFeatureTibble <- startEndDt[combinedFeatureTibble[,.(intronStarts, intronEnds, chr, strand, 
+                                                                 maxTxScore, maxTxScore.noFit, maxIntronChainScore, maxIntronChainScore.noFit, 
+                                                                 maxTssScore, maxTssScore.noFit, maxTesScore, maxTesScore.noFit, 
+                                                                 firstExonGroup, lastExonGroup, tesId, startRegionId, endRegionId, 
+                                                                 compatible, equal,
+                                                                 NSampleReadCount, NSampleReadProp, 
+                                                                 NSampleTxScore, rowID)], on = "rowID"]
+    combinedFeatureTibble[, rowID := NULL]
     return(combinedFeatureTibble)
 }
 
+#' Function to get median value without interpolation using certain column names
+#' @noRd
+readCountWeightedMedian <- function(dt, valuevar, timesvar){
+    sortVector <- rep(na.omit(unlist(dt[,..valuevar])), 
+                times = as.integer(na.omit(unlist(dt[,..timesvar]))))
+    return(min(sortVector[sortVector>=quantile(sortVector, probs = 0.5)]))
+}
 
 
 #' Function to combine featureTibble and create the NSample variables 
@@ -336,35 +331,14 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         } , BPPARAM = bpParameters))
     newUnsplicedTibble <- newUnsplicedTibble %>% 
         left_join(rowDataCombined, by =  "row_id") %>%
-        separate(row_id, c("sample","rcName"), sep = "\\-") %>%
-        mutate(sample_id = as.integer(gsub("s","",sample))) %>%
-        mutate(sample_name = colDataNames[sample_id]) %>%
-        select(-sample, -sample_id) %>%
         mutate(readCount_tmp = readCount) %>%
-        group_by(chr,strand, start, end, sample_name) %>%
+        group_by(chr,strand, start, end) %>%
         summarise(readCount = sum(readCount),
-                    geneReadProp = sum(geneReadProp),
-                    txScore = weighted.mean(txScore, readCount_tmp),
-                    txScore.noFit = weighted.mean(txScore.noFit, readCount_tmp),
-                    intronChainScore = weighted.mean(intronChainScore, readCount_tmp),
-                    intronChainScore.noFit = weighted.mean(intronChainScore.noFit, readCount_tmp),
-                    tssScore = weighted.mean(tssScore, readCount_tmp),
-                    tssScore.noFit = weighted.mean(tssScore.noFit, readCount_tmp),
-                    tesScore = weighted.mean(tesScore, readCount_tmp),
-                    tesScore.noFit = weighted.mean(tesScore.noFit, readCount_tmp)) %>%
-        group_by(chr, strand, start, end) %>% 
-        summarise(readCount = sum(readCount),
-                    maxTxScore = txScore,
-                    maxTxScore.noFit = txScore.noFit,
-                    maxIntronChainScore = intronChainScore,
-                    maxIntronChainScore.noFit = intronChainScore.noFit,
-                    maxTssScore = tssScore,
-                    maxTssScore.noFit = tssScore.noFit, 
-                    maxTesScore = tesScore,
-                    maxTesScore.noFit = tesScore.noFit,                    
-                    NSampleReadCount = sum(readCount >= min.readCount), 
-                    NSampleReadProp = sum(geneReadProp >= 
-                                            min.readFractionByGene),
-                    NSampleTxScore = sum(maxTxScore > min.txScore.singleExon))
+                  maxTxScore = weighted.mean(txScore, readCount_tmp),
+                  maxTxScore.noFit = weighted.mean(txScore.noFit, readCount_tmp),
+                  NSampleReadCount = sum(readCount_tmp >= min.readCount), 
+                  NSampleReadProp = sum(geneReadProp >= 
+                                          min.readFractionByGene),
+                  NSampleTxScore = sum(txScore > min.txScore.singleExon))
     return(newUnsplicedTibble)
 }

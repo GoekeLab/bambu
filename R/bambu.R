@@ -181,6 +181,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
     
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
+	xgb.set.config(nthread = 1)
     # only when reads is not NULL, this proceed, otherwise, it will jump to quant step
     if(!is.null(reads)){ 
         rm.readClassSe <- FALSE

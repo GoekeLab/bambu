@@ -216,10 +216,16 @@ By default bambu will write four .gtf files
 ```rscript
 writeBambuOutput(se, path = "./bambu/")
 ```
-If you would like to avoid outputting any of the above .gtf for space concerns, each can be toggled off with the below arguments.
+
+If you are only interested in the novel transcripts, one can filter this 'se' object first to remove reference annotations.
 ```rscript
-writeBambuOutput(se.novel, path = "./bambu/", outputExtendedAnno = FALSE, outputAll = FALSE, outputBambuModels = FALSE, outputNovelOnly = FALSE)
+se.novel = se[mcols(se)$novelTranscript,]
+writeBambuOutput(se.novel, path = "./bambu/")
 ```
+If you are only interested in full-length transcripts that were detected by Bambu in at least 1 sample.
+```rscript
+se.novel = se[mcols(se)$novelTranscript&(apply(assays(se)$fullLengthCounts >= 1,1,sum)>=1),]
+writeBambuOutput(se.novel, path = "./bambu/")
 
 If quant is set to FALSE i.e. only transcript discovery is performed, only the rowRanges output of the extended annotations is returned (a GRangesList object). The equivalent rowData can be accessed with mcols()
 These annotations can be written to a .gtf file using writeAnnotationsToGTF(GRangesList_object, output_path).
@@ -679,31 +685,27 @@ metadata(rowRanges(se))$warnings
 
 ### Release History
 
-**bambu v3.9.0**
+**bambu v3.13.1**
 
-Release date: 2025-xxx-xx
-
-- Subset transcripts and those above the NDR threshold are placed into the metadata of the annotations in $subsetTranscripts and $lowConfidenceTranscripts respectively (when filtered out by default).
-- adds the setNDR function
-- outputs the NDR, txScore and txScore.noFit as attributes to the gtf file and these are also read in with prepareAnnotations.
-- Added setNDR as part of quant, which means that users can provide their extendedAnnotations alongside an NDR threshold when running bambu and it will automatically adjust the NDR used for quant. This means users do not need to manually filter the NDR value themselves.
-- NDR and other stats are now copied over to equal transcripts even if above the NDR threshold (previously only happened for those below the NDR threshold)
-- Read class to transcript assignment is now its own step instead of being done with quant. This is turned on and off with assignDist. 
-- Added demultiplexed argument
-- Added spatial argument
-- Added sampleNames argument
-- Added cleanReads argument
-- Added dedupUMI argument
-- Added clusters argument
-- Deprecated lowMemory - This has been replaced by processByChromosome
-- Added processByChomosome (the old memory)
-- Added processByBam argument
-- Added importBambuResults()
-- writeBambuOutput now outputs all information needed to import Bambu results from text files
-- Count outputs are all now in sparse matrix format
+Release date: 2026-01-14
 
 Minor changes:
-- Warnings will no longer occur if there are seqlevels in the readGrgList that are not in the annotations or genome. This was done by setting seqlevels of the reads to only those in the reads. Warning was constantly occuring because all the scaffolds used in alignment were in the bam files, even if no reads from these scaffolds existed.
+
+- Resolve xgboost object incompatibility error [issue](https://github.com/GoekeLab/bambu/issues/447)  
+- Resolve process.y.margin.and.object error [issue](https://github.com/GoekeLab/bambu/issues/505)  
+- Resolve xgboost warnings related to argument updates in the recent xgboost version
+- Resolve the dplyr warning related to summarise usage [issue](https://github.com/GoekeLab/bambu/issues/380) 
+- Resolve the xgboost related parallel processing restarting with no progress issue
+
+**bambu v3.8.2**
+
+Release date: 2025-02-06
+
+Minor changes:
+
+- Fix large number of samples [issue](https://github.com/GoekeLab/bambu/issues/450)  
+- Fix denovo bug issue 
+
 
 **bambu v3.2.6**
 

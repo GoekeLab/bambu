@@ -542,17 +542,18 @@ trim_lm = function(lm){
 
 #' calculate and format read class features for model training
 #' @noRd
-prepareTranscriptModelFeatures = function(rowData, labels = "equal"){
-  scalingFactor = sum(rowData$readCount)/1000000
-  outData <- as_tibble(rowData) %>%  
-    dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
-                  numAstart, numAend, numTstart,numTend, 
-                  tx_strand_bias = readCount.posStrand, labels = labels) %>%
-    mutate(
-      tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
-      numReads = log2(pmax(1,1+(numReads/scalingFactor)))
-    )
-  return(outData)
+prepareTranscriptModelFeatures = function(rowData){
+    scalingFactor = sum(rowData$readCount)/1000000
+    outData <- as_tibble(rowData) %>%  
+        dplyr::select(numReads = readCount, geneReadProp, startSD, endSD,
+                      numAstart, numAend, numTstart,numTend, 
+                      tx_strand_bias = readCount.posStrand, labels = equal) %>%
+        mutate(
+            tx_strand_bias=(1-abs(0.5-(tx_strand_bias/numReads))),
+			labels = as.logical(labels),
+            numReads = log2(pmax(1,1+(numReads/scalingFactor)))
+        )
+    return(outData)
 }
 
 #' ensures that the data is trainable after filtering

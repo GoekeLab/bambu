@@ -71,8 +71,8 @@ test_that("isore.combineTranscriptCandidates completes successfully", {
     
     expect_equal(seIsoReCombined, seIsoReCombinedExpected)
     expect_named(seIsoReCombined,
-                 c('intronStarts', 'intronEnds', 'chr', 'strand', 'maxTxScore', 'maxTxScore.noFit',
-                   'NSampleReadCount', 'NSampleReadProp', 'NSampleTxScore', 'start', 'end', 'readCount', 'confidenceType') 
+                 c('start', 'end', 'readCount','intronStarts', 'intronEnds', 'chr', 'strand', 'maxTxScore', 'maxTxScore.noFit',
+                   'NSampleReadCount', 'NSampleReadProp', 'NSampleTxScore',  'confidenceType') 
     )
 })
 

@@ -4,9 +4,6 @@
 #' @importFrom BiocParallel bpparam
 #' @noRd
 setBiocParallelParameters <- function(reads, ncore, verbose, demultiplexed){
-    if(ncore >= 2) message("WARNING - If you change the number of cores (ncore) ",
-    "between Bambu runs and there is no progress please restart your R session ",
-    "to resolve the issue that originates from the XGboost package.")
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
     # when demultiplexed is FALSE, isFALSE(demultiplexed) is TRUE
