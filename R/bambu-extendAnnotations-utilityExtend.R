@@ -541,8 +541,6 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons,
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                       primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
                                       ignore.strand = FALSE) {
-  exByTx <<- exByTx
-  exByTxRef <<- exByTxRef
   # (1)  find overlaps of read classes with annotated transcripts,
   spliceOverlaps <- findSpliceOverlapsByDist(exByTx, exByTxRef,
                                              maxDist = maxDist, firstLastSeparate = TRUE,
@@ -931,8 +929,6 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
   readClassTable <-
     as_tibble(rowData(seReadClass), rownames = "readClassId") %>%
     dplyr::select(readClassId, confidenceType)
-  seReadClass <<- seReadClass
-  annotationGrangesList <<- annotationGrangesList
 
   distTable <- calculateDistToAnnotation(rowRanges(seReadClass),
                                          annotationGrangesList, maxDist = min.exonDistance,
