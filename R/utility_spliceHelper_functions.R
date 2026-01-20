@@ -82,8 +82,8 @@ findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
    mcols(olap) <- DataFrame(compatible, equal, unique,
                            strandSpecific, strandedMatch)
   
-   mcols(olap)$dist_5 <- NA
-   mcols(olap)$dist_3 <- NA
+  mcols(olap)$dist_3 <- rep(NA, length(olap))
+  mcols(olap)$dist_5 <- rep(NA, length(olap))
    
   
    if (match_5) {
@@ -122,8 +122,6 @@ findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
        mcols(olap)$equal[comp_idx[bad]] <- FALSE
      }
    }
-   
-  
   ## NOTE: Check if there is an error with the start sequence ##
   if (firstLastSeparate)
     olap <- checkStartSequence(olap, firstLastSeparate, queryStart,
