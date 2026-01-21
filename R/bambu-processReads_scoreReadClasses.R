@@ -198,8 +198,8 @@ newIsReadClassCompatible <- function(query, subject){
   #comp_firstexon <- isfirstEndExonCompatible(queryFirstExon[comp], subjectFirstExon[comp])
   #comp_lastexon <-  isStartEndExonMatch(queryLastExon[comp], subjectLastExon[comp])
   
-  match_firstexon <- isStartEndExonMatch(queryFirstExon[comp], subjectFirstExon[comp])
-  match_lastexon <-  isStartEndExonMatch(queryLastExon[comp], subjectLastExon[comp])
+  match_firstexon <- isStartEndExonMatch(queryFirstExon[comp], subjectFirstExon[comp], exonPosition = "start")
+  match_lastexon <-  isStartEndExonMatch(queryLastExon[comp], subjectLastExon[comp], exonPosition = "end")
   
   dist_5 <- calculateStartEndDist(queryFirstExon[comp], subject_withStartEnd[comp], whichSide = "5prime")
   dist_3 <- calculateStartEndDist(queryLastExon[comp], subject_withStartEnd[comp], whichSide = "3prime")
@@ -245,8 +245,31 @@ isfirstEndExonCompatible <- function(exonRanges, subjectSplice){
 }
 
 
-isStartEndExonMatch <- function(queryExonRanges, subjectExonRanges){
-  exonCompatible <- elementNROWS(GenomicRanges::intersect(queryExonRanges, subjectExonRanges)) > 0L
+isStartEndExonMatch <- function(queryExonRanges, subjectExonRanges, exonPosition = "start"){
+  strandMatch <- as.character(strand(queryExonRanges)) == as.character(strand(subjectExonRanges))
+  if(exonPosition == "start"){
+    querySpliceSite <- ifelse(
+      as.character(strand(subjectExonRanges)) == "-",
+      unlist(start(queryExonRanges), use.names = FALSE),
+      unlist(end(queryExonRanges), use.names = FALSE))
+    subjectSpliceSite <- ifelse(
+      as.character(strand(subjectExonRanges)) == "-",
+      unlist(start(subjectExonRanges), use.names = FALSE),
+      unlist(end(subjectExonRanges), use.names = FALSE))
+  }
+  if(exonPosition == "end"){
+    querySpliceSite <- ifelse(
+      as.character(strand(queryExonRanges)) == "-",
+      unlist(end(queryExonRanges), use.names = FALSE),
+      unlist(start(queryExonRanges), use.names = FALSE))
+    subjectSpliceSite <- ifelse(
+      as.character(strand(subjectExonRanges)) == "-",
+      unlist(end(subjectExonRanges), use.names = FALSE),
+      unlist(start(subjectExonRanges), use.names = FALSE))
+  }
+  spliceSiteMatch <- querySpliceSite == subjectSpliceSite
+  exonCompatible <- as.logical(elementNROWS(GenomicRanges::intersect(queryExonRanges, subjectExonRanges)) > 0L) &
+    strandMatch & spliceSiteMatch
   return(exonCompatible)
 }
 
