@@ -297,14 +297,14 @@ assignTssToReads <- function(readTable, tssList){
 
 
 ###The function is used after reads have been stranded, so can be grouped by strand
-prepareTesFromReads <- function(readGrgList, max_dist = 100){
+prepareTesFromReads <- function(readGrgList, max_dist = 100, min_reads = 10){
   ends_df <- getTes(readGrgList, width = 1)
   ends_df <- as_tibble(ends_df)
   collapsed_tes <- as_tibble(ends_df) %>%
     select(seqnames, end, strand) %>%
     group_by(seqnames, end, strand) %>%
     summarise(N = n(), .groups = "drop") %>%
-    filter(N > 10) %>%
+    filter(N > min_reads) %>%
     arrange(seqnames, end) %>%
     group_by(seqnames) %>%
     mutate(cluster = cumsum(c(0, diff(end)) > max_dist)) %>%
@@ -314,7 +314,7 @@ prepareTesFromReads <- function(readGrgList, max_dist = 100){
       N = sum(N),              # sum N across the cluster
       .groups = "drop"
     ) %>%
-    filter(N >= 10)
+    filter(N >= min_reads)
   referenceTES <- GRanges(seqnames = collapsed_tes$seqnames,
                           ranges = IRanges(end = collapsed_tes$end, width = 1),
                           strand = collapsed_tes$strand)
