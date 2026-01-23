@@ -387,7 +387,7 @@ extractRowDataAsDataTable <- function(se, columns = NULL, keep.rownames = FALSE)
 #' @noRd
 calculateEqClassSums <- function(values, eq_classes, na.rm = FALSE) {
     unlist(lapply(eq_classes, function(x) {
-        return(sum(values[x], na.rm = na.rm))
+        sum(values[x], na.rm = na.rm)
     }))
 }
 
