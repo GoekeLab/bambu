@@ -79,7 +79,7 @@ sequentialCombineFeatureTibble <- function(readClassList,
                     min.txScore.singleExon = min.txScore.singleExon)
         }
         combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
-            combinedListNew, index = indexList[s], intraGroup)
+            combinedListNew, index = indexList[sampleIndex], intraGroup)
     }
     return(combinedFeatureTibble)
 }
@@ -293,9 +293,10 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         do.call("rbind",bplapply(newUnsplicedSeList, function(newUnsplicedSe) {
             rowDataTable <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
                                         newUnsplicedTibble$row_id)])
+            rowDataTableNames <- rownames(rowDataTable)
             rowDataTable <- as_tibble(rowDataTable) %>% select(confidenceType,readCount, 
                     geneReadProp, txScore, txScore.noFit) %>%
-                mutate(row_id = rownames(rowDataTable))
+                mutate(row_id = rowDataTableNames)
             return(rowDataTable)
         } , BPPARAM = bpParameters))
     newUnsplicedTibble <- newUnsplicedTibble %>% 
