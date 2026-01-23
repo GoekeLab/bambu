@@ -101,11 +101,10 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
   minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
-  # Optimize: use vectorized sum instead of lapply for better performance
-  # Create mapping of transcript to equivalence class total
-  eq_sums <- sum(splitAsList(rowDataCombined$readCount[unlist(minEq)], 
-                              rep(seq_along(minEq), lengths(minEq))))
-  rowDataCombined$relSubsetCount <- rowDataCombined$readCount / eq_sums
+  # Optimize: use vectorized operations instead of lapply for better performance
+  # Compute sum for each equivalence class
+  eq_class_sums <- vapply(minEq, function(x) sum(rowDataCombined$readCount[x]), numeric(1))
+  rowDataCombined$relSubsetCount <- rowDataCombined$readCount / eq_class_sums
   #post extend annotation filters applied here (currently only subset filter)
   if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
     filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass

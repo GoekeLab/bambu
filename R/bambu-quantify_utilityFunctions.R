@@ -165,8 +165,8 @@ processMinEquiRC <- function(annotations){
     unnest(c(txidTemp)) %>%
     mutate(minRC = 1, equal = FALSE,  txid = txidTemp, txidTemp = NULL)
   
-  # Use rbindlist for better performance when combining data.frames/tibbles
-  minEquiRC <- data.table::rbindlist(list(minEquiRC, minEquiRCTemp))
+  # Keep bind_rows for tibbles to preserve tibble class and attributes
+  minEquiRC <- bind_rows(minEquiRC, minEquiRCTemp)
   return(minEquiRC)
 }
 
