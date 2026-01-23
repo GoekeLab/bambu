@@ -71,18 +71,14 @@ prepareAnnotationsFromGTF <- function(file) {
         partitioning <- PartitioningByEnd(cumsum(elementNROWS(grlist)),
             names = NULL)
         txIdForReorder <- togroup(PartitioningByWidth(grlist))
-        exon_rank <- lapply(elementNROWS(grlist), seq, from = 1)
-        exon_rank[which(unlist(unique(strand(grlist))) == "-")] <- lapply(
-            exon_rank[which(unlist(unique(strand(grlist))) == "-")], rev
-            ) # * assumes positive for exon ranking
-        names(exon_rank) <- NULL
-        unlistedExons$exon_rank <- unlist(exon_rank)
+        # Create exon rankings using shared utility function
+        rankings <- createExonRankings(grlist, unlist(unique(strand(grlist))))
+        unlistedExons$exon_rank <- unlist(rankings$exon_rank)
         unlistedExons <- unlistedExons[order(txIdForReorder,
             unlistedExons$exon_rank)]
         # exonsByTx is always sorted by exon rank, not by strand,
         # make sure that this is the case here
-        unlistedExons$exon_endRank <- unlist(lapply(elementNROWS(grlist),
-            seq, to = 1), use.names = FALSE)
+        unlistedExons$exon_endRank <- unlist(rankings$exon_endRank)
         unlistedExons <- unlistedExons[order(txIdForReorder,
             start(unlistedExons))]
         mcols(unlistedExons) <- mcols(unlistedExons)[, c("exon_rank",

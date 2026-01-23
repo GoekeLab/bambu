@@ -71,8 +71,7 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
                                                                                                                   annotationTxId, readCount, GENEID, dist,equal, compatible, txid)]
   distTable <- rcWidth[distTable, on = "readClassId"]
   # filter out multiple geneIDs mapped to the same readClass using rowData(se)
-  compatibleData <- as.data.table(as.data.frame(rowData(readClass)),
-                                  keep.rownames = TRUE)
+  compatibleData <- extractRowDataAsDataTable(readClass, keep.rownames = TRUE)
   setnames(compatibleData, old = c("rn", "geneId"),
            new = c("readClassId", "GENEID"))
   distTable <- distTable[compatibleData[ readClassId %in% 

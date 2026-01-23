@@ -121,7 +121,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
   minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
-  rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
+  rowDataCombined$relSubsetCount <- rowDataCombined$readCount / 
+    calculateEqClassSums(rowDataCombined$readCount, minEq)
   #post extend annotation filters applied here (currently only subset filter)
   if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
     filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass
@@ -289,13 +290,10 @@ createExonByReadClass <- function(transcriptsTibble, annotationSeqLevels) {
   unlistData <- unlist(exonsByReadClass, use.names = FALSE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
                                     names = NULL)
-  exon_rank <- lapply(width((partitioning)), seq, from = 1)
-  # * assumes positive for exon ranking
-  negative_strand <- which(transcriptsTibble$strand == "-")
-  exon_rank[negative_strand] <- lapply(exon_rank[negative_strand], rev) 
-  exon_endRank <- lapply(exon_rank, rev)
-  unlistData$exon_rank <- unlist(exon_rank)
-  unlistData$exon_endRank <- unlist(exon_endRank)
+  # Create exon rankings using shared utility function
+  rankings <- createExonRankings(exonsByReadClass, transcriptsTibble$strand)
+  unlistData$exon_rank <- unlist(rankings$exon_rank)
+  unlistData$exon_endRank <- unlist(rankings$exon_endRank)
   exonsByReadClass <- relist(unlistData, partitioning)
   seqlevels(exonsByReadClass) <-
     unique(c(seqlevels(exonsByReadClass), annotationSeqLevels))
@@ -730,8 +728,8 @@ calculateRelSubsetCount <- function(extendedAnnotationRanges, minEq, min.readFra
   filter <- !is.na(mcols(extendedAnnotationRanges)$readCount)
   mcols(extendedAnnotationRanges)$relSubsetCount <- NA
   mcols(extendedAnnotationRanges)$relSubsetCount[filter] <- 
-    mcols(extendedAnnotationRanges)$readCount[filter]/
-    unlist(lapply(minEq[filter], function(x){return(sum(mcols(extendedAnnotationRanges)$readCount[x], na.rm = TRUE))}))
+    mcols(extendedAnnotationRanges)$readCount[filter] /
+    calculateEqClassSums(mcols(extendedAnnotationRanges)$readCount, minEq[filter], na.rm = TRUE)
   #post extend annotation filters applied here (currently only subset filter)
   if(min.readFractionByEqClass>0) { # filter out subset transcripts based on relative expression
     filterSet <- is.na(mcols(extendedAnnotationRanges)$relSubsetCount) | mcols(extendedAnnotationRanges)$relSubsetCount > min.readFractionByEqClass

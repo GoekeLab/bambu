@@ -337,3 +337,50 @@ merge_wrapper <- function(x,y){
     merge.data.table(x,y,by = "GENEID",all=TRUE)
 }
 
+#' Add exon rank and exon endRank to GRangesList
+#' @param grlist A GRangesList object
+#' @param strand_info Character vector of strand information ("+", "-", or "*")
+#' @return A list with two elements: exon_rank and exon_endRank
+#' @details This function creates exon rankings based on strand information.
+#' For negative strand transcripts, exon_rank is reversed. exon_endRank is 
+#' always the reverse of exon_rank.
+#' @noRd
+createExonRankings <- function(grlist, strand_info) {
+    exon_rank <- lapply(elementNROWS(grlist), seq, from = 1)
+    negative_strand <- which(strand_info == "-")
+    exon_rank[negative_strand] <- lapply(exon_rank[negative_strand], rev)
+    exon_endRank <- lapply(exon_rank, rev)
+    return(list(exon_rank = exon_rank, exon_endRank = exon_endRank))
+}
+
+#' Extract rowData from SummarizedExperiment as data.table
+#' @param se A SummarizedExperiment object
+#' @param columns Optional character vector of column names to extract
+#' @param keep.rownames Logical, whether to keep row names (default: FALSE)
+#' @return A data.table object
+#' @details This function provides a convenient way to extract rowData from
+#' a SummarizedExperiment object and convert it to a data.table in one step.
+#' @importFrom data.table data.table
+#' @noRd
+extractRowDataAsDataTable <- function(se, columns = NULL, keep.rownames = FALSE) {
+    rd <- as.data.frame(rowData(se))
+    if (!is.null(columns)) {
+        rd <- rd[, columns, drop = FALSE]
+    }
+    return(data.table(rd, keep.rownames = keep.rownames))
+}
+
+#' Calculate sum of values by equivalence class groups
+#' @param values A numeric vector of values to sum
+#' @param eq_classes A list where each element contains indices for summing
+#' @param na.rm Logical, whether to remove NA values (default: FALSE)
+#' @return A numeric vector of sums for each equivalence class
+#' @details This function computes the sum of values for each group defined
+#' by equivalence classes. It's used for calculating relative read counts.
+#' @noRd
+calculateEqClassSums <- function(values, eq_classes, na.rm = FALSE) {
+    unlist(lapply(eq_classes, function(x) {
+        return(sum(values[x], na.rm = na.rm))
+    }))
+}
+

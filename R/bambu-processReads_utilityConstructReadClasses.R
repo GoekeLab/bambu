@@ -221,13 +221,10 @@ createExonsByReadClass <- function(readTable){
     unlistData <- unlist(exonsByReadClass, use.names = FALSE)
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
                                       names = NULL)
-    exon_rank <- lapply(width(partitioning), seq, from = 1)
-    exon_rank[which(readTable$strand == "-")] <-
-        lapply(exon_rank[which(readTable$strand == "-")], rev)
-    # * assumes positive for exon ranking
-    exon_endRank <- lapply(exon_rank, rev)
-    unlistData$exon_rank <- unlist(exon_rank)
-    unlistData$exon_endRank <- unlist(exon_endRank)
+    # Create exon rankings using shared utility function
+    rankings <- createExonRankings(exonsByReadClass, readTable$strand)
+    unlistData$exon_rank <- unlist(rankings$exon_rank)
+    unlistData$exon_endRank <- unlist(rankings$exon_endRank)
     exonsByReadClass <- relist(unlistData, partitioning)
     return(exonsByReadClass)
 }

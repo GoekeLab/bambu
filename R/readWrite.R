@@ -50,7 +50,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         writeCountsOutput(seGene, varname='counts', feature='gene',outdir, prefix)
         #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
         #R.utils::gzip(paste0(outdir, "barcodes.tsv"))
-        txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
+        txANDGenes <- extractRowDataAsDataTable(se, columns = c("TXNAME", "GENEID"))
         utils::write.table(txANDGenes, file = paste0(transcript_gtffn, "txANDgenes.tsv"), 
                            sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
         utils::write.table(names(seGene), file = paste0(transcript_gtffn, "genes.tsv"), 
@@ -96,7 +96,7 @@ writeCountsOutput <- function(se, varname = "counts",
                               keep.rownames = TRUE) 
       if(feature == "transcript"){
         setnames(estimates, "rn", "TXNAME")
-        geneIDs <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
+        geneIDs <- extractRowDataAsDataTable(se, columns = c("TXNAME", "GENEID"))
         estimates <- geneIDs[estimates, on = "TXNAME"]
       }else{
         setnames(estimates, "rn","GENEID")
