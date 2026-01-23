@@ -72,7 +72,7 @@ prepareAnnotationsFromGTF <- function(file) {
             names = NULL)
         txIdForReorder <- togroup(PartitioningByWidth(grlist))
         # Create exon rankings using shared utility function
-        rankings <- createExonRankings(grlist, unlist(unique(strand(grlist))))
+        rankings <- createExonRankings(elementNROWS(grlist), unlist(unique(strand(grlist))))
         unlistedExons$exon_rank <- unlist(rankings$exon_rank)
         unlistedExons <- unlistedExons[order(txIdForReorder,
             unlistedExons$exon_rank)]

@@ -222,7 +222,7 @@ createExonsByReadClass <- function(readTable){
     partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
                                       names = NULL)
     # Create exon rankings using shared utility function
-    rankings <- createExonRankings(exonsByReadClass, readTable$strand)
+    rankings <- createExonRankings(width(partitioning), readTable$strand)
     unlistData$exon_rank <- unlist(rankings$exon_rank)
     unlistData$exon_endRank <- unlist(rankings$exon_endRank)
     exonsByReadClass <- relist(unlistData, partitioning)

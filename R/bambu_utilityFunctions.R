@@ -338,15 +338,17 @@ merge_wrapper <- function(x,y){
 }
 
 #' Add exon rank and exon endRank to GRangesList
-#' @param grlist A GRangesList object
-#' @param strand_info Character vector of strand information ("+", "-", or "*")
-#' @return A list with two elements: exon_rank and exon_endRank
+#' @param size_list A list of integers representing the number of exons per transcript.
+#'   Typically obtained from elementNROWS(grlist) or width(partitioning).
+#' @param strand_info Character vector of strand information ("+", "-", or "*") with
+#'   length equal to length(size_list). One strand value per transcript.
+#' @return A list with two elements: exon_rank and exon_endRank, both as lists of integer vectors
 #' @details This function creates exon rankings based on strand information.
 #' For negative strand transcripts, exon_rank is reversed. exon_endRank is 
 #' always the reverse of exon_rank.
 #' @noRd
-createExonRankings <- function(grlist, strand_info) {
-    exon_rank <- lapply(elementNROWS(grlist), seq, from = 1)
+createExonRankings <- function(size_list, strand_info) {
+    exon_rank <- lapply(size_list, seq, from = 1)
     negative_strand <- which(strand_info == "-")
     exon_rank[negative_strand] <- lapply(exon_rank[negative_strand], rev)
     exon_endRank <- lapply(exon_rank, rev)
@@ -360,11 +362,16 @@ createExonRankings <- function(grlist, strand_info) {
 #' @return A data.table object
 #' @details This function provides a convenient way to extract rowData from
 #' a SummarizedExperiment object and convert it to a data.table in one step.
+#' If columns are specified, they will be validated against available columns.
 #' @importFrom data.table data.table
 #' @noRd
 extractRowDataAsDataTable <- function(se, columns = NULL, keep.rownames = FALSE) {
     rd <- as.data.frame(rowData(se))
     if (!is.null(columns)) {
+        missing_cols <- setdiff(columns, colnames(rd))
+        if (length(missing_cols) > 0) {
+            stop("Columns not found in rowData: ", paste(missing_cols, collapse = ", "))
+        }
         rd <- rd[, columns, drop = FALSE]
     }
     return(data.table(rd, keep.rownames = keep.rownames))

@@ -291,7 +291,7 @@ createExonByReadClass <- function(transcriptsTibble, annotationSeqLevels) {
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(exonsByReadClass)),
                                     names = NULL)
   # Create exon rankings using shared utility function
-  rankings <- createExonRankings(exonsByReadClass, transcriptsTibble$strand)
+  rankings <- createExonRankings(width(partitioning), transcriptsTibble$strand)
   unlistData$exon_rank <- unlist(rankings$exon_rank)
   unlistData$exon_endRank <- unlist(rankings$exon_endRank)
   exonsByReadClass <- relist(unlistData, partitioning)
