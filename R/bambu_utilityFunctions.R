@@ -178,8 +178,7 @@ checkInputSequence <- function(genomeSequence) {
 #' @noRd
 handleWarnings <- function(readClassList, verbose){
     warnings = list()
-    # Pre-allocate or use vectorized approach instead of growing vector in loop
-    sampleNames <- unlist(lapply(readClassList, colnames))
+    sampleNames = vector("character", 0)
     for(i in seq_along(readClassList)){
         readClassSe = readClassList[[i]]
         if (is.character(readClassSe)){
@@ -187,6 +186,7 @@ handleWarnings <- function(readClassList, verbose){
         warnings[[i]] = NA
         if(!is.null(metadata(readClassSe)$warnings)){
             warnings[[i]] = metadata(readClassSe)$warnings}
+        sampleNames = c(sampleNames, colnames(readClassSe))
     }
     names(warnings) = sampleNames
 
