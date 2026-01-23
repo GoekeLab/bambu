@@ -101,7 +101,11 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   #calculate relative subset read count after filtering (increase speed, subsets are not considered here)
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
   minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
-  rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
+  # Optimize: use vectorized sum instead of lapply for better performance
+  # Create mapping of transcript to equivalence class total
+  eq_sums <- sum(splitAsList(rowDataCombined$readCount[unlist(minEq)], 
+                              rep(seq_along(minEq), lengths(minEq))))
+  rowDataCombined$relSubsetCount <- rowDataCombined$readCount / eq_sums
   #post extend annotation filters applied here (currently only subset filter)
   if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
     filterSet <- rowDataCombined$relSubsetCount > min.readFractionByEqClass
@@ -287,19 +291,18 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
   # annotate with transcript and gene Ids
   equalSubHits <- subjectHits(ovExon[mcols(ovExon)$equal])
   rowDataFilteredSpliced$TXNAME <- NA
-  rowDataFilteredSpliced$TXNAME[
-    equalQhits[!duplicated(equalQhits)]] <-
-    mcols(annotationGrangesList)$TXNAME[
-      equalSubHits[!duplicated(equalQhits)]]
+  # Cache duplicated checks to avoid redundant computation
+  unique_equal_idx <- !duplicated(equalQhits)
+  rowDataFilteredSpliced$TXNAME[equalQhits[unique_equal_idx]] <-
+    mcols(annotationGrangesList)$TXNAME[equalSubHits[unique_equal_idx]]
   compatibleSubHits <- subjectHits(ovExon[mcols(ovExon)$compatible])
   rowDataFilteredSpliced$GENEID <- NA
-  rowDataFilteredSpliced$GENEID[
-    compatibleQhits[!duplicated(compatibleQhits)]] <-
-    mcols(annotationGrangesList)$GENEID[
-      compatibleSubHits[!duplicated(compatibleQhits)]]
+  unique_compatible_idx <- !duplicated(compatibleQhits)
+  rowDataFilteredSpliced$GENEID[compatibleQhits[unique_compatible_idx]] <-
+    mcols(annotationGrangesList)$GENEID[compatibleSubHits[unique_compatible_idx]]
   # annotate with compatible gene id,
-  rowDataFilteredSpliced$GENEID[equalQhits[!duplicated(equalQhits)]] <-
-    mcols(annotationGrangesList[equalSubHits[!duplicated(equalQhits)]])$GENEID
+  rowDataFilteredSpliced$GENEID[equalQhits[unique_equal_idx]] <-
+    mcols(annotationGrangesList[equalSubHits[unique_equal_idx]])$GENEID
   # annotate as identical, using intron matches
   unlistedIntrons <- unlist(intronsByReadClass, use.names = TRUE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)),
