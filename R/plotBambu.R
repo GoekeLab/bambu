@@ -24,8 +24,8 @@ plotBambu <- function(se, group.variable = NULL,
     type = c("annotation", "pca", "heatmap"),
     gene_id = NULL, transcript_id = NULL) {
     if (type == "annotation") {
-        p <- plotAnnotation(se, gene_id, transcript_id)
-        return(p)
+        annotationPlot <- plotAnnotation(se, gene_id, transcript_id)
+        return(annotationPlot)
     }
     # =
     count.data <- assays(se)$CPM
@@ -33,11 +33,11 @@ plotBambu <- function(se, group.variable = NULL,
         quantile(apply(count.data, 1, sd), 0.50), ]
     count.data <- log2(count.data + 1)
     if (type == "pca") {
-        p <- plotPCA(se, count.data, group.variable)
-        return(p)
+        pcaPlot <- plotPCA(se, count.data, group.variable)
+        return(pcaPlot)
     }
     if (type == "heatmap") {
-        p <- plotHeatmap(se, count.data, group.variable)
-        return(p)
+        heatmapPlot <- plotHeatmap(se, count.data, group.variable)
+        return(heatmapPlot)
     }
 }

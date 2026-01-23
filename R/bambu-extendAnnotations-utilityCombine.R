@@ -43,8 +43,8 @@ combineSplicedTranscriptModels <- function(readClassList, bpParameters,
                                             round(n_sample/2)))
     indexList <- sample(rep(seq_len(nGroups), length.out=n_sample))
     indexList <- splitAsList(seq_len(n_sample), indexList)
-    combinedFeatureTibbleList <- bplapply(seq_along(indexList), function(g){
-        indexVec <- indexList[[g]]
+    combinedFeatureTibbleList <- bplapply(seq_along(indexList), function(groupIndex){
+        indexVec <- indexList[[groupIndex]]
         return(sequentialCombineFeatureTibble(readClassList[indexVec],
             indexVec, intraGroup = TRUE, 
             min.readCount = min.readCount, 
@@ -68,12 +68,12 @@ sequentialCombineFeatureTibble <- function(readClassList,
         indexList,intraGroup,min.readCount,min.readFractionByGene,
         min.txScore.multiExon, min.txScore.singleExon){
     combinedFeatureTibble <- NULL
-    for (s in seq_along(readClassList)){
-        combinedListNew <- readClassList[[s]]
+    for (sampleIndex in seq_along(readClassList)){
+        combinedListNew <- readClassList[[sampleIndex]]
         if(intraGroup){
             combinedListNew <- 
                 extractFeaturesFromReadClassSE(readClassSe = combinedListNew,
-                    sample_id = indexList[s], min.readCount = min.readCount,
+                    sample_id = indexList[sampleIndex], min.readCount = min.readCount,
                     min.readFractionByGene = min.readFractionByGene,
                     min.txScore.multiExon = min.txScore.multiExon,
                     min.txScore.singleExon = min.txScore.singleExon)
@@ -218,9 +218,9 @@ combineUnsplicedTranscriptModels <-
         if (verbose) message("extract new unspliced ranges object for all ",
         "samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
         rangesList <- bplapply(newUnsplicedSeList, function(newUnsplicedSe){
-            rr <- unlist(rowRanges(newUnsplicedSe))
-            rr$row_id <- names(rr)
-            return(rr)
+            unsplicedRanges <- unlist(rowRanges(newUnsplicedSe))
+            unsplicedRanges$row_id <- names(unsplicedRanges)
+            return(unsplicedRanges)
         }, BPPARAM = bpParameters)
         colDataNames <-unlist(lapply(newUnsplicedSeList, colnames))
         start.ptm <- proc.time()
@@ -291,12 +291,12 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         separate_rows(row_id, sep = "\\+") 
     rowDataCombined <-
         do.call("rbind",bplapply(newUnsplicedSeList, function(newUnsplicedSe) {
-            rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
+            rowDataTable <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
                                         newUnsplicedTibble$row_id)])
-            rr <- as_tibble(rr) %>% select(confidenceType,readCount, 
+            rowDataTable <- as_tibble(rowDataTable) %>% select(confidenceType,readCount, 
                     geneReadProp, txScore, txScore.noFit) %>%
-                mutate(row_id = rownames(rr))
-            return(rr)
+                mutate(row_id = rownames(rowDataTable))
+            return(rowDataTable)
         } , BPPARAM = bpParameters))
     newUnsplicedTibble <- newUnsplicedTibble %>% 
         left_join(rowDataCombined, by =  "row_id") %>%

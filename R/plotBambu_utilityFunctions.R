@@ -19,11 +19,11 @@ plotAnnotation <- function(se, gene_id, transcript_id) {
         p_annotation <- ggbio::autoplot(geneRanges, group.selfish = TRUE)
         p_expression <-
             ggbio::autoplot(as.matrix(log2(assays(se)$CPM[gene_id, ] + 1)))
-        p <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression)
-        return(p)
+        combinedPlot <- gridExtra::grid.arrange(p_annotation@ggplot, p_expression)
+        return(combinedPlot)
     } else {
-        p <- plotAnnotation_withExpression(se, gene_id, transcript_id)
-        return(p)
+        annotationPlot <- plotAnnotation_withExpression(se, gene_id, transcript_id)
+        return(annotationPlot)
     }
 }
 
@@ -40,21 +40,21 @@ plotAnnotation_withExpression <-  function(se, gene_id, transcript_id) {
             geneRange <- rowRanges(seGene)[gene_id]
             names(txRanges) <- labelFeature(transcript_id, txRanges)
             names(geneRange) <- labelFeature(gene_id, geneRange)
-            p <- plotAnnotation_plotFunction(geneRange, txRanges,se,transcript_id)
-            return(p)
+            transcriptPlot <- plotAnnotation_plotFunction(geneRange, txRanges,se,transcript_id)
+            return(transcriptPlot)
     } else {
         if (!all(gene_id %in% rowData(se)$GENEID)) stop("all(gene_id %in% 
                 rowData(se)$GENEID) condition is not satisfied!")
-            p <- lapply(gene_id, function(g) {
+            genePlotList <- lapply(gene_id, function(g) {
                 txVec <- rowData(se)[rowData(se)$GENEID == g, ]$TXNAME
                 txRanges <- rowRanges(se)[txVec]
                 geneRange <- rowRanges(seGene)[gene_id]
                 names(geneRange) <- labelFeature(gene_id, geneRange)
                 names(txRanges) <-labelFeature(txVec, txRanges)
-                p <- plotAnnotation_plotFunction(geneRange, txRanges,se,txVec)
-                return(p)
+                genePlot <- plotAnnotation_plotFunction(geneRange, txRanges,se,txVec)
+                return(genePlot)
             })
-        return(p)
+        return(genePlotList)
     }
 }
 
@@ -75,11 +75,11 @@ plotAnnotation_plotFunction <- function(geneRange, txRanges,se,txVec){
     p_expression <-
         ggbio::autoplot(as.matrix(log2(assays(se)$CPM[txVec, ] + 
                                            1)), axis.text.angle = 45, hjust = 1)
-    p <- gridExtra::grid.arrange(Gene = p_annotation_gene@ggplot, 
+    combinedPlot <- gridExtra::grid.arrange(Gene = p_annotation_gene@ggplot, 
                                  Transcript = p_annotation@ggplot, p_expression,
                                  top = "", heights = c(1,min(length(txVec),4),
                                                        min(length(txVec),5)))
-    return(p)
+    return(combinedPlot)
 }
 
 #' plot PCA
@@ -101,7 +101,7 @@ plotPCA <- function(se, count.data, group.variable) {
             stop("all(plotData$runname %in% sample.info$runname) 
                 is not satisfied!")}
         plotData <- sample.info[plotData, on = "runname"]
-        p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
+        pcaPlot <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
             ggplot2::geom_point(ggplot2::aes(col = groupVar)) +
             ggplot2::ylab(paste0("PC2 (",
             round(pca_result$sdev[2]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
@@ -112,7 +112,7 @@ plotPCA <- function(se, count.data, group.variable) {
         pca_result <- prcomp(t(as.matrix(count.data))) 
         plotData <- data.table(pca_result$x[, seq_len(2)], keep.rownames = TRUE)
         setnames(plotData, "rn", "runname")
-        p <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
+        pcaPlot <- ggplot2::ggplot(plotData, ggplot2::aes(x = PC1, y = PC2)) +
             ggplot2::geom_point(ggplot2::aes(col = runname)) +
             ggplot2::ylab(paste0("PC2 (",
             round(pca_result$sdev[2]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
@@ -120,7 +120,7 @@ plotPCA <- function(se, count.data, group.variable) {
             round(pca_result$sdev[1]^2 / sum(pca_result$sdev^2) * 100, 1), "%)")) +
             ggplot2::theme_minimal()
     }
-    return(p)
+    return(pcaPlot)
 }
 #' plot heatmap
 #' @param se a SummarizedExperiment object
@@ -146,14 +146,14 @@ plotHeatmap <- function(se, count.data, group.variable) {
         topAnnotation <- ComplexHeatmap::HeatmapAnnotation(
             group =
                 sample.info[match(colnames(count.data), runname)]$groupVar)
-        p <- ComplexHeatmap::Heatmap(corData,
+        heatmapPlot <- ComplexHeatmap::Heatmap(corData,
             name = "Sp.R", col = col_fun,
             top_annotation = topAnnotation, show_row_names = FALSE,
             column_names_gp = grid::gpar(fontsize = 9))
     } else {
-        p <- ComplexHeatmap::Heatmap(corData,
+        heatmapPlot <- ComplexHeatmap::Heatmap(corData,
             name = "Sp.R", col = col_fun,
             show_row_names = FALSE, column_names_gp = grid::gpar(fontsize = 9))
     }
-    return(p)
+    return(heatmapPlot)
 }
