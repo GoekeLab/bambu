@@ -102,12 +102,13 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
   minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
   # Optimize: use vapply instead of lapply+unlist for better performance and type safety
-  # Handle empty vectors and avoid division by zero
+  # Handle edge cases: empty vectors (return 1) and zero sums (replace with 1)
+  # This prevents NaN in relSubsetCount; filtering later removes invalid entries
   eq_class_sums <- vapply(minEq, function(x) {
-    if(length(x) == 0) return(1)  # Return 1 to avoid division by zero
+    if(length(x) == 0) return(1)  # Avoid division by zero for empty eq classes
     sum(rowDataCombined$readCount[x])
   }, numeric(1))
-  # Replace any remaining zero sums with 1 to avoid NaN
+  # Replace zero sums with 1 to prevent NaN (maintains original behavior)
   eq_class_sums[eq_class_sums == 0] <- 1
   rowDataCombined$relSubsetCount <- rowDataCombined$readCount / eq_class_sums
   #post extend annotation filters applied here (currently only subset filter)
