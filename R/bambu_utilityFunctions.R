@@ -178,6 +178,8 @@ checkInputSequence <- function(genomeSequence) {
 #' @noRd
 handleWarnings <- function(readClassList, verbose){
     warnings = list()
+    # Note: Cannot pre-allocate sampleNames as colnames may change after loading RDS files
+    # For small number of samples, vector growth is acceptable
     sampleNames = vector("character", 0)
     for(i in seq_along(readClassList)){
         readClassSe = readClassList[[i]]
