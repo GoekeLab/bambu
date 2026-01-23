@@ -267,7 +267,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             #load in the barcode clustering from file if provided
             iter <- seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
             if(!is.null(clusters)){
-              if(class(clusters)!="CompressedCharacterList"&(!is.list(clusters))){
+              if(!inherits(clusters, "CompressedCharacterList") && !is.list(clusters)){
                 clusterMaps <- NULL
                 for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
                   clusterMap <- fread(clusters[[j]], header = FALSE, 
