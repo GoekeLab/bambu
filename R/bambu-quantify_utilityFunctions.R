@@ -2,7 +2,8 @@
 #' @import data.table
 #' @noRd
 modifyIncompatibleAssignment <- function(distTable){
-  distTable <- data.table(as.data.frame(distTable))
+  # Convert directly to data.table to avoid double conversion
+  distTable <- as.data.table(distTable)
   distTable[,`:=`(anyCompatible = any(compatible), 
                   anyEqual = any(equal)),
             by = readClassId]
@@ -20,12 +21,12 @@ modifyIncompatibleAssignment <- function(distTable){
 #' Process incompatible counts
 #' @noRd
 processIncompatibleCounts <- function(readClassDist){
-  distTable <- unique(data.table(as.data.frame(metadata(readClassDist)$distTable))[, 
+  # Convert directly to data.table to avoid double conversion
+  distTable <- unique(as.data.table(metadata(readClassDist)$distTable)[, 
                .(readClassId, annotationTxId, readCount, GENEID, equal)], by = NULL)
   distTableIncompatible <- distTable[grep("unidentified", annotationTxId)]
   # filter out multiple geneIDs mapped to the same readClass using rowData(se)
-  geneRCMap <- as.data.table(as.data.frame(rowData(readClassDist)),
-                             keep.rownames = TRUE)
+  geneRCMap <- as.data.table(rowData(readClassDist), keep.rownames = TRUE)
   setnames(geneRCMap, old = c("rn", "geneId"),
            new = c("readClassId", "GENEID"))
   distTable <- distTable[geneRCMap[ readClassId %in% 
@@ -73,12 +74,12 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
                         firstExonWidth =
                           width(unlisted_rowranges[unlisted_rowranges$exon_rank == 1,]),
                         totalWidth = sum(width(rowRanges(readClass))))
-  distTable <- data.table(as.data.frame(metadata(readClass)$distTable))[!grepl("unidentified", annotationTxId), .(readClassId, 
+  # Convert directly to data.table to avoid double conversion
+  distTable <- as.data.table(metadata(readClass)$distTable)[!grepl("unidentified", annotationTxId), .(readClassId, 
                                                                                                                   annotationTxId, readCount, GENEID, dist,equal,txid)]
   distTable <- rcWidth[distTable, on = "readClassId"]
   # filter out multiple geneIDs mapped to the same readClass using rowData(se)
-  compatibleData <- as.data.table(as.data.frame(rowData(readClass)),
-                                  keep.rownames = TRUE)
+  compatibleData <- as.data.table(rowData(readClass), keep.rownames = TRUE)
   setnames(compatibleData, old = c("rn", "geneId"),
            new = c("readClassId", "GENEID"))
   distTable <- distTable[compatibleData[ readClassId %in% 

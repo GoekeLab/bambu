@@ -280,7 +280,7 @@ reduceUnsplicedRanges <- function(rangesList, stranded){
 #' make unspliced tibble 
 #' @importFrom tidyr separate_rows pivot_wider
 #' @importFrom dplyr as_tibble rename mutate select %>% group_by left_join
-#'              ungroup
+#'              ungroup bind_rows
 #' @noRd
 makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         colDataNames,min.readCount, min.readFractionByGene,
@@ -290,7 +290,7 @@ makeUnsplicedTibble <- function(combinedNewUnsplicedSe,newUnsplicedSeList,
         rename(chr = seqnames) %>% select(chr, start, end, strand, row_id) %>%
         separate_rows(row_id, sep = "\\+") 
     rowDataCombined <-
-        do.call("rbind",bplapply(newUnsplicedSeList, function(newUnsplicedSe) {
+        dplyr::bind_rows(bplapply(newUnsplicedSeList, function(newUnsplicedSe) {
             rr <- rowData(newUnsplicedSe[intersect(rownames(newUnsplicedSe), 
                                         newUnsplicedTibble$row_id)])
             rr <- as_tibble(rr) %>% select(confidenceType,readCount, 

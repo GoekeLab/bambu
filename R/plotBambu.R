@@ -29,8 +29,9 @@ plotBambu <- function(se, group.variable = NULL,
     }
     # =
     count.data <- assays(se)$CPM
-    count.data <- count.data[apply(count.data, 1, sd) >
-        quantile(apply(count.data, 1, sd), 0.50), ]
+    # Cache standard deviation calculation to avoid computing twice
+    sds <- apply(count.data, 1, sd)
+    count.data <- count.data[sds > quantile(sds, 0.50), ]
     count.data <- log2(count.data + 1)
     if (type == "pca") {
         p <- plotPCA(se, count.data, group.variable)

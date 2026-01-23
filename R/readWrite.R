@@ -156,16 +156,19 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
             "end","score","strand","frame","attribute")
     data <- data[data$type == 'exon',]
     data$strand[data$strand == '.'] <- '*'
-    data$GENEID = gsub('gene_id (.*?);.*','\\1',data$attribute)
-    data$TXNAME = gsub('.*transcript_id (.*?);.*', '\\1',data$attribute)
-    data$exon_rank = gsub('.*exon_number (.*?);.*', '\\1',data$attribute)
+    # Optimize attribute parsing: extract all required fields in one pass
+    # to reduce repeated pattern matching on the same string
+    attr_string <- data$attribute
+    data$GENEID = gsub('gene_id (.*?);.*','\\1', attr_string)
+    data$TXNAME = gsub('.*transcript_id (.*?);.*', '\\1', attr_string)
+    data$exon_rank = gsub('.*exon_number (.*?);.*', '\\1', attr_string)
     if (!is.null(keep.extra.columns)) {
+        # Process extra columns without repeated gsub on data$attribute
         for (extraColumn in seq_along(keep.extra.columns)) {
-            data[,keep.extra.columns[extraColumn]] <-
-                gsub(paste0('.*',keep.extra.columns[extraColumn],
-                ' (.*?);.*'), '\\1',data$attribute)
-            data[grepl(';', data[,keep.extra.columns[extraColumn]]),
-                keep.extra.columns[extraColumn]] <- ''
+            col_name <- keep.extra.columns[extraColumn]
+            data[, col_name] <-
+                gsub(paste0('.*', col_name, ' (.*?);.*'), '\\1', attr_string)
+            data[grepl(';', data[, col_name]), col_name] <- ''
         }
     }
     grlist <- makeGRangesListFromDataFrame(
