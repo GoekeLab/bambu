@@ -28,6 +28,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                                        rowDataSplicedTibble, annotationGrangesList, 
                                                        min.exonDistance, min.primarySecondaryDist,
                                                        min.primarySecondaryDistStartEnd, verbose)
+        rowDataFilteredSpliced <<- rowDataFilteredSpliced
     } else{ 
         rowDataFilteredSpliced <- NULL
     }
@@ -104,6 +105,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     subsetTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!notCompatibleIds,], 
         exonRangesCombined[!notCompatibleIds])
+        subsetTranscripts <<- subsetTranscripts
     rowDataCombined$maxTxScore[grepl("compatible", rowDataCombined$readClassType) &
         rowDataCombined$readClassType != "equal:compatible"] <- -1
     rowDataCombined$maxTxScore.noFit[grepl("compatible", rowDataCombined$readClassType) &
@@ -154,7 +156,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
                  "txClassDescription","readCount","relReadCount", 
                  "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", 
                  "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", 
-                 "maxIntronChainScore", "maxIntronChainScore.noFit", "startRegionId", "endRegionId", "equalRc.Tss", "equalRc.Tes", "anno.Tss", "anno.Tes")]
+                 "maxIntronChainScore", "maxIntronChainScore.noFit", "startRegionId", "endRegionId")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
   metadata(extendedAnnotationRanges)$lowConfidenceTranscripts = lowConfidenceTranscripts
@@ -762,58 +764,6 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
                                    extendedAnnotationRanges,annotationGrangesList, prefix, 
                                    predictStart = FALSE, predictEnd = FALSE){
   equalRanges <- rowDataCombinedFiltered[!(rowDataCombinedFiltered$novelTranscript),]
-  #use 5' and 3' ends from data to overwrite annotation starts and ends
-  mcols(annotationGrangesList)$equalRc.Tss <- NA
-  mcols(annotationGrangesList)$equalRc.Tes <- NA
-  mcols(annotationGrangesList)$anno.Tss <- NA
-  mcols(annotationGrangesList)$anno.Tes <- NA
-  
-  equalRanges$equalRc.Tss <- ifelse(equalRanges$strand == "+",
-                                    equalRanges$start,
-                                    equalRanges$end)
-  equalRanges$equalRc.Tes <- ifelse(equalRanges$strand == "+",
-                                    equalRanges$end,
-                                    equalRanges$start)
-  equalRanges$anno.Tss <- start(getTss(selectStartExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
-  equalRanges$anno.Tes <- end(getTes(selectEndExonsFromGrangesList(annotationGrangesList[equalRanges$TXNAME], exonNumber = 1), width = 1))
-  #unique the equalRanges by TXNAME to avoid multiple updates for TSS and TES
-
-  equalRanges_unique <- equalRanges %>%
-    group_by(TXNAME) %>%
-    summarise(
-      equalRc.Tss = equalRc.Tss[which.max(readCount)],
-      equalRc.Tes = equalRc.Tes[which.max(readCount)],
-      anno.Tss = unique(anno.Tss),
-      anno.Tes = unique(anno.Tes),
-      maxTxScore = weightedMean(maxTxScore, readCount),
-      maxTxScore.noFit = weightedMean(maxTxScore.noFit, readCount),
-      maxIntronChainScore = weightedMean(maxIntronChainScore, readCount),
-      maxIntronChainScore.noFit = weightedMean(maxIntronChainScore.noFit, readCount),
-      maxTssScore = weightedMean(maxTssScore, readCount),
-      maxTssScore.noFit = weightedMean(maxTssScore.noFit, readCount),
-      maxTesScore = weightedMean(maxTesScore, readCount),
-      maxTesScore.noFit = weightedMean(maxTesScore.noFit, readCount),
-      readCount = sum(readCount),
-      relReadCount = sum(relReadCount),
-      intronStarts = list(unique(intronStarts)),
-      intronEnds = list(unique(intronEnds)),
-      chr = list(unique(chr)),
-      strand = list(unique(strand)),
-      confidenceType = list(unique(confidenceType)),
-      .groups = "drop")
-
-
-  if(predictStart == TRUE){
-    annotationGrangesList[equalRanges_unique$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges_unique$TXNAME], 
-                                                                equalRanges_unique$equalRc.Tss, 
-                                                                feature = "tss")
-  }
-  
-  if(predictEnd == TRUE){
-    annotationGrangesList[equalRanges_unique$TXNAME] <- updateStartEnd(annotationGrangesList[equalRanges_unique$TXNAME], 
-                                                                       equalRanges_unique$equalRc.Tes,
-                                                                feature = "tes")
-  }
   #remove extended ranges that are already present in annotation
   extendedAnnotationRanges <- extendedAnnotationRanges[rowDataCombinedFiltered$novelTranscript]
   annotationRangesToMerge <- annotationGrangesList
@@ -834,31 +784,23 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     mcols(annotationRangesToMerge)$maxIntronChainScore.noFit <- NA
     mcols(annotationRangesToMerge)$startRegionId <- NA
     mcols(annotationRangesToMerge)$endRegionId <- NA
-    mcols(annotationRangesToMerge)$equalRc.Tss <- NA
-    mcols(annotationRangesToMerge)$equalRc.Tes <- NA
-    mcols(annotationRangesToMerge)$anno.Tss <- NA
-    mcols(annotationRangesToMerge)$anno.Tes <- NA
     
     mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
     #copy over stats to annotations from read classes
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.tx <- equalRanges_unique$NDR.tx
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.ic <- equalRanges_unique$NDR.ic
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.tss <- equalRanges_unique$NDR.tss
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$NDR.tes <- equalRanges_unique$NDR.tes
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$readCount <- equalRanges_unique$readCount
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$relReadCount <- equalRanges_unique$relReadCount
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTxScore <- equalRanges_unique$maxTxScore
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTxScore.noFit <- equalRanges_unique$maxTxScore.noFit
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxIntronChainScore <- equalRanges_unique$maxIntronChainScore
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxIntronChainScore.noFit <- equalRanges_unique$maxIntronChainScore.noFit
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTssScore <- equalRanges_unique$maxTssScore
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$maxTssScore.noFit <- equalRanges_unique$maxTssScore.noFit
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$startRegionId <- equalRanges_unique$startRegionId
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$endRegionId <- equalRanges_unique$endRegionId
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$equalRc.Tss <- equalRanges_unique$equalRc.Tss
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$equalRc.Tes <- equalRanges_unique$equalRc.Tes
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$anno.Tss <- equalRanges_unique$anno.Tss
-    mcols(annotationRangesToMerge[equalRanges_unique$TXNAME])$anno.Tes <- equalRanges_unique$anno.Tes
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tx <- equalRanges$NDR.tx
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.ic <- equalRanges$NDR.ic
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tss <- equalRanges$NDR.tss
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tes <- equalRanges$NDR.tes
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount <- equalRanges$readCount
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount <- equalRanges$relReadCount
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore <- equalRanges$maxTxScore
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore.noFit <- equalRanges$maxTxScore.noFit
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore <- equalRanges$maxIntronChainScore
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore.noFit <- equalRanges$maxIntronChainScore.noFit
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore <- equalRanges$maxTssScore
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore.noFit <- equalRanges$maxTssScore.noFit
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$startRegionId <- equalRanges$startRegionId
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$endRegionId <- equalRanges$endRegionId
   }
   if (length(extendedAnnotationRanges)) {
     mcols(extendedAnnotationRanges)$TXNAME <- rowDataCombinedFiltered[rowDataCombinedFiltered$novelTranscript,]$TXNAME
@@ -874,31 +816,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
   return(extendedAnnotationRanges)
 }
 
-#' update the start or end of annotated tx based one the read class
-updateStartEnd <- function(grlist, newSites, feature) {
-  if (length(grlist) != length(newSites))
-    stop("`grlist` and `newSites` must have the same length")  
-  gr_unlisted <- unlist(grlist, use.names = FALSE)
-  gr_partition <- PartitioningByEnd(grlist)
-  first_idx <- start(gr_partition)
-  last_idx  <- end(gr_partition) 
-  strand_vec <- as.character(strand(gr_unlisted)[first_idx])
-  if (feature == "tss") {
-    # For + strand → update first exon start
-    start(gr_unlisted)[first_idx[strand_vec == "+"]] <- newSites[strand_vec == "+"]
-    # For - strand → update last exon end
-    end(gr_unlisted)[last_idx[strand_vec == "-"]] <- newSites[strand_vec == "-"]
-  }
-  if (feature == "tes") {
-    # For + strand → update last exon end
-    end(gr_unlisted)[last_idx[strand_vec == "+"]] <- newSites[strand_vec == "+"]
-    # For - strand → update first exon start
-    start(gr_unlisted)[first_idx[strand_vec == "-"]] <- newSites[strand_vec == "-"]
-  }
-  new_grlist <- relist(gr_unlisted, gr_partition)
-  mcols(new_grlist) <- mcols(grlist)
-  return(new_grlist)
-}
+
 
 #' calculate relative subset read count after filtering (increase speed, subsets are not considered here)'
 #' @noRd

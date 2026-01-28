@@ -231,20 +231,6 @@ newIsReadClassCompatible <- function(query, subject){
   return(outData)
 }
 
-isfirstEndExonCompatible <- function(exonRanges, subjectSplice){
-  gr <- unlist(exonRanges)
-  is_long <- width(gr) > 100
-  start(gr[is_long]) <- start(gr[is_long]) + 50
-  end(gr[is_long])   <- end(gr[is_long]) - 50
-  midpoint <- round((start(gr[!is_long]) + end(gr[!is_long])) / 2)
-  start(gr[!is_long]) <- midpoint
-  end(gr[!is_long])   <- midpoint
-  gr <- split(gr)
-  exonCompatible <- elementNROWS(GenomicRanges::intersect(gr, subjectSplice)) == 0L 
-  return(exonCompatible)
-}
-
-
 isStartEndExonMatch <- function(queryExonRanges, subjectExonRanges, exonPosition = "start"){
   strandMatch <- as.character(strand(queryExonRanges)) == as.character(strand(subjectExonRanges))
   if(exonPosition == "start"){

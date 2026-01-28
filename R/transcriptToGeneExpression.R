@@ -52,19 +52,6 @@ transcriptToGeneExpression <- function(se) {
     return(seOutput)
 }
 
-addTssId <- function(se){
-  seTssTable <- tibble(start = unlist(endoapply(start(rowRanges(se)), function(x) x[1])), 
-                       end = unlist(endoapply(end(rowRanges(se)), function(x) x[length(x)])),
-                       strand = as.character(getStrandFromGrList(rowRanges(se))),
-                       chr = as.character(getChrFromGrList(rowRanges(se)))) %>%
-    mutate(tssRanges = ifelse(strand != "-", start, end)) %>%
-    group_by(chr, strand, tssRanges) %>% 
-    mutate(TSSID = paste0("BambuTss", cur_group_id())) %>%
-    ungroup()
-  rowData(se)$TSSID <- seTssTable$TSSID
-  rowData(se)$tssRanges <- seTssTable$tssRanges
-  return(se)
-}
 
 transcriptToTssTesExpression <- function(se, feature = "tss") {
   counts <- assays(se)$counts
