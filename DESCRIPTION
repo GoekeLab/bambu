@@ -1,15 +1,15 @@
 Package: bambu
 Type: Package
 Title: Context-Aware Transcript Quantification from Long Read RNA-Seq data
-Version: 3.13.1
+Version: 3.13.2
 Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
-             email = "chen_ying@gis.a-star.edu.sg"),
+             email = "chen_ying@a-star.edu.sg"),
              person("Andre", "Sim", role = "aut",
-             email = "andre_sim@gis.a-star.edu.sg"),
+             email = "andre_sim@a-star.edu.sg"),
              person("Yuk Kei", "Wan", role = "aut",
-             email = "Wan_Yuk_Kei@gis.a-star.edu.sg"),
+             email = "Wan_Yuk_Kei@a-star.edu.sg"),
              person("Jonathan", "Goeke", role = "aut",
-             email = "gokej@gis.a-star.edu.sg"))
+             email = "gokej@a-star.edu.sg"))
 Description: bambu is a R package for multi-sample transcript discovery and 
     quantification using long read RNA-Seq data. You can use bambu after read 
     alignment to obtain expression estimates for known and novel transcripts and 
