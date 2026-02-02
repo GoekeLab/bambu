@@ -9,7 +9,7 @@ Authors@R: c(person("Ying", "Chen", role = c("cre","aut"),
              person("Yuk Kei", "Wan", role = "aut",
              email = "Wan_Yuk_Kei@a-star.edu.sg"),
              person("Jonathan", "Goeke", role = "aut",
-             email = "gokej@a-star.edu.sg"))
+             email = "Jonathan_GOEKE@a-star.edu.sg"))
 Description: bambu is a R package for multi-sample transcript discovery and 
     quantification using long read RNA-Seq data. You can use bambu after read 
     alignment to obtain expression estimates for known and novel transcripts and 
