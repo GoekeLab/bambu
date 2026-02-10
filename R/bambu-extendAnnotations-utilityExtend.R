@@ -28,7 +28,6 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
                                                        rowDataSplicedTibble, annotationGrangesList, 
                                                        min.exonDistance, min.primarySecondaryDist,
                                                        min.primarySecondaryDistStartEnd, verbose)
-        rowDataFilteredSpliced <<- rowDataFilteredSpliced
     } else{ 
         rowDataFilteredSpliced <- NULL
     }
@@ -47,6 +46,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     rowDataCombined$novelGene <- geneIds[,2]
     if(fusionMode) rowDataCombined$readClassType[geneIds[,3]] <- 'fusionTranscript'
     # ## filter out transcripts
+    print("before filterTranscriptsByAnnotation !!!")
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
       remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose, predictStart, predictEnd)
@@ -105,7 +105,6 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     subsetTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!notCompatibleIds,], 
         exonRangesCombined[!notCompatibleIds])
-        subsetTranscripts <<- subsetTranscripts
     rowDataCombined$maxTxScore[grepl("compatible", rowDataCombined$readClassType) &
         rowDataCombined$readClassType != "equal:compatible"] <- -1
     rowDataCombined$maxTxScore.noFit[grepl("compatible", rowDataCombined$readClassType) &
@@ -142,6 +141,8 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     "WARNING - No annotations were provided. Please increase NDR threshold to use novel transcripts")
   if(sum(filterSet)==0) message("WARNING - No novel transcripts meet the given thresholds. Try a higher NDR.")
   # (3) combine novel transcripts with annotations
+
+  
   extendedAnnotationRanges <- combindRowDataWithRanges(rowDataCombined, exonRangesCombined)
   extendedAnnotationRanges <- combineWithAnnotations(
     rowDataCombined, extendedAnnotationRanges, 
@@ -334,32 +335,20 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
   exonsByReadClass <- combinedTranscriptRanges$exons
   intronsByReadClass <- combinedTranscriptRanges$introns
   ovExon <- 
-    findSpliceOverlapsQuick(cutStartEndFromGrangesList(exonsByReadClass),
-                            cutStartEndFromGrangesList(annotationGrangesList)) # slow
+    findSpliceOverlapsQuick_2((exonsByReadClass),
+                            (annotationGrangesList)) # slow
   classificationTable <- 
     data.frame(matrix("", nrow = length(exonsByReadClass), ncol = 9), 
                stringsAsFactors = FALSE)
   colnames(classificationTable) <- c("equal", "compatible", "newWithin",
                                      "newLastJunction","newFirstJunction","newJunction", "allNew", 
                                      "newFirstExon", "newLastExon")
-  
-  
-  
   equalQhits <- queryHits(ovExon[mcols(ovExon)$equal])
   classificationTable$equal[equalQhits[!duplicated(equalQhits)]] <- "equal"
-  
   compatibleQhits <- queryHits(ovExon[mcols(ovExon)$compatible])
   classificationTable$compatible[
     compatibleQhits[!duplicated(compatibleQhits)]] <- "compatible"
   classificationTable$compatible[classificationTable$equal == "equal"] <- ""
-  
-  
-  #add filtering based one what we have in 
-  classificationTable$equal[which(rowDataFilteredSpliced$equal == FALSE)] <- ""
-  classificationTable$compatible[which(rowDataFilteredSpliced$compatible == 0)] <- ""
-  
-  
-  
   # annotate with transcript and gene Ids
   equalSubHits <- subjectHits(ovExon[mcols(ovExon)$equal])
   rowDataFilteredSpliced$TXNAME <- NA
@@ -376,23 +365,7 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
   # annotate with compatible gene id,
   rowDataFilteredSpliced$GENEID[equalQhits[!duplicated(equalQhits)]] <-
     mcols(annotationGrangesList[equalSubHits[!duplicated(equalQhits)]])$GENEID
-  
-  # remove TXNAME, GENEID, equal and compatible for 
-  idx_startEnd <- which(rowDataFilteredSpliced$firstExonGroup == 0 |
-                          rowDataFilteredSpliced$lastExonGroup == 0)
-  #if (length(idx_startEnd) > 0) {
-  #  classificationTable$compatible[idx_startEnd] <- ""
-  #  classificationTable$equal[idx_startEnd] <- ""
-  #  rowDataFilteredSpliced$GENEID[idx_startEnd] <- NA
-  #  rowDataFilteredSpliced$TXNAME[idx_startEnd] <- NA
-  #}
-
-  
-  classificationTable$compatible[which(rowDataFilteredSpliced$compatible == 0)] = ""
-  classificationTable$equal[which(rowDataFilteredSpliced$compatible == 0)] = ""
-  rowDataFilteredSpliced$GENEID[which(rowDataFilteredSpliced$compatible == 0)] = NA
-  rowDataFilteredSpliced$TXNAME[which(rowDataFilteredSpliced$compatible == 0)] = NA  
-
+  # annotate as identical, using intron matches
   unlistedIntrons <- unlist(intronsByReadClass, use.names = TRUE)
   partitioning <- PartitioningByEnd(cumsum(elementNROWS(intronsByReadClass)),
                                     names = NULL)
@@ -404,15 +377,9 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
     updateWIntronMatches(unlistedIntrons, unlistedIntronsAnnotations,
                          partitioning, classificationTable, annotationGrangesList,
                          rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
-                         min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
-  #classificationTable <- updateWStartEnd(rowDataFilteredSpliced, classificationTable)
-
-  classificationTable$compatible[which(rowDataFilteredSpliced$compatible == 0)] = ""
-  classificationTable$equal[which(rowDataFilteredSpliced$compatible == 0)] = ""
-
+                         min.primarySecondaryDist, min.primarySecondaryDistStartEnd)             
   rowDataFilteredSpliced$readClassType <-
     apply(classificationTable, 1, function(x){paste(x[x!=""], collapse = ":")})
-
   rowDataFilteredSpliced$novelTranscript = TRUE
   rowDataFilteredSpliced$novelTranscript[classificationTable$equal=="equal"] = FALSE
   end.ptm <- proc.time()
@@ -544,21 +511,22 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
                                       primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
                                       ignore.strand = FALSE) {
   # (1)  find overlaps of read classes with annotated transcripts,
-  spliceOverlaps <- findSpliceOverlapsByDist(exByTx, exByTxRef,
+  spliceOverlaps <- findSpliceOverlapsByDist_2(exByTx, exByTxRef,
                                              maxDist = maxDist, firstLastSeparate = TRUE,
                                              dropRangesByMinLength = TRUE, cutStartEnd = TRUE,
                                              ignore.strand = ignore.strand)
-  print("check point 1!!! after findSpliceOverlapsByDist")
   txToAnTableFiltered <- genFilteredAnTable(spliceOverlaps,
       primarySecondaryDist, primarySecondaryDistStartEnd, DistCalculated = FALSE)
   # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
   setTMP <- unique(txToAnTableFiltered$queryHits)
 
-  spliceOverlaps_rest <- findSpliceOverlapsByDist(exByTx[-setTMP],
+  print("check point 1!!!")
+
+  spliceOverlaps_rest <- findSpliceOverlapsByDist_2(exByTx[-setTMP],
                                                     exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                                     dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
                                                     ignore.strand = ignore.strand)
-  print("check point 2!!! after findSpliceOverlapsByDist")
+    print("check point 2!!!")
 
   if(length(spliceOverlaps_rest) > 0){
     txToAnTableRest <-
@@ -569,16 +537,17 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
     txToAnTableRestStartEnd <- NULL
     if (length(exByTx[-setTMPRest])) {
       spliceOverlaps_restStartEnd <-
-        findSpliceOverlapsByDist(exByTx[-setTMPRest], exByTxRef,
+        findSpliceOverlapsByDist_2(exByTx[-setTMPRest], exByTxRef,
                                 maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                 dropRangesByMinLength = FALSE,
                                 cutStartEnd = FALSE, ignore.strand = ignore.strand)
-        print("check point 3!!! after findSpliceOverlapsByDist")
       if (length(spliceOverlaps_restStartEnd)) {
         txToAnTableRestStartEnd <-
           genFilteredAnTable(spliceOverlaps_restStartEnd,
                             primarySecondaryDist, exByTx = exByTx,
                             setTMP = setTMPRest, DistCalculated = TRUE)
+          print("check point 3!!!")
+
       }
     }
     txToAnTableFiltered <- rbind( txToAnTableFiltered,

@@ -111,12 +111,13 @@ prepareAnnotationsFromGTF <- function(file) {
 #' @importFrom dplyr tibble
 #' @noRd
 getMinimumEqClassByTx <- function(exonsByTranscripts) {
-    exByTxAnnotated_singleBpStartEnd <-
-        cutStartEndFromGrangesList(exonsByTranscripts)
+    #exByTxAnnotated_singleBpStartEnd <-
+    #    cutStartEndFromGrangesList(exonsByTranscripts)
+    
     # estimate overlap only based on junctions
-    spliceOverlaps <- findSpliceOverlapsQuick(
-        exByTxAnnotated_singleBpStartEnd,
-        exByTxAnnotated_singleBpStartEnd
+    spliceOverlaps <- findSpliceOverlapsQuick_2(
+        exonsByTranscripts,
+        exonsByTranscripts
         )
     ## identify transcripts compatible with other (subsets by splice sites)
     spliceOverlaps <- spliceOverlaps[mcols(spliceOverlaps)$compatible == TRUE, ]

@@ -27,7 +27,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
         if(verbose) warning(warningText)
     }
 
-    compTable <- newIsReadClassCompatible(rowRanges(se[thresholdIndex,]), 
+    compTable <- isReadClassCompatible(rowRanges(se[thresholdIndex,]), 
                                        annotations)                          
     
     polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
@@ -121,8 +121,9 @@ isReadClassCompatible =  function(query, subject){
                           mcols(query)$lastExonGroup == 0)
     outData <- data.frame(compatible=rep(0, length(query)), 
                           equal = rep(FALSE, length(query)))
-    query <- cutStartEndFromGrangesList(query)
-    subject <- cutStartEndFromGrangesList(subject)
+    
+    #query <- cutStartEndFromGrangesList(query)
+    #subject <- cutStartEndFromGrangesList(subject)
     
     # reduce memory and speed footprint by reducing number of queries
     # based on all intron match prefilter
@@ -136,7 +137,7 @@ isReadClassCompatible =  function(query, subject){
                           names = NULL)
     allIntronMatchQuery <- all(relist(intronMatchesQuery, partitioningQuery))
     
-    olap = findOverlaps(query[allIntronMatchQuery],subject, 
+    olap = findOverlaps(cutStartEndFromGrangesList(query)[allIntronMatchQuery], cutStartEndFromGrangesList(subject), 
                         ignore.strand = FALSE, type = 'within')
     query <- query[allIntronMatchQuery][queryHits(olap)]
     
@@ -146,6 +147,14 @@ isReadClassCompatible =  function(query, subject){
     comp <- myCompatibleTranscription(query = query, subject = subject,
                                       splice = splice)
     equal <- elementNROWS(query)==elementNROWS(subject) & comp
+
+    
+    sqantiTable <- defineSQANTIcategory_pairs(query[comp], subject[comp])
+    compatibility_df <- compatibilityByDatatype(sqantiTable, dataType = "full_length", alternativeStartEndDist = 10)
+
+    equal[which(comp == T)] <- compatibility_df$equal
+    comp[which(comp == T)] <- compatibility_df$compatible
+  
     
     outData$compatible[allIntronMatchQuery] <- countQueryHits(olap[comp])
     outData$equal[allIntronMatchQuery] <- countQueryHits(olap[equal])>0
