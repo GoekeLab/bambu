@@ -150,7 +150,7 @@ isReadClassCompatible =  function(query, subject){
 
     
     sqantiTable <- defineSQANTIcategory_pairs(query[comp], subject[comp])
-    compatibility_df <- compatibilityByDatatype(sqantiTable, dataType = "full_length", alternativeStartEndDist = 10)
+    compatibility_df <- compatibilityByDatatype(sqantiTable, dataType = "3prime", alternativeStartEndDist = 10)
 
     equal[which(comp == T)] <- compatibility_df$equal
     comp[which(comp == T)] <- compatibility_df$compatible
