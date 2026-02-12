@@ -12,7 +12,7 @@
 #' @importFrom BiocParallel bplapply
 #' @importFrom BiocGenerics basename
 #' @noRd
-bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss = NULL,
+bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss = NULL, preset = "unstranded_cDNA",
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
     stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
     processByChromosome = FALSE, processByBam = TRUE, trackReads = trackReads, fusionMode = fusionMode, 
@@ -58,6 +58,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
     if(processByBam){ # bulk mode
         readClassList <- bplapply(seq_along(reads), function(i) {
             bambu.processReadsByFile(bam.file = reads[i], referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold,
+            preset = preset,
             genomeSequence = genomeSequence,annotations = annotations, 
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
@@ -94,6 +95,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
           mcols(readGrgList)$sampleID <- i
         }
         readClassList <- constructReadClasses(readGrgList, genomeSequence = genomeSequence, annotations = annotations,
+            preset = preset,
             referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
@@ -123,13 +125,16 @@ bambu.processReads <- function(reads, annotations, genomeSequence, referenceTss 
 #' @inheritParams bambu
 #' @importFrom GenomeInfoDb seqlevels seqlevels<- keepSeqlevels
 #' @noRd
-bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, referenceTss = NULL, rcSplitThreshold = 0,
+bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, preset = "unstranded_cDNA", referenceTss = NULL, rcSplitThreshold = 0,
     yieldSize = NULL, stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE, demultiplexed = FALSE, 
     cleanReads = FALSE, dedupUMI = FALSE, index = 0, barcodesToFilter = NULL) {
     if(verbose) message(names(bam.file)[1])
+    
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
+    readGrgList <<- readGrgList
+
     if(verbose) message(paste0("Number of alignments/reads: ",length(readGrgList)))
     warnings <- c()
     if(!is.null(barcodesToFilter) & !isFALSE(demultiplexed))
@@ -190,13 +195,13 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, refe
         
     # construct read classes for each chromosome seperately 
     if(processByChromosome){
-        se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, annotations, stranded, verbose,bam.file,
+        se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, annotations, stranded, verbose,bam.file, preset = preset,
                                             referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)
     } else{
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
-        se <- isore.constructReadClasses(readGrgList, 
+        se <- isore.constructReadClasses(readGrgList, preset = preset, 
                                               unlisted_junctions, uniqueJunctions, runName = "TODO",
                                               annotations, stranded, verbose, 
                                               referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)
@@ -212,6 +217,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, refe
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se, genomeSequence, annotations, 
+                             preset = preset, 
                              defaultModels = defaultModels,
                              fit = fitReadClassModel,
                              returnModel = returnModel,
@@ -306,7 +312,7 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
 
 #' Construct read classes
 #' @noRd
-constructReadClasses <- function(readGrgList, genomeSequence, annotations, referenceTss = NULL, rcSplitThreshold = 0,
+constructReadClasses <- function(readGrgList, genomeSequence, annotations, preset = "unstranded_cDNA",referenceTss = NULL, rcSplitThreshold = 0,
     stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE){
@@ -316,13 +322,13 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations, refer
 
     if(processByChromosome){
         # construct read classes for each chromosome seperately 
-        se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
+        se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, preset = preset,
                                             annotations, stranded, verbose,"TODO", fusionMode)
     } else{
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
-        se <- isore.constructReadClasses(readGrgList, 
+        se <- isore.constructReadClasses(readGrgList, preset = preset, 
                                         unlisted_junctions, uniqueJunctions, runName = "TODO",
                                         annotations, stranded, verbose, 
                                         referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)
@@ -338,6 +344,7 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations, refer
     GenomeInfoDb::seqlevels(se) <- refSeqLevels
     # create SE object with reconstructed readClasses
     se <- scoreReadClasses(se, genomeSequence, annotations, 
+                             preset = preset,
                              defaultModels = defaultModels,
                              fit = fitReadClassModel,
                              returnModel = returnModel,
@@ -351,7 +358,7 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations, refer
 
 #' Low memory mode for construct read classes (processByChromosome)
 #' @noRd
-lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, referenceTss = NULL, rcSplitThreshold = 0,
+lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, referenceTss = NULL, rcSplitThreshold = 0, preset = "unstranded_cDNA",
                                           annotations, stranded, verbose,bam.file, fusionMode = FALSE){
     if(fusionMode){
         readGrgList <- list(readGrgList)
@@ -365,7 +372,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, reference
         unlisted_junctions <- unlistIntrons(readGrgList[[i]], use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
-        se.temp <- isore.constructReadClasses(readGrgList[[i]], 
+        se.temp <- isore.constructReadClasses(readGrgList[[i]], preset = preset, 
                                               unlisted_junctions, uniqueJunctions, runName = "TODO",
                                               annotations, stranded, verbose, 
                                               referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)

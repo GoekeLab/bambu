@@ -2,7 +2,7 @@
 #' Extend annotations
 #' @inheritParams bambu
 #' @noRd
-bambu.extendAnnotations <- function(readClassList, annotations, NDR,
+bambu.extendAnnotations <- function(readClassList, annotations, NDR, preset = "unstranded_cDNA",
     isoreParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE, 
     predictStart = FALSE, predictEnd = FALSE) {
     start.ptm_all <- proc.time()
@@ -21,6 +21,7 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
     annotations <- isore.extendAnnotations(
         combinedTranscripts = combinedTxCandidates,
         annotationGrangesList = annotations,
+        preset = preset, 
         remove.subsetTx = isoreParameters[["remove.subsetTx"]],
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
         NDR = NDR,

@@ -1,7 +1,8 @@
 #' Extend annotations
 #' @inheritParams bambu
 #' @noRd
-isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
+isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList, 
+                                    preset = "unstranded_cDNA",
                                     remove.subsetTx = TRUE,
                                     min.sampleNumber = 1, NDR = NULL, min.exonDistance = 35, min.exonOverlap = 10,
                                     min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 5, 
@@ -24,7 +25,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
       rowDataSplicedTibble, annotationSeqLevels)
     confidenceTypeVec <- rowDataTibble$confidenceType
     if(nrow(rowDataSplicedTibble)>0){
-        rowDataFilteredSpliced <- addNewSplicedReadClasses(transcriptRanges,
+        rowDataFilteredSpliced <- addNewSplicedReadClasses(transcriptRanges, preset,
                                                        rowDataSplicedTibble, annotationGrangesList, 
                                                        min.exonDistance, min.primarySecondaryDist,
                                                        min.primarySecondaryDistStartEnd, verbose)
@@ -48,7 +49,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     # ## filter out transcripts
     print("before filterTranscriptsByAnnotation !!!")
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
-      rowDataCombined, annotationGrangesList, exonRangesCombined, prefix,
+      rowDataCombined, annotationGrangesList, preset = preset, exonRangesCombined, prefix,
       remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose, predictStart, predictEnd)
     message(paste0("Novel transcripts detected: ", sum(mcols(extendedAnnotationRanges)$novelTranscript)))
     message(paste0("Novel genes detected: ", length(unique(mcols(extendedAnnotationRanges)$GENEID[mcols(extendedAnnotationRanges)$novelGene]))))
@@ -84,7 +85,7 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
 #' @importFrom dplyr select as_tibble %>% mutate_at mutate group_by 
 #'     ungroup .funs .name_repair vars 
 #' @noRd
-filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList,
+filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList, preset = "unstranded_cDNA",
                                           exonRangesCombined, prefix,  remove.subsetTx, 
                                           min.readFractionByEqClass, baselineFDR = 0.1, 
                                           NDR = NULL, defaultModels = NULL, verbose, 
@@ -129,7 +130,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   
 
   mcols(exonRangesCombined)$txid <- seq_along(exonRangesCombined)
-  minEq <- getMinimumEqClassByTx(exonRangesCombined)$eqClassById
+  minEq <- getMinimumEqClassByTx(exonRangesCombined, preset = preset)$eqClassById
   rowDataCombined$relSubsetCount <- rowDataCombined$readCount/unlist(lapply(minEq, function(x){return(sum(rowDataCombined$readCount[x]))}))
   #post extend annotation filters applied here (currently only subset filter)
   if(min.readFractionByEqClass>0 & sum(filterSet)>0) { # filter out subset transcripts based on relative expression
@@ -148,10 +149,13 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     rowDataCombined, extendedAnnotationRanges, 
     annotationGrangesList, prefix, predictStart, predictEnd)
   minEqClasses <-
-    getMinimumEqClassByTx(extendedAnnotationRanges) # get eqClasses
+    getMinimumEqClassByTx(extendedAnnotationRanges, preset = preset) # get eqClasses
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   extendedAnnotationRanges <- calculateRelSubsetCount(extendedAnnotationRanges, minEqClasses$eqClassById, min.readFractionByEqClass)
+  
+  extendedAnnotationRanges_before_extract_column <<- extendedAnnotationRanges
+
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
                  c("TXNAME", "GENEID", "NDR.tx", "NDR.ic", "NDR.tss", "NDR.tes", "novelGene", "novelTranscript", 
                  "txClassDescription","readCount","relReadCount", 
@@ -328,15 +332,14 @@ createExonByReadClass <- function(transcriptsTibble, annotationSeqLevels) {
 
 #' extended annotations for spliced reads
 #' @noRd
-addNewSplicedReadClasses <- function(combinedTranscriptRanges, 
+addNewSplicedReadClasses <- function(combinedTranscriptRanges, preset = preset, 
                                      rowDataFilteredSpliced, annotationGrangesList, min.exonDistance, 
                                      min.primarySecondaryDist, min.primarySecondaryDistStartEnd, verbose){
   start.ptm <- proc.time()
   exonsByReadClass <- combinedTranscriptRanges$exons
   intronsByReadClass <- combinedTranscriptRanges$introns
   ovExon <- 
-    findSpliceOverlapsQuick_2((exonsByReadClass),
-                            (annotationGrangesList)) # slow
+    findSpliceOverlapsQuick_2(exonsByReadClass, annotationGrangesList, preset = preset) # slow
   classificationTable <- 
     data.frame(matrix("", nrow = length(exonsByReadClass), ncol = 9), 
                stringsAsFactors = FALSE)
@@ -374,7 +377,7 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
   )$GENEID[match(names(unlistedIntronsAnnotations),
                  mcols(annotationGrangesList)$TXNAME)]
   classificationTable <- 
-    updateWIntronMatches(unlistedIntrons, unlistedIntronsAnnotations,
+    updateWIntronMatches(unlistedIntrons, unlistedIntronsAnnotations, preset = preset,
                          partitioning, classificationTable, annotationGrangesList,
                          rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
                          min.primarySecondaryDist, min.primarySecondaryDistStartEnd)             
@@ -392,7 +395,7 @@ addNewSplicedReadClasses <- function(combinedTranscriptRanges,
 #' update classificationTable
 #' @importFrom GenomicRanges match
 #' @noRd
-updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
+updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations, preset = "unstranded_cDNA",
                                 partitioning, classificationTable, annotationGrangesList,
                                 rowDataFilteredSpliced, exonsByReadClass, min.exonDistance,
                                 min.primarySecondaryDist, min.primarySecondaryDistStartEnd){
@@ -424,6 +427,7 @@ updateWIntronMatches <- function(unlistedIntrons, unlistedIntronsAnnotations,
   if (length(overlapsNewIntronsAnnotatedIntrons)) {
     distNewTxByQuery <- assignGeneIDbyMaxMatch(
       unlistedIntrons,unlistedIntronsAnnotations,
+      preset = preset,
       overlapsNewIntronsAnnotatedIntrons, exonsByReadClass,
       rowDataFilteredSpliced, annotationGrangesList, min.exonDistance,
       min.primarySecondaryDist, min.primarySecondaryDistStartEnd)
@@ -459,7 +463,7 @@ updateWStartEnd <- function(rowDataSplicedTibble, classificationTable) {
 #' assign gene id by maximum match
 #' @importFrom dplyr as_tibble %>% group_by summarise filter ungroup
 #' @noRd
-assignGeneIDbyMaxMatch <- function(unlistedIntrons,
+assignGeneIDbyMaxMatch <- function(unlistedIntrons, preset = "unstranded_cDNA",
                                    unlistedIntronsAnnotations, overlapsNewIntronsAnnotatedIntrons,
                                    exonsByReadClass, rowDataFilteredSpliced, annotationGrangesList,
                                    min.exonDistance, min.primarySecondaryDist,
@@ -483,6 +487,7 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons,
   distNewTx <- calculateDistToAnnotation(
     exByTx = exonsByReadClass,
     exByTxRef = annotationGrangesList,
+    preset = preset,
     maxDist = min.exonDistance,
     primarySecondaryDist = min.primarySecondaryDist,
     primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
@@ -507,11 +512,11 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons,
 #' @param ignore.strand defaults to FALSE
 #' @importFrom dplyr ungroup %>%
 #' @noRd
-calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
+calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, preset = preset,
                                       primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
                                       ignore.strand = FALSE) {
   # (1)  find overlaps of read classes with annotated transcripts,
-  spliceOverlaps <- findSpliceOverlapsByDist_2(exByTx, exByTxRef,
+  spliceOverlaps <- findSpliceOverlapsByDist_2(exByTx, exByTxRef, preset = preset, 
                                              maxDist = maxDist, firstLastSeparate = TRUE,
                                              dropRangesByMinLength = TRUE, cutStartEnd = TRUE,
                                              ignore.strand = ignore.strand)
@@ -522,7 +527,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
 
   print("check point 1!!!")
 
-  spliceOverlaps_rest <- findSpliceOverlapsByDist_2(exByTx[-setTMP],
+  spliceOverlaps_rest <- findSpliceOverlapsByDist_2(exByTx[-setTMP], preset = preset,
                                                     exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                                     dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
                                                     ignore.strand = ignore.strand)
@@ -537,7 +542,7 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35,
     txToAnTableRestStartEnd <- NULL
     if (length(exByTx[-setTMPRest])) {
       spliceOverlaps_restStartEnd <-
-        findSpliceOverlapsByDist_2(exByTx[-setTMPRest], exByTxRef,
+        findSpliceOverlapsByDist_2(exByTx[-setTMPRest], exByTxRef, preset = preset,
                                 maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                 dropRangesByMinLength = FALSE,
                                 cutStartEnd = FALSE, ignore.strand = ignore.strand)
@@ -749,6 +754,11 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     mcols(annotationRangesToMerge)$maxTxScore.noFit <- NA
     mcols(annotationRangesToMerge)$maxTssScore <- NA
     mcols(annotationRangesToMerge)$maxTssScore.noFit <- NA
+
+    mcols(annotationRangesToMerge)$maxTesScore <- NA
+    mcols(annotationRangesToMerge)$maxTesScore.noFit <- NA
+
+
     mcols(annotationRangesToMerge)$maxIntronChainScore <- NA
     mcols(annotationRangesToMerge)$maxIntronChainScore.noFit <- NA
     mcols(annotationRangesToMerge)$startRegionId <- NA
@@ -768,6 +778,11 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore.noFit <- equalRanges$maxIntronChainScore.noFit
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore <- equalRanges$maxTssScore
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore.noFit <- equalRanges$maxTssScore.noFit
+
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTesScore <- equalRanges$maxTesScore
+    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTesScore.noFit <- equalRanges$maxTesScore.noFit
+
+
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$startRegionId <- equalRanges$startRegionId
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$endRegionId <- equalRanges$endRegionId
   }
@@ -808,7 +823,7 @@ calculateRelSubsetCount <- function(extendedAnnotationRanges, minEq, min.readFra
 #' @inheritParams bambu
 #' @importFrom dplyr select left_join as_tibble mutate %>%
 #' @noRd
-isore.estimateDistanceToAnnotations <- function(seReadClass,
+isore.estimateDistanceToAnnotations <- function(seReadClass, preset = "unstranded_cDNA",
                                                 annotationGrangesList, min.exonDistance = 35,
                                                 min.primarySecondaryDist = 5, min.primarySecondaryDistStartEnd = 100000, 
                                                 additionalFiltering = FALSE, verbose = FALSE) {
@@ -817,7 +832,7 @@ isore.estimateDistanceToAnnotations <- function(seReadClass,
     as_tibble(rowData(seReadClass), rownames = "readClassId") %>%
     dplyr::select(readClassId, confidenceType)
 
-  distTable <- calculateDistToAnnotation(rowRanges(seReadClass),
+  distTable <- calculateDistToAnnotation(rowRanges(seReadClass), preset = preset,
                                          annotationGrangesList, maxDist = min.exonDistance,
                                          primarySecondaryDist = min.primarySecondaryDist,
                                          primarySecondaryDistStartEnd = min.primarySecondaryDistStartEnd,
@@ -900,7 +915,7 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @details 
 #' @return extendedAnnotations with a new NDR threshold
 #' @export
-setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 'Bambu', baselineFDR = 0.1, defaultModels2 = defaultModels){
+setNDR <- function(extendedAnnotations, preset = "unstranded_cDNA", NDR = NULL, includeRef = FALSE, prefix = 'Bambu', baselineFDR = 0.1, defaultModels2 = defaultModels){
     #Check to see if the annotations/gtf are dervived from Bambu
     if(is.null(mcols(extendedAnnotations)$NDR)){
         warning("Annotations were not extended by Bambu (or the wrong prefix was provided). NDR can not be set")
@@ -934,7 +949,7 @@ setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix =
   metadata(extendedAnnotations)$lowConfidenceTranscripts <- temp
 
   mcols(extendedAnnotations)$txid <- seq_along(extendedAnnotations)
-  minEqClasses <- getMinimumEqClassByTx(extendedAnnotations)
+  minEqClasses <- getMinimumEqClassByTx(extendedAnnotations, preset = preset)
   mcols(extendedAnnotations)$eqClassById <- minEqClasses$eqClassById
   
   metadata(extendedAnnotations)$NDRthreshold <- NDR

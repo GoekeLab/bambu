@@ -4,7 +4,7 @@
 #' @param annotations GRangesList of annotations
 #' @noRd
 scoreReadClasses = function(se, genomeSequence, annotations, defaultModels, 
-                            fit = TRUE, returnModel = FALSE, 
+                            fit = TRUE, returnModel = FALSE, preset = "unstranded_cDNA",
                             min.readCount = 2, min.exonOverlap = 10,
                             fusionMode = FALSE, verbose = FALSE){
     message(paste0("Number of Read Classes - ", nrow(se)))
@@ -28,7 +28,7 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     }
 
     compTable <- isReadClassCompatible(rowRanges(se[thresholdIndex,]), 
-                                       annotations)                          
+                                       annotations, preset = preset)                          
     
     polyATerminals = countPolyATerminals(rowRanges(se[thresholdIndex,]), 
                                          genomeSequence)
@@ -116,7 +116,7 @@ calculateGeneProportion = function(counts, geneIds){
 
 #' returns number of ref anno each read class is a subset of
 #' @noRd
-isReadClassCompatible =  function(query, subject){
+isReadClassCompatible =  function(query, subject, preset = "unstranded_cDNA"){
   idx_startEnd <- which(mcols(query)$firstExonGroup == 0 |
                           mcols(query)$lastExonGroup == 0)
     outData <- data.frame(compatible=rep(0, length(query)), 
@@ -150,7 +150,7 @@ isReadClassCompatible =  function(query, subject){
 
     
     sqantiTable <- defineSQANTIcategory_pairs(query[comp], subject[comp])
-    compatibility_df <- compatibilityByDatatype(sqantiTable, dataType = "3prime", alternativeStartEndDist = 10)
+    compatibility_df <- compatibilityByDatatype(sqantiTable, preset = preset, alternativeStartEndDist = 10)
 
     equal[which(comp == T)] <- compatibility_df$equal
     comp[which(comp == T)] <- compatibility_df$compatible

@@ -16,7 +16,7 @@
 #' ))
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
-writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE, 
+writeBambuOutput <- function(se, path, preset = "unstranded_cDNA", prefix = "", outputExtendedAnno = TRUE, 
                              outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE, seperateSamples = FALSE) {
     if (missing(se) | missing(path)) {
         stop("Both summarizedExperiment object from bambu and
@@ -29,7 +29,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         transcript_grList <- rowRanges(se)
         prefix <- ifelse(prefix != "", paste0(prefix, "_"), "")
         transcript_gtffn <- paste(outdir, prefix, sep = "")
-        gtf <- writeAnnotationsToGTF(annotation = transcript_grList,
+        gtf <- writeAnnotationsToGTF(annotation = transcript_grList, preset = preset,
             file = transcript_gtffn, outputExtendedAnno = outputExtendedAnno, 
             outputAll = outputAll, outputBambuModels = outputBambuModels, outputNovelOnly = outputNovelOnly)
         
@@ -260,13 +260,13 @@ writeToGTF <- function(annotation, file, geneIDs = NULL) {
 #'     package = "bambu"
 #' ))
 #' writeToGTF(gr, outputGtfFile)
-writeAnnotationsToGTF <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
+writeAnnotationsToGTF <- function(annotation, file, preset = "unstranded_cDNA", geneIDs = NULL, outputExtendedAnno = TRUE, 
                                 outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE){
     if(outputExtendedAnno){
         writeToGTF(annotation, paste0(file, "bambuAnnotation.gtf"), geneIDs)
     }
     if(outputAll){
-        annotationAll = setNDR(annotation, 1)
+        annotationAll = setNDR(annotation, 1, preset = preset)
         if(length(annotationAll) == length(annotation)) 
             message("The current NDR threshold already outputs all transcript models. This may result in reduced precision for th extendedAnnotations and supportedTranscriptModels gtfs")
         writeToGTF(annotationAll, paste0(file, "bambuAnnotation_transcriptCandidates.gtf"), geneIDs)
@@ -352,13 +352,13 @@ readFromGTF <- function(file, keep.extra.columns = NULL){
 #' ))
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
-importBambuResults <- function(path, prefixes = ""){
+importBambuResults <- function(path, prefixes = "", preset = "unstranded_cDNA") {
     if(prefixes == ""){
       path <- paste0(path,"/")
     } else{
       path <- paste0(path,"/",prefixes,"_")
     }
-    annotations = prepareAnnotations(paste0(path, "bambuAnnotation.gtf"))
+    annotations = prepareAnnotations(paste0(path, "bambuAnnotation.gtf"), preset = preset)
     counts = readMM(paste0(path, "counts_transcript.mtx"))
     CPM = readMM(paste0(path, "counts_transcript_CPM.mtx"))
     fullLengthCounts = readMM(paste0(path, "counts_transcript_fullLength.mtx"))

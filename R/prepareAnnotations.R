@@ -32,7 +32,7 @@
 #'     package = "bambu")
 #' se <- bambu(reads = test.bam, annotations = annotations, 
 #'     genome = fa.file, discovery = TRUE, quant = TRUE)
-prepareAnnotations <- function(x) {
+prepareAnnotations <- function(x, preset = "unstranded_cDNA") {
     if (is(x, "TxDb")) {
         exonsByTx <- exonsBy(x, by = "tx", use.names = FALSE)
         txNames <- values(transcripts(x, columns="tx_name"))$tx_name
@@ -64,13 +64,13 @@ prepareAnnotations <- function(x) {
             columns = c("TXNAME", "GENEID"),
             keytype = "TXNAME"))
         mcols(exonsByTx)$txid <- seq_along(exonsByTx)
-        minEqClasses <- getMinimumEqClassByTx(exonsByTx)
+        minEqClasses <- getMinimumEqClassByTx(exonsByTx, preset = preset)
         if(!identical(names(exonsByTx),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
         mcols(exonsByTx)$eqClass <- minEqClasses$eqClass
         mcols(exonsByTx)$eqClassById <- minEqClasses$eqClassById
     } else {
         tryCatch({
-            exonsByTx = prepareAnnotationsFromGTF(x)
+            exonsByTx = prepareAnnotationsFromGTF(x, preset = preset)
             },
         error = function(cond){
             stop("Input annotation file not readable. ",

@@ -135,7 +135,7 @@
 #' se <- bambu(reads = test.bam, annotations = gr, 
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
-bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenceTss = NULL,
+bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded_cDNA", NDR = NULL, referenceTss = NULL,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE,
@@ -170,7 +170,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
     if(is.null(annotations)){ 
         annotations <- GRangesList()
     } else {
-        annotations <- checkInputs(annotations, reads,
+        annotations <- checkInputs(annotations, reads, preset,
             readClass.outputDir = rcOutDir, 
             genomeSequence = genome, discovery = discovery, 
             sampleNames = sampleNames, spatial = spatial,quantData = quantData)
@@ -201,7 +201,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
                 rm.readClassSe <- TRUE # remove temporary read class files 
             }
             message("--- Start generating read class files ---")
-            readClassList <- bambu.processReads(reads, annotations, 
+            readClassList <- bambu.processReads(reads, annotations, preset = preset,
                                                 genomeSequence = genome, referenceTss,
                                                 readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
                                                 bpParameters = bpParameters, stranded = stranded, verbose = verbose,
@@ -217,7 +217,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
         if (!discovery & !assignDist & !quant) return(readClassList)
         if (discovery) {
             message("--- Start extending annotations ---")
-            extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
+            extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR, preset = preset,
                                                            isoreParameters, stranded, bpParameters, fusionMode, verbose)
             metadata(extendedAnnotations)$warnings = warnings
             
@@ -234,9 +234,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
         }
         if(assignDist){
             message("--- Start calculating equivilance classes ---")
-            quantData <- bplapply(readClassList, 
+            quantData <- bplapply(readClassList,
                                   FUN = assignReadClasstoTranscripts, 
                                   annotations = annotations, 
+                                  preset = preset,
                                   isoreParameters = isoreParameters, 
                                   verbose = verbose, 
                                   demultiplexed = demultiplexed, 
@@ -251,7 +252,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL, referenc
     if (quant) {
         message("--- Start isoform EM quantification ---")
         if(!is.null(NDR) & !discovery)# this step is used when reset NDR is needed 
-            annotations <- setNDR(annotations, NDR, 
+            annotations <- setNDR(annotations, NDR, preset = preset,
                                   prefix = isoreParameters$prefix, 
                 baselineFDR = isoreParameters[["baselineFDR"]], 
                 defaultModels2 = isoreParameters[["defaultModels"]])

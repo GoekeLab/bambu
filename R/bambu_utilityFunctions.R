@@ -75,7 +75,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, 
+checkInputs <- function(annotations, reads, preset = "unstranded_cDNA", readClass.outputDir, genomeSequence, 
                         discovery, sampleNames, spatial, quantData){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
@@ -95,7 +95,7 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
                 message("If you are running bambu multiple times we recommend ",
                 "processing your annotation file first with ",
                 "annotations = prepareAnnotations(gtf.file)")
-            annotations <- prepareAnnotations(annotations)
+            annotations <- prepareAnnotations(annotations, preset = preset)
         } else {
             stop("The annotations is not a GRangesList object a TxDb or a path to a .gtf.")
         }
@@ -240,8 +240,8 @@ handleWarnings <- function(readClassList, verbose){
 }
 
 #' Calculate the dist table used for Bambu Quantification
-calculateDistTable <- function(readClassList, annotations, isoreParameters, verbose, returnDistTable){
-    readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
+calculateDistTable <- function(readClassList, annotations, preset = "unstranded_cDNA", isoreParameters, verbose, returnDistTable){
+    readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations, preset = preset, 
                                                             min.exonDistance = isoreParameters[["min.exonDistance"]],
                                                             min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']],
                                                             min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],

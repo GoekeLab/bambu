@@ -8,7 +8,7 @@
 #' @param verbose verbose
 #' @inheritParams bambu
 #' @noRd
-isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
+isore.constructReadClasses <- function(readGrgList, unlisted_junctions, preset = "unstranded_cDNA",
                                        uniqueJunctions, runName = "sample1",
                                        annotations, stranded = FALSE, verbose = FALSE, referenceTss = NULL, rcSplitThreshold = 0) {
     #split reads into single exon and multi exon reads
@@ -28,6 +28,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
         exonsByRC.spliced <- constructSplicedReadClasses(
             uniqueJunctions = uniqueJunctions,
             unlisted_junctions = unlisted_junctions,
+            preset = preset, 
             readGrgList = readGrgList,
             stranded = stranded, annotations, referenceTss = referenceTss, rcSplitThreshold = rcSplitThreshold)}
     else{exonsByRC.spliced = GRangesList()}
@@ -56,7 +57,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
 #' @importFrom dplyr select %>%
 #' @importFrom GenomicRanges match
 #' @noRd
-constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, 
+constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, preset = "unstranded_cDNA",
                                         readGrgList, annotations, stranded = FALSE, referenceTss = NULL, rcSplitThreshold = 0) {
     options(scipen = 999)
     allToUniqueJunctionMatch <- GenomicRanges::match(unlisted_junctions,
@@ -89,7 +90,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions,
     readConfidence[lowConfidenceReads] <- "lowConfidenceJunctionReads"
     rm(lowConfidenceReads, uniqueJunctions, allToUniqueJunctionMatch)
     readTable <- createReadTable(start(unlisted_junctions), 
-        end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList,
+        end(unlisted_junctions), mcols(unlisted_junctions)$id, readGrgList, preset = preset, 
         readStrand, readConfidence, annotations, referenceTss = referenceTss, rcSplitThreshold)
     exonsByReadClass <- createExonsByReadClass(readTable)
     readTable <- readTable %>% dplyr::select(chr.rc = chr, strand.rc = strand,
@@ -161,7 +162,7 @@ correctReadStrandById <- function(strand, id, stranded = FALSE){
 #' @importFrom dplyr tibble %>% group_by n summarise nth order_by arrange mutate
 #'     row_number .groups
 #' @noRd
-createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, 
+createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, preset = "unstranded_cDNA",
     unlisted_junctions_id, readGrgList,readStrand, readConfidence, annotations, referenceTss = NULL, rcSplitThreshold = 0) {
     readRanges <- unlist(range(ranges(readGrgList)), use.names = FALSE)
     intronStartCoordinatesInt <- 
@@ -206,16 +207,23 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end,
     annoTable <- createAnnoTable(annotations)
     readTable <- splitReadClassByStartEnd(readTable, annoTable, rcSplitThreshold, alternativeStartEnd = F)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
+    readTable <<- readTable
+    group_var <- c("chr", "strand", "intronEnds", "intronStarts", "confidenceType", "firstExonGroup", "lastExonGroup")
+    if (preset == "cfc_seq") { group_var <- c(group_var, "tssId", "tesId")}
+    if (preset == "5prime") { group_var <- c(group_var, "tssId")}
+    if (preset == "3prime" | preset == "direct_RNA") { group_var <- c(group_var, "tesId")}
+
     readTable <- readTable %>% 
-        group_by(chr, strand, intronEnds, intronStarts, confidenceType, firstExonGroup, lastExonGroup, tesId) %>% 
+        group_by(across(all_of(group_var))) %>% 
         summarise(readCount = n(), startSD = sd(start), endSD = sd(end),
                 start = nth(x = start, n = ceiling(readCount / 5), order_by = start),
                 end = nth(x = end, n = ceiling(readCount / 1.25), order_by = end), 
-                firstExonGroup = unique(firstExonGroup), lastExonGroup =  unique(lastExonGroup), tesId = unique(tesId),
+                firstExonGroup = unique(firstExonGroup), lastExonGroup =  unique(lastExonGroup), 
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), 
                 readIds = list(readId), sampleIDs = list(sampleID), 
                 tssNumber = length(unique(tssId[!is.na(tssId)])),
                 tssId = paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
+                tesId = paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
@@ -358,6 +366,10 @@ createAnnoTable <- function(annotations){
 
 
 splitReadClassByStartEnd <- function(readTable, annoTable, rcSplitThreshold = 0, alternativeStartEnd = FALSE){
+  
+  print(paste0("rcSplitThreshold: ", rcSplitThreshold))
+  readTable <<- readTable
+  annoTable <<- annoTable
   if(!alternativeStartEnd){
     annoTable <- annoTable %>%
       filter(exonRank > 1 & exon_endRank > 1)
@@ -367,22 +379,22 @@ splitReadClassByStartEnd <- function(readTable, annoTable, rcSplitThreshold = 0,
     group_by(chr, strand, firstExon3prime) %>% 
     mutate(firstExonGroup = ifelse(
       strand != "-",
-      safeFind(start, start[is.na(readId)], rcSplitThreshold),
-      safeFind(-end, -end[is.na(readId)], rcSplitThreshold)
+      safeFind(start, start[is.na(readId)], window = rcSplitThreshold),
+      safeFind(-end, -end[is.na(readId)], window= rcSplitThreshold)
     )) %>% 
     ungroup() %>%
     group_by(chr, strand, lastExon5prime) %>% 
     mutate(lastExonGroup = ifelse(
       strand != "-",
-      safeFind(-end, -end[is.na(readId)], rcSplitThreshold),
-      safeFind(start, start[is.na(readId)], rcSplitThreshold)
+      safeFind(-end, -end[is.na(readId)], window = rcSplitThreshold),
+      safeFind(start, start[is.na(readId)], window = rcSplitThreshold)
     )) %>% 
     ungroup() %>% 
     filter(!is.na(readId))
   return(readTable)
 }
 
-safeFind <- function(x, ref, window) {
+safeFind <- function(x, ref, window, start_end = "start"){
   if (length(ref) == 0) {
     return(rep(NA_integer_, length(x)))
   } else {

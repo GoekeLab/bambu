@@ -16,7 +16,7 @@
 #'   }
 #' @importFrom GenomicRanges makeGRangesListFromDataFrame 
 #' @noRd
-prepareAnnotationsFromGTF <- function(file) {
+prepareAnnotationsFromGTF <- function(file, preset = "unstranded_cDNA") {
     if (missing(file)) {
         stop("A GTF file is required.")
     } else {
@@ -92,7 +92,7 @@ prepareAnnotationsFromGTF <- function(file) {
         mcols(grlist) <- DataFrame(geneData[(match(names(grlist),
             geneData$TXNAME)), ])
         mcols(grlist)$txid <- seq_along(grlist)
-        minEqClasses <- getMinimumEqClassByTx(grlist)
+        minEqClasses <- getMinimumEqClassByTx(grlist, preset = preset)
         if(!identical(names(grlist),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
         mcols(grlist)$eqClassById <- minEqClasses$eqClassById
     }
@@ -110,14 +110,15 @@ prepareAnnotationsFromGTF <- function(file) {
 #' @param exonsByTranscripts exonsByTranscripts
 #' @importFrom dplyr tibble
 #' @noRd
-getMinimumEqClassByTx <- function(exonsByTranscripts) {
+getMinimumEqClassByTx <- function(exonsByTranscripts, preset = "unstranded_cDNA") {
     #exByTxAnnotated_singleBpStartEnd <-
     #    cutStartEndFromGrangesList(exonsByTranscripts)
     
     # estimate overlap only based on junctions
     spliceOverlaps <- findSpliceOverlapsQuick_2(
         exonsByTranscripts,
-        exonsByTranscripts
+        exonsByTranscripts,
+        preset = preset
         )
     ## identify transcripts compatible with other (subsets by splice sites)
     spliceOverlaps <- spliceOverlaps[mcols(spliceOverlaps)$compatible == TRUE, ]

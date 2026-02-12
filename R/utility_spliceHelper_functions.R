@@ -129,7 +129,7 @@ findSpliceOverlapsByDist <- function(query, subject, ignore.strand = FALSE,
   return(olap)
 }
 
-findSpliceOverlapsByDist_2 <- function(query, subject, ignore.strand = FALSE,
+findSpliceOverlapsByDist_2 <- function(query, subject, preset = "unstranded_cDNA", ignore.strand = FALSE,
                                      maxDist = 5, type = "within", firstLastSeparate = TRUE,
                                      dropRangesByMinLength = FALSE, cutStartEnd = TRUE) {
   if (firstLastSeparate) {
@@ -160,7 +160,7 @@ findSpliceOverlapsByDist_2 <- function(query, subject, ignore.strand = FALSE,
   equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
   
   sqantiTable <- defineSQANTIcategory_pairs(query[which(compatible$compatible == TRUE)], subject[which(compatible$compatible==TRUE)])
-  compatibility_df <- compatibilityByDatatype(sqantiTable, dataType = "3prime", alternativeStartEndDist = 10)
+  compatibility_df <- compatibilityByDatatype(sqantiTable, preset = preset, alternativeStartEndDist = 10)
   
   equal[which(compatible$compatible == T)] <- compatibility_df$equal
   compatible$compatible[which(compatible$compatible == T)] <- compatibility_df$compatible
@@ -313,7 +313,7 @@ findSpliceOverlapsQuick <- function(query, subject, ignore.strand = FALSE) {
 }
 
 
-findSpliceOverlapsQuick_2 <- function(query, subject, ignore.strand = FALSE) {
+findSpliceOverlapsQuick_2 <- function(query, subject, preset = "unstranded_cDNA", ignore.strand = FALSE) {
   query_cut <- cutStartEndFromGrangesList(query)
   subject_cut <- cutStartEndFromGrangesList(subject)
   
@@ -332,7 +332,7 @@ findSpliceOverlapsQuick_2 <- function(query, subject, ignore.strand = FALSE) {
   equal <- (!is.na(S4Vectors::match(olap, olapEqual)))
   
   sqantiTable <- defineSQANTIcategory_pairs(query[which(compatible == TRUE)], subject[which(compatible==TRUE)])
-  compatibility_df <- compatibilityByDatatype(sqantiTable, dataType = "3prime", alternativeStartEndDist = 10)
+  compatibility_df <- compatibilityByDatatype(sqantiTable, preset = preset, alternativeStartEndDist = 10)
   
   equal[which(compatible == T)] <- compatibility_df$equal
   compatible[which(compatible == T)] <- compatibility_df$compatible
@@ -470,7 +470,7 @@ selectEndExonsFromGrangesList <- function(grangesList, exonNumber = 2) {
 
 
 
-defineSQANTIcategory <- function(queryTxList, refTxList, dataType = "spliceJunction_based",alternativeStartEndDist = 10){
+defineSQANTIcategory <- function(queryTxList, refTxList, preset = "unstranded_cDNA",alternativeStartEndDist = 10){
   #this will include FSM, ISM
   queryTxIntrons <- myGaps(queryTxList)
   refTxIntrons <- myGaps(refTxList)
@@ -503,8 +503,7 @@ defineSQANTIcategory <- function(queryTxList, refTxList, dataType = "spliceJunct
              category == "ISM" & startExonMatch & !(endDist <= -alternativeStartEndDist) ~ "5prime_fragment",
              category == "ISM" & (abs(endDist) >= alternativeStartEndDist | abs(startDist) >= alternativeStartEndDist) ~ "intron_retention")) %>%
     select(category, subcategory, startDist, endDist)
-  
-  sqanti_tibble <- compatibilityByDatatype(sqanti_tibble, dataType = dataType, alternativeStartEndDist = alternativeStartEndDist)
+  sqanti_tibble <- compatibilityByDatatype(sqanti_tibble, preset = preset, alternativeStartEndDist = alternativeStartEndDist)
   mcols(overlap) <- sqanti_tibble
   overlap <- overlap[sqanti_tibble$compatible,]
   return(overlap)
@@ -518,14 +517,6 @@ defineSQANTIcategory_pairs <- function(query, subject, alternativeStartEndDist =
   queryEndExon <- selectEndExonsFromGrangesList(query, exonNumber = 1)
   subjectStartExon <- selectStartExonsFromGrangesList(subject, exonNumber = 1)
   subjectEndExon <- selectEndExonsFromGrangesList(subject, exonNumber = 1)
-  
-  #exon_within <- findOverlaps(cutStartEndFromGrangesList(queryTxList), 
-  #                            cutStartEndFromGrangesList(refTxList), type = "within")
-  #intron_within <- findOverlaps(queryTxIntrons, 
-  #                              refTxIntrons, type = "within")
-  #overlap <- exon_within[which(exon_within %in% intron_within)]
-  #define subcategory
-  
   sqanti_tibble <- tibble(queryExonLength = lengths(query),
                           subjectExonLength = lengths(subject),
                           startExonMatch = isStartEndExonMatch(queryStartExon, subjectStartExon, exonPosition = "start"),
@@ -545,32 +536,29 @@ defineSQANTIcategory_pairs <- function(query, subject, alternativeStartEndDist =
              category == "ISM" & startExonMatch & !(endDist <= -alternativeStartEndDist) ~ "5prime_fragment",
              category == "ISM" & (abs(endDist) >= alternativeStartEndDist | abs(startDist) >= alternativeStartEndDist) ~ "intron_retention")) %>%
     select(category, subcategory, startDist, endDist)
-  
-  #sqanti_tibble <- compatibilityByDatatype(sqanti_tibble, dataType = dataType, alternativeStartEndDist = alternativeStartEndDist)
-  #mcols(overlap) <- sqanti_tibble
-  #overlap <- overlap[sqanti_tibble$compatible,]
   return(sqanti_tibble)
 }
 
 #input the sqanti category table then decide the compatibility by datatype
-compatibilityByDatatype <- function(sqanti_tibble, dataType = "spliceJunction_based", alternativeStartEndDist = 10){
-  if(dataType == "spliceJunction_based"){
+compatibilityByDatatype <- function(sqanti_tibble, preset = "unstranded_cDNA", alternativeStartEndDist = 10){
+  if(preset == "unstranded_cDNA"){
     sqanti_tibble$compatible <- ifelse(sqanti_tibble$subcategory == "intron_retention" | 
                                          sqanti_tibble$subcategory == "genic_genomic", FALSE, TRUE)
     sqanti_tibble$equal <- ifelse(sqanti_tibble$category == "FSM", TRUE, FALSE)
   }
-  if(dataType == "full_length"){
+  if(preset == "cfc_seq"){
     sqanti_tibble$compatible <- ifelse(sqanti_tibble$subcategory == "reference_match", TRUE, FALSE)
     sqanti_tibble$equal <- sqanti_tibble$compatible
   }
-  if(dataType == "5prime"){
+  if(preset == "5prime"){
     sqanti_tibble$compatible <- ifelse(sqanti_tibble$subcategory == "reference_match" |
                                          sqanti_tibble$subcategory == "alternative_3end" | 
                                          (sqanti_tibble$subcategory == "5prime_fragment" & abs(sqanti_tibble$startDist) <= alternativeStartEndDist), 
                                        TRUE, FALSE)
     sqanti_tibble$equal <- sqanti_tibble$compatible & sqanti_tibble$category == "FSM"
   }
-  if(dataType == "3prime"){
+  if(preset == "3prime" | preset == "direct_RNA"){
+    print(preset)
     sqanti_tibble$compatible <- ifelse(sqanti_tibble$subcategory == "reference_match" |
                                          sqanti_tibble$subcategory == "alternative_5end" | 
                                          (sqanti_tibble$subcategory == "3prime_fragment" & abs(sqanti_tibble$endDist) <= alternativeStartEndDist), 
