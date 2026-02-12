@@ -220,8 +220,8 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
             (txScore > min.txScore.singleExon & numExons == 1)), 
             maxTxScore = txScore, maxTxScore.noFit = txScore.noFit,
             maxIntronChainScore = intronChainScore, maxIntronChainScore.noFit = intronChainScore.noFit,
-            maxTssScore = tssScore, maxTssScore.noFit = tssScore.noFit, maxTesScore = tssScore, maxTesScore.noFit = tssScore.noFit,
-            maxTssScore = tesScore, maxTssScore.noFit = tesScore.noFit, maxTesScore = tesScore, maxTesScore.noFit = tesScore.noFit) %>%
+            maxTssScore = tssScore, maxTssScore.noFit = tssScore.noFit, 
+            maxTesScore = tesScore, maxTesScore.noFit = tesScore.noFit) %>%
         select(all_of(c(group_var, sum_var))) 
     return(featureTibble)
 }
