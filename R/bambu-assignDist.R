@@ -3,7 +3,7 @@
 #' @import data.table
 #' @noRd
 assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, 
-                                        verbose, demultiplexed, spatial, 
+                                        verbose, sampleData, demultiplexed, spatial, 
                                         returnDistTable = FALSE, trackReads = TRUE) {
     if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose, returnDistTable)
@@ -17,7 +17,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
         mutate(aval = 1) %>%
         data.table()
     #return non-em counts
-    ColData <- generateColData(colnames(metadata(readClassList)$countMatrix), clusters = NULL, demultiplexed, spatial)
+    ColData <- generateColData(readClassList, sampleData, demultiplexed)
     quantData <- SummarizedExperiment(assays = SimpleList(
         counts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)),
         rowRanges = annotations,

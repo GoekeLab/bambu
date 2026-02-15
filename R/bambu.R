@@ -138,7 +138,7 @@
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
-    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE,
+    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
     sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
@@ -234,16 +234,20 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         }
         if(assignDist){
             message("--- Start calculating equivilance classes ---")
-            quantData <- bplapply(readClassList, 
-                                  FUN = assignReadClasstoTranscripts, 
-                                  annotations = annotations, 
-                                  isoreParameters = isoreParameters, 
-                                  verbose = verbose, 
-                                  demultiplexed = demultiplexed, 
-                                  spatial = spatial, 
-                                  returnDistTable = returnDistTable,
-                                  trackReads = trackReads,
-                                  BPPARAM = bpParameters)
+            quantData <- bplapply(seq_along(readClassList), function(i){
+              assignReadClasstoTranscripts(
+                readClassList = readClassList[[i]],
+                annotations = annotations, 
+                isoreParameters = isoreParameters, 
+                verbose = verbose, 
+                # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
+                sampleData = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
+                demultiplexed = demultiplexed, 
+                spatial = spatial, 
+                returnDistTable = returnDistTable,
+                trackReads = trackReads
+              )
+            }, BPPARAM = bpParameters)
             if (!quant) return(quantData)
         }
     }
