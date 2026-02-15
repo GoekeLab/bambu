@@ -262,6 +262,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         start.ptm <- proc.time()
         countsSeCompressed.all <- NULL
         ColNames <- c()
+        colData.all <- list()
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
@@ -310,8 +311,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
             if(!is.null(clusters)){
                 ColNames <- c(ColNames, names(iter))
+                colData.all[[i]] <- data.frame(
+                  id = names(countsSeCompressed), 
+                  sampleName = names(countsSeCompressed), 
+                  row.names = names(countsSeCompressed)
+                )
             } else{
                 ColNames <- c(ColNames, colnames(quantData_i)) 
+                colData.all[[i]] <- data.frame(colData(quantData_i))
             }
             countsSeCompressed.all <- c(countsSeCompressed.all, countsSeCompressed)
         }
