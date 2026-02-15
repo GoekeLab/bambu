@@ -307,7 +307,6 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
     stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE){
-    warnings <- c() ###TODO
     
     if(processByChromosome){
         # construct read classes for each chromosome seperately 

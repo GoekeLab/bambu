@@ -25,12 +25,14 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
             Please report this")
     start.ptm <- proc.time()
     if(!is.null(uniqueJunctions)){
-        exonsByRC.spliced <- constructSplicedReadClasses(
-            uniqueJunctions = uniqueJunctions,
-            unlisted_junctions = unlisted_junctions,
-            readGrgList = readGrgList,
-            stranded = stranded)}
-    else{exonsByRC.spliced = GRangesList()}
+      exonsByRC.spliced <- constructSplicedReadClasses(
+        uniqueJunctions = uniqueJunctions,
+        unlisted_junctions = unlisted_junctions,
+        readGrgList = readGrgList,
+        stranded = stranded)
+    } else{
+      exonsByRC.spliced = GRangesList()
+    }
     end.ptm <- proc.time()
     rm(readGrgList, unlisted_junctions, uniqueJunctions)
     if (verbose) 
@@ -38,11 +40,13 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
     "spliced junctions in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     if(length(reads.singleExon)==0) { 
         exonsByRC.unspliced <- NULL
-    } else {exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
-        annotations, exonsByRC.spliced, stranded, verbose)}
+    } else {
+      exonsByRC.unspliced <- constructUnsplicedReadClasses(reads.singleExon, 
+                             annotations, exonsByRC.spliced, stranded, verbose)
+    }
     exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
     colDataDf <- DataFrame(name = runName, row.names = runName)
-    #TODO later remove assays = SimpleList(counts = counts)
+
     counts <- matrix(mcols(exonsByRC)$readCount,
                      dimnames = list(names(exonsByRC), runName))
     se <- SummarizedExperiment(assays = SimpleList(counts = counts),
