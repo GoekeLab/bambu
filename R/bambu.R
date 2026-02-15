@@ -315,8 +315,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             }
             countsSeCompressed.all <- c(countsSeCompressed.all, countsSeCompressed)
         }
-        countsSeCompressed.all$colnames <- ColNames            
-        countsSe <- combineCountSes(countsSeCompressed.all, annotations)
+        names(countsSeCompressed.all) <- ColNames   
+        
+        countsSe <- combineCountSes(countsSeCompressed.all, colData.all, annotations)
         if(returnDistTable){
             distTables = list()
             for(i in seq_along(quantData)){
@@ -324,11 +325,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             }
             metadata(countsSe)$distTables <- distTables
         }
-        #metadata(countsSe)$warnings = warnings
-
-        ColData <- generateColData(colnames(countsSe), clusters, demultiplexed, spatial)
-        colData(countsSe) <- ColData
-        colnames(countsSe) <- ColData[,1]
         return(countsSe)
     }
   }

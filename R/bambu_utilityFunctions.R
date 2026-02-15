@@ -255,13 +255,11 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
         return(readClassDist)
 }
 
-#' Combine count se object while preserving the metadata objects
+#' Combine combined count se object from multiple samples, cells or spatial locations
 #' @noRd
-combineCountSes <- function(countsSe, annotations){
-    countsData <- c("counts", "CPM", "fullLengthCounts", 
-                    "uniqueCounts", "incompatibleCounts")
-    sampleNames <- countsSe$colnames
-    countsSe$colnames <- NULL
+combineCountSes <- function(countsSe, colData, annotations){
+    countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
+    sampleNames <- names(countsSe)
     countsDataMat <- lapply(countsData, FUN = function(k){
         countsVecList <- lapply(countsSe, function(j){j[[k]]})
         countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j) j@i)),
@@ -279,13 +277,16 @@ combineCountSes <- function(countsSe, annotations){
         return(countsMat)
     })
     names(countsDataMat) <- countsData
-    countsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
+    combinedCountsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
                                                         CPM = countsDataMat$CPM, 
                                                         fullLengthCounts = countsDataMat$fullLengthCounts, 
                                                         uniqueCounts = countsDataMat$uniqueCounts))
-    metadata(countsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
-    rowRanges(countsSe) <- annotations
-    return(countsSe)
+    metadata(combinedCountsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
+    rowRanges(combinedCountsSe) <- annotations
+
+    colData(combinedCountsSe) <- DataFrame(bind_rows(colData))
+    
+    return(combinedCountsSe)
 }
 
 #' Generate the colData using the external sampleData.csv provided by the user in the sampleData argument
@@ -308,7 +309,7 @@ generateColData <- function(readClassList, sampleData, demultiplexed) {
   if (demultiplexed) {
     colData$sampleName = sub('_[^_]+$', '', samples)
     colData$barcode <- sub('.*_', '', samples)
-        } else{
+  } else{
     colData$sampleName <- samples
   }
   
