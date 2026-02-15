@@ -288,47 +288,37 @@ combineCountSes <- function(countsSe, annotations){
     return(countsSe)
 }
 
-#' Generate the coldata for se options using colnames, and other option inputs
-#' @noRd
-generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
-    ColData <- DataFrame(id = sampleNames)
-    if(!isFALSE(demultiplexed) & is.null(clusters)){
-        ColData <- DataFrame(id = sampleNames, 
-                        sampleName = gsub("_[^_]+$","", sampleNames, perl = TRUE), 
-                        Barcode = gsub(".*_(?=[^_]*$)","", sampleNames, perl = TRUE))
-    }
-    if(!is.null(spatial) & is.null(clusters)){
-        ColData$x_coordinate <- NA
-        ColData$y_coordinate <- NA
-        if(length(spatial)==1){
-            # the following line takes a regular delimited file as input
-            # it can either has header or without header
-            # it can also be compressed 
-            bc_coords <- fread(spatial, 
-                col.names = c("Barcode", "x_coordinate", "y_coordinate"),
-                data.table = FALSE)
-                # DataFrame(read.table(gzfile(spatial),
-                # col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-            bcMatch <- match(ColData$Barcode, bc_coords$Barcode)
-            ColData$x_coordinate <- bc_coords$x_coordinate[bcMatch]
-            ColData$y_coordinate <- bc_coords$y_coordinate[bcMatch]
+#' Generate the colData using the external sampleData.csv provided by the user in the sampleData argument
+#' @param readClassList A list object containingmetadata about read classes.
+#' @param sampleData A path to a CSV file or NULL/NA if there is no metadata for the sample.
+#' @param demultiplexed Logical; indicates if data is demultiplexed.
+#'
+#' @return A DataFrame containing colData for the sample.
+#' @export
+generateColData <- function(readClassList, sampleData, demultiplexed) {
+  sampleDataDf <- if (is.null(sampleData) || is.na(sampleData)) {
+    if (demultiplexed) tibble(barcode = character()) else tibble(sampleName = character())
+  } else {
+    read.csv(sampleData)
+  }
+  samples <- metadata(readClassList)$samples
+  joinKey <- if (demultiplexed) "barcode" else "sampleName"
+  
+  colData <- tibble(id = samples)
+  if (demultiplexed) {
+    colData$sampleName = sub('_[^_]+$', '', samples)
+    colData$barcode <- sub('.*_', '', samples)
         } else{
-            spatial.unique <- unique(spatial)
-            for(whitelist in spatial.unique){
-                i <- which(spatial.unique==whitelist)
-                bc_coords <- fread(whitelist, 
-                                   col.names = c("Barcode", "x_coordinate", "y_coordinate"),
-                                   data.table = FALSE)
-                    # DataFrame(read.table(gzfile(whitelist), 
-                    # col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-                bcSampleIndex <- ColData$sampleName %in% sampleNames[i]
-                bcMatch <- match(ColData$Barcode[bcSampleIndex], bc_coords$Barcode)
-                ColData$x_coordinate[bcSampleIndex] <- bc_coords$x_coordinate[bcMatch]
-                ColData$y_coordinate[bcSampleIndex] <- bc_coords$y_coordinate[bcMatch]
-            }
-        }
-    }
-    return(ColData)
+    colData$sampleName <- samples
+  }
+  
+  colData <- colData %>%
+    left_join(sampleDataDf, by = joinKey) %>%
+    as.data.frame()
+  
+  rownames(colData) <- colData$id
+  
+  colData
 }
 
 # Quick wrapper function (https://stackoverflow.com/questions/13273833/merging-multiple-data-tables)
