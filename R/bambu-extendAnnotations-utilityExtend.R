@@ -120,7 +120,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   } else if(is.null(NDR)) {
           NDR <- 0.5
   }
-  filterSet <- (rowDataCombined$NDR.tx <= NDR | rowDataCombined$readClassType == "equal:compatible")
+  filterSet <- (rowDataCombined$NDR.ic <= NDR | rowDataCombined$readClassType == "equal:compatible")
   lowConfidenceTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!filterSet,], 
         exonRangesCombined[!filterSet])
@@ -175,22 +175,22 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
 #' @noRd
 recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, defaultModels = defaultModels, verbose = FALSE){
     if(verbose) message("-- Predicting annotation completeness to determine NDR threshold --")
-    combinedTranscripts <- combinedTranscripts[combinedTranscripts$maxTxScore.noFit >=0, ] #ignore filtered out read classes
+    combinedTranscripts <- combinedTranscripts[combinedTranscripts$maxIntronChainScore >=0, ] #ignore filtered out read classes
     equal <- combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] <- FALSE
     #add envirnment so poly() works
     attr(defaultModels$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
     baseline <- predict(defaultModels$lmNDR, newdata=data.frame(NDR=baselineFDR))
     attr(defaultModels$lmNDR[["terms"]], ".Environment") <- c()
-    score <- combinedTranscripts$maxTxScore.noFit
+    score <- combinedTranscripts$maxIntronChainScore.noFit
     score[is.na(score)] <- 0
-    NDR.txScores <- calculateNDR(score, equal)
-    NDR.tx.rec <- predict(lm(NDR.txScores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
-    NDR.tx.rec <- round(NDR.tx.rec,3)
-    if(NDR.tx.rec > 1) NDR.tx.rec <- 0.999
-    if (NDR.tx.rec < 0) NDR.tx.rec <- 0
-    if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.tx.rec)
-    if(NDR.tx.rec > 0.5){
+    NDR.icScores <- calculateNDR(score, equal)
+    NDR.ic.rec <- predict(lm(NDR.icScores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
+    NDR.ic.rec <- round(NDR.ic.rec,3)
+    if(NDR.ic.rec > 1) NDR.ic.rec <- 0.999
+    if (NDR.ic.rec < 0) NDR.ic.rec <- 0
+    if(verbose) message("Recommended NDR for baseline FDR of ", baselineFDR, " = ", NDR.ic.rec)
+    if(NDR.ic.rec > 0.5){
         message("A high NDR threshold is being recommended by Bambu indicating high levels of novel transcripts, ",
         "limiting the performance of the trained model")
         message("We recommend training a new model on similiar but well annotated dataset if available ",
@@ -200,10 +200,10 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
     
     #if users are using an NDR let them know if the recommended NDR is different
     if(is.null(NDR)) {
-        NDR <- NDR.tx.rec
+        NDR <- NDR.ic.rec
         message("Using a novel discovery rate (NDR) of: ", NDR)
-    } else if(abs(NDR.tx.rec-NDR)>=0.1){
-            message(paste0("For your combination of sample and reference annotations we recommend an NDR of ", NDR.tx.rec,
+    } else if(abs(NDR.ic.rec-NDR)>=0.1){
+            message(paste0("For your combination of sample and reference annotations we recommend an NDR of ", NDR.ic.rec,
             ". You are currently using an NDR threshold of ", NDR, 
             ". A higher NDR is suited for samples where the reference annotations are poor and more novel transcripts are expected,", 
             "whereas a lower NDR is suited for samples with already high quality annotations"))
@@ -212,17 +212,17 @@ recommendNDR <- function(combinedTranscripts, baselineFDR = 0.1, NDR = NULL, def
 }
 
 recommendNDR.onAnnotations <- function(annotations, prefix = "Bambu", baselineFDR = 0.1, defaultModels2 = defaultModels2){
-    mcols <- mcols(annotations)[!is.na(mcols(annotations)$maxTxScore),]
+    mcols <- mcols(annotations)[!is.na(mcols(annotations)$maxIntronChainScore),]
     equal <- !grepl(prefix, mcols$TXNAME)
     #add envirnment so poly() works
     attr(defaultModels2$lmNDR[["terms"]], ".Environment") <- new.env(parent = parent.env(globalenv()))
-    baseline <- predict(defaultModels2$lmNDR, newdata=data.frame(NDR.tx=baselineFDR))
+    baseline <- predict(defaultModels2$lmNDR, newdata=data.frame(NDR.ic=baselineFDR))
     attr(defaultModels2$lmNDR[["terms"]], ".Environment") <- c()
-    score <- mcols$maxTxScore.noFit
-    NDR.txScores <- calculateNDR(score, equal)
-    NDR.tx.rec <- predict(lm(NDR.txScores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
-    NDR.tx.rec <- round(NDR.tx.rec,3)
-    return(NDR.tx.rec)
+    score <- mcols$maxIntronChainScore.noFit
+    NDR.icScores <- calculateNDR(score, equal)
+    NDR.ic.rec <- predict(lm(NDR.icScores~poly(score,3,raw=TRUE)), newdata=data.frame(score=baseline))
+    NDR.ic.rec <- round(NDR.ic.rec,3)
+    return(NDR.ic.rec)
 }
 
 

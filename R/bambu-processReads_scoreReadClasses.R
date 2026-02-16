@@ -481,8 +481,8 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
     }
     transcriptModelME = NULL
     transcriptModelSE = NULL
-    txScoreBaseline = NA
-    txScoreBaselineSE = NA
+    intronChainScoreBaseline = NA
+    intronChainScoreBaselineSE = NA
     lmNDR = NULL
     lmNDR.SE = NULL
     ## Multi-Exon
@@ -492,18 +492,18 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
             data.train=as.matrix(features[indexME,]),
             labels.train=txFeatures$labels[indexME], 
             nrounds = nrounds, show.cv=FALSE)
-        txScore = predict(transcriptModelME, as.matrix(features))[indexME]
+        intronChainScore = predict(transcriptModelME, as.matrix(features))[indexME]
 
         ##Calculate the txScore baseline
-        NDR.tx = calculateNDR(txScore, txFeatures$labels[indexME])
+        NDR.ic = calculateNDR(intronChainScore, txFeatures$labels[indexME])
         #lm of NDR vs txScore
-        lmNDR = lm(txScore~poly(NDR.tx,3,raw=TRUE))
-        txScoreBaseline = predict(lmNDR, newdata=data.frame(NDR.tx=NDR.threshold))
+        lmNDR = lm(intronChainScore~poly(NDR.ic,3,raw=TRUE))
+        intronChainScoreBaseline = predict(lmNDR, newdata=data.frame(NDR.ic=NDR.threshold))
 
         ## Compare the trained model AUC to the default model AUC
-        txScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
-        newPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore)
-        currentPerformance = evaluatePerformance(txFeatures$labels[indexME],txScore.default)
+        intronChainScore.default = predict(defaultModels$transcriptModelME, as.matrix(features))[indexME] 
+        newPerformance = evaluatePerformance(txFeatures$labels[indexME],intronChainScore)
+        currentPerformance = evaluatePerformance(txFeatures$labels[indexME],intronChainScore.default)
         if(verbose){
         message("On the dataset the new trained model achieves a ROC AUC of ",
             signif(newPerformance$AUC,3),  " and a Precision-Recall AUC of ", signif(newPerformance$PR.AUC,3), ".", 
@@ -520,11 +520,11 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
             data.train=as.matrix(features[indexSE,]),
             labels.train=txFeatures$labels[indexSE], 
             nrounds = nrounds, show.cv=FALSE)
-        txScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
+        intronChainScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
 
-        NDR.SE = calculateNDR(txScoreSE, txFeatures$labels[indexSE])
+        NDR.SE = calculateNDR(intronChainScoreSE, txFeatures$labels[indexSE])
         lmNDR.SE = glm(txScoreSE~NDR.SE)
-        txScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
+        intronChainScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
         lmNDR.SE = trim_lm(lmNDR.SE)
     }
 
