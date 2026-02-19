@@ -3,7 +3,7 @@
 #' @import data.table
 #' @noRd
 assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, 
-                                        verbose, sampleData, demultiplexed, spatial, 
+                                        verbose, sampleData, demultiplexed,
                                         returnDistTable = FALSE, trackReads = TRUE) {
     if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose, returnDistTable)

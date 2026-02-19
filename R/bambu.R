@@ -173,7 +173,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         annotations <- checkInputs(annotations, reads,
             readClass.outputDir = rcOutDir, 
             genomeSequence = genome, discovery = discovery, 
-            sampleNames = sampleNames, spatial = spatial,quantData = quantData)
+            sampleNames = sampleNames, sampleData = sampleData, quantData = quantData)
     }
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
@@ -243,7 +243,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
                 sampleData = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
                 demultiplexed = demultiplexed, 
-                spatial = spatial, 
                 returnDistTable = returnDistTable,
                 trackReads = trackReads
               )

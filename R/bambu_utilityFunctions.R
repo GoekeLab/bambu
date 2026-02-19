@@ -73,7 +73,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @importFrom methods is
 #' @noRd
 checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, 
-                        discovery, sampleNames, spatial, quantData){
+                        discovery, sampleNames, quantData){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
@@ -156,12 +156,12 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
         }
     }
 
-    if(!is.null(spatial)){
-        #if(!all(grepl(".tsv^", spatial))){stop("Not all paths for spatial are .tsv files")}
-        if(length(spatial)==1 & length(reads)>1){
-            warning("Using the same whitelist and coordinates for all input samples")
-        } else if(length(reads)!=length(spatial)){
-            stop("There are not the same number spatial whitelist paths as input files to reads. ",
+    if(!is.null(sampleData)){
+        if(!all(grepl(".csv^", sampleData))){stop("Not all paths for sample metadata files are .csv files")}
+        if(length(sampleData)==1 & length(reads)>1){
+            warning("Using the same sample metadata file for all input samples")
+        } else if(length(reads)!=length(sampleData)){
+            stop("There are not the same number sample metadata files paths as input files to reads. ",
             "Make sure these two arguments are vectors of the same length")
         }
     }
