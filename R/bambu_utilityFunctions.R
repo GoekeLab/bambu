@@ -158,11 +158,14 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
 
     if(!is.null(sampleData)){
         if(!all(grepl(".csv^", sampleData))){stop("Not all paths for sample metadata files are .csv files")}
-        if(length(sampleData)==1 & length(reads)>1){
-            warning("Using the same sample metadata file for all input samples")
-        } else if(length(reads)!=length(sampleData)){
-            stop("There are not the same number sample metadata files paths as input files to reads. ",
-            "Make sure these two arguments are vectors of the same length")
+        if(length(sampleData)==1 & length(reads)>1){ # normally used for bulk samples
+            message("Using the same sample metadata file for all input samples")
+        } else if(length(reads)!=length(sampleData)){ # normally used for single-cell/spatial samples
+            stop(
+                "The number of sample metadata files does not match the number of input read files. ",
+                "These two arguments (sampleData & reads) must be vectors of the same length. ",
+                "If a specific sample has no metadata, please use 'NA' as a placeholder in the sampleData vector."
+            )
         }
     }
     return(annotations)
