@@ -93,6 +93,11 @@
 #' distTables. The output is a list with an entry for each sample.
 #' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
 #' is specified. This option provides an efficient way to process big samples.
+#' @param sampleData A character vector of paths to metadata CSV files (or \code{NA} if 
+#' unavailable for specific samples); defaults to \code{NULL}. Files must contain a 
+#' "sampleName" column for bulk data or a "barcode" column for single-cell/spatial data. 
+#' For bulk data, one metadata CSV file for all samples is sufficient, whereas single-cell/spatial 
+#' data requires one metadata CSV file per sample.
 #' @param fusionMode A logical variable indicating whether run in fusion mode
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
