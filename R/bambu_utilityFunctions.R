@@ -257,7 +257,7 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
 
 #' Combine combined count se object from multiple samples, cells or spatial locations
 #' @noRd
-combineCountSes <- function(countsSe, colData, annotations){
+combineCountSes <- function(countsSe, colDataList, annotations){
     countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
     sampleNames <- names(countsSe)
     countsDataMat <- lapply(countsData, FUN = function(k){
@@ -284,7 +284,7 @@ combineCountSes <- function(countsSe, colData, annotations){
     metadata(combinedCountsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
     rowRanges(combinedCountsSe) <- annotations
 
-    colData(combinedCountsSe) <- DataFrame(bind_rows(colData))
+    colData(combinedCountsSe) <- DataFrame(bind_rows(colDataList))
     
     return(combinedCountsSe)
 }
