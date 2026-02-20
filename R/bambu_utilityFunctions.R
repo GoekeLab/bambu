@@ -157,7 +157,9 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
     }
 
     if(!is.null(sampleData)){
-        if(!all(grepl(".csv^", sampleData))){stop("Not all paths for sample metadata files are .csv files")}
+        if (!all(grepl("\\.csv$", na.omit(sampleData)))){
+            stop("Not all paths for sample metadata files are .csv files")
+        }
         if(length(sampleData)==1 & length(reads)>1){ # normally used for bulk samples
             message("Using the same sample metadata file for all input samples")
         } else if(length(reads)!=length(sampleData)){ # normally used for single-cell/spatial samples
