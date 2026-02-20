@@ -292,18 +292,18 @@ combineCountSes <- function(countsSe, colDataList, annotations){
     return(combinedCountsSe)
 }
 
-#' Generate the colData using the external sampleData.csv provided by the user in the sampleData argument
+#' Generate the colData using the external sampleMetadata.csv provided by the user in the sampleMetadata argument
 #' @param readClassList A list object containingmetadata about read classes.
-#' @param sampleData A path to a CSV file or NULL/NA if there is no metadata for the sample.
+#' @param sampleMetadata A path to a CSV file or NULL/NA if there is no metadata for the sample.
 #' @param demultiplexed Logical; indicates if data is demultiplexed.
 #'
 #' @return A DataFrame containing colData for the sample.
 #' @export
-generateColData <- function(readClassList, sampleData, demultiplexed) {
-  sampleDataDf <- if (is.null(sampleData) || is.na(sampleData)) {
+generateColData <- function(readClassList, sampleMetadata, demultiplexed) {
+  sampleMetadataDf <- if (is.null(sampleMetadata) || is.na(sampleMetadata)) {
     if (demultiplexed) tibble(barcode = character()) else tibble(sampleName = character())
   } else {
-    read.csv(sampleData)
+    read.csv(sampleMetadata)
   }
   samples <- metadata(readClassList)$samples
   joinKey <- if (demultiplexed) "barcode" else "sampleName"
@@ -317,7 +317,7 @@ generateColData <- function(readClassList, sampleData, demultiplexed) {
   }
   
   colData <- colData %>%
-    left_join(sampleDataDf, by = joinKey) %>%
+    left_join(sampleMetadataDf, by = joinKey) %>%
     as.data.frame()
   
   rownames(colData) <- colData$id

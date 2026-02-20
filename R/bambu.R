@@ -246,7 +246,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 isoreParameters = isoreParameters, 
                 verbose = verbose, 
                 # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
-                sampleData = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
+                sampleMetadata = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
                 demultiplexed = demultiplexed, 
                 returnDistTable = returnDistTable,
                 trackReads = trackReads
