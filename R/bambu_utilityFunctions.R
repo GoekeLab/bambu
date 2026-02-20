@@ -73,7 +73,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @importFrom methods is
 #' @noRd
 checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, 
-                        discovery, sampleNames, quantData){
+                        discovery, sampleNames, sampleData, quantData){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {

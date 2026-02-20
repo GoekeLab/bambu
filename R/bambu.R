@@ -144,7 +144,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
-    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
+    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL,
     sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
     message(paste0("Running Bambu-v", "3.9.0"))
