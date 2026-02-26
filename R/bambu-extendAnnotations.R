@@ -10,8 +10,8 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR, preset = "u
         stranded, ## stranded used for unspliced reduce  
         min.readCount = isoreParameters[["min.readCount"]], 
         min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
-        min.txScore.multiExon = isoreParameters[["min.txScore.multiExon"]],
-        min.txScore.singleExon = isoreParameters[["min.txScore.singleExon"]],
+        min.intronChainScore.multiExon = isoreParameters[["min.intronChainScore.multiExon"]],
+        min.intronChainScore.singleExon = isoreParameters[["min.intronChainScore.singleExon"]],
         bpParameters,
         verbose)
     end.ptm_all <- proc.time()

@@ -1,4 +1,4 @@
-#' Assigns each read class geneScore and txScore
+#' Assigns each read class geneScore and intronChainScore
 #' @param se summerized experiment object with read classes/ranges
 #' @param genomeSequence genomeSequence
 #' @param annotations GRangesList of annotations
@@ -41,55 +41,23 @@ scoreReadClasses = function(se, genomeSequence, annotations, defaultModels,
     rowData(se)[names(newRowData)] = NA
     rowData(se)[thresholdIndex,names(newRowData)] = newRowData
     #calculate using the pretrained model for NDR recommendation
-    rowData(se)$txScore.noFit = rep(NA,nrow(se))
     rowData(se)$intronChainScore.noFit = rep(NA,nrow(se))
-    rowData(se)$tssScore.noFit = rep(NA,nrow(se))
-    rowData(se)$tesScore.noFit = rep(NA,nrow(se))
 
     if(length(thresholdIndex)>0){
-        txScore.noFit = getTranscriptScore(rowData(se)[thresholdIndex,], 
-                                    model = NULL, defaultModels)
-        rowData(se)$txScore.noFit[thresholdIndex] = txScore.noFit
         intronChainScore.noFit = getIntronChainScore(rowData(se)[thresholdIndex,],
                                                            model = NULL, defaultModels)
         rowData(se)$intronChainScore.noFit[thresholdIndex] = intronChainScore.noFit
-
-        tssScore.noFit = getTssScore(rowData(se)[thresholdIndex,], 
-                                    model = NULL, defaultModels)
-        rowData(se)$tssScore.noFit[thresholdIndex] = tssScore.noFit
-
-        tesScore.noFit = getTesScore(rowData(se)[thresholdIndex,], 
-                                    model = NULL, defaultModels)
-        rowData(se)$tesScore.noFit[thresholdIndex] = tesScore.noFit     
     }
     model = NULL
-    rowData(se)$txScore = rowData(se)$txScore.noFit
     rowData(se)$intronChainScore = rowData(se)$intronChainScore.noFit
-    rowData(se)$tssScore = rowData(se)$tssScore.noFit
-    rowData(se)$tesScore = rowData(se)$tesScore.noFit
 
     if (fit & length(thresholdIndex)>0){ 
         model = trainBambu(se, verbose = verbose, min.readCount = min.readCount)
         if(returnModel) metadata(se)$model = model
-        txScore = getTranscriptScore(rowData(se)[thresholdIndex,], model,
-                                 defaultModels)
-        rowData(se)$txScore = rep(NA,nrow(se))
-
-        if(!is.null(txScore))  rowData(se)$txScore[thresholdIndex] = txScore
         intronChainScore = getIntronChainScore(rowData(se)[thresholdIndex,], model,
                                                      defaultModels)
         rowData(se)$intronChainScore = rep(NA,nrow(se))
         if(!is.null(intronChainScore))  rowData(se)$intronChainScore[thresholdIndex] = intronChainScore
-
-        tssScore = getTssScore(rowData(se)[thresholdIndex,], model,
-                                                     defaultModels)
-        rowData(se)$tssScore = rep(NA,nrow(se))
-        if(!is.null(tssScore))  rowData(se)$tssScore[thresholdIndex] = tssScore
-                
-        tesScore = getTesScore(rowData(se)[thresholdIndex,], model,
-                                                     defaultModels)
-        rowData(se)$tesScore = rep(NA,nrow(se))
-        if(!is.null(tesScore))  rowData(se)$tesScore[thresholdIndex] = tesScore
     }
 
     if(is.null(model) & fit) {
@@ -332,32 +300,32 @@ getTranscriptScore = function(rowData, model = NULL, defaultModels){
         ## Multi-Exon
         indexME = which(!rowData$novelGene & rowData$numExons>1)
         if(length(indexME)>0){
-            txScore = predict(model$transcriptModelME, as.matrix(features))
-        } else txScore = NULL
+            intronChainScore = predict(model$transcriptModelME, as.matrix(features))
+        } else intronChainScore = NULL
         
         ## Single-Exon
         indexSE = which(!rowData$novelGene & rowData$numExons==1)
         if(length(indexSE)>0){
-            txScoreSE = predict(model$transcriptModelSE, as.matrix(features))
-        } else txScoreSE = NULL
+            intronChainScoreSE = predict(model$transcriptModelSE, as.matrix(features))
+        } else intronChainScoreSE = NULL
     } else {
         if (!is.null(defaultModels)){
-            txScore = predict(defaultModels$transcriptModelME, 
+            intronChainScore = predict(defaultModels$transcriptModelME, 
                 as.matrix(features))
-            txScoreSE = predict(defaultModels$transcriptModelSE, 
+            intronChainScoreSE = predict(defaultModels$transcriptModelSE, 
                 as.matrix(features))
         } else {
             warning("Transcript model not trained. ",
                 "No pre-trained models provided. ",
                 "Scores will not be calculated and ",
                 "transcript discovery will not happen")
-            txScore = rep(0, nrow(features))
-            txScoreSE = rep(0, nrow(features))
+            intronChainScore = rep(0, nrow(features))
+            intronChainScoreSE = rep(0, nrow(features))
         }
     }
-    txScore[which(rowData$numExons==1)] =
-        txScoreSE[which(rowData$numExons==1)]
-    return(txScore)
+    intronChainScore[which(rowData$numExons==1)] =
+        intronChainScoreSE[which(rowData$numExons==1)]
+    return(intronChainScore)
 }
 
 
@@ -462,11 +430,11 @@ getTesScore <- function(rowData, model = NULL, defaultModels){
 #' Output - A list containing 6 objects which is passed directly into bambu(opt.discovery=list(defaultModels=trainBambu()))
 #'      transcriptModelME - the model for multi-exon transcripts 
 #'      transcriptModelSE - the model for single-exon transcripts 
-#'      txScoreBaseline - the txScore used for NDR calibration for multi-exon transcripts
-#'      txScoreBaselineSE - [DEPRECATED] the txScore used for NDR calibration for single-exon transcripts
-#'      lmNDR = lmNDR - the linear model of the reletionship between txScore and NDR used to calculate the baseline for multi-exon transcripts
-#'      lmNDR.SE = lmNDR.SE - the linear model of the reletionship between txScore and NDR used to calculate the baseline for single-exon transcripts
-#'      NDR.threshold - the NDR threshold usd to calculate the txScoreBaseline on the lmNDR (baselineFDR)
+#'      intronChainScoreBaseline - the intronChainScore used for NDR calibration for multi-exon transcripts
+#'      intronChainScoreBaselineSE - [DEPRECATED] the intronChainScore used for NDR calibration for single-exon transcripts
+#'      lmNDR = lmNDR - the linear model of the reletionship between intronChainScore and NDR used to calculate the baseline for multi-exon transcripts
+#'      lmNDR.SE = lmNDR.SE - the linear model of the reletionship between intronChainScore and NDR used to calculate the baseline for single-exon transcripts
+#'      NDR.threshold - the NDR threshold usd to calculate the intronChainScoreBaseline on the lmNDR (baselineFDR)
 #' @details 
 #' @return It returns a model object to use in \link{bambu}
 #' @export
@@ -494,9 +462,9 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
             nrounds = nrounds, show.cv=FALSE)
         intronChainScore = predict(transcriptModelME, as.matrix(features))[indexME]
 
-        ##Calculate the txScore baseline
+        ##Calculate the intronChainScore baseline
         NDR.ic = calculateNDR(intronChainScore, txFeatures$labels[indexME])
-        #lm of NDR vs txScore
+        #lm of NDR vs intronChainScore
         lmNDR = lm(intronChainScore~poly(NDR.ic,3,raw=TRUE))
         intronChainScoreBaseline = predict(lmNDR, newdata=data.frame(NDR.ic=NDR.threshold))
 
@@ -523,7 +491,7 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
         intronChainScoreSE = predict(transcriptModelSE, as.matrix(features))[indexSE]
 
         NDR.SE = calculateNDR(intronChainScoreSE, txFeatures$labels[indexSE])
-        lmNDR.SE = glm(txScoreSE~NDR.SE)
+        lmNDR.SE = glm(intronChainScoreSE~NDR.SE)
         intronChainScoreBaselineSE = predict(lmNDR.SE, newdata=data.frame(NDR.SE=NDR.threshold))
         lmNDR.SE = trim_lm(lmNDR.SE)
     }
@@ -533,8 +501,8 @@ trainBambu <- function(rcFile = NULL, min.readCount = 2, nrounds = 50, NDR.thres
 
     return(list(transcriptModelME = transcriptModelME, 
                 transcriptModelSE = transcriptModelSE,
-                txScoreBaseline = txScoreBaseline,
-                txScoreBaselineSE = txScoreBaselineSE,
+                intronChainScoreBaseline = intronChainScoreBaseline,
+                intronChainScoreSE = intronChainScoreSE,
                 lmNDR = lmNDR,
                 lmNDR.SE = lmNDR.SE,
                 NDR.threshold = NDR.threshold))

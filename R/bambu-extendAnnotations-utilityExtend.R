@@ -12,9 +12,8 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
   combinedTranscripts <- filterTranscripts(combinedTranscripts, min.sampleNumber)
   if (nrow(combinedTranscripts) > 0) {
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
-                   "confidenceType","readCount", "maxTxScore", "maxTxScore.noFit", 
+                   "confidenceType","readCount",
                    "maxIntronChainScore", "maxIntronChainScore.noFit", 
-                   "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", 
                    "firstExonGroup", "lastExonGroup", "tesId",
                    "startRegionId", "endRegionId", "compatible", "equal")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
@@ -68,16 +67,16 @@ filterTranscripts <- function(combinedTranscripts, min.sampleNumber){
   filterSet = NULL
   if (nrow(combinedTranscripts) > 0){
     #filter by read counts
-    naTxscore <- is.na(combinedTranscripts$NSampleTxScore)
+    naTxscore <- is.na(combinedTranscripts$NSampleIntronChainScore)
     if(any(naTxscore)) 
-       combinedTranscripts$NSampleTxScore[naTxscore] <- 0
+       combinedTranscripts$NSampleIntronChainScore[naTxscore] <- 0
     filterSet <- combinedTranscripts$NSampleReadCount >= min.sampleNumber & (
-        combinedTranscripts$NSampleTxScore >= min.sampleNumber) & (
+        combinedTranscripts$NSampleIntronChainScore >= min.sampleNumber) & (
         combinedTranscripts$NSampleReadProp >= min.sampleNumber)
   }
   #combinedTranscripts = combinedTranscripts[filterSet,]
-  combinedTranscripts$maxTxScore[!filterSet] = -1
-  combinedTranscripts$maxTxScore.noFit[!filterSet] = -1
+  combinedTranscripts$maxIntronChainScore[!filterSet] = -1
+  combinedTranscripts$maxIntronChainScore.noFit[!filterSet] = -1
   return(combinedTranscripts)
 }
 
@@ -106,9 +105,9 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
     subsetTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!notCompatibleIds,], 
         exonRangesCombined[!notCompatibleIds])
-    rowDataCombined$maxTxScore[grepl("compatible", rowDataCombined$readClassType) &
+    rowDataCombined$maxIntronChainScore[grepl("compatible", rowDataCombined$readClassType) &
         rowDataCombined$readClassType != "equal:compatible"] <- -1
-    rowDataCombined$maxTxScore.noFit[grepl("compatible", rowDataCombined$readClassType) &
+    rowDataCombined$maxIntronChainScore.noFit[grepl("compatible", rowDataCombined$readClassType) &
         rowDataCombined$readClassType != "equal:compatible"] <- -1
   }
   #(2) remove transcripts below NDR threshold/identical junctions to annotations
@@ -153,14 +152,10 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   if(!identical(names(extendedAnnotationRanges),minEqClasses$queryTxId)) warning('eq classes might be incorrect')
   mcols(extendedAnnotationRanges)$eqClassById <- minEqClasses$eqClassById
   extendedAnnotationRanges <- calculateRelSubsetCount(extendedAnnotationRanges, minEqClasses$eqClassById, min.readFractionByEqClass)
-  
-  extendedAnnotationRanges_before_extract_column <<- extendedAnnotationRanges
-
   mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[, 
-                 c("TXNAME", "GENEID", "NDR.tx", "NDR.ic", "NDR.tss", "NDR.tes", "novelGene", "novelTranscript", 
+                 c("TXNAME", "GENEID", "NDR.ic", "novelGene", "novelTranscript", 
                  "txClassDescription","readCount","relReadCount", 
-                 "relSubsetCount", "txid", "eqClassById", "maxTxScore", "maxTxScore.noFit", 
-                 "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", 
+                 "relSubsetCount", "txid", "eqClassById", 
                  "maxIntronChainScore", "maxIntronChainScore.noFit", "startRegionId", "endRegionId")]
   metadata(extendedAnnotationRanges)$NDRthreshold = NDR
   if (remove.subsetTx) metadata(extendedAnnotationRanges)$subsetTranscripts = subsetTranscripts
@@ -233,24 +228,14 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
     equal <- combinedTranscripts$readClassType == "equal:compatible"
     equal[is.na(equal)] <- FALSE
     if(sum(equal, na.rm = TRUE)<50 | sum(!equal, na.rm = TRUE)<50 | useTxScore){
-          combinedTranscripts$NDR.tx <- 1 - combinedTranscripts$maxTxScore
           combinedTranscripts$NDR.ic <- 1 - combinedTranscripts$maxIntronChainScore
-          combinedTranscripts$NDR.tss <- 1 - combinedTranscripts$maxTssScore
-          combinedTranscripts$NDR.tes <- 1 - combinedTranscripts$maxTesScore
           if(!useTxScore) message("WARNING - Less than 50 TRUE or FALSE read classes ",
             "for NDR precision stabilization.")
           message("NDR will be approximated as: (1 - Transcript Model Prediction Score)")
     } else {
-        combinedTranscripts$NDR.tx <- calculateNDR(combinedTranscripts$maxTxScore, equal)
         combinedTranscripts$NDR.ic <- calculateNDR(combinedTranscripts$maxIntronChainScore, equal)
-        combinedTranscripts$NDR.tss <- calculateNDR(combinedTranscripts$maxTssScore, equal)
-        combinedTranscripts$NDR.tes <- calculateNDR(combinedTranscripts$maxTesScore, equal)
     }
-    
-    combinedTranscripts$NDR.tx[combinedTranscripts$maxTxScore==-1] <- 1
     combinedTranscripts$NDR.ic[combinedTranscripts$maxIntronChainScore==-1] <- 1
-    combinedTranscripts$NDR.tss[combinedTranscripts$maxTssScore==-1] <- 1
-    combinedTranscripts$NDR.tes[combinedTranscripts$maxTesScore==-1] <- 1
     return(combinedTranscripts)
 }
 
@@ -721,12 +706,10 @@ combindRowDataWithRanges <- function(rowDataCombinedFiltered, exonRangesCombined
     if(length(ndrCols) > 0){
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", ndrCols, "startRegionId", "endRegionId",
-                                  "maxTxScore", "maxTxScore.noFit", "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", 
                                   "maxIntronChainScore", "maxIntronChainScore.noFit", "relReadCount")]
     } else{
     mcols(extendedAnnotationRanges) <-
       rowDataCombinedFiltered[, c("TXNAME", "GENEID", "novelGene", "novelTranscript", "txClassDescription","readCount", "startRegionId", "endRegionId",
-                                  "maxTxScore", "maxTxScore.noFit", "maxTssScore", "maxTssScore.noFit", "maxTesScore", "maxTesScore.noFit", 
                                   "maxIntronChainScore", "maxIntronChainScore.noFit", "relReadCount")]
     }
     return(extendedAnnotationRanges)
@@ -746,19 +729,7 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     mcols(annotationRangesToMerge)$txClassDescription <- "annotation"
     mcols(annotationRangesToMerge)$novelTranscript <- FALSE
     mcols(annotationRangesToMerge)$novelGene <- FALSE
-    mcols(annotationRangesToMerge)$NDR.tx <- NA
     mcols(annotationRangesToMerge)$NDR.ic <- NA
-    mcols(annotationRangesToMerge)$NDR.tss <- NA
-    mcols(annotationRangesToMerge)$NDR.tes <- NA
-    mcols(annotationRangesToMerge)$maxTxScore <- NA
-    mcols(annotationRangesToMerge)$maxTxScore.noFit <- NA
-    mcols(annotationRangesToMerge)$maxTssScore <- NA
-    mcols(annotationRangesToMerge)$maxTssScore.noFit <- NA
-
-    mcols(annotationRangesToMerge)$maxTesScore <- NA
-    mcols(annotationRangesToMerge)$maxTesScore.noFit <- NA
-
-
     mcols(annotationRangesToMerge)$maxIntronChainScore <- NA
     mcols(annotationRangesToMerge)$maxIntronChainScore.noFit <- NA
     mcols(annotationRangesToMerge)$startRegionId <- NA
@@ -766,23 +737,11 @@ combineWithAnnotations <- function(rowDataCombinedFiltered,
     
     mcols(extendedAnnotationRanges) <- mcols(extendedAnnotationRanges)[,colnames(mcols(extendedAnnotationRanges))]
     #copy over stats to annotations from read classes
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tx <- equalRanges$NDR.tx
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.ic <- equalRanges$NDR.ic
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tss <- equalRanges$NDR.tss
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$NDR.tes <- equalRanges$NDR.tes
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$readCount <- equalRanges$readCount
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$relReadCount <- equalRanges$relReadCount
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore <- equalRanges$maxTxScore
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTxScore.noFit <- equalRanges$maxTxScore.noFit
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore <- equalRanges$maxIntronChainScore
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxIntronChainScore.noFit <- equalRanges$maxIntronChainScore.noFit
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore <- equalRanges$maxTssScore
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTssScore.noFit <- equalRanges$maxTssScore.noFit
-
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTesScore <- equalRanges$maxTesScore
-    mcols(annotationRangesToMerge[equalRanges$TXNAME])$maxTesScore.noFit <- equalRanges$maxTesScore.noFit
-
-
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$startRegionId <- equalRanges$startRegionId
     mcols(annotationRangesToMerge[equalRanges$TXNAME])$endRegionId <- equalRanges$endRegionId
   }
@@ -974,7 +933,7 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
     annotations.clusters <- list()
     rcfs.clusters <- list()
     clusters.rc <- splitReadClassFilesByRC(readClassList[[1]])
-    txScores <- c()
+    intronChainScores <- c()
     for(i in seq_along(clusters)){
         ###TODO need to account for the sample name here which is added to the barcode
         index <- match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples)) 
@@ -992,11 +951,11 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
         rowData(rcf.filt)$readCount.posStrand <- 0
         thresholdIndex <- which(rowData(rcf.filt)$readCount>=isoreParameters$min.readCount)
         model <- trainBambu(rcf.filt, verbose = verbose, min.readCount = isoreParameters$min.readCount)
-        txScore <- getTranscriptScore(rowData(rcf.filt)[thresholdIndex,], model,
+        intronChainScore <- getTranscriptScore(rowData(rcf.filt)[thresholdIndex,], model,
                                 defaultModels)
-        rowData(rcf.filt)$txScore <- rep(NA,nrow(rcf.filt))
-        rowData(rcf.filt)$txScore[thresholdIndex] <- txScore
-        #txScores = cbind(txScores, rowData(rcf.filt)$txScore)
+        rowData(rcf.filt)$intronChainScore <- rep(NA,nrow(rcf.filt))
+        rowData(rcf.filt)$intronChainScore[thresholdIndex] <- intronChainScore
+        #intronChainScores = cbind(intronChainScores, rowData(rcf.filt)$intronChainScore)
         rcfs.clusters[[names(clusters)[i]]] <- rcf.filt
         annotations.clusters[[names(clusters)[i]]] <- bambu.extendAnnotations(list(rcf.filt), annotations, NDR,
                                 isoreParameters, stranded, bpParameters, fusionMode, verbose)

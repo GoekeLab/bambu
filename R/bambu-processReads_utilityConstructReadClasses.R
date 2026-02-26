@@ -207,7 +207,6 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
     annoTable <- createAnnoTable(annotations)
     readTable <- splitReadClassByStartEnd(readTable, annoTable, rcSplitThreshold, alternativeStartEnd = F)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
-    readTable <<- readTable
     group_var <- c("chr", "strand", "intronEnds", "intronStarts", "confidenceType", "firstExonGroup", "lastExonGroup")
     if (preset == "cfc_seq") { group_var <- c(group_var, "tssId", "tesId")}
     if (preset == "5prime") { group_var <- c(group_var, "tssId")}
@@ -368,8 +367,6 @@ createAnnoTable <- function(annotations){
 splitReadClassByStartEnd <- function(readTable, annoTable, rcSplitThreshold = 0, alternativeStartEnd = FALSE){
   
   print(paste0("rcSplitThreshold: ", rcSplitThreshold))
-  readTable <<- readTable
-  annoTable <<- annoTable
   if(!alternativeStartEnd){
     annoTable <- annoTable %>%
       filter(exonRank > 1 & exon_endRank > 1)

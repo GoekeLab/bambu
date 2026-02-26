@@ -27,8 +27,8 @@ setIsoreParameters <- function(isoreParameters){
         min.primarySecondaryDist = 5,
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
-        min.txScore.multiExon = 0,
-        min.txScore.singleExon = 1,
+        min.intronChainScore.multiExon = 0,
+        min.intronChainScore.singleExon = 1,
         predictStart = FALSE,
         predictEnd = FALSE,
         rcSplitThreshold = 0,

@@ -133,7 +133,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations, pres
     if(verbose) message(names(bam.file)[1])
     
     readGrgList <- prepareDataFromBam(bam.file[[1]], verbose = verbose, yieldSize = yieldSize, use.names = trackReads, demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI)
-    readGrgList <<- readGrgList
 
     if(verbose) message(paste0("Number of alignments/reads: ",length(readGrgList)))
     warnings <- c()

@@ -39,10 +39,10 @@
 #'     \item{min.primarySecondaryDistStartEnd2}{specifying the minimum number 
 #'     of distance threshold, used for estimating distance to annotation, 
 #'     defaults to 5bp}
-#'     \item{min.txScore.multiExon}{specifying the minimum transcript level 
+#'     \item{min.intronChainScore.multiExon}{specifying the minimum transcript level 
 #'     threshold for multi-exon transcripts during sample combining, 
 #'     defaults to 0}
-#'     \item{min.txScore.singleExon}{specifying the minimum transcript level 
+#'     \item{min.intronChainScore.singleExon}{specifying the minimum transcript level 
 #'     threshold for single-exon transcripts during sample combining, defaults 
 #'     to 1}
 #'     \item{fitReadClassModel}{ A boolean specifying if Bambu should attempt
