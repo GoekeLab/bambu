@@ -157,12 +157,12 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
     }
 
     if(!is.null(sampleData)){
-        if (!all(grepl("\\.csv$", na.omit(sampleData)))){
-            stop("Not all paths for sample metadata files are .csv files")
+        if (!all(grepl("\\.(csv|tsv|txt)$", na.omit(sampleData), ignore.case = TRUE))){
+            stop("Not all paths for sample metadata files are .csv/.tsv/.txt files")
         }
-        if(length(sampleData)==1 & length(reads)>1){ # normally used for bulk samples
+        if(length(sampleData)==1 & length(reads)>1){ # one sample metadata for all samples
             message("Using the same sample metadata file for all input samples")
-        } else if(length(reads)!=length(sampleData)){ # normally used for single-cell/spatial samples
+        } else if(length(reads)!=length(sampleData)){ # multiple sample metadatas for multiple samples
             stop(
                 "The number of sample metadata files does not match the number of input read files. ",
                 "These two arguments (sampleData & reads) must be vectors of the same length. ",
@@ -305,7 +305,7 @@ generateColData <- function(readClassList, sampleMetadata, demultiplexed) {
   sampleMetadataDf <- if (is.null(sampleMetadata) || is.na(sampleMetadata)) {
     if (demultiplexed) tibble(barcode = character()) else tibble(sampleName = character())
   } else {
-    read.csv(sampleMetadata)
+    fread(sampleMetadata)
   }
   samples <- metadata(readClassList)$samples
   joinKey <- if (demultiplexed) "barcode" else "sampleName"
