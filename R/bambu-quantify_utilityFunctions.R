@@ -79,7 +79,8 @@ genEquiRCsBasedOnObservedReads <- function(readClass){
                                            unique(distTable$readClassId), .(readClassId, GENEID)],
                          on = c("readClassId", "GENEID")]
   #here, each transcript should be assigned to one gene only based on isore.estimateDistanceToAnnotation function
-  ##this step is very slow, consider to use integers instead of tx_ids
+  ##this step is very slow, consider to use integers instead of tx_ids  
+  distTable <- distTable %>% filter(compatible == TRUE)
   eqClassByIdList <- createList(distTable$readClassId, distTable$txid*(-1)^distTable$equal)
   distTable[, eqClassById := as.list(eqClassByIdList)]
   return(distTable)

@@ -246,6 +246,9 @@ calculateDistTable <- function(readClassList, annotations, preset = "unstranded_
                                                             min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']],
                                                             min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
                                                             verbose = verbose)
+        metadata(readClassDist)$distTable <- metadata(readClassDist)$distTable[which(
+            metadata(readClassDist)$distTable$compatible == TRUE
+        ),]
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
         if(returnDistTable) metadata(readClassDist)$distTableOld <- metadata(readClassDist)$distTable
                 #convert string gene ids into index to save memory

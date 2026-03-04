@@ -75,7 +75,6 @@ sequentialCombineFeatureTibble <- function(readClassList,
     for (s in seq_along(readClassList)){
         combinedListNew <- readClassList[[s]]
         if(intraGroup){
-            combinedListNew <<- combinedListNew
             combinedListNew <- 
                 extractFeaturesFromReadClassSE(readClassSe = combinedListNew,
                     sample_id = indexList[s], min.readCount = min.readCount,
@@ -191,7 +190,6 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
                 "maxIntronChainScore", "maxIntronChainScore.noFit",
                 "readCount", "NSampleReadProp",
                 "NSampleIntronChainScore")
-    rowData <<- rowData
     featureTibble <- rowData %>% 
         dplyr::select(chr = chr.rc, start, end, strand = strand.rc, firstExonGroup, lastExonGroup, tesId,
             startRegionId, endRegionId, compatible, equal,
