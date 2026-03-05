@@ -558,7 +558,6 @@ compatibilityByDatatype <- function(sqanti_tibble, preset = "unstranded_cDNA", a
     sqanti_tibble$equal <- sqanti_tibble$compatible & sqanti_tibble$category == "FSM"
   }
   if(preset == "3prime" | preset == "direct_RNA"){
-    print(preset)
     sqanti_tibble$compatible <- ifelse(sqanti_tibble$subcategory == "reference_match" |
                                          sqanti_tibble$subcategory == "alternative_5end" | 
                                          (sqanti_tibble$subcategory == "3prime_fragment" & abs(sqanti_tibble$endDist) <= alternativeStartEndDist), 

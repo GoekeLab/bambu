@@ -188,7 +188,6 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
     tssList <- prepareTss(annotations, referenceTss)
     tesList <- prepareTesFromReads(readGrgList)
 
-    #print("Tss list has been prepared!")
     readTable <- assignTssToReads(readTable, tssList = tssList)
     readTable <- assignTesToReads(readTable, tesList = tesList)
     
@@ -365,8 +364,7 @@ createAnnoTable <- function(annotations){
 
 
 splitReadClassByStartEnd <- function(readTable, annoTable, rcSplitThreshold = 0, alternativeStartEnd = FALSE){
-  
-  print(paste0("rcSplitThreshold: ", rcSplitThreshold))
+
   if(!alternativeStartEnd){
     annoTable <- annoTable %>%
       filter(exonRank > 1 & exon_endRank > 1)

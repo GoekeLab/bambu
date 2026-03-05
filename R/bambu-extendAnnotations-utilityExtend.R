@@ -46,7 +46,6 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     rowDataCombined$novelGene <- geneIds[,2]
     if(fusionMode) rowDataCombined$readClassType[geneIds[,3]] <- 'fusionTranscript'
     # ## filter out transcripts
-    print("before filterTranscriptsByAnnotation !!!")
     extendedAnnotationRanges <- filterTranscriptsByAnnotation(
       rowDataCombined, annotationGrangesList, preset = preset, exonRangesCombined, prefix,
       remove.subsetTx, min.readFractionByEqClass, baselineFDR, NDR, defaultModels, verbose, predictStart, predictEnd)
@@ -500,6 +499,23 @@ assignGeneIDbyMaxMatch <- function(unlistedIntrons, preset = "unstranded_cDNA",
 calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, preset = preset,
                                       primarySecondaryDist = 5, primarySecondaryDistStartEnd = 5,
                                       ignore.strand = FALSE) {
+  
+  # --- NEW SAVING LOGIC ---
+  # Retrieve the info we exported in Bash
+  sample_id <- Sys.getenv("CURRENT_SAMPLE_ID", unset = "unknown_sample")
+  out_dir   <- Sys.getenv("CURRENT_OUT_DIR", unset = ".")
+  
+  # Create a safe file prefix
+  file_prefix <- file.path(out_dir, paste0("internal_", sample_id))
+  
+  # Save the first two objects separately for this sample
+  message("Saving intermediate objects for: ", sample_id)
+  saveRDS(exByTx,    paste0(file_prefix, "_exByTx.rds"))
+  saveRDS(exByTxRef, paste0(file_prefix, "_exByTxRef.rds"))
+  # -------------------------
+
+  print(paste("Number of read classes: ", length(exByTx)))
+
   # (1)  find overlaps of read classes with annotated transcripts,
   spliceOverlaps <- findSpliceOverlapsByDist_2(exByTx, exByTxRef, preset = preset, 
                                              maxDist = maxDist, firstLastSeparate = TRUE,
@@ -507,16 +523,27 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, preset = 
                                              ignore.strand = ignore.strand)
   txToAnTableFiltered <- genFilteredAnTable(spliceOverlaps,
       primarySecondaryDist, primarySecondaryDistStartEnd, DistCalculated = FALSE)
+
+      
   # (2) calculate splice overlap for any not in the list (new exon >= 35bp)
   setTMP <- unique(txToAnTableFiltered$queryHits)
 
-  print("check point 1!!!")
+  #print the number of reads and read classes that are being assigned to annotation in accurate mapping
+  txToAnTableFiltered_accurate_match <- txToAnTableFiltered %>% 
+     filter(compatible == TRUE)
+  exByTx_accurate_match <- exByTx[unique(txToAnTableFiltered_accurate_match$queryHits)]
+  reads_number <- sum(mcols(exByTx_accurate_match)$readCount)
+  print(paste("Number of reads after accurate mapping:", reads_number))
+
+  accurate_matched_rc <- txToAnTableFiltered_accurate_match %>% 
+     select(queryHits) %>%
+     n_distinct()
+  print(paste("Number of read classes after accurate mapping:", accurate_matched_rc))
 
   spliceOverlaps_rest <- findSpliceOverlapsByDist_2(exByTx[-setTMP], preset = preset,
                                                     exByTxRef, maxDist = 0, type = "any", firstLastSeparate = TRUE,
                                                     dropRangesByMinLength = FALSE, cutStartEnd = TRUE,
                                                     ignore.strand = ignore.strand)
-    print("check point 2!!!")
 
   if(length(spliceOverlaps_rest) > 0){
     txToAnTableRest <-
@@ -536,8 +563,6 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, preset = 
           genFilteredAnTable(spliceOverlaps_restStartEnd,
                             primarySecondaryDist, exByTx = exByTx,
                             setTMP = setTMPRest, DistCalculated = TRUE)
-          print("check point 3!!!")
-
       }
     }
     txToAnTableFiltered <- rbind( txToAnTableFiltered,
@@ -550,6 +575,19 @@ calculateDistToAnnotation <- function(exByTx, exByTxRef, maxDist = 35, preset = 
     names(exByTxRef)[txToAnTableFiltered$subjectHits]
   txToAnTableFiltered$txid <-
     mcols(exByTxRef)$txid[txToAnTableFiltered$subjectHits]
+
+  #print the number of reads and read classes that are being assigned to annotation after inaccurate mapping
+  spliceOverlaps_inaccurate_match <- txToAnTableFiltered %>% 
+     filter(compatible == TRUE)
+  exByTx_inaccurate_match <- exByTx[unique(spliceOverlaps_inaccurate_match$queryHits)]
+  reads_number <- sum(mcols(exByTx_inaccurate_match)$readCount)
+  print(paste("Number of reads after inaccurate mapping:", reads_number))
+
+  inaccurate_matched_rc <- spliceOverlaps_inaccurate_match %>% 
+     select(queryHits) %>%
+     n_distinct()
+  print(paste("Number of read classes after inaccurate mapping:", inaccurate_matched_rc))
+
   return(txToAnTableFiltered)
 }
 
