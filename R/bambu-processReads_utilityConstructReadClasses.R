@@ -221,7 +221,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
                 readIds = list(readId), sampleIDs = list(sampleID), 
                 tssNumber = length(unique(tssId[!is.na(tssId)])),
                 tssId = paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
-                tesId = paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
+                tesId = paste(unique(tesId[!is.na(tesId)]), collapse = ";"),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
