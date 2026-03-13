@@ -220,8 +220,9 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
                 readCount.posStrand = sum(alignmentStrand, na.rm = TRUE), 
                 readIds = list(readId), sampleIDs = list(sampleID), 
                 tssNumber = length(unique(tssId[!is.na(tssId)])),
-                tssId = paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
-                tesId = paste(unique(tesId[!is.na(tesId)]), collapse = ";"),
+                # Only create these summary strings if they aren't already grouping columns
+                tesId = if("tesId" %in% group_var) unique(tesId) else paste(unique(tesId[!is.na(tesId)]), collapse = ";"),
+                tssId = if("tssId" %in% group_var) unique(tssId) else paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
         mutate(readClassId = paste("rc", row_number(), sep = "."))
