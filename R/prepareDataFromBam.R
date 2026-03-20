@@ -46,12 +46,12 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         if (!isFALSE(demultiplexed)){ # if demultiplexed is TRUE or a string path 
             if(isTRUE(demultiplexed)){ # if demultiplexed is TRUE
       
-                mcols(readGrgList[[counter]])$CB <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), # a checkpoint to see whether CB is contained in the name, with specific format CB_UMI#READNAME, 
-                                                              !is.na(mcols(alignmentInfo)$CB) ~ mcols(alignmentInfo)$CB, 
+                mcols(readGrgList[[counter]])$CB <- case_when(!is.na(mcols(alignmentInfo)$CB) ~ mcols(alignmentInfo)$CB,
+                                                              grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), # a checkpoint to see whether CB is contained in the name, with specific format CB_UMI#READNAME  
                                                               TRUE ~ NA) 
 
-                mcols(readGrgList[[counter]])$UMI <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format CB_UMI#READNAME, 
-                                                               !is.na(mcols(alignmentInfo)$UB) ~ mcols(alignmentInfo)$UB, 
+                mcols(readGrgList[[counter]])$UMI <- case_when(!is.na(mcols(alignmentInfo)$UB) ~ mcols(alignmentInfo)$UB,
+                                                               grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format CB_UMI#READNAME
                                                                TRUE ~ NA) 
             } else{ # if demultiplexed is a string path
                 mcols(readGrgList[[counter]])$CB <- NA
