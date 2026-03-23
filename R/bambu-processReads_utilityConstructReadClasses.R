@@ -297,6 +297,7 @@ assignTssToReads <- function(readTable, tssList){
   mcols(readTss)$readId <- readTable$readId
   #find the start of reads within the tssList
   readTable$tssId <- NA_character_
+  mcols(tssList)$tssId <- seq_along(tssList)
   within_index <- findOverlaps(readTss, tssList)
   readTable$tssId[queryHits(within_index)] <- mcols(tssList)$tssId[subjectHits(within_index)]
   #readTable$tssId[queryHits(within_index)] <- TRUE
@@ -312,10 +313,10 @@ prepareTssFromReads <- function(readGrgList, max_dist = 100, min_reads = 10){
     group_by(seqnames, start, strand) %>%
     summarise(N = n(), .groups = "drop") %>%
     filter(N > min_reads) %>%
-    arrange(seqnames, start) %>%
-    group_by(seqnames) %>%
+    arrange(seqnames, start, strand) %>%
+    group_by(seqnames, strand) %>%
     mutate(cluster = cumsum(c(0, diff(start)) > max_dist)) %>%
-    group_by(seqnames, cluster) %>%
+    group_by(seqnames, strand, cluster) %>%
     summarise(
       start = start[which.max(N)],   # choose the TES with the highest N
       N = sum(N),              # sum N across the cluster
@@ -338,13 +339,13 @@ prepareTesFromReads <- function(readGrgList, max_dist = 100, min_reads = 10){
     group_by(seqnames, end, strand) %>%
     summarise(N = n(), .groups = "drop") %>%
     filter(N > min_reads) %>%
-    arrange(seqnames, end) %>%
-    group_by(seqnames) %>%
+    arrange(seqnames, end, strand) %>%           # Added strand to arrange
+    group_by(seqnames, strand) %>%               # Group by strand to define clusters per strand
     mutate(cluster = cumsum(c(0, diff(end)) > max_dist)) %>%
-    group_by(seqnames, cluster) %>%
+    group_by(seqnames, strand, cluster) %>%      # Keep strand in the group
     summarise(
-      end = end[which.max(N)],   # choose the TES with the highest N
-      N = sum(N),              # sum N across the cluster
+      end = end[which.max(N)],                   # Peak position in the cluster
+      N = sum(N),                                # Total reads in cluster
       .groups = "drop"
     ) %>%
     filter(N >= min_reads)
