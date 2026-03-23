@@ -51,7 +51,15 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
 generateUniqueCounts <- function(readClassDt, countMatrix, annotations){
     x <- readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
     uniqueCounts <- countMatrix[x$eqClass.match,]
+    #uniqueCounts.tx <- sparse.model.matrix(~ factor(x$txid) - 1)
+
+    # the following code was modified to handle the case when there is only one unique transcript
+    if (length(unique(x$txid)) > 1) {
     uniqueCounts.tx <- sparse.model.matrix(~ factor(x$txid) - 1)
+    } else {
+    uniqueCounts.tx <- Matrix::Matrix(rep(1, nrow(x)), sparse = TRUE)
+    colnames(uniqueCounts.tx) <- paste0("txid_", unique(x$txid))
+    }
     uniqueCounts <- t(uniqueCounts.tx) %*% uniqueCounts
     rownames(uniqueCounts) <- names(annotations)[match(as.numeric(levels(factor(x$txid))),mcols(annotations)$txid)]
     counts <- sparseMatrix(length(annotations), ncol(uniqueCounts), x = 0)
