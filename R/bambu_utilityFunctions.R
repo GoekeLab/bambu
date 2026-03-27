@@ -307,15 +307,17 @@ generateColData <- function(readClassList, sampleMetadata, demultiplexed) {
   } else {
     fread(sampleMetadata)
   }
-  samples <- metadata(readClassList)$samples
+
   joinKey <- if (demultiplexed) "barcode" else "sampleName"
-  
-  colData <- tibble(id = samples)
+
   if (demultiplexed) {
-    colData$sampleName = sub('_[^_]+$', '', samples)
-    colData$barcode <- sub('.*_', '', samples)
+    colData <- tibble(
+        id = paste(metadata(readClassList)$sampleData$sampleName, metadata(readClassList)$sampleData$barcode, sep = '_'),
+        sampleName = metadata(readClassList)$sampleData$sampleName,
+        barcode = metadata(readClassList)$sampleData$barcode
+    )
   } else{
-    colData$sampleName <- samples
+    colData <- tibble(id = metadata(readClassList)$sampleData$sampleName, sampleName = metadata(readClassList)$sampleData$sampleName)
   }
   
   colData <- colData %>%

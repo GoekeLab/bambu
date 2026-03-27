@@ -32,7 +32,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     metadata(quantData)$readClassDt <- readClassDt
     metadata(quantData)$countMatrix <- metadata(readClassList)$countMatrix
     metadata(quantData)$incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix 
-    metadata(quantData)$sampleNames <- metadata(readClassList)$sampleNames 
+    metadata(quantData)$sampleName <- metadata(readClassList)$sampleData$sampleName 
     if(returnDistTable)
         metadata(quantData)$distTable <- metadata(metadata(readClassList)$readClassDist)$distTableOld
 
