@@ -46,11 +46,13 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         if (!isFALSE(demultiplexed)){ # if demultiplexed is TRUE or a string path 
             if(isTRUE(demultiplexed)){ # if demultiplexed is TRUE
       
-                mcols(readGrgList[[counter]])$CB <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), # a checkpoint to see whether CB is contained in the name, with specific format CB_UMI#READNAME, 
+                # a checkpoint to parse CB and UMI from the bam file, either from reads or CB/UMI tags.
+                # currently read name only accepts the format CB_UMI#READNAME (CB & UMI cannot have '_', otherwise parsing fails) 
+                mcols(readGrgList[[counter]])$CB <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), 
                                                               !is.na(mcols(alignmentInfo)$CB) ~ mcols(alignmentInfo)$CB, 
                                                               TRUE ~ NA) 
 
-                mcols(readGrgList[[counter]])$UMI <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format CB_UMI#READNAME, 
+                mcols(readGrgList[[counter]])$UMI <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), 
                                                                !is.na(mcols(alignmentInfo)$UB) ~ mcols(alignmentInfo)$UB, 
                                                                TRUE ~ NA) 
             } else{ # if demultiplexed is a string path
