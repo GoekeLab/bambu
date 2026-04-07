@@ -186,8 +186,8 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
         sampleID = mcols(readGrgList)$sampleID)
     #assign tssId
     #tssList <- prepareTss(annotations, referenceTss)
-    tssList <- prepareTssFromReads(readGrgList)
-    tesList <- prepareTesFromReads(readGrgList)
+    tssList <- prepareTssFromReads(readTable)
+    tesList <- prepareTesFromReads(readTable)
 
     readTable <- assignTssToReads(readTable, tssList = tssList)
     readTable <- assignTesToReads(readTable, tesList = tesList)
@@ -305,11 +305,10 @@ assignTssToReads <- function(readTable, tssList){
 }
 
 
-prepareTssFromReads <- function(readGrgList, max_dist = 100, min_reads = 10){
-  starts_df <- getTss(readGrgList, width = 1)
-  starts_df <- as_tibble(starts_df)
-  collapsed_tss <- as_tibble(starts_df) %>%
-    select(seqnames, start, strand) %>%
+prepareTssFromReads <- function(readTable, max_dist = 100, min_reads = 10){
+  collapsed_tss <- readTable %>%
+    mutate(tss = ifelse(strand != "-", start, end)) %>%
+    select(seqnames = chr, start = tss, strand) %>%
     group_by(seqnames, start, strand) %>%
     summarise(N = n(), .groups = "drop") %>%
     filter(N > min_reads) %>%
@@ -318,31 +317,30 @@ prepareTssFromReads <- function(readGrgList, max_dist = 100, min_reads = 10){
     mutate(cluster = cumsum(c(0, diff(start)) > max_dist)) %>%
     group_by(seqnames, strand, cluster) %>%
     summarise(
-      start = start[which.max(N)],   # choose the TES with the highest N
-      N = sum(N),              # sum N across the cluster
+      start = start[which.max(N)],   # choose the TSS with the highest N
+      N = sum(N),                    # sum N across the cluster
       .groups = "drop"
     ) %>%
     filter(N >= min_reads)
   referenceTSS <- GRanges(seqnames = collapsed_tss$seqnames,
-                          ranges = IRanges(end = collapsed_tss$start, width = 1),
+                          ranges = IRanges(start = collapsed_tss$start, width = 1),
                           strand = collapsed_tss$strand)
   return(referenceTSS)
 }
 
 
 ###The function is used after reads have been stranded, so can be grouped by strand
-prepareTesFromReads <- function(readGrgList, max_dist = 100, min_reads = 10){
-  ends_df <- getTes(readGrgList, width = 1)
-  ends_df <- as_tibble(ends_df)
-  collapsed_tes <- as_tibble(ends_df) %>%
-    select(seqnames, end, strand) %>%
+prepareTesFromReads <- function(readTable, max_dist = 100, min_reads = 10){
+  collapsed_tes <- readTable %>%
+    mutate(tes = ifelse(strand != "-", end, start)) %>%
+    select(seqnames = chr, end = tes, strand) %>%
     group_by(seqnames, end, strand) %>%
     summarise(N = n(), .groups = "drop") %>%
     filter(N > min_reads) %>%
-    arrange(seqnames, end, strand) %>%           # Added strand to arrange
-    group_by(seqnames, strand) %>%               # Group by strand to define clusters per strand
+    arrange(seqnames, end, strand) %>%
+    group_by(seqnames, strand) %>%
     mutate(cluster = cumsum(c(0, diff(end)) > max_dist)) %>%
-    group_by(seqnames, strand, cluster) %>%      # Keep strand in the group
+    group_by(seqnames, strand, cluster) %>%
     summarise(
       end = end[which.max(N)],                   # Peak position in the cluster
       N = sum(N),                                # Total reads in cluster
