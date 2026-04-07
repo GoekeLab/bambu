@@ -186,7 +186,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
         sampleID = mcols(readGrgList)$sampleID)
     #assign tssId
     #tssList <- prepareTss(annotations, referenceTss)
-    tssList <- prepareTesFromReads(readGrgList)
+    tssList <- prepareTssFromReads(readGrgList)
     tesList <- prepareTesFromReads(readGrgList)
 
     readTable <- assignTssToReads(readTable, tssList = tssList)
