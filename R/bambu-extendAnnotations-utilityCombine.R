@@ -106,7 +106,7 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
         readCount = sum(.SD[,y], na.rm = TRUE)),
         by = rowID,  env = I(list(x = startCols, y = readCountCols, z = endCols))]
     combinedFeatureTibble <- startEndDt[combinedFeatureTibble[,.(intronStarts, intronEnds, chr, strand, maxIntronChainScore, maxIntronChainScore.noFit, 
-                                                                 firstExonGroup, lastExonGroup, tesId, startRegionId, endRegionId, 
+                                                                 firstExonGroup, lastExonGroup, sampleTesId, startRegionId, endRegionId, 
                                                                  compatible, equal,
                                                                  NSampleReadCount, NSampleReadProp, 
                                                                  NSampleIntronChainScore, rowID)], on = "rowID"]
@@ -129,14 +129,14 @@ combineFeatureTibble <- function(combinedFeatureTibble,
         featureTibbleSummarised, index=1, intraGroup = TRUE){ 
     if (is.null(combinedFeatureTibble)) { 
         combinedTable <- featureTibbleSummarised %>% 
-            select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, tesId, startRegionId, endRegionId, compatible, equal,
+            select(intronStarts, intronEnds, chr, strand, firstExonGroup, lastExonGroup, sampleTesId, startRegionId, endRegionId, compatible, equal,
             maxIntronChainScore, maxIntronChainScore.noFit, 
             NSampleReadCount, NSampleReadProp,NSampleIntronChainScore, 
             starts_with('start'), starts_with('end'), starts_with('readCount'))
     } else { 
         combinedTable <- full_join(combinedFeatureTibble, 
             featureTibbleSummarised, by = c('intronStarts', 'intronEnds', 'chr',
-            'strand', 'firstExonGroup', 'lastExonGroup', "startRegionId", "tesId","endRegionId", "compatible", "equal"), suffix=c('.combined','.new')) %>% 
+            'strand', 'firstExonGroup', 'lastExonGroup', "startRegionId", "sampleTesId","endRegionId", "compatible", "equal"), suffix=c('.combined','.new')) %>% 
             mutate(NSampleReadCount=pmax0NA(NSampleReadCount.combined) + 
                         pmax0NA(NSampleReadCount.new), 
                     NSampleReadProp = pmax0NA(NSampleReadProp.combined) + 
@@ -151,7 +151,7 @@ combineFeatureTibble <- function(combinedFeatureTibble,
             NSampleReadCount, NSampleReadProp, NSampleIntronChainScore, 
             maxIntronChainScore, maxIntronChainScore.noFit, 
             starts_with('start'), starts_with('end'), 
-            starts_with('readCount'), firstExonGroup, lastExonGroup, tesId, startRegionId, endRegionId, compatible, equal) 
+            starts_with('readCount'), firstExonGroup, lastExonGroup, sampleTesId, startRegionId, endRegionId, compatible, equal) 
     } 
     if(intraGroup) 
         combinedTable <- 
@@ -184,14 +184,14 @@ extractFeaturesFromReadClassSE <- function(readClassSe, sample_id,
         mutate(start = unname(min(start(rowRangesSe))), 
                 end= unname(max(end(rowRangesSe))))
 
-    group_var <- c("intronStarts", "intronEnds", "chr", "strand", "firstExonGroup", "lastExonGroup", "tesId",
+    group_var <- c("intronStarts", "intronEnds", "chr", "strand", "firstExonGroup", "lastExonGroup", "sampleTesId",
         "startRegionId", "endRegionId", "compatible", "equal")
     sum_var <- c("start","end","NSampleReadCount", 
                 "maxIntronChainScore", "maxIntronChainScore.noFit",
                 "readCount", "NSampleReadProp",
                 "NSampleIntronChainScore")
     featureTibble <- rowData %>% 
-        dplyr::select(chr = chr.rc, start, end, strand = strand.rc, firstExonGroup, lastExonGroup, tesId,
+        dplyr::select(chr = chr.rc, start, end, strand = strand.rc, firstExonGroup, lastExonGroup, sampleTesId,
             startRegionId, endRegionId, compatible, equal,
             intronStarts, intronEnds, confidenceType, readCount, geneReadProp, 
             intronChainScore, intronChainScore.noFit, numExons) %>%

@@ -97,7 +97,7 @@ constructSplicedReadClasses <- function(uniqueJunctions, unlisted_junctions, pre
         startSD = startSD, endSD = endSD, 
         start.rc = start, end.rc = end, 
         firstExonGroup = firstExonGroup, lastExonGroup = lastExonGroup, tssNumber = tssNumber,
-        tesId = tesId,
+        sampleTesId = sampleTesId,
         startRegionId = startRegionId, endRegionId = endRegionId,
         readCount.posStrand = readCount.posStrand, intronStarts, intronEnds, 
         confidenceType, readCount, readIds, sampleIDs)
@@ -208,9 +208,9 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
     readTable <- splitReadClassByStartEnd(readTable, annoTable, rcSplitThreshold, alternativeStartEnd = F)
     ## currently 80%/20% quantile of reads is used to identify start/end sites
     group_var <- c("chr", "strand", "intronEnds", "intronStarts", "confidenceType", "firstExonGroup", "lastExonGroup")
-    if (preset == "cfc_seq") { group_var <- c(group_var, "tssId", "tesId")}
+    if (preset == "cfc_seq") { group_var <- c(group_var, "tssId", "sampleTesId")}
     if (preset == "5prime") { group_var <- c(group_var, "tssId")}
-    if (preset == "3prime" | preset == "direct_RNA") { group_var <- c(group_var, "tesId")}
+    if (preset == "3prime" | preset == "direct_RNA") { group_var <- c(group_var, "sampleTesId")}
 
     readTable <- readTable %>% 
         group_by(across(all_of(group_var))) %>% 
@@ -222,7 +222,7 @@ createReadTable <- function(unlisted_junctions_start, unlisted_junctions_end, pr
                 readIds = list(readId), sampleIDs = list(sampleID), 
                 tssNumber = length(unique(tssId[!is.na(tssId)])),
                 # Only create these summary strings if they aren't already grouping columns
-                tesId = if("tesId" %in% group_var) unique(tesId) else paste(unique(tesId[!is.na(tesId)]), collapse = ";"),
+                sampleTesId = if("sampleTesId" %in% group_var) unique(sampleTesId) else paste(unique(sampleTesId[!is.na(sampleTesId)]), collapse = ";"),
                 tssId = if("tssId" %in% group_var) unique(tssId) else paste(unique(tssId[!is.na(tssId)]), collapse = ";"),
                 .groups = 'drop') %>% 
         arrange(chr, start, end) %>%
@@ -362,10 +362,10 @@ assignTesToReads <- function(readTable, tesList){
     ranges = IRanges(end = readTable$tesRanges, width = 50),
     strand = readTable$strand)
   mcols(readTes)$readId <- readTable$readId
-  readTable$tesId <- NA_character_
-  mcols(tesList)$tesId <- seq_along(tesList)
+  readTable$sampleTesId <- NA_character_
+  mcols(tesList)$sampleTesId <- seq_along(tesList)
   within_index <- findOverlaps(readTes, tesList)
-  readTable$tesId[queryHits(within_index)] <- mcols(tesList)$tesId[subjectHits(within_index)]
+  readTable$sampleTesId[queryHits(within_index)] <- mcols(tesList)$sampleTesId[subjectHits(within_index)]
   return(readTable)
 }
 
