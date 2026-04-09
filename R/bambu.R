@@ -317,7 +317,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 ColNames <- c(ColNames, names(iter))
                 colData.all[[i]] <- data.frame(
                   id = names(countsSeCompressed), 
-                  sampleName = names(countsSeCompressed)
+                  sampleName = names(countsSeCompressed),
+                  row.names = names(countsSeCompressed)
                 )
             } else{
                 ColNames <- c(ColNames, colnames(quantData_i)) 
