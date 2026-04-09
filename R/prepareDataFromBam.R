@@ -101,6 +101,11 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     } else {
         readGrgList <- readGrgList[[1]]
     }
+
+    if (demultiplexed){
+        mcols(readGrgList)$CB <- as.factor(mcols(readGrgList)$CB)
+    }
+
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList <- readGrgList[sum(width(readGrgList)) > 1]
     numNoCBs <- sum(is.na(mcols(readGrgList)$CB))

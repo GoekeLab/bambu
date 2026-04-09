@@ -310,14 +310,14 @@ generateColData <- function(readClassList, sampleMetadata, demultiplexed) {
 
   joinKey <- if (demultiplexed) "barcode" else "sampleName"
 
+  colData <- tibble(
+      id = metadata(readClassList)$sampleData$id, 
+      sampleName = metadata(readClassList)$sampleData$sampleName
+  ) 
+
   if (demultiplexed) {
-    colData <- tibble(
-        id = paste(metadata(readClassList)$sampleData$sampleName, metadata(readClassList)$sampleData$barcode, sep = '_'),
-        sampleName = metadata(readClassList)$sampleData$sampleName,
-        barcode = metadata(readClassList)$sampleData$barcode
-    )
-  } else{
-    colData <- tibble(id = metadata(readClassList)$sampleData$sampleName, sampleName = metadata(readClassList)$sampleData$sampleName)
+      colData <- colData %>%
+        mutate(barcode = metadata(readClassList)$sampleData$barcode)
   }
   
   colData <- colData %>%

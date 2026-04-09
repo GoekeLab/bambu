@@ -54,7 +54,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     returnModel <- isoreParameters[["returnModel"]]
     min.exonOverlap <- isoreParameters[["min.exonOverlap"]]
 
-    if(processByBam){ # bulk mode
+    if(processByBam){
         readClassList <- bplapply(seq_along(reads), function(i) {
             bambu.processReadsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
@@ -64,7 +64,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode, 
             demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = 1, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
-    } else { # single cell mode 
+    } else {
         readGrgList <- bplapply(seq_along(reads), function(i) {
             bambu.readsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
@@ -173,10 +173,7 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 
     mcols(readGrgList)$id <- seq_along(readGrgList) 
 
-    sampleName <- names(bam.file)[1]
-
     if(!isFALSE(demultiplexed)){ 
-        mcols(readGrgList)$CB <- as.factor(mcols(readGrgList)$CB)
         mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$CB)
     } else {
         mcols(readGrgList)$sampleID <- index
@@ -409,7 +406,7 @@ splitReadClassFiles = function(readClassFile){
         i = rep(seq_along(counts.table), lengths(counts.table)),
         j = as.numeric(names(unlist(counts.table))),
         x = unlist(counts.table),
-        dims = c(nrow(eqClasses), length(metadata(readClassFile)$sampleData$id)))
+        dims = c(nrow(eqClasses), nrow(metadata(readClassFile)$sampleData)))
     #incompatible counts
     distTable <- metadata(metadata(readClassFile)$readClassDist)$distTable.incompatible
     if(nrow(distTable)==0) {
