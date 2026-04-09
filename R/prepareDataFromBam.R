@@ -68,10 +68,6 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
                     mcols(readGrgList[[counter]])$UMI <- readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]
                 }
             }
-            cells <- unique(c(cells, mcols(readGrgList[[counter]])$CB))
-            mcols(readGrgList[[counter]])$CB <- factor(mcols(readGrgList[[counter]])$CB, levels = cells)
-            umi <- unique(c(umi, mcols(readGrgList[[counter]])$UMI))
-            mcols(readGrgList[[counter]])$UMI <- factor(mcols(readGrgList[[counter]])$UMI, levels = umi)
         }
         if(cleanReads){
             softClip5Prime <- clipFunction(cigarData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '^(\\d*)[S].*', replace_pattern = '\\1')
@@ -103,7 +99,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     }
 
     if (demultiplexed){
-        mcols(readGrgList)$CB <- as.factor(mcols(readGrgList)$CB)
+        mcols(readGrgList)$CB <- factor(mcols(readGrgList)$CB, levels = sort(unique(mcols(readGrgList)$CB)))
     }
 
     # remove microexons of width 1bp from list
