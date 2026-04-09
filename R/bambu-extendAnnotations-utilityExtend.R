@@ -14,7 +14,7 @@ isore.extendAnnotations <- function(combinedTranscripts, annotationGrangesList,
     group_var <- c("intronStarts","intronEnds","chr","strand","start","end",
                    "confidenceType","readCount",
                    "maxIntronChainScore", "maxIntronChainScore.noFit", 
-                   "firstExonGroup", "lastExonGroup", "sampleTesId",
+                   "firstExonGroup", "lastExonGroup", "mulSamTesId",
                    "startRegionId", "endRegionId", "compatible", "equal")
     rowDataTibble <- select(combinedTranscripts,all_of(group_var))
     annotationSeqLevels <- seqlevels(annotationGrangesList)
