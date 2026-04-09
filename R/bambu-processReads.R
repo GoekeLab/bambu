@@ -214,10 +214,11 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              verbose = verbose)
 
     if (demultiplexed) {
+        barcodes <- levels(mcols(readGrgList)$CB)
         metadata(se)$sampleData <- tibble(
-          id = paste(names(bam.file)[1], levels(mcols(readGrgList)$CB), sep = '_'),
+          id = paste(names(bam.file)[1], barcodes, sep = '_'),
           sampleName = names(bam.file)[1],
-          barcode = levels(mcols(readGrgList)$CB)
+          barcode = barcodes
         )
     } else{
         metadata(se)$sampleData <- tibble(
