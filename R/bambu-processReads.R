@@ -54,7 +54,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
     returnModel <- isoreParameters[["returnModel"]]
     min.exonOverlap <- isoreParameters[["min.exonOverlap"]]
 
-    if(processByBam){ # bulk mode
+    if(processByBam){
         readClassList <- bplapply(seq_along(reads), function(i) {
             bambu.processReadsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
@@ -64,7 +64,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode, 
             demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = 1, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
-    } else { # single cell mode 
+    } else {
         readGrgList <- bplapply(seq_along(reads), function(i) {
             bambu.readsByFile(bam.file = reads[i],
             genomeSequence = genomeSequence,annotations = annotations,
@@ -173,13 +173,6 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 
     mcols(readGrgList)$id <- seq_along(readGrgList) 
 
-    sampleName <- names(bam.file)[1]
-    if(!isFALSE(demultiplexed)){
-        mcols(readGrgList)$CB <- paste0(sampleName, '_', mcols(readGrgList)$CB)
-    } else{
-        mcols(readGrgList)$CB <- sampleName
-        }
-    mcols(readGrgList)$CB <- as.factor(mcols(readGrgList)$CB)
     if(!isFALSE(demultiplexed)){ 
         mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$CB)
     } else {
@@ -217,9 +210,20 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
                              fusionMode = fusionMode,
                              verbose = verbose)
 
-    metadata(se)$samples <- names(bam.file)[1]
-    metadata(se)$sampleNames <- names(bam.file)[1]
-    if(!isFALSE(demultiplexed)) metadata(se)$samples <- levels(mcols(readGrgList)$CB)                         
+    if (demultiplexed) {
+        barcodes <- levels(mcols(readGrgList)$CB)
+        metadata(se)$sampleData <- tibble(
+          id = paste(names(bam.file)[1], barcodes, sep = '_'),
+          sampleName = names(bam.file)[1],
+          barcode = barcodes
+        )
+    } else{
+        metadata(se)$sampleData <- tibble(
+          id = names(bam.file)[1],
+          sampleName = names(bam.file)[1]
+        )
+    }
+
     return(se)
 }
 
@@ -307,7 +311,6 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
     stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
     verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE){
-    warnings <- c() ###TODO
     
     if(processByChromosome){
         # construct read classes for each chromosome seperately 
@@ -403,12 +406,12 @@ splitReadClassFiles = function(readClassFile){
         i = rep(seq_along(counts.table), lengths(counts.table)),
         j = as.numeric(names(unlist(counts.table))),
         x = unlist(counts.table),
-        dims = c(nrow(eqClasses), length(metadata(readClassFile)$samples)))
+        dims = c(nrow(eqClasses), nrow(metadata(readClassFile)$sampleData)))
     #incompatible counts
     distTable <- metadata(metadata(readClassFile)$readClassDist)$distTable.incompatible
     if(nrow(distTable)==0) {
         counts.incompatible <- sparseMatrix(i= 1, j = 1, x = 0,
-        dims = c(1, length(metadata(readClassFile)$samples)))
+        dims = c(1, length(metadata(readClassFile)$sampleData$id)))
         rownames(counts.incompatible) <- "TODO"
     } else{
         distTable$sampleIDs <- rowData(readClassFile)$sampleIDs[match(distTable$readClassId, rownames(readClassFile))]
@@ -419,11 +422,11 @@ splitReadClassFiles = function(readClassFile){
             i = rep(seq_along(counts.table), lengths(counts.table)),
             j = as.numeric(names(unlist(counts.table))),
             x = unlist(counts.table),
-            dims = c(nrow(distTable), length(metadata(readClassFile)$samples)))
-        colnames(counts.incompatible) <- metadata(readClassFile)$samples
+            dims = c(nrow(distTable), length(metadata(readClassFile)$sampleData$id)))
+        colnames(counts.incompatible) <- metadata(readClassFile)$sampleData$id
         rownames(counts.incompatible) <- distTable$GENEID.i 
     }
-    colnames(counts) <- metadata(readClassFile)$samples
+    colnames(counts) <- metadata(readClassFile)$sampleData$id
     metadata(readClassFile)$eqClassById <- eqClasses$eqClassById
     #rownames(counts) = eqClasses$eqClassById
     metadata(readClassFile)$countMatrix <- counts

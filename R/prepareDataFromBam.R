@@ -46,13 +46,20 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         if (!isFALSE(demultiplexed)){ # if demultiplexed is TRUE or a string path 
             if(isTRUE(demultiplexed)){ # if demultiplexed is TRUE
       
-                mcols(readGrgList[[counter]])$CB <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])), # a checkpoint to see whether CB is contained in the name, with specific format CB_UMI#READNAME, 
-                                                              !is.na(mcols(alignmentInfo)$CB) ~ mcols(alignmentInfo)$CB, 
-                                                              TRUE ~ NA) 
+                # a checkpoint to parse CB and UMI from the bam file, either from reads or CB/UMI tags.
+                # currently read name only accepts the format CB_UMI#READNAME (CB & UMI cannot have '_', otherwise parsing fails) 
+                mcols(readGrgList[[counter]])$CB <- case_when(
+                    !is.na(mcols(alignmentInfo)$CB) ~ mcols(alignmentInfo)$CB,
+                    grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("_.*", "", names(readGrgList[[counter]])),
+                    TRUE ~ NA
+                ) 
 
-                mcols(readGrgList[[counter]])$UMI <- case_when(grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), # a checkpoint to see whether UMI is contained in the name, with specific format CB_UMI#READNAME, 
-                                                               !is.na(mcols(alignmentInfo)$UB) ~ mcols(alignmentInfo)$UB, 
-                                                               TRUE ~ NA) 
+                mcols(readGrgList[[counter]])$UMI <- case_when(
+                    !is.na(mcols(alignmentInfo)$UB) ~ mcols(alignmentInfo)$UB,
+                    grepl("^[^_]+_[^#]+#", names(readGrgList[[counter]]), perl = TRUE) ~ sub("^[^_]+_([^#]+)#.*$", "\\1", names(readGrgList[[counter]])), 
+                    TRUE ~ NA
+                )
+                
             } else{ # if demultiplexed is a string path
                 mcols(readGrgList[[counter]])$CB <- NA
                 mcols(readGrgList[[counter]])$UMI <- NA
@@ -61,10 +68,6 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
                     mcols(readGrgList[[counter]])$UMI <- readMap[,3][match(names(readGrgList[[counter]]),readMap[,1])]
                 }
             }
-            cells <- unique(c(cells, mcols(readGrgList[[counter]])$CB))
-            mcols(readGrgList[[counter]])$CB <- factor(mcols(readGrgList[[counter]])$CB, levels = cells)
-            umi <- unique(c(umi, mcols(readGrgList[[counter]])$UMI))
-            mcols(readGrgList[[counter]])$UMI <- factor(mcols(readGrgList[[counter]])$UMI, levels = umi)
         }
         if(cleanReads){
             softClip5Prime <- clipFunction(cigarData = GenomicAlignments::cigar(alignmentInfo), grep_pattern = '^(\\d*)[S].*', replace_pattern = '\\1')
@@ -94,6 +97,11 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     } else {
         readGrgList <- readGrgList[[1]]
     }
+
+    if (demultiplexed){
+        mcols(readGrgList)$CB <- factor(mcols(readGrgList)$CB, levels = sort(unique(mcols(readGrgList)$CB)))
+    }
+
     # remove microexons of width 1bp from list
     readGrgList <- readGrgList <- readGrgList[sum(width(readGrgList)) > 1]
     numNoCBs <- sum(is.na(mcols(readGrgList)$CB))

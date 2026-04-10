@@ -73,7 +73,7 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @importFrom methods is
 #' @noRd
 checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, 
-                        discovery, sampleNames, spatial, quantData){
+                        discovery, sampleNames, sampleData, quantData){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
@@ -156,13 +156,18 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
         }
     }
 
-    if(!is.null(spatial)){
-        #if(!all(grepl(".tsv^", spatial))){stop("Not all paths for spatial are .tsv files")}
-        if(length(spatial)==1 & length(reads)>1){
-            warning("Using the same whitelist and coordinates for all input samples")
-        } else if(length(reads)!=length(spatial)){
-            stop("There are not the same number spatial whitelist paths as input files to reads. ",
-            "Make sure these two arguments are vectors of the same length")
+    if(!is.null(sampleData)){
+        if (!all(grepl("\\.(csv|tsv|txt)$", na.omit(sampleData), ignore.case = TRUE))){
+            stop("Not all paths for sample metadata files are .csv/.tsv/.txt files")
+        }
+        if(length(sampleData)==1 & length(reads)>1){ # one sample metadata for all samples
+            message("Using the same sample metadata file for all input samples")
+        } else if(length(reads)!=length(sampleData)){ # multiple sample metadatas for multiple samples
+            stop(
+                "The number of sample metadata files does not match the number of input read files. ",
+                "These two arguments (sampleData & reads) must be vectors of the same length. ",
+                "If a specific sample has no metadata, please use 'NA' as a placeholder in the sampleData vector."
+            )
         }
     }
     return(annotations)
@@ -255,13 +260,11 @@ calculateDistTable <- function(readClassList, annotations, isoreParameters, verb
         return(readClassDist)
 }
 
-#' Combine count se object while preserving the metadata objects
+#' Combine combined count se object from multiple samples, cells or spatial locations
 #' @noRd
-combineCountSes <- function(countsSe, annotations){
-    countsData <- c("counts", "CPM", "fullLengthCounts", 
-                    "uniqueCounts", "incompatibleCounts")
-    sampleNames <- countsSe$colnames
-    countsSe$colnames <- NULL
+combineCountSes <- function(countsSe, colDataList, annotations){
+    countsData <- c("counts", "CPM", "fullLengthCounts", "uniqueCounts", "incompatibleCounts")
+    sampleNames <- names(countsSe)
     countsDataMat <- lapply(countsData, FUN = function(k){
         countsVecList <- lapply(countsSe, function(j){j[[k]]})
         countsMat <- sparseMatrix(i = unlist(lapply(countsVecList, function(j) j@i)),
@@ -279,56 +282,51 @@ combineCountSes <- function(countsSe, annotations){
         return(countsMat)
     })
     names(countsDataMat) <- countsData
-    countsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
+    combinedCountsSe <- SummarizedExperiment(assays = SimpleList(counts = countsDataMat$counts, 
                                                         CPM = countsDataMat$CPM, 
                                                         fullLengthCounts = countsDataMat$fullLengthCounts, 
                                                         uniqueCounts = countsDataMat$uniqueCounts))
-    metadata(countsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
-    rowRanges(countsSe) <- annotations
-    return(countsSe)
+    metadata(combinedCountsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
+    rowRanges(combinedCountsSe) <- annotations
+
+    colData(combinedCountsSe) <- DataFrame(bind_rows(colDataList))
+    
+    return(combinedCountsSe)
 }
 
-#' Generate the coldata for se options using colnames, and other option inputs
-#' @noRd
-generateColData <- function(sampleNames, clusters, demultiplexed, spatial){
-    ColData <- DataFrame(id = sampleNames)
-    if(!isFALSE(demultiplexed) & is.null(clusters)){
-        ColData <- DataFrame(id = sampleNames, 
-                        sampleName = gsub("_[^_]+$","", sampleNames, perl = TRUE), 
-                        Barcode = gsub(".*_(?=[^_]*$)","", sampleNames, perl = TRUE))
-    }
-    if(!is.null(spatial) & is.null(clusters)){
-        ColData$x_coordinate <- NA
-        ColData$y_coordinate <- NA
-        if(length(spatial)==1){
-            # the following line takes a regular delimited file as input
-            # it can either has header or without header
-            # it can also be compressed 
-            bc_coords <- fread(spatial, 
-                col.names = c("Barcode", "x_coordinate", "y_coordinate"),
-                data.table = FALSE)
-                # DataFrame(read.table(gzfile(spatial),
-                # col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-            bcMatch <- match(ColData$Barcode, bc_coords$Barcode)
-            ColData$x_coordinate <- bc_coords$x_coordinate[bcMatch]
-            ColData$y_coordinate <- bc_coords$y_coordinate[bcMatch]
-        } else{
-            spatial.unique <- unique(spatial)
-            for(whitelist in spatial.unique){
-                i <- which(spatial.unique==whitelist)
-                bc_coords <- fread(whitelist, 
-                                   col.names = c("Barcode", "x_coordinate", "y_coordinate"),
-                                   data.table = FALSE)
-                    # DataFrame(read.table(gzfile(whitelist), 
-                    # col.names = c("Barcode", "x_coordinate", "y_coordinate")))
-                bcSampleIndex <- ColData$sampleName %in% sampleNames[i]
-                bcMatch <- match(ColData$Barcode[bcSampleIndex], bc_coords$Barcode)
-                ColData$x_coordinate[bcSampleIndex] <- bc_coords$x_coordinate[bcMatch]
-                ColData$y_coordinate[bcSampleIndex] <- bc_coords$y_coordinate[bcMatch]
-            }
-        }
-    }
-    return(ColData)
+#' Generate the colData using the external sampleMetadata.csv provided by the user in the sampleMetadata argument
+#' @param readClassList A list object containingmetadata about read classes.
+#' @param sampleMetadata A path to a CSV file or NULL/NA if there is no metadata for the sample.
+#' @param demultiplexed Logical; indicates if data is demultiplexed.
+#'
+#' @return A DataFrame containing colData for the sample.
+#' @export
+generateColData <- function(readClassList, sampleMetadata, demultiplexed) {
+  sampleMetadataDf <- if (is.null(sampleMetadata) || is.na(sampleMetadata)) {
+    if (demultiplexed) tibble(barcode = character()) else tibble(sampleName = character())
+  } else {
+    fread(sampleMetadata)
+  }
+
+  joinKey <- if (demultiplexed) "barcode" else "sampleName"
+
+  colData <- tibble(
+      id = metadata(readClassList)$sampleData$id, 
+      sampleName = metadata(readClassList)$sampleData$sampleName
+  ) 
+
+  if (demultiplexed) {
+      colData <- colData %>%
+        mutate(barcode = metadata(readClassList)$sampleData$barcode)
+  }
+  
+  colData <- colData %>%
+    left_join(sampleMetadataDf, by = joinKey) %>%
+    as.data.frame()
+  
+  rownames(colData) <- colData$id
+  
+  colData
 }
 
 # Quick wrapper function (https://stackoverflow.com/questions/13273833/merging-multiple-data-tables)
