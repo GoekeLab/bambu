@@ -3,7 +3,7 @@
 #' @import data.table
 #' @noRd
 assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, preset = "unstranded_cDNA",
-                                        verbose, demultiplexed, spatial, 
+                                        verbose, demultiplexed, sampleMetadata, 
                                         returnDistTable = FALSE, trackReads = TRUE) {
     if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, preset, isoreParameters, verbose, returnDistTable)
@@ -17,7 +17,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
         mutate(aval = 1) %>%
         data.table()
     #return non-em counts
-    ColData <- generateColData(colnames(metadata(readClassList)$countMatrix), clusters = NULL, demultiplexed, spatial)
+    ColData <- generateColData(readClassList, sampleMetadata, demultiplexed)
     quantData <- SummarizedExperiment(assays = SimpleList(
         counts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)),
         rowRanges = annotations,
@@ -32,7 +32,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     metadata(quantData)$readClassDt <- readClassDt
     metadata(quantData)$countMatrix <- metadata(readClassList)$countMatrix
     metadata(quantData)$incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix 
-    metadata(quantData)$sampleNames <- metadata(readClassList)$sampleNames 
+    metadata(quantData)$sampleName <- metadata(readClassList)$sampleData$sampleName 
     if(returnDistTable)
         metadata(quantData)$distTable <- metadata(metadata(readClassList)$readClassDist)$distTableOld
 

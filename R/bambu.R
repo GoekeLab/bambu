@@ -93,6 +93,11 @@
 #' distTables. The output is a list with an entry for each sample.
 #' @param lowMemory Read classes will be processed by chromosomes when lowMemory 
 #' is specified. This option provides an efficient way to process big samples.
+#' @param sampleData A character vector of paths to metadata CSV files (or \code{NA} if 
+#' unavailable for specific samples); defaults to \code{NULL}. Files must contain a 
+#' "sampleName" column for bulk data or a "barcode" column for single-cell/spatial data. 
+#' For bulk data, one metadata CSV file for all samples is sufficient, whereas single-cell/spatial 
+#' data requires one metadata CSV file per sample.
 #' @param fusionMode A logical variable indicating whether run in fusion mode
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
@@ -138,8 +143,8 @@
 bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded_cDNA", NDR = NULL, referenceTss = NULL,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
-    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE,
-    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, spatial = NULL, quantData = NULL,
+    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
+    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL,
     sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
     message(paste0("Running Bambu-v", "3.9.0"))
@@ -173,7 +178,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded
         annotations <- checkInputs(annotations, reads, preset,
             readClass.outputDir = rcOutDir, 
             genomeSequence = genome, discovery = discovery, 
-            sampleNames = sampleNames, spatial = spatial,quantData = quantData)
+            sampleNames = sampleNames, sampleData = sampleData, quantData = quantData)
     }
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
@@ -234,17 +239,19 @@ bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded
         }
         if(assignDist){
             message("--- Start calculating equivilance classes ---")
-            quantData <- bplapply(readClassList,
-                                  FUN = assignReadClasstoTranscripts, 
-                                  annotations = annotations, 
-                                  preset = preset,
-                                  isoreParameters = isoreParameters, 
-                                  verbose = verbose, 
-                                  demultiplexed = demultiplexed, 
-                                  spatial = spatial, 
-                                  returnDistTable = returnDistTable,
-                                  trackReads = trackReads,
-                                  BPPARAM = bpParameters)
+            quantData <- bplapply(seq_along(readClassList), function(i){
+              assignReadClasstoTranscripts(
+                readClassList = readClassList[[i]],
+                annotations = annotations, 
+                isoreParameters = isoreParameters, 
+                verbose = verbose, 
+                # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
+                sampleMetadata = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
+                demultiplexed = demultiplexed, 
+                returnDistTable = returnDistTable,
+                trackReads = trackReads
+              )
+            }, BPPARAM = bpParameters)
             if (!quant) return(quantData)
         }
     }
@@ -263,6 +270,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded
         start.ptm <- proc.time()
         countsSeCompressed.all <- NULL
         ColNames <- c()
+        colData.all <- list()
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
@@ -286,11 +294,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded
                 iter <- clustering
                 
               } else{ #if clusters is a list
-                if(length(quantData)>1){
-                  iter <- clusters[[i]] #lowMemory mode
-                }else{
-                  iter <- clusters#do.call(c,clusters)
-                }
+                iter <- clusters[[i]] 
               }
             }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
@@ -311,13 +315,20 @@ bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded
             message("Total Time ", round((end.ptm - start.ptm)[3] / 60, 3), " mins.")
             if(!is.null(clusters)){
                 ColNames <- c(ColNames, names(iter))
+                colData.all[[i]] <- data.frame(
+                  id = names(countsSeCompressed), 
+                  sampleName = names(countsSeCompressed),
+                  row.names = names(countsSeCompressed)
+                )
             } else{
                 ColNames <- c(ColNames, colnames(quantData_i)) 
+                colData.all[[i]] <- data.frame(colData(quantData_i))
             }
             countsSeCompressed.all <- c(countsSeCompressed.all, countsSeCompressed)
         }
-        countsSeCompressed.all$colnames <- ColNames            
-        countsSe <- combineCountSes(countsSeCompressed.all, annotations)
+        names(countsSeCompressed.all) <- ColNames   
+        
+        countsSe <- combineCountSes(countsSeCompressed.all, colData.all, annotations)
         if(returnDistTable){
             distTables = list()
             for(i in seq_along(quantData)){
@@ -325,11 +336,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, preset = "unstranded
             }
             metadata(countsSe)$distTables <- distTables
         }
-        #metadata(countsSe)$warnings = warnings
-
-        ColData <- generateColData(colnames(countsSe), clusters, demultiplexed, spatial)
-        colData(countsSe) <- ColData
-        colnames(countsSe) <- ColData[,1]
         return(countsSe)
     }
   }
