@@ -79,6 +79,10 @@ cluster_tes_anchors <- function(df, threshold) {
 }
 
 updateTesIdAcrossSamples <- function(readClassList, threshold = 10) {
+  # Load any file-backed read class objects
+  readClassList <- lapply(readClassList, function(x) {
+    if (is.character(x)) readRDS(file = x) else x
+  })
   # Collect all samples into one dataframe
   master_df <- lapply(seq_along(readClassList), function(i) {
     rd <- as.data.frame(rowData(readClassList[[i]]))
