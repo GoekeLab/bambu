@@ -1,16 +1,16 @@
 #' Summarise transcript expression to exon-level expression
 #' @title summarise by exon
 #' @param se a \code{SummarizedExperiment} object from \code{\link{bambu}}
-#' @return A data.table with columns: exon_id, seqnames, start, end, strand,
-#'   GENEID, and one count column per sample
+#' @return A \code{RangedSummarizedExperiment} with exon-level counts
 #' @details Counts are summed across all transcripts that share the same exon
 #'   (defined by identical seqnames, start, end, and strand). The returned
 #'   counts therefore represent the total evidence attributed to each unique
 #'   exonic locus across all overlapping transcripts.
 #' @import data.table
 #' @importFrom Matrix sparseMatrix
-#' @importFrom SummarizedExperiment assays rowRanges rowData
-#' @importFrom GenomicRanges seqnames start end strand
+#' @importFrom SummarizedExperiment assays rowRanges rowData colData SummarizedExperiment
+#' @importFrom GenomicRanges GRanges seqnames start end strand
+#' @importFrom IRanges IRanges
 #' @export
 summariseByExon <- function(se) {
     # Unlist GRangesList: one row per exon-transcript combination
@@ -63,14 +63,19 @@ summariseByExon <- function(se) {
     txCounts   <- assays(se)$counts
     exonCounts <- exonTxMat %*% txCounts
 
-    # Combine metadata with aggregated counts
-    result <- cbind(
-        exonMeta,
-        as.data.table(as.matrix(exonCounts))
+    # Build GRanges for unique exons
+    exonGRanges <- GRanges(
+        seqnames = exonMeta$seqnames,
+        ranges   = IRanges(start = exonMeta$start, end = exonMeta$end),
+        strand   = exonMeta$strand
     )
+    names(exonGRanges) <- exonMeta$exon_id
+    mcols(exonGRanges)$GENEID <- exonMeta$GENEID
 
-    # Sort by genomic position
-    result <- result[order(seqnames, start, end)]
-
-    return(result)
+    # Return as SummarizedExperiment
+    return(SummarizedExperiment(
+        assays   = list(counts = exonCounts),
+        rowRanges = exonGRanges,
+        colData  = colData(se)
+    ))
 }
