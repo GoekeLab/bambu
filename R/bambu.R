@@ -274,17 +274,17 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
-            iter <- seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
+            iter <- seq_len(ncol(quantData_i$countMatrix)) # iter is integer
             if(!is.null(clusters)){
               if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
                 clusterMaps <- NULL
-                for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
+                for(j in seq_along(quantData_i$sampleNames)){ #load in a file per sample name provided
                   clusterMap <- fread(clusters[[j]], header = FALSE, 
                                       data.table = FALSE)
                   # read.table(clusters[[j]], 
                   #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), 
                   #     header = FALSE)
-                  clusterMap[,1] <- paste0(metadata(quantData_i)$sampleNames[j],
+                  clusterMap[,1] <- paste0(quantData_i$sampleNames[j],
                                            "_",clusterMap[,1])
                   clusterMaps <- rbind(clusterMaps, clusterMap)                        
                 }
@@ -299,14 +299,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
-                countMatrix <- unname(metadata(quantData_i)$countMatrix[,j]) # same here 
-                incompatibleCountMatrix <- unname(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
+                countMatrix <- unname(quantData_i$countMatrix[,j]) # same here 
+                incompatibleCountMatrix <- unname(quantData_i$incompatibleCountMatrix[,j]) # same here
                 if(!is.null(dim(countMatrix))){
                     countMatrix <- rowSums(countMatrix)
-                    incompatibleCountMatrix <- rowSums(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
+                    incompatibleCountMatrix <- rowSums(quantData_i$incompatibleCountMatrix[,j]) # same here
                 }
-                return(bambu.quantify(readClassDt = metadata(quantData_i)$readClassDt, countMatrix = countMatrix, 
-                                            incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(metadata(quantData_i)$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
+                return(bambu.quantify(readClassDt = quantData_i$readClassDt, countMatrix = countMatrix, 
+                                            incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData_i$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
                                             txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                             emParameters = emParameters, trackReads = trackReads, 
                                             verbose = verbose))}, 
@@ -321,8 +321,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                   row.names = names(countsSeCompressed)
                 )
             } else{
-                ColNames <- c(ColNames, colnames(quantData_i)) 
-                colData.all[[i]] <- data.frame(colData(quantData_i))
+                ColNames <- c(ColNames, rownames(quantData_i$sampleData)) 
+                colData.all[[i]] <- data.frame(quantData_i$sampleData)
             }
             countsSeCompressed.all <- c(countsSeCompressed.all, countsSeCompressed)
         }
@@ -332,7 +332,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(returnDistTable){
             distTables = list()
             for(i in seq_along(quantData)){
-                distTables[[i]] <- metadata(quantData[[i]])$distTable
+                distTables[[i]] <- quantData[[i]]$distTable
             }
             metadata(countsSe)$distTables <- distTables
         }

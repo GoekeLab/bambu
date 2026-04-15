@@ -18,32 +18,30 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
         data.table()
     #return non-em counts
     ColData <- generateColData(readClassList, sampleMetadata, demultiplexed)
-    quantData <- SummarizedExperiment(assays = SimpleList(
-        counts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)),
-        rowRanges = annotations,
-        colData = ColData)
-    colnames(quantData) <- ColData$id
-    if(sum(metadata(readClassList)$incompatibleCountMatrix)==0){
-        metadata(quantData)$incompatibleCounts <- NULL
-    }else{
-        metadata(quantData)$incompatibleCounts <- generateIncompatibleCounts(metadata(readClassList)$incompatibleCountMatrix, annotations)       
-    }
-    metadata(quantData)$nonuniqueCounts <- generateNonUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)
-    metadata(quantData)$readClassDt <- readClassDt
-    metadata(quantData)$countMatrix <- metadata(readClassList)$countMatrix
-    metadata(quantData)$incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix 
-    metadata(quantData)$sampleName <- metadata(readClassList)$sampleData$sampleName 
-    if(returnDistTable)
-        metadata(quantData)$distTable <- metadata(metadata(readClassList)$readClassDist)$distTableOld
-
-    if(trackReads)
-        metadata(quantData)$readToTranscriptMap <- 
-            generateReadToTranscriptMap(readClassList, 
+    
+    incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix
+    incompatibleCounts <- if(sum(incompatibleCountMatrix)==0) NULL else generateIncompatibleCounts(incompatibleCountMatrix, annotations)
+    
+    distTable <- if(returnDistTable) metadata(metadata(readClassList)$readClassDist)$distTableOld else NULL
+    
+    readToTranscriptMap <- if(trackReads) generateReadToTranscriptMap(readClassList, 
                                         metadata(readClassList)$readClassDist, 
-                                        annotations)
+                                        annotations) else NULL
+
+    quantData <- new("quantData",
+        sampleData = data.frame(ColData),
+        uniqueCounts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations),
+        readClassDt = readClassDt,
+        countMatrix = metadata(readClassList)$countMatrix,
+        incompatibleCountMatrix = incompatibleCountMatrix,
+        sampleNames = as.character(metadata(readClassList)$sampleData$sampleName),
+        incompatibleCounts = incompatibleCounts,
+        nonuniqueCounts = generateNonUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations),
+        distTable = distTable,
+        readToTranscriptMap = readToTranscriptMap
+    )
 
     return(quantData)     
-
 }
 
 #' Generate unique counts
