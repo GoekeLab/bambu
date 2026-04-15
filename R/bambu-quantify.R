@@ -2,12 +2,25 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, txid.index, GENEIDs, emParameters, 
+bambu.quantify <- function(readClassDt, columnIdx, incompatibleCountMatrix, txid.index, GENEIDs, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
     start.ptm <- proc.time()
-    readClassDt$nobs = countMatrix[readClassDt$eqClass.match]
-    readClassDt$nobs[is.na(readClassDt$nobs)] = 0
+
+    # Calculate nobs for sample(s) columnIdx
+    # Use data.table syntax for in-place creation of nobs column for the scope of this function
+    readClassDt[, nobs := {
+        ids <- columnIds[[1]]
+        if (is.null(ids) || length(ids) == 0 || is.na(ids[1])) {
+            0L
+        } else if (length(columnIdx) == 1) {
+            match_idx <- match(columnIdx, ids)
+            if (is.na(match_idx)) 0L else columnCounts[[1]][match_idx]
+        } else {
+            sum(columnCounts[[1]][ids %in% columnIdx])
+        }
+    }, by = eqClassId]
+
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
     incompatibleCounts <- incompatibleCountMatrix[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
     incompatibleCounts[is.na(counts), counts := 0]

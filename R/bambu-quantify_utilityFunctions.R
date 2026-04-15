@@ -106,10 +106,9 @@ getUniCountPerEquiRC <- function(distTable){
     mutate(anyEqual = any(equal)) %>%
     select(eqClassById, firstExonWidth,totalWidth, readCount,GENEID,anyEqual) %>% #eqClassByIdTemp,
     distinct() %>%
-    mutate(nobs = sum(readCount),
-           rcWidth = ifelse(anyEqual, max(totalWidth), 
-                            max(firstExonWidth))) %>%
-    select(eqClassById,GENEID,nobs,rcWidth) %>% #eqClassByIdTemp,
+    mutate(rcWidth = ifelse(anyEqual, max(totalWidth),
+                             max(firstExonWidth))) %>%
+    select(eqClassById,GENEID,rcWidth) %>% #eqClassByIdTemp,
     ungroup()  %>%
     distinct()
   return(eqClassCount)
@@ -124,11 +123,10 @@ addEmptyRC <- function(eqClassCount, annotations){
   eqClassCount <- createEqClassToTxMapping(eqClassCount)
   eqClassCountJoin <- full_join(eqClassCount, minEquiRC, by = c("eqClassById","GENEID","txid","equal"))
   eqClassCountJoin[is.na(eqClassCountJoin)] <- 0
-  eqClassCount_final <- eqClassCountJoin %>% 
+  eqClassCount_final <- eqClassCountJoin %>%
     group_by(eqClassById) %>%
-    mutate(nobs = max(nobs),
-           rcWidth = max(rcWidth),
-           minRC = max(minRC)) %>%
+    mutate(rcWidth = max(rcWidth, na.rm = TRUE),
+           minRC = max(minRC, na.rm = TRUE)) %>%
     ungroup() %>%
     distinct()
   return(eqClassCount_final)

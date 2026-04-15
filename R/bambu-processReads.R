@@ -174,9 +174,9 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
     mcols(readGrgList)$id <- seq_along(readGrgList) 
 
     if(!isFALSE(demultiplexed)){ 
-        mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$CB)
+        mcols(readGrgList)$columnID <- as.numeric(mcols(readGrgList)$CB)
     } else {
-        mcols(readGrgList)$sampleID <- index
+        mcols(readGrgList)$columnID <- index
     }
         
     # construct read classes for each chromosome seperately 
@@ -398,10 +398,12 @@ splitReadClassFiles = function(readClassFile){
     distTable <- metadata(metadata(readClassFile)$readClassDist)$distTable  
     eqClasses <- distTable %>% group_by(eqClassById) %>% 
         distinct(eqClassById, readCount,GENEID, totalWidth, firstExonWidth, .keep_all = TRUE)
-    eqClasses$sampleIDs <- rowData(readClassFile)$sampleIDs[match(eqClasses$readClassId, rownames(readClassFile))]
+    eqClasses$columnIds <- rowData(readClassFile)$columnIds[match(eqClasses$readClassId, rownames(readClassFile))]
     eqClasses <- eqClasses %>% summarise(nobs = sum(readCount),
-                                                sampleIDs = list(unlist(sampleIDs)))
-    counts.table <- tableFunction(eqClasses$sampleIDs)
+                                                columnIds = list(unlist(columnIds)))
+    counts.table <- tableFunction(eqClasses$columnIds)
+    metadata(readClassFile)$columnIds <- lapply(counts.table, function(x) as.numeric(names(x)))
+    metadata(readClassFile)$columnCounts <- lapply(counts.table, function(x) as.numeric(x))
     counts <- sparseMatrix(
         i = rep(seq_along(counts.table), lengths(counts.table)),
         j = as.numeric(names(unlist(counts.table))),
@@ -414,10 +416,10 @@ splitReadClassFiles = function(readClassFile){
         dims = c(1, length(metadata(readClassFile)$sampleData$id)))
         rownames(counts.incompatible) <- "TODO"
     } else{
-        distTable$sampleIDs <- rowData(readClassFile)$sampleIDs[match(distTable$readClassId, rownames(readClassFile))]
+        distTable$columnIds <- rowData(readClassFile)$columnIds[match(distTable$readClassId, rownames(readClassFile))]
         distTable <- distTable %>% group_by(GENEID.i) %>% summarise(counts = sum(readCount),
-                    sampleIDs = list(unlist(sampleIDs)))
-        counts.table <- lapply(distTable$sampleIDs, FUN = function(x){table(x)})
+                    columnIds = list(unlist(columnIds)))
+        counts.table <- lapply(distTable$columnIds, FUN = function(x){table(x)})
         counts.incompatible <- sparseMatrix(
             i = rep(seq_along(counts.table), lengths(counts.table)),
             j = as.numeric(names(unlist(counts.table))),
@@ -429,7 +431,6 @@ splitReadClassFiles = function(readClassFile){
     colnames(counts) <- metadata(readClassFile)$sampleData$id
     metadata(readClassFile)$eqClassById <- eqClasses$eqClassById
     #rownames(counts) = eqClasses$eqClassById
-    metadata(readClassFile)$countMatrix <- counts
     metadata(readClassFile)$incompatibleCountMatrix <- counts.incompatible  
     return(readClassFile)
 }
@@ -439,7 +440,7 @@ splitReadClassFiles = function(readClassFile){
 #' @importFrom Matrix
 #' @noRd
 splitReadClassFilesByRC <- function(readClassFile){
-    counts.table <- tableFunction(rowData(readClassFile)$sampleIDs)
+    counts.table <- tableFunction(rowData(readClassFile)$columnIds)
     counts <- sparseMatrix(
         i = rep(seq_along(counts.table), lengths(counts.table)),
         j = as.numeric(names(unlist(counts.table))),

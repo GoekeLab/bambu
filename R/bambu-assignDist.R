@@ -10,6 +10,13 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     readClassList <- splitReadClassFiles(readClassList)
     readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
     readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
+
+    # Add columnIds and columnCounts columns
+    readClassDt[, `:=`(columnIds = as.list(rep(NA, .N)), columnCounts = as.list(rep(NA, .N)))]
+    observedIdx <- which(!is.na(readClassDt$eqClass.match))
+    readClassDt$columnIds[observedIdx] <- metadata(readClassList)$columnIds[readClassDt$eqClass.match[observedIdx]]
+    readClassDt$columnCounts[observedIdx] <- metadata(readClassList)$columnCounts[readClassDt$eqClass.match[observedIdx]]
+
     readClassDt <- simplifyNames(readClassDt)
     readClassDt <- readClassDt %>% group_by(eqClassId, gene_sid) %>% 
         mutate(multi_align = length(unique(txid))>1) %>% 
@@ -30,13 +37,12 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
 
     quantData <- new("quantData",
         sampleData = data.frame(ColData),
-        uniqueCounts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations),
+        uniqueCounts = generateUniqueCounts(readClassDt, annotations, nrow(metadata(readClassList)$sampleData)),
         readClassDt = readClassDt,
-        countMatrix = metadata(readClassList)$countMatrix,
         incompatibleCountMatrix = incompatibleCountMatrix,
         sampleNames = as.character(metadata(readClassList)$sampleData$sampleName),
         incompatibleCounts = incompatibleCounts,
-        nonuniqueCounts = generateNonUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations),
+        nonuniqueCounts = generateNonUniqueCounts(readClassDt, annotations, nrow(metadata(readClassList)$sampleData)),
         distTable = distTable,
         readToTranscriptMap = readToTranscriptMap
     )
@@ -46,22 +52,20 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
 
 #' Generate unique counts
 #' @noRd
-generateUniqueCounts <- function(readClassDt, countMatrix, annotations){
+generateUniqueCounts <- function(readClassDt, annotations, nSamples){
     x <- readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
-    uniqueCounts <- countMatrix[x$eqClass.match,]
-    uniqueCounts.tx <- sparse.model.matrix(~ factor(x$txid) - 1)
-    uniqueCounts <- t(uniqueCounts.tx) %*% uniqueCounts
-    rownames(uniqueCounts) <- names(annotations)[match(as.numeric(levels(factor(x$txid))),mcols(annotations)$txid)]
-    counts <- sparseMatrix(length(annotations), ncol(uniqueCounts), x = 0)
-    rownames(counts) <- names(annotations)
-    counts[rownames(uniqueCounts),] <- uniqueCounts
-    return(counts)
     
-    # these three lines appear after return, so it's not used, is this used for debug only?
-    # counts.total = colSums(countMatrix) + colSums(incompatibleCountMatrix)
-    # counts.total[counts.total==0] = 1
-    # counts.CPM = counts/counts.total * 10^6
-
+    uniqueCounts <- if(nrow(x) == 0) {
+        sparseMatrix(i = 1, j = 1, x = 0, dims = c(length(annotations), nSamples))
+    } else {
+        txids <- mcols(annotations)$txid
+        i <- rep(match(x$txid, txids), lengths(x$columnIds))
+        j <- unlist(x$columnIds)
+        x_vals <- unlist(x$columnCounts)
+        sparseMatrix(i = i, j = j, x = x_vals, dims = c(length(annotations), nSamples))
+    }
+    rownames(uniqueCounts) <- names(annotations)
+    return(uniqueCounts)
 }
 
 
@@ -79,11 +83,22 @@ generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
 
 #' Generate non-unique counts
 #' @noRd
-generateNonUniqueCounts <- function(readClassDt, countMatrix, annotations){
+generateNonUniqueCounts <- function(readClassDt, annotations, nSamples){
     #fuse multi align RCs by gene
     x <- readClassDt %>% filter(multi_align & !is.na(eqClass.match))
     x <- x %>% distinct(eqClassId, .keep_all = TRUE)
-    nonuniqueCounts <- countMatrix[x$eqClass.match,, drop = FALSE]
+    
+    if(nrow(x) == 0) {
+        genes <- levels(factor(unique(mcols(annotations)$GENEID)))
+        return(sparseMatrix(i = 1, j = 1, x = 0, dims = c(length(genes), nSamples), dimnames = list(genes, NULL)))
+    }
+
+    # x has columnIds and columnCounts
+    i <- rep(seq_along(x$gene_sid), lengths(x$columnIds))
+    j <- unlist(x$columnIds)
+    x_vals <- unlist(x$columnCounts)
+    nonuniqueCounts <- sparseMatrix(i = i, j = j, x = x_vals, dims = c(nrow(x), nSamples))
+
     if(nrow(x)>1 & length(unique(x$gene_sid))>1){
         nonuniqueCounts.gene <- sparse.model.matrix(~ factor(x$gene_sid) - 1)
         nonuniqueCounts <- t(nonuniqueCounts.gene) %*% nonuniqueCounts
@@ -99,7 +114,7 @@ generateNonUniqueCounts <- function(readClassDt, countMatrix, annotations){
     rownames(nonuniqueCounts) <- geneids
     #create matrix for all annotated genes
     genes <- levels(factor(unique(mcols(annotations)$GENEID)))
-    geneMat <- sparseMatrix(length(genes), ncol(nonuniqueCounts), x = 0)
+    geneMat <- sparseMatrix(length(genes), nSamples, x = 0)
     rownames(geneMat) <- genes
     if(!is.null(rownames(nonuniqueCounts))){
       geneMat[rownames(nonuniqueCounts),] <- nonuniqueCounts

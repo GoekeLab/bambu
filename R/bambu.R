@@ -274,7 +274,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
-            iter <- seq_len(ncol(quantData_i$countMatrix)) # iter is integer
+            iter <- seq_len(nrow(quantData_i$sampleData)) # iter is integer
             if(!is.null(clusters)){
               if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
                 clusterMaps <- NULL
@@ -297,15 +297,16 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 iter <- clusters[[i]] 
               }
             }
-            countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
+            countsSeCompressed <- bplapply(iter, FUN = function(columnIdx){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
-                countMatrix <- unname(quantData_i$countMatrix[,j]) # same here 
-                incompatibleCountMatrix <- unname(quantData_i$incompatibleCountMatrix[,j]) # same here
-                if(!is.null(dim(countMatrix))){
-                    countMatrix <- rowSums(countMatrix)
-                    incompatibleCountMatrix <- rowSums(quantData_i$incompatibleCountMatrix[,j]) # same here
+                if(is.character(columnIdx)) {
+                    columnIdx <- match(columnIdx, quantData_i$sampleData$id)
                 }
-                return(bambu.quantify(readClassDt = quantData_i$readClassDt, countMatrix = countMatrix, 
+                incompatibleCountMatrix <- unname(quantData_i$incompatibleCountMatrix[,columnIdx]) # same here
+                if(!is.null(dim(incompatibleCountMatrix))){
+                    incompatibleCountMatrix <- rowSums(incompatibleCountMatrix)
+                }
+                return(bambu.quantify(readClassDt = quantData_i$readClassDt, columnIdx = columnIdx, 
                                             incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData_i$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
                                             txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
                                             emParameters = emParameters, trackReads = trackReads, 
