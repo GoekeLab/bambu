@@ -1,0 +1,115 @@
+name: "Bug report"
+description: "Report a problem with bambu (include a minimal reproducible example and session info)."
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue! To help us fix it quickly, please provide as much detail as possible.
+        **Do not include any sensitive/private data**.
+
+  - type: dropdown
+    id: bug_area
+    attributes:
+      label: Affected Area
+      description: Which part of bambu is having issues?
+      options:
+        - "Installation"
+        - "Transcript Discovery"
+        - "Transcript Quantification"
+        - "Annotation"
+        - "Bambu Output / Visualization"
+        - "Performance (CPU, Memory, Storage)"
+        - "Others"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: |
+        A clear description of what happened, what you expected to happen, and any troubleshooting you've already tried.
+      placeholder: "I ran bambu with X parameters and got Y error, but I expected Z..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro_code
+    attributes:
+      label: Minimal Reproducible Example (R Code)
+      description: |
+        Provide the smallest possible R code snippet that reproduces the issue.
+      render: r
+      placeholder: |
+        library(bambu)
+        # Your code here...
+    validations:
+      required: true
+
+  - type: textarea
+    id: input_data
+    attributes:
+      label: Input Data Details
+      description: |
+        Describe the inputs needed to reproduce (e.g., sequencing platform, reference used, approx. dataset size).
+      placeholder: |
+        - Sequencing Platform (e.g. ONT / PacBio):
+        - Reference Genome (name & version):
+        - Reference Annotation (name & version):
+        - Approx. dataset size / number of reads:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      description: How often does this bug occur?
+      options:
+        - "Always (every time I run this)"
+        - "Intermittently (only sometimes)"
+        - "Once (haven't been able to repeat it)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Session Info
+      description: |
+        Paste the output of `sessionInfo()`.
+      placeholder: |
+        ```r
+        sessionInfo()
+        ```
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pr_interest
+    attributes:
+      label: Contribution
+      options:
+        - label: "I can provide a small public dataset/toy example for reproduction."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: "I searched existing issues to avoid duplicates."
+          required: true
+        - label: "I included a minimal reproducible code snippet."
+          required: true
+        - label: "I included session/environment information."
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        *This form is for bug reports. For feature enhancements, please use the **Feature Request** template. For general questions or discussions, please visit the [**Discussions**](https://github.com/GoekeLab/bambu/discussions) tab.*
