@@ -112,7 +112,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   } else if(is.null(NDR)) {
           NDR <- 0.5
   }
-  filterSet <- (rowDataCombined$NDR <= NDR | rowDataCombined$readClassType == "equal:compatible")
+  filterSet <- ((!is.na(rowDataCombined$NDR) & rowDataCombined$NDR <= NDR) | rowDataCombined$readClassType == "equal:compatible")
   lowConfidenceTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!filterSet,], 
         exonRangesCombined[!filterSet])
@@ -224,7 +224,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
     } else {
         combinedTranscripts$NDR <- calculateNDR(combinedTranscripts$maxTxScore, equal)
     }
-    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==-1] <- 1
+    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==-1] <- NA
     return(combinedTranscripts)
 }
 
