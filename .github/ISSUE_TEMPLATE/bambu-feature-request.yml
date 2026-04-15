@@ -1,0 +1,75 @@
+name: "Feature request"
+description: "Suggest an improvement or new feature for bambu."
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for a new feature or improvement? We'd love to hear it!
+        Please check if a similar request already exists before opening a new one.
+
+  - type: dropdown
+    id: feature_area
+    attributes:
+      label: Feature Area
+      description: Which part of bambu would this feature affect?
+      options:
+        - "Transcript Discovery"
+        - "Transcript Quantification"
+        - "Output / Visualization"
+        - "Performance / Memory Optimization"
+        - "New Functionality"
+        - "Others"
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: The Goal or Problem
+      description: |
+        What is the goal you are trying to achieve, or what problem are you trying to solve? 
+        Why is this important for your workflow?
+      placeholder: "I want to be able to X because currently I have to Y manually..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The Proposal & Example Usage (Optional)
+      description: |
+        Describe the feature you'd like to see. 
+        If possible, include a code example or pseudo-code showing how you imagine it working.
+      render: r
+      placeholder: |
+        # Example of how I'd like to use it:
+        bambu(reads, annotations, new_param = TRUE)
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered (Optional)
+      description: Have you tried any other ways to achieve this? Any existing workarounds?
+      placeholder: "I tried using package Z, but it doesn't handle X well..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: "I searched existing issues to avoid duplicates."
+          required: true
+        - label: "I described a concrete use case and success criteria."
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        *This form is for feature enhancements. For bug reports, please use the **Bug Report** template. For general questions or discussions, please visit the [**Discussions**](https://github.com/GoekeLab/bambu/discussions) tab.*
