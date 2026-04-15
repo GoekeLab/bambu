@@ -144,8 +144,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
-    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL,
-    sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
+    fusionMode = FALSE, verbose = FALSE, extractBarcodeUMI = FALSE, quantData = NULL,
+    dedupUMI = FALSE, clusters = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
     message(paste0("Running Bambu-v", "3.9.0"))
     if(!is.null(mode)){
@@ -154,8 +154,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             processByBam <- TRUE
         }
         if(mode == "multiplexed"){
-            demultiplexed <- TRUE
-            cleanReads <- TRUE
+            extractBarcodeUMI <- TRUE
             opt.em <- list(degradationBias = FALSE)
             quant <- FALSE
             processByChromosome <- TRUE
@@ -176,16 +175,16 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         annotations <- GRangesList()
     } else {
         annotations <- checkInputs(annotations, reads,
-            readClass.outputDir = rcOutDir, 
-            genomeSequence = genome, discovery = discovery, 
-            sampleNames = sampleNames, sampleData = sampleData, quantData = quantData)
+            readClass.outputDir = rcOutDir,
+            genomeSequence = genome, discovery = discovery,
+            sampleData = sampleData, quantData = quantData)
     }
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
     
     emParameters <- setEmParameters(emParameters = opt.em)
-    bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
+    bpParameters <- setBiocParallelParameters(reads, ncore, verbose, extractBarcodeUMI)
 	xgb.set.config(nthread = 1)
     # only when reads is not NULL, this proceed, otherwise, it will jump to quant step
     if(!is.null(reads)){ 
@@ -213,9 +212,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                 isoreParameters = isoreParameters, trackReads = trackReads, 
                                                 fusionMode = fusionMode, 
                                                 processByChromosome = processByChromosome, processByBam = processByBam, 
-                                                demultiplexed = demultiplexed,
-                                                sampleNames = sampleNames, cleanReads = cleanReads, 
-                                                dedupUMI = dedupUMI,barcodesToFilter = barcodesToFilter)
+                                                extractBarcodeUMI = extractBarcodeUMI,
+                                                dedupUMI = dedupUMI)
         }
         
         #warnings = handleWarnings(readClassList, verbose)
@@ -247,7 +245,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 verbose = verbose, 
                 # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
                 sampleMetadata = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
-                demultiplexed = demultiplexed, 
+                extractBarcodeUMI = extractBarcodeUMI,
                 returnDistTable = returnDistTable,
                 trackReads = trackReads
               )
@@ -276,26 +274,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             #load in the barcode clustering from file if provided
             iter <- seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
             if(!is.null(clusters)){
-              if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
-                clusterMaps <- NULL
-                for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
-                  clusterMap <- fread(clusters[[j]], header = FALSE, 
-                                      data.table = FALSE)
-                  # read.table(clusters[[j]], 
-                  #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), 
-                  #     header = FALSE)
-                  clusterMap[,1] <- paste0(metadata(quantData_i)$sampleNames[j],
-                                           "_",clusterMap[,1])
-                  clusterMaps <- rbind(clusterMaps, clusterMap)                        
-                }
-                clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2]) 
-                rm(clusterMaps)
-                rm(clusterMap)
-                iter <- clustering
-                
-              } else{ #if clusters is a list
-                iter <- clusters[[i]] 
-              }
+              iter <- clusters[[i]]
             }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)

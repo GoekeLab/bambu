@@ -59,7 +59,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         #R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
         #R.utils::gzip(paste0(outdir, "genes.tsv"))
 
-        #If there are multiple samples (when demultiplexed), seperate each sample into its own directory
+        #If there are multiple samples (when extractBarcodeUMI), seperate each sample into its own directory
         if(seperateSamples){
             fullSe = se
             for(sampleName in unique(colData(fullSe)$sampleName)){
