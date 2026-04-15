@@ -2,11 +2,11 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, 
+assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParameters, rcAssignmentParameters,
                                         verbose, sampleMetadata, demultiplexed,
                                         returnDistTable = FALSE, trackReads = TRUE) {
     if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
-    metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, verbose, returnDistTable)
+    metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, isoreParameters, rcAssignmentParameters, verbose, returnDistTable)
     readClassList <- splitReadClassFiles(readClassList)
     readClassDt <- genEquiRCs(metadata(readClassList)$readClassDist, annotations, verbose) 
     readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)

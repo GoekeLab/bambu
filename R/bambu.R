@@ -141,7 +141,7 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
-    mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
+    mode = NULL, opt.discovery = NULL, opt.rcAssignment = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE,
     assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL,
@@ -183,7 +183,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
-    
+    rcAssignmentParameters <- setRcAssignmentParameters(rcAssignmentParameters = opt.rcAssignment)
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
 	xgb.set.config(nthread = 1)
@@ -223,7 +223,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if (discovery) {
             message("--- Start extending annotations ---")
             extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-                                                           isoreParameters, stranded, bpParameters, fusionMode, verbose)
+                                                           isoreParameters, rcAssignmentParameters, stranded, bpParameters, fusionMode, verbose)
             metadata(extendedAnnotations)$warnings = warnings
             
             #### cluster based transcript discovery
@@ -242,9 +242,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             quantData <- bplapply(seq_along(readClassList), function(i){
               assignReadClasstoTranscripts(
                 readClassList = readClassList[[i]],
-                annotations = annotations, 
-                isoreParameters = isoreParameters, 
-                verbose = verbose, 
+                annotations = annotations,
+                isoreParameters = isoreParameters,
+                rcAssignmentParameters = rcAssignmentParameters,
+                verbose = verbose,
                 # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
                 sampleMetadata = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
                 demultiplexed = demultiplexed, 

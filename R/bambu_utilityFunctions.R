@@ -22,11 +22,7 @@ setIsoreParameters <- function(isoreParameters){
         min.readCount = 2,
         min.readFractionByGene = 0.05,
         min.sampleNumber = 1,
-        min.exonDistance = 35,
-        min.exonOverlap = 10, 
-        min.primarySecondaryDist = 5,
-        min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
-        min.primarySecondaryDistStartEnd2 = 5, # for read assignment
+        min.exonOverlap = 10,
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
         fitReadClassModel = TRUE,
@@ -38,6 +34,20 @@ setIsoreParameters <- function(isoreParameters){
     isoreParameters <- 
         updateParameters(isoreParameters, isoreParameters.default)
     return(isoreParameters)
+}
+
+
+#' setRcAssignmentParameters
+#' @noRd
+setRcAssignmentParameters <- function(rcAssignmentParameters){
+    rcAssignmentParameters.default <- list(
+        min.exonDistance = 35,
+        min.primarySecondaryDist = 5,
+        min.primarySecondaryDistStartEnd1 = 5, # for extending annotations
+        min.primarySecondaryDistStartEnd2 = 5) # for read class assignment
+    rcAssignmentParameters <-
+        updateParameters(rcAssignmentParameters, rcAssignmentParameters.default)
+    return(rcAssignmentParameters)
 }
 
 
@@ -242,11 +252,11 @@ handleWarnings <- function(readClassList, verbose){
 }
 
 #' Calculate the dist table used for Bambu Quantification
-calculateDistTable <- function(readClassList, annotations, isoreParameters, verbose, returnDistTable){
+calculateDistTable <- function(readClassList, annotations, isoreParameters, rcAssignmentParameters, verbose, returnDistTable){
     readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
-                                                            min.exonDistance = isoreParameters[["min.exonDistance"]],
-                                                            min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']],
-                                                            min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
+                                                            min.exonDistance = rcAssignmentParameters[["min.exonDistance"]],
+                                                            min.primarySecondaryDist = rcAssignmentParameters[['min.primarySecondaryDist']],
+                                                            min.primarySecondaryDistStartEnd = rcAssignmentParameters[['min.primarySecondaryDistStartEnd2']],
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
         if(returnDistTable) metadata(readClassDist)$distTableOld <- metadata(readClassDist)$distTable
