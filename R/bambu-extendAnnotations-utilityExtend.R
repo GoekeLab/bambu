@@ -827,7 +827,6 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @description This function train a model for use on other data
 #' @param extendedAnnotations A GRangesList object produced from bambu(quant = FALSE) or rowRanges(se)
 #' @param NDR The maximum NDR for novel transcripts to be in extendedAnnotations (0-1). If not provided a recommended NDR is calculated.
-#' @param includeRef A boolean which if TRUE will also filter out reference annotations based on their NDR
 #' @param prefix A string which determines which transcripts are considered novel by bambu and will be filtered (by default = 'Bambu')
 #' @param baselineFDR a value between 0-1. Bambu uses this FDR on the trained model to recommend an equivilent NDR threshold to be used for the sample. By default, a baseline FDR of 0.1 is used. This does not impact the analysis if an NDR is set.
 #' @param defaultModels a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the bambu package
@@ -835,7 +834,7 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @details 
 #' @return extendedAnnotations with a new NDR threshold
 #' @export
-setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 'Bambu', baselineFDR = 0.1, defaultModels2 = defaultModels){
+setNDR <- function(extendedAnnotations, NDR = NULL, prefix = 'Bambu', baselineFDR = 0.1, defaultModels2 = defaultModels){
     #Check to see if the annotations/gtf are dervived from Bambu
     if(is.null(mcols(extendedAnnotations)$NDR)){
         warning("Annotations were not extended by Bambu (or the wrong prefix was provided). NDR can not be set")
@@ -852,17 +851,10 @@ setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix =
         message("Recommending a novel discovery rate (NDR) of: ", NDR)
     }
 
-    #If reference annotations should be filtered too (note that reference annotations with no read support arn't filtered)
-    if(includeRef){
-        toRemove <- (!is.na(mcols(extendedAnnotations)$NDR) & mcols(extendedAnnotations)$NDR > NDR)
-        toAdd <- !is.na(mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR) & 
-            mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR  
-    } else {
-        toRemove <- (mcols(extendedAnnotations)$NDR > NDR & 
-            grepl(prefix, mcols(extendedAnnotations)$TXNAME))
-        toAdd <- (mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR & 
-            grepl(prefix, mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$TXNAME))     
-    }
+    toRemove <- (mcols(extendedAnnotations)$NDR > NDR &
+        grepl(prefix, mcols(extendedAnnotations)$TXNAME))
+    toAdd <- (mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR &
+        grepl(prefix, mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$TXNAME))
   
   temp <- c(metadata(extendedAnnotations)$lowConfidenceTranscripts[!toAdd], extendedAnnotations[toRemove])
   extendedAnnotations <- c(extendedAnnotations[!toRemove], metadata(extendedAnnotations)$lowConfidenceTranscripts[toAdd])
