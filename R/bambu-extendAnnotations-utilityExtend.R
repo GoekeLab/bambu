@@ -882,8 +882,14 @@ setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix =
 #' @noRd
 isore.extendAnnotations.clusters <- function(readClassList, annotations, clusters, NDR, isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE){
     message("--- Start extending annotations for clusters ---")
+    #if clustering is a csv, create a list with the barcodes for each cluster
+    #csv must have two cols with heading barcode, cluster
     if(!is.list(clusters)){
-        stop("clusters must be a named list mapping cluster names to barcode vectors")
+        clusters <- read.csv(clusters)
+        clusters <- clusters %>% group_by(cluster) %>% summarise(barcodes = list(barcode))
+        clusters <- clusters$cluster
+        clusters <- clusters$barcodes
+        names(clusters) <- clusters
     }
     annotations.clusters <- list()
     rcfs.clusters <- list()
@@ -892,7 +898,7 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
     for(i in seq_along(clusters)){
         print(names(clusters)[i])
         ###TODO need to account for the sample name here which is added to the barcode
-        index <- match(clusters[[i]], metadata(readClassList[[1]])$samples)
+        index <- match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples))
         index <- index[!is.na(index)]
         print(length(index))
         if(length(index)<20) next

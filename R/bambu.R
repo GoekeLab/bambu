@@ -274,7 +274,26 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             #load in the barcode clustering from file if provided
             iter <- seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
             if(!is.null(clusters)){
-              iter <- clusters[[i]]
+              if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList
+                clusterMaps <- NULL
+                for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
+                  clusterMap <- fread(clusters[[j]], header = FALSE,
+                                      data.table = FALSE)
+                  # read.table(clusters[[j]],
+                  #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","),
+                  #     header = FALSE)
+                  clusterMap[,1] <- paste0(metadata(quantData_i)$sampleNames[j],
+                                           "_",clusterMap[,1])
+                  clusterMaps <- rbind(clusterMaps, clusterMap)
+                }
+                clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2])
+                rm(clusterMaps)
+                rm(clusterMap)
+                iter <- clustering
+
+              } else{ #if clusters is a list
+                iter <- clusters[[i]]
+              }
             }
             countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
