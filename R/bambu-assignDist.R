@@ -95,26 +95,3 @@ generateNonUniqueCountMatrix <- function(readClassDt, annotations, sampleIds){
     geneMat[match(rownames(nonuniqueCounts), rownames(geneMat)), ] <- nonuniqueCounts
     return(geneMat)
 }
-
-#' Generate unique counts
-#' @noRd
-generateUniqueCountsFromQuantData <- function(quantData, annotations){
-    uniqueCountsList <- lapply(quantData, function(x) {
-        readClassDt <- x$readClassDt
-        x_filtered <- readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
-        
-        uniqueCounts <- if(nrow(x_filtered) == 0) {
-            sparseMatrix(i = 1, j = 1, x = 0, dims = c(length(annotations), nrow(x$sampleData)))
-        } else {
-            txids <- mcols(annotations)$txid
-            i <- rep(match(x_filtered$txid, txids), lengths(x_filtered$columnIds))
-            j <- unlist(x_filtered$columnIds)
-            x_vals <- unlist(x_filtered$columnCounts)
-            sparseMatrix(i = i, j = j, x = x_vals, dims = c(length(annotations), nrow(x$sampleData)))
-        }
-        rownames(uniqueCounts) <- names(annotations)
-        colnames(uniqueCounts) <- rownames(x$sampleData)
-        return(uniqueCounts)
-    })
-    return(do.call(cbind, uniqueCountsList))
-}
