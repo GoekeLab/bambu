@@ -9,7 +9,7 @@
 #' @inheritParams bambu
 #' @noRd
 isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
-                                       uniqueJunctions, runName = "sample1",
+                                       uniqueJunctions, runName = "sample",
                                        annotations, stranded = FALSE, verbose = FALSE) {
     #split reads into single exon and multi exon reads
     reads.singleExon <- unlist(readGrgList[elementNROWS(readGrgList) == 1],
@@ -45,7 +45,7 @@ isore.constructReadClasses <- function(readGrgList, unlisted_junctions,
                              annotations, exonsByRC.spliced, stranded, verbose)
     }
     exonsByRC <- c(exonsByRC.spliced, exonsByRC.unspliced)
-    colDataDf <- DataFrame(name = runName, row.names = runName)
+    colDataDf <- DataFrame(sampleName = runName, row.names = runName)
 
     counts <- matrix(mcols(exonsByRC)$readCount,
                      dimnames = list(names(exonsByRC), runName))

@@ -96,7 +96,8 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-            processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode)
+            processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode,
+            runName = "combinedSamples")
         metadata(readClassList)$samples <- names(reads)
         metadata(readClassList)$sampleNames <- names(reads)
         if(!isFALSE(demultiplexed)) metadata(readClassList)$samples <- levels(mcols(readGrgList)$CB)
@@ -179,16 +180,17 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
         mcols(readGrgList)$columnID <- index
     }
         
+    runName <- names(bam.file)[1]
     # construct read classes for each chromosome seperately 
     if(processByChromosome){
         se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-                                                      annotations, stranded, verbose,bam.file)
+                                                      annotations, stranded, verbose, bam.file)
     } else{
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se <- isore.constructReadClasses(readGrgList, 
-                                              unlisted_junctions, uniqueJunctions, runName = "TODO",
+                                              unlisted_junctions, uniqueJunctions, runName = runName,
                                               annotations, stranded, verbose)
 
     }
@@ -310,18 +312,18 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
 constructReadClasses <- function(readGrgList, genomeSequence, annotations,
     stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE){
+    verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE, runName = "sample"){
     
     if(processByChromosome){
         # construct read classes for each chromosome seperately 
         se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-                                            annotations, stranded, verbose,"TODO", fusionMode)
+                                            annotations, stranded, verbose, runName, fusionMode)
     } else{
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se <- isore.constructReadClasses(readGrgList, 
-                                              unlisted_junctions, uniqueJunctions, runName = "TODO",
+                                              unlisted_junctions, uniqueJunctions, runName = runName,
                                               annotations, stranded, verbose)
 
     }
@@ -349,13 +351,14 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
 #' Low memory mode for construct read classes (processByChromosome)
 #' @noRd
 lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, 
-                                          annotations, stranded, verbose,bam.file, fusionMode = FALSE){
+                                          annotations, stranded, verbose, bam.file, fusionMode = FALSE){
     if(fusionMode){
         readGrgList <- list(readGrgList)
         names(readGrgList) <- c("fusion")
     } else{
         readGrgList <- split(readGrgList, getChrFromGrList(readGrgList))
     }
+    runName <- names(bam.file)[1]
     se <- lapply(names(readGrgList),FUN = function(i){
         if(length(readGrgList[[i]]) == 0) return(NULL)
         # create error and strand corrected junction tables
@@ -363,7 +366,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se.temp <- isore.constructReadClasses(readGrgList[[i]], 
-                                              unlisted_junctions, uniqueJunctions, runName = "TODO",
+                                              unlisted_junctions, uniqueJunctions, runName = runName,
                                               annotations, stranded, verbose)
         return(se.temp)
     })
