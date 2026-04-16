@@ -36,12 +36,12 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
                                         metadata(readClassList)$readClassDist,
                                         annotations) else NULL
 
-    quantData <- new("quantData",
-        sampleData = data.frame(ColData),
-        readClassDt = readClassDt,
-        incompatibleCounts = incompatibleCounts,
-        nonuniqueCounts = nonuniqueCounts,
-        distTable = distTable,
+    quantData <- constructQuantData(
+        sampleData          = data.frame(ColData),
+        readClassDt         = readClassDt,
+        incompatibleCounts  = incompatibleCounts,
+        nonuniqueCounts     = nonuniqueCounts,
+        distTable           = distTable,
         readToTranscriptMap = readToTranscriptMap
     )
 

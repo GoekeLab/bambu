@@ -274,17 +274,17 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
-            iter <- seq_len(nrow(quantData_i$sampleData)) # iter is integer
+            iter <- seq_len(nrow(getSampleData(quantData_i))) # iter is integer
             if(!is.null(clusters)){
               if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
                 clusterMaps <- NULL
-                for(j in seq_along(quantData_i$sampleNames)){ #load in a file per sample name provided
+                for(j in seq_along(getSampleData(quantData_i)$sampleName)){ #load in a file per sample name provided
                   clusterMap <- fread(clusters[[j]], header = FALSE, 
                                       data.table = FALSE)
                   # read.table(clusters[[j]], 
                   #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), 
                   #     header = FALSE)
-                  clusterMap[,1] <- paste0(quantData_i$sampleNames[j],
+                  clusterMap[,1] <- paste0(getSampleData(quantData_i)$sampleName[j],
                                            "_",clusterMap[,1])
                   clusterMaps <- rbind(clusterMaps, clusterMap)                        
                 }
@@ -300,15 +300,15 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             countsSeCompressed <- bplapply(iter, FUN = function(columnIdx){ # previous i changed to j to avoid duplicated assignment 
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
                 if(is.character(columnIdx)) {
-                    columnIdx <- match(columnIdx, quantData_i$sampleData$id)
+                    columnIdx <- match(columnIdx, getSampleData(quantData_i)$id)
                 }
                 
-                incompatibleCounts_i <- quantData_i$incompatibleCounts[, columnIdx, drop = FALSE]
+                incompatibleCounts_i <- getIncompatibleCounts(quantData_i)[, columnIdx, drop = FALSE]
                 incompatibleCounts_i <- rowSums(incompatibleCounts_i)
-                nonuniqueCounts_i <- quantData_i$nonuniqueCounts[, columnIdx, drop = FALSE]
+                nonuniqueCounts_i <- getNonuniqueCounts(quantData_i)[, columnIdx, drop = FALSE]
                 nonuniqueCounts_i <- rowSums(nonuniqueCounts_i)
 
-                return(bambu.quantify(readClassDt = quantData_i$readClassDt, columnIdx = columnIdx,
+                return(bambu.quantify(readClassDt = getReadClassDt(quantData_i), columnIdx = columnIdx,
                                             incompatibleCounts = data.table(GENEID.i = names(incompatibleCounts_i), counts = incompatibleCounts_i),
                                             nonuniqueCounts = nonuniqueCounts_i,
                                             txid.index = mcols(annotations)$txid, GENEIDs = names(incompatibleCounts_i), isoreParameters = isoreParameters,
@@ -325,8 +325,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                   row.names = names(countsSeCompressed)
                 )
             } else{
-                ColNames <- c(ColNames, rownames(quantData_i$sampleData)) 
-                colData.all[[i]] <- data.frame(quantData_i$sampleData)
+                ColNames <- c(ColNames, rownames(getSampleData(quantData_i)))
+                colData.all[[i]] <- data.frame(getSampleData(quantData_i))
             }
             countsSeCompressed.all <- c(countsSeCompressed.all, countsSeCompressed)
         }
@@ -336,7 +336,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(trackReads){
             readToTranscriptMaps = list()
             for(i in seq_along(quantData)){
-                readToTranscriptMaps[[i]] <- quantData[[i]]$readToTranscriptMap
+                readToTranscriptMaps[[i]] <- getReadToTranscriptMap(quantData[[i]])
             }
             names(readToTranscriptMaps) <- names(quantData)
             metadata(countsSe)$readToTranscriptMaps <- readToTranscriptMaps
@@ -344,7 +344,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(returnDistTable){
             distTables = list()
             for(i in seq_along(quantData)){
-                distTables[[i]] <- quantData[[i]]$distTable
+                distTables[[i]] <- getDistTable(quantData[[i]])
             }
             names(distTables) <- names(quantData)
             metadata(countsSe)$distTables <- distTables

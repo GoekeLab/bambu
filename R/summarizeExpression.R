@@ -61,28 +61,28 @@ transcriptToGeneExpression <- function(se) {
 #' @noRd
 generateUniqueCountsSEFromQuantData <- function(quantData, annotations) {
     uniqueCountsList <- lapply(quantData, function(x) {
-        readClassDt <- x$readClassDt
+        readClassDt <- getReadClassDt(x)
         x_filtered <- readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
 
         uniqueCounts <- if (nrow(x_filtered) == 0) {
-            sparseMatrix(i = 1, j = 1, x = 0, dims = c(length(annotations), nrow(x$sampleData)))
+            sparseMatrix(i = 1, j = 1, x = 0, dims = c(length(annotations), nrow(getSampleData(x))))
         } else {
             txids <- mcols(annotations)$txid
             i <- rep(match(x_filtered$txid, txids), lengths(x_filtered$columnIds))
             j <- unlist(x_filtered$columnIds)
             x_vals <- unlist(x_filtered$columnCounts)
-            sparseMatrix(i = i, j = j, x = x_vals, dims = c(length(annotations), nrow(x$sampleData)))
+            sparseMatrix(i = i, j = j, x = x_vals, dims = c(length(annotations), nrow(getSampleData(x))))
         }
         rownames(uniqueCounts) <- names(annotations)
-        colnames(uniqueCounts) <- rownames(x$sampleData)
+        colnames(uniqueCounts) <- rownames(getSampleData(x))
         return(uniqueCounts)
     })
     uniqueCounts <- do.call(cbind, uniqueCountsList)
 
-    incompatibleCounts <- do.call(cbind, lapply(quantData, function(x) x$incompatibleCounts))
-    nonuniqueCounts <- do.call(cbind, lapply(quantData, function(x) x$nonuniqueCounts))
+    incompatibleCounts <- do.call(cbind, lapply(quantData, getIncompatibleCounts))
+    nonuniqueCounts <- do.call(cbind, lapply(quantData, getNonuniqueCounts))
 
-    colData <- do.call(rbind, lapply(quantData, function(x) x$sampleData))
+    colData <- do.call(rbind, lapply(quantData, getSampleData))
 
     se <- SummarizedExperiment(assays = SimpleList(uniqueCounts = uniqueCounts))
     rowRanges(se) <- annotations
