@@ -27,7 +27,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     ColData <- generateColData(readClassList, sampleMetadata, demultiplexed)
     
     incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix
-    incompatibleCounts <- if(sum(incompatibleCountMatrix)==0) NULL else generateIncompatibleCounts(incompatibleCountMatrix, annotations)
+    incompatibleCounts <- generateIncompatibleCounts(incompatibleCountMatrix, annotations)
     
     distTable <- if(returnDistTable) metadata(metadata(readClassList)$readClassDist)$distTableOld else NULL
     
@@ -37,12 +37,8 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
 
     quantData <- new("quantData",
         sampleData = data.frame(ColData),
-        uniqueCounts = generateUniqueCounts(readClassDt, annotations, nrow(metadata(readClassList)$sampleData)),
         readClassDt = readClassDt,
-        incompatibleCountMatrix = incompatibleCountMatrix,
-        sampleNames = as.character(metadata(readClassList)$sampleData$sampleName),
         incompatibleCounts = incompatibleCounts,
-        nonuniqueCounts = generateNonUniqueCounts(readClassDt, annotations, nrow(metadata(readClassList)$sampleData)),
         distTable = distTable,
         readToTranscriptMap = readToTranscriptMap
     )
@@ -76,7 +72,8 @@ generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
     rownames(incompatibleCountMatrix) <- genes[as.numeric(rownames(incompatibleCountMatrix))]
     geneMat <- sparseMatrix(length(genes), ncol(incompatibleCountMatrix), x = 0)
     rownames(geneMat) <- genes
-    geneMat[rownames(incompatibleCountMatrix),] <- incompatibleCountMatrix
+    colnames(geneMat) <- colnames(incompatibleCountMatrix)
+    geneMat[match(rownames(incompatibleCountMatrix), rownames(geneMat)), ] <- incompatibleCountMatrix
     return(geneMat)
 }
 
@@ -117,7 +114,7 @@ generateNonUniqueCounts <- function(readClassDt, annotations, nSamples){
     geneMat <- sparseMatrix(length(genes), nSamples, x = 0)
     rownames(geneMat) <- genes
     if(!is.null(rownames(nonuniqueCounts))){
-      geneMat[rownames(nonuniqueCounts),] <- nonuniqueCounts
+      geneMat[match(rownames(nonuniqueCounts), rownames(geneMat)), ] <- nonuniqueCounts
     }
     return(geneMat)
 }

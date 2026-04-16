@@ -7,12 +7,8 @@
 setClass("quantData",
     slots = list(
         sampleData = "data.frame",
-        uniqueCounts = "Matrix",
         readClassDt = "data.table",
-        incompatibleCountMatrix = "Matrix",
-        sampleNames = "character",
         incompatibleCounts = "ANY",
-        nonuniqueCounts = "Matrix",
         distTable = "ANY",
         readToTranscriptMap = "ANY"
     )

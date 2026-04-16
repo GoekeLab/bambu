@@ -2,7 +2,7 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(readClassDt, columnIdx, incompatibleCountMatrix, txid.index, GENEIDs, emParameters, 
+bambu.quantify <- function(readClassDt, columnIdx, incompatibleCounts, txid.index, GENEIDs, emParameters, 
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
     start.ptm <- proc.time()
@@ -22,7 +22,7 @@ bambu.quantify <- function(readClassDt, columnIdx, incompatibleCountMatrix, txid
     }, by = eqClassId]
 
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
-    incompatibleCounts <- incompatibleCountMatrix[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
+    incompatibleCounts <- incompatibleCounts[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
     incompatibleCounts[is.na(counts), counts := 0]
     compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
     counts <- compatibleCounts[match(txid.index, txid)]

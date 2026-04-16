@@ -412,9 +412,9 @@ splitReadClassFiles = function(readClassFile){
     #incompatible counts
     distTable <- metadata(metadata(readClassFile)$readClassDist)$distTable.incompatible
     if(nrow(distTable)==0) {
-        counts.incompatible <- sparseMatrix(i= 1, j = 1, x = 0,
-        dims = c(1, length(metadata(readClassFile)$sampleData$id)))
-        rownames(counts.incompatible) <- "TODO"
+        counts.incompatible <- sparseMatrix(i= integer(0), j = integer(0), x = numeric(0),
+        dims = c(0, length(metadata(readClassFile)$sampleData$id)))
+        rownames(counts.incompatible) <- character(0)
     } else{
         distTable$columnIds <- rowData(readClassFile)$columnIds[match(distTable$readClassId, rownames(readClassFile))]
         distTable <- distTable %>% group_by(GENEID.i) %>% summarise(counts = sum(readCount),

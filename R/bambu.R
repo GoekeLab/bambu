@@ -266,7 +266,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(length(annotations)==0) stop("No valid annotations, if running
                                     de novo please try less stringent parameters")
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
-        GENEIDs.i <- as.numeric(factor(unique(mcols(annotations)$GENEID)))
         start.ptm <- proc.time()
         countsSeCompressed.all <- NULL
         ColNames <- c()
@@ -302,13 +301,13 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 if(is.character(columnIdx)) {
                     columnIdx <- match(columnIdx, quantData_i$sampleData$id)
                 }
-                incompatibleCountMatrix <- unname(quantData_i$incompatibleCountMatrix[,columnIdx]) # same here
-                if(!is.null(dim(incompatibleCountMatrix))){
-                    incompatibleCountMatrix <- rowSums(incompatibleCountMatrix)
-                }
+                
+                incompatibleCounts_i <- quantData_i$incompatibleCounts[, columnIdx, drop = FALSE]
+                incompatibleCounts_i <- rowSums(incompatibleCounts_i)
+
                 return(bambu.quantify(readClassDt = quantData_i$readClassDt, columnIdx = columnIdx, 
-                                            incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(quantData_i$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
-                                            txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
+                                            incompatibleCounts = data.table(GENEID.i = names(incompatibleCounts_i), counts = incompatibleCounts_i),
+                                            txid.index = mcols(annotations)$txid, GENEIDs = names(incompatibleCounts_i), isoreParameters = isoreParameters,
                                             emParameters = emParameters, trackReads = trackReads, 
                                             verbose = verbose))}, 
                                             BPPARAM = bpParameters)
