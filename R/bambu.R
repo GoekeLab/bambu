@@ -329,6 +329,13 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         names(countsSeCompressed.all) <- ColNames   
         
         countsSe <- combineCountSes(countsSeCompressed.all, colData.all, annotations)
+        if(trackReads){
+            readToTranscriptMaps = list()
+            for(i in seq_along(quantData)){
+                readToTranscriptMaps[[i]] <- quantData[[i]]$readToTranscriptMap
+            }
+            metadata(countsSe)$readToTranscriptMaps <- readToTranscriptMaps
+        }
         if(returnDistTable){
             distTables = list()
             for(i in seq_along(quantData)){
