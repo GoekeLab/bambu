@@ -2,7 +2,6 @@
 
 export(bambu)
 export(bambu.singlecell)
-export(bambu.spatial)
 export(plotBambu)
 export(prepareAnnotations)
 export(readFromGTF)
