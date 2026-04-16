@@ -26,8 +26,6 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     bf <- open(bamFile)
     readGrgList <- list()
     counter <- 1
-    cells <- c()
-    umi <- c()
     use.names.OG <- use.names
     if(extractBarcodeUMI) use.names <- TRUE
     while (isIncomplete(bf)) {
@@ -54,8 +52,6 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
         counter <- counter + 1
     }
     on.exit(close(bf))
-    rm(cells)
-    rm(umi)
     if (length(readGrgList) > 1) {
         readGrgList <- do.call(c, readGrgList)
     } else {
