@@ -252,6 +252,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 trackReads = trackReads
               )
             }, BPPARAM = bpParameters)
+            names(quantData) <- names(readClassList)
             if (!quant) return(quantData)
         }
     }
@@ -334,6 +335,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             for(i in seq_along(quantData)){
                 readToTranscriptMaps[[i]] <- quantData[[i]]$readToTranscriptMap
             }
+            names(readToTranscriptMaps) <- names(quantData)
             metadata(countsSe)$readToTranscriptMaps <- readToTranscriptMaps
         }
         if(returnDistTable){
@@ -341,6 +343,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             for(i in seq_along(quantData)){
                 distTables[[i]] <- quantData[[i]]$distTable
             }
+            names(distTables) <- names(quantData)
             metadata(countsSe)$distTables <- distTables
         }
         return(countsSe)

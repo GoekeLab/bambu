@@ -64,6 +64,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode, 
             demultiplexed = demultiplexed, cleanReads = cleanReads, dedupUMI = dedupUMI, index = 1, barcodesToFilter = barcodesToFilter)},
             BPPARAM = bpParameters)
+        names(readClassList) <- names(reads)
     } else {
         readGrgList <- bplapply(seq_along(reads), function(i) {
             bambu.readsByFile(bam.file = reads[i],
@@ -96,8 +97,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             stranded = stranded, min.readCount = min.readCount, 
             fitReadClassModel = fitReadClassModel, min.exonOverlap = min.exonOverlap, 
             defaultModels = defaultModels, returnModel = returnModel, verbose = verbose, 
-            processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode,
-            runName = "combinedSamples")
+            processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode)
         metadata(readClassList)$samples <- names(reads)
         metadata(readClassList)$sampleNames <- names(reads)
         if(!isFALSE(demultiplexed)) metadata(readClassList)$samples <- levels(mcols(readGrgList)$CB)
