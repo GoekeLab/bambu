@@ -205,9 +205,9 @@ Access transcript expression estimates by extracting a variable (such as counts 
 
 For a full description of the other outputs see [Output Description](#Output-Description)
 
-The full output can be written to a file using writeBambuOutput().  Using this function will generate six files, including 4four .gtf files(detailed below), and two .txt files for the expression counts at transcript and gene levels.
+The full output can be written to a file using writeBambuOutput().  Using this function will generate six files, including four .gtf/.gff3 files(detailed below), and two .txt files for the expression counts at transcript and gene levels.
 
-By default bambu will write four .gtf files
+By default bambu will write four .gtf files. Functionality to write .gff3 files can be specified with the parameter `outputAnnFormat = "gff3"` 
 - **extendedAnnotations.gtf** - Contains all transcript models from the reference annotations and any novel high confidence transcript models (below NDR threshold) from Bambu
 - **allTranscriptModels** - Contains all transcript models from the reference annotations and all novel transcript models, irrespective of their NDR score. This is useful for reloading into Bambu with prepareAnnotations() to redo the analysis or reoutput the annotations at different NDR thresholds.
 - **supportedTranscriptModels** - Contains only transcript models that are fully supported by at least one read across the samples provided. Note that if multiple reference annotations share the same intron junctions, an abitrary one will selected to be be included in this output. 

@@ -4,10 +4,12 @@
 #' @param path the destination of the output files 
 #' (gtf, transcript counts, and gene counts)
 #' @param prefix the prefix of the output files
-#' @details The function will write the output from Bambu to files. The 
-#' annotations will be written to a .gtf file, transcript counts (total counts, 
+#' @param outputAnnFormat the file format in which to output annotations, must
+#' be one of \code{"gtf"} or \code{"gff3"}. \code{"gtf"} is specified by default.
+#' @details The function will write the output from Bambu to files. The
+#' annotations will be written to a .gtf or .gff3 file, transcript counts (total counts, 
 #' CPM, full-length counts, partial-length counts, and unique counts) and gene counts
-#' will be written to .txt files.  
+#' will be written to .txt files.
 #' @export
 #' @examples
 #' se <- readRDS(system.file("extdata",
@@ -17,23 +19,36 @@
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
 writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE, 
-                             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE, seperateSamples = FALSE) {
-    if (missing(se) | missing(path)) {
-        stop("Both summarizedExperiment object from bambu and
+                             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE, seperateSamples = FALSE,
+                             outputAnnFormat = "gtf") {
+  
+  if (missing(se) | missing(path)) {
+    stop("Both summarizedExperiment object from bambu and
             the path for the output files are required.")
-    } else {
-        outdir <- paste0(path, "/")
-        if (!dir.exists(outdir))
-            dir.create(outdir, recursive = TRUE)
-
-        transcript_grList <- rowRanges(se)
-        prefix <- ifelse(prefix != "", paste0(prefix, "_"), "")
-        transcript_gtffn <- paste(outdir, prefix, sep = "")
-        gtf <- writeAnnotationsToGTF(annotation = transcript_grList,
-            file = transcript_gtffn, outputExtendedAnno = outputExtendedAnno, 
-            outputAll = outputAll, outputBambuModels = outputBambuModels, outputNovelOnly = outputNovelOnly)
+  } else if (!outputAnnFormat %in% c("gtf", "gff3")) {
+    stop("Please specify a valid annotation outputAnnFormat: 'gtf' or 'gff3', or leave blank to output to GTF by default.")
+  } else {
+    outdir <- paste0(path, "/")
+    if (!dir.exists(outdir))
+      dir.create(outdir, recursive = TRUE)
+    
+    transcript_grList <- rowRanges(se)
+    prefix <- ifelse(prefix != "", paste0(prefix, "_"), "")
+    transcript_annfn <- paste(outdir, prefix, sep = "")
+    
+    if (outputAnnFormat == "gtf") {
+      gtf <- writeAnnotationsToGTF(annotation = transcript_grList,
+                                   file = transcript_annfn, outputExtendedAnno = outputExtendedAnno, 
+                                   outputAll = outputAll, outputBambuModels = outputBambuModels, outputNovelOnly = outputNovelOnly)
+    }
+    
+    if (outputAnnFormat == "gff3") {
+      gff3 <- writeAnnotationsToGFF3(annotation = transcript_grList,
+                                     file = transcript_annfn, outputExtendedAnno = outputExtendedAnno, 
+                                     outputAll = outputAll, outputBambuModels = outputBambuModels, outputNovelOnly = outputNovelOnly)
+    }
         
-        utils::write.table(colData(se), file = paste0(transcript_gtffn, "sampleData.tsv"), 
+        utils::write.table(colData(se), file = paste0(transcript_annfn, "sampleData.tsv"), 
             sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
         for(d in names(assays(se))){
             writeCountsOutput(se, varname=d,
@@ -43,7 +58,7 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         #write incompatible counts
         if(!is.null(metadata(se)$incompatibleCounts)){
             estimates <- metadata(se)$incompatibleCounts
-            estimatesfn <- paste(transcript_gtffn, "incompatibleCounts.mtx", sep = "")
+            estimatesfn <- paste(transcript_annfn, "incompatibleCounts.mtx", sep = "")
                 Matrix::writeMM(estimates, estimatesfn)
         }
         seGene <- transcriptToGeneExpression(se)
@@ -51,9 +66,9 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
         #R.utils::gzip(paste0(outdir, "barcodes.tsv"))
         txANDGenes <- data.table(as.data.frame(rowData(se))[,c("TXNAME","GENEID")])
-        utils::write.table(txANDGenes, file = paste0(transcript_gtffn, "txANDgenes.tsv"), 
+        utils::write.table(txANDGenes, file = paste0(transcript_annfn, "txANDgenes.tsv"), 
                            sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
-        utils::write.table(names(seGene), file = paste0(transcript_gtffn, "genes.tsv"), 
+        utils::write.table(names(seGene), file = paste0(transcript_annfn, "genes.tsv"), 
                         sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE)
         
         #R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
@@ -246,6 +261,135 @@ writeAnnotationsToGTF <- function(annotation, file, geneIDs = NULL, outputExtend
         writeToGTF(annotationNovel, paste0(file, "novelTranscripts.gtf"), geneIDs)
     }
 }
+
+# Write to GFF3 file
+writeToGFF3 <- function(annotation, file, geneIDs = NULL) {
+  
+  if (missing(annotation) | missing(file)) {
+    stop("Both GRangesList and the name of the output file are required.")
+  } else if (!is(annotation, "CompressedGRangesList")) { # Check filename
+    stop("The inputted GRangesList is of the wrong class.")
+  }
+  
+  NDR = NULL
+  txScore = NULL
+  txScore.noFit = NULL
+  novelGene = NULL
+  novelTranscript = NULL
+  txClassDescription = NULL
+  
+  df <- as_tibble(annotation)
+  
+  # Build exon number in GTF format
+  df$exon_rank <- paste("rank=", df$exon_rank, ";", sep = "")
+  
+  # if there is an NDR column
+  if(!is.null(mcols(annotation)$NDR)){
+    
+    NDR = rep(mcols(annotation)$NDR, unname(elementNROWS(annotation)))
+    txScore = rep(mcols(annotation)$maxTxScore, unname(elementNROWS(annotation)))
+    txScore.noFit = rep(mcols(annotation)$maxTxScore.noFit, unname(elementNROWS(annotation)))
+    novelGene = rep(mcols(annotation)$novelGene, unname(elementNROWS(annotation)))
+    novelTranscript = rep(mcols(annotation)$novelTranscript, unname(elementNROWS(annotation)))
+    txClassDescription = rep(mcols(annotation)$txClassDescription, unname(elementNROWS(annotation)))
+    
+    df$NDR <- paste("NDR=", as.character(NDR), ";", sep = "")
+    df$txScore <- paste("maxTxScore=", as.character(txScore), ";", sep = "")
+    df$txScore.noFit <- paste("maxTxScore.noFit=", as.character(txScore.noFit), ";", sep = "")
+    df$novelGene <- paste("novelGene=", as.character(novelGene), ";", sep = "")
+    df$novelTranscript <- paste("novelTranscript=", as.character(novelTranscript), ";", sep = "")
+    df$txClassDescription <- paste("txClassDescription=", as.character(txClassDescription), ";", sep = "")
+  }
+  
+  # Join gene IDs
+  if (is.null(geneIDs)) {
+    if (!is.null(mcols(annotation, use.names = FALSE)$GENEID)) {
+      geneIDs <- as_tibble(mcols(annotation, use.names = FALSE)[,
+                                                                c("TXNAME", "GENEID")])
+      geneIDs$seqnames <- unlist(unique(seqnames(annotation)))
+      geneIDs$strand <- unlist(unique(strand(annotation)))
+    }
+  }
+  
+  df <- left_join(df, geneIDs[, c("TXNAME", "GENEID")], 
+                  by = c("group_name" = "TXNAME"))
+  
+  # Convert group_name and gene ID into GFF3 format
+  df$group_name <- paste("ID=", df$group_name, ";", sep = "")
+  df$GENEID <- paste("Parent=", df$GENEID, ";", sep = "")
+  
+  # Create GFF3 formatted dataframes for exons and transcripts separately
+  
+  # Exons: no need gene IDs but set Parent = transcript ID
+  dfExon <- mutate(df, source = "Bambu", feature = "exon", score = ".",
+                   frame = ".", attributes = paste0(group_name, exon_rank, NDR, txScore, txScore.noFit, novelGene, novelTranscript, txClassDescription )) %>%
+    select(seqnames, source, feature, start, end, score,
+           strand, frame, attributes, group_name) %>%
+    mutate(attributes = sub("ID=", "Parent=", attributes))
+  
+  # Dataframe for transcripts
+  dfTx <- as_tibble(as.data.frame(range(ranges(annotation))))
+  dfTx <- left_join(dfTx, geneIDs, by = c("group_name" = "TXNAME"))
+  dfTx$group_name <- paste("ID=", dfTx$group_name, ";", sep = "")
+  dfTx$GENEID <- paste("Parent=", dfTx$GENEID, ";", sep = "")
+  
+  
+  if(!is.null(mcols(annotation)$NDR)) {
+    dfTx$NDR <- paste("NDR=", as.character(mcols(annotation)$NDR), ";", sep = "")
+    dfTx$txScore <- paste("txScore=", as.character(mcols(annotation)$txScore), ";", sep = "")
+    dfTx$txScore.noFit <- paste("txScore.noFit=", as.character(mcols(annotation)$txScore.noFit), ";", sep = "")
+    dfTx$novelGene <- paste("novelGene=", as.character(mcols(annotation)$novelGene), ";", sep = "")
+    dfTx$novelTranscript <- paste("novelTranscript=", as.character(mcols(annotation)$novelTranscript), ";", sep = "")
+    dfTx$txClassDescription <- paste("txClassDescription=", as.character(mcols(annotation)$txClassDescription), ";", sep = "")
+  }
+  
+  # Parse to gff3 format
+  dfTx <- mutate(dfTx, source = "Bambu", feature = "mRNA", score = ".",
+                 frame = ".", attributes = paste0(GENEID, group_name, NDR, txScore, txScore.noFit, novelGene, novelTranscript, txClassDescription )) %>%
+    select(seqnames, source, feature, start, end, score,
+           strand, frame, attributes, group_name)
+  
+  # Concat tx and exon, then drop the group_name
+  gff3 <- rbind(dfTx, dfExon) %>% group_by(group_name) %>%
+    arrange(as.character(seqnames), start) %>% ungroup() %>%
+    select(seqnames, source, feature, start, end, score,
+           strand, frame, attributes)
+  
+  # replace * with . and remove trailing ;
+  gff3 <- mutate(gff3, strand = recode_factor(strand, `*` = "."),
+                 attributes = sub(";$", "", attributes))
+  
+  # Export
+  writeLines("##gff-version 3", file)
+  utils::write.table(gff3, file = file, append = TRUE, quote = FALSE, row.names = FALSE,
+                     col.names = FALSE, sep = "\t")
+}
+
+
+writeAnnotationsToGFF3 <- function(annotation, file, geneIDs = NULL, outputExtendedAnno = TRUE, 
+                                   outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE){
+  if(outputExtendedAnno){
+    writeToGFF3(annotation, paste0(file, "extendedAnnotations.gff3"), geneIDs)
+  }
+  if(outputAll){
+    annotationAll = setNDR(annotation, 1)
+    if(length(annotationAll) == length(annotation)) 
+      message("The current NDR threshold already outputs all transcript models. This may result in reduced precision for th extendedAnnotations and supportedTranscriptModels gtfs")
+    writeToGFF3(annotationAll, paste0(file, "allTranscriptModels.gff3"), geneIDs)
+  }
+  
+  #todo - have this write bambu start and ends for annotated transcripts
+  if(outputBambuModels){
+    annotationBambu = annotation[!is.na(mcols(annotation)$readCount)]
+    writeToGFF3(annotationBambu, paste0(file, "supportedTranscriptModels.gff3"), geneIDs)
+  }
+  
+  if(outputNovelOnly){
+    annotationNovel = annotation[mcols(annotation)$novelTranscript]
+    writeToGFF3(annotationNovel, paste0(file, "novelTranscripts.gff3"), geneIDs)
+  }
+}
+
 
 
 #' Outputs GRangesList object from reading a GTF file
