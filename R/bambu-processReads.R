@@ -70,7 +70,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             if(extractBarcodeUMI){
                 mcols(readGrgList[[i]])$CB <- paste0(names(reads)[i], '_', mcols(readGrgList[[i]])$CB)
             } else{
-                mcols(readGrgList[[i]])$CB <- i
+                mcols(readGrgList[[i]])$CB <- names(reads)[i]
             }
             
             mcols(readGrgList[[i]])$CB <- as.factor(mcols(readGrgList[[i]])$CB)
