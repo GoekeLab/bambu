@@ -9,6 +9,7 @@ setClass("quantData",
         sampleData = "data.frame",
         readClassDt = "data.table",
         incompatibleCounts = "ANY",
+        nonuniqueCounts = "ANY",
         distTable = "ANY",
         readToTranscriptMap = "ANY"
     )

@@ -305,11 +305,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 
                 incompatibleCounts_i <- quantData_i$incompatibleCounts[, columnIdx, drop = FALSE]
                 incompatibleCounts_i <- rowSums(incompatibleCounts_i)
+                nonuniqueCounts_i <- quantData_i$nonuniqueCounts[, columnIdx, drop = FALSE]
+                nonuniqueCounts_i <- rowSums(nonuniqueCounts_i)
 
-                return(bambu.quantify(readClassDt = quantData_i$readClassDt, columnIdx = columnIdx, 
+                return(bambu.quantify(readClassDt = quantData_i$readClassDt, columnIdx = columnIdx,
                                             incompatibleCounts = data.table(GENEID.i = names(incompatibleCounts_i), counts = incompatibleCounts_i),
+                                            nonuniqueCounts = nonuniqueCounts_i,
                                             txid.index = mcols(annotations)$txid, GENEIDs = names(incompatibleCounts_i), isoreParameters = isoreParameters,
-                                            emParameters = emParameters, trackReads = trackReads, 
+                                            emParameters = emParameters, trackReads = trackReads,
                                             verbose = verbose))}, 
                                             BPPARAM = bpParameters)
             end.ptm <- proc.time()

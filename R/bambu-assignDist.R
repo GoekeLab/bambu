@@ -28,17 +28,19 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     
     incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix
     incompatibleCounts <- generateIncompatibleCounts(incompatibleCountMatrix, annotations)
-    
+    nonuniqueCounts <- generateNonUniqueCountMatrix(readClassDt, annotations, metadata(readClassList)$sampleData$id)
+
     distTable <- if(returnDistTable) metadata(metadata(readClassList)$readClassDist)$distTableOld else NULL
-    
-    readToTranscriptMap <- if(trackReads) generateReadToTranscriptMap(readClassList, 
-                                        metadata(readClassList)$readClassDist, 
+
+    readToTranscriptMap <- if(trackReads) generateReadToTranscriptMap(readClassList,
+                                        metadata(readClassList)$readClassDist,
                                         annotations) else NULL
 
     quantData <- new("quantData",
         sampleData = data.frame(ColData),
         readClassDt = readClassDt,
         incompatibleCounts = incompatibleCounts,
+        nonuniqueCounts = nonuniqueCounts,
         distTable = distTable,
         readToTranscriptMap = readToTranscriptMap
     )
@@ -55,6 +57,42 @@ generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
     rownames(geneMat) <- genes
     colnames(geneMat) <- colnames(incompatibleCountMatrix)
     geneMat[match(rownames(incompatibleCountMatrix), rownames(geneMat)), ] <- incompatibleCountMatrix
+    return(geneMat)
+}
+
+#' Generate nonunique count matrix (gene x sample) from multi-align reads in readClassDt
+#' @noRd
+generateNonUniqueCountMatrix <- function(readClassDt, annotations, sampleIds){
+    genes <- levels(factor(unique(mcols(annotations)$GENEID)))
+    nSamples <- length(sampleIds)
+    geneMat <- sparseMatrix(length(genes), nSamples, x = 0)
+    rownames(geneMat) <- genes
+    colnames(geneMat) <- sampleIds
+
+    x <- readClassDt %>% filter(multi_align & !is.na(eqClass.match))
+    x <- x %>% distinct(eqClassId, .keep_all = TRUE)
+    if (nrow(x) == 0) return(geneMat)
+
+    i <- rep(seq_along(x$gene_sid), lengths(x$columnIds))
+    j <- unlist(x$columnIds)
+    x_vals <- unlist(x$columnCounts)
+    nonuniqueCounts <- sparseMatrix(i = i, j = j, x = x_vals, dims = c(nrow(x), nSamples))
+
+    if (nrow(x) > 1 & length(unique(x$gene_sid)) > 1) {
+        nonuniqueCounts.gene <- sparse.model.matrix(~ factor(x$gene_sid) - 1)
+        nonuniqueCounts <- t(nonuniqueCounts.gene) %*% nonuniqueCounts
+    } else {
+        nonuniqueCounts.gene <- Matrix(1, nrow = nrow(x), ncol = 1, sparse = TRUE)
+        nonuniqueCounts <- t(nonuniqueCounts.gene) %*% nonuniqueCounts
+    }
+
+    geneids <- as.numeric(levels(factor(x$gene_sid)))
+    geneids <- x$txid[match(geneids, x$gene_sid)]
+    geneids <- mcols(annotations)$GENEID[as.numeric(geneids)]
+    rownames(nonuniqueCounts) <- geneids
+    colnames(nonuniqueCounts) <- sampleIds
+
+    geneMat[match(rownames(nonuniqueCounts), rownames(geneMat)), ] <- nonuniqueCounts
     return(geneMat)
 }
 
@@ -79,79 +117,4 @@ generateUniqueCountsFromQuantData <- function(quantData, annotations){
         return(uniqueCounts)
     })
     return(do.call(cbind, uniqueCountsList))
-}
-
-#' Generate non-unique counts
-#' @noRd
-generateNonUniqueCountsFromQuantData <- function(quantData, annotations){
-    nonuniqueCountsList <- lapply(quantData, function(x_obj) {
-        readClassDt <- x_obj$readClassDt
-        #fuse multi align RCs by gene
-        x <- readClassDt %>% filter(multi_align & !is.na(eqClass.match))
-        x <- x %>% distinct(eqClassId, .keep_all = TRUE)
-        
-        if(nrow(x) == 0) {
-            genes <- levels(factor(unique(mcols(annotations)$GENEID)))
-            geneMat <- sparseMatrix(i = 1, j = 1, x = 0, dims = c(length(genes), nrow(x_obj$sampleData)), dimnames = list(genes, NULL))
-            colnames(geneMat) <- rownames(x_obj$sampleData)
-            return(geneMat)
-        }
-
-        # x has columnIds and columnCounts
-        i <- rep(seq_along(x$gene_sid), lengths(x$columnIds))
-        j <- unlist(x$columnIds)
-        x_vals <- unlist(x$columnCounts)
-        nonuniqueCounts <- sparseMatrix(i = i, j = j, x = x_vals, dims = c(nrow(x), nrow(x_obj$sampleData)))
-
-        if(nrow(x)>1 & length(unique(x$gene_sid))>1){
-            nonuniqueCounts.gene <- sparse.model.matrix(~ factor(x$gene_sid) - 1)
-            nonuniqueCounts <- t(nonuniqueCounts.gene) %*% nonuniqueCounts
-        } else{
-            warning("The factor variable 'gene_sid' has only one level. Adjusting output.")
-            nonuniqueCounts.gene <- Matrix(1, nrow = nrow(x), ncol = 1, sparse = TRUE)
-            nonuniqueCounts <- t(nonuniqueCounts.gene) %*% nonuniqueCounts
-        }
-        #covert ids into gene ids
-        geneids <- as.numeric(levels(factor(x$gene_sid)))
-        geneids <- x$txid[match(geneids, x$gene_sid)]
-        geneids <- mcols(annotations)$GENEID[as.numeric(geneids)]
-        rownames(nonuniqueCounts) <- geneids
-        #create matrix for all annotated genes
-        genes <- levels(factor(unique(mcols(annotations)$GENEID)))
-        geneMat <- sparseMatrix(length(genes), nrow(x_obj$sampleData), x = 0)
-        rownames(geneMat) <- genes
-        if(!is.null(rownames(nonuniqueCounts))){
-          geneMat[match(rownames(nonuniqueCounts), rownames(geneMat)), ] <- nonuniqueCounts
-        }
-        colnames(geneMat) <- rownames(x_obj$sampleData)
-        return(geneMat)
-    })
-    return(do.call(cbind, nonuniqueCountsList))
-}
-
-#' Generate gene counts directly from quantData
-#' @noRd
-generateGeneCountsFromQuantData <- function(quantData, annotations){
-    # 1. Get unique transcript counts and aggregate them to gene level
-    uniqueCounts <- generateUniqueCountsFromQuantData(quantData, annotations)
-    
-    geneIDs <- factor(mcols(annotations)$GENEID, levels = unique(mcols(annotations)$GENEID))
-    geneCounts <- Matrix::fac2sparse(geneIDs) %*% uniqueCounts
-    
-    # 2. Get non-unique counts and incompatible counts
-    nonuniqueCounts <- generateNonUniqueCountsFromQuantData(quantData, annotations)
-    incompatibleCounts <- do.call(cbind, lapply(quantData, function(x) x$incompatibleCounts))
-    
-    # 3. Align the rows/dimensions and sum them up
-    if(!is.null(incompatibleCounts)){
-        incompatibleCounts <- Matrix(incompatibleCounts[match(rownames(geneCounts), rownames(incompatibleCounts)), ], sparse = TRUE)
-        geneCounts <- geneCounts + incompatibleCounts
-    }
-    
-    if(!is.null(nonuniqueCounts)){
-        nonuniqueCounts <- Matrix(nonuniqueCounts[match(rownames(geneCounts), rownames(nonuniqueCounts)), ], sparse = TRUE)
-        geneCounts <- geneCounts + nonuniqueCounts
-    }
-    
-    return(geneCounts)
 }
