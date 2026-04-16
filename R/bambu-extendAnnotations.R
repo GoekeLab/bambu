@@ -3,7 +3,7 @@
 #' @inheritParams bambu
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations, NDR,
-    isoreParameters, rcAssignmentParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE) {
+    isoreParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE) {
     start.ptm_all <- proc.time()
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClassList,
         stranded, ## stranded used for unspliced reduce  
@@ -23,12 +23,12 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
         remove.subsetTx = isoreParameters[["remove.subsetTx"]],
         min.sampleNumber = isoreParameters[["min.sampleNumber"]],
         NDR = NDR,
-        min.exonDistance = rcAssignmentParameters[["min.exonDistance"]],
+        min.exonDistance = isoreParameters[["min.exonDistance"]],
         min.exonOverlap = isoreParameters[["min.exonOverlap"]],
-        min.primarySecondaryDist =
-        rcAssignmentParameters[['min.primarySecondaryDist']],
-        min.primarySecondaryDistStartEnd =
-        rcAssignmentParameters[['min.primarySecondaryDistStartEnd1']],
+        min.primarySecondaryDist = 
+        isoreParameters[['min.primarySecondaryDist']], 
+        min.primarySecondaryDistStartEnd = 
+        isoreParameters[['min.primarySecondaryDistStartEnd1']],
         min.readFractionByEqClass =  
         isoreParameters[['min.readFractionByEqClass']],
         fusionMode = fusionMode,
