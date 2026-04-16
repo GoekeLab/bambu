@@ -11,19 +11,13 @@
 #' ))
 #' transcriptToGeneExpression(se)
 transcriptToGeneExpression <- function(se) {
-    counts <- assays(se)$counts
-    runnames <- colnames(counts)[-1]
+    uniqueCounts <- assays(se)$uniqueCounts
     rowDataSe <- as.data.table(rowData(se))
 
-    counts  = fac2sparse(factor(rowData(se)$GENEID, levels = unique(rowData(se)$GENEID))) %*% counts
-    if(!is.null(metadata(se)$incompatibleCounts)){
-        incompatibleCounts <- metadata(se)$incompatibleCounts
-        if("nonuniqueCounts" %in% names(metadata(se))){
-            incompatibleCounts = incompatibleCounts + metadata(se)$nonuniqueCounts
-        }
-        incompatibleCounts = Matrix(incompatibleCounts[match(rownames(counts), rownames(incompatibleCounts)),], sparse = TRUE)
-        counts = counts + incompatibleCounts
-    }
+    uniqueCounts = fac2sparse(factor(rowData(se)$GENEID, levels = unique(rowData(se)$GENEID))) %*% uniqueCounts
+    incompatibleCounts <- metadata(se)$incompatibleCounts
+    nonuniqueCounts <- metadata(se)$nonuniqueCounts
+    counts = uniqueCounts + incompatibleCounts + nonuniqueCounts
     counts.total = colSums(counts)
     counts.total[counts.total==0] = 1
     counts.CPM = counts/counts.total * 10^6

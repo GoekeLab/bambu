@@ -51,7 +51,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
 #' Generate incompatible counts
 #' @noRd
 generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
-    genes <- levels(factor(unique(mcols(annotations)$GENEID)))
+    genes <- unique(mcols(annotations)$GENEID)
     rownames(incompatibleCountMatrix) <- genes[as.numeric(rownames(incompatibleCountMatrix))]
     geneMat <- sparseMatrix(length(genes), ncol(incompatibleCountMatrix), x = 0)
     rownames(geneMat) <- genes
@@ -63,7 +63,7 @@ generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
 #' Generate nonunique count matrix (gene x sample) from multi-align reads in readClassDt
 #' @noRd
 generateNonUniqueCountMatrix <- function(readClassDt, annotations, sampleIds){
-    genes <- levels(factor(unique(mcols(annotations)$GENEID)))
+    genes <- unique(mcols(annotations)$GENEID)
     nSamples <- length(sampleIds)
     geneMat <- sparseMatrix(length(genes), nSamples, x = 0)
     rownames(geneMat) <- genes
