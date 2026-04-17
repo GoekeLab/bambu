@@ -274,7 +274,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
-            iter <- seq_len(nrow(getSampleData(quantData_i))) # iter is integer
+            # single-cell mode: iter is an integer vector of column indices, one per barcode
+            iter <- seq_len(nrow(getSampleData(quantData_i)))
             if(!is.null(clusters)){
               if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
                 clusterMaps <- NULL
@@ -288,20 +289,19 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                            "_",clusterMap[,1])
                   clusterMaps <- rbind(clusterMaps, clusterMap)                        
                 }
-                clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2]) 
+                clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2])
                 rm(clusterMaps)
                 rm(clusterMap)
                 iter <- clustering
-                
+
               } else{ #if clusters is a list
-                iter <- clusters[[i]] 
+                iter <- clusters[[i]]
               }
+              # cluster mode: convert barcode strings to integer column indices;
+              # iter becomes a named list of integer vectors, one per cluster
+              iter <- lapply(iter, match, getSampleData(quantData_i)$id)
             }
             countsSeCompressed <- bplapply(iter, FUN = function(columnIdx){ # previous i changed to j to avoid duplicated assignment
-                #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
-                if(is.character(columnIdx)) {
-                    columnIdx <- match(columnIdx, getSampleData(quantData_i)$id)
-                }
 
                 incompatibleCounts_i <- getIncompatibleCounts(quantData_i)[, columnIdx, drop = FALSE]
 
