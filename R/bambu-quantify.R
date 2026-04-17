@@ -2,7 +2,7 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(readClassDt, columnIdx, incompatibleCounts, nonuniqueCounts, txid.index, GENEIDs, emParameters,
+bambu.quantify <- function(readClassDt, columnIdx, incompatibleCounts, txid.index, GENEIDs, emParameters,
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
     start.ptm <- proc.time()
@@ -28,7 +28,6 @@ bambu.quantify <- function(readClassDt, columnIdx, incompatibleCounts, nonunique
     counts <- compatibleCounts[match(txid.index, txid)]
     sig.digit <- emParameters[["sig.digit"]]
     seOutput <- list(incompatibleCounts = as(incompatibleCounts$counts, "sparseVector"),
-                    nonuniqueCounts = as(nonuniqueCounts, "sparseVector"),
                     counts = as(round(counts$counts,sig.digit), "sparseVector"),
                     CPM = as(round(counts$CPM,sig.digit), "sparseVector"),
                     fullLengthCounts = as(round(counts$fullLengthCounts,sig.digit), "sparseVector"),
