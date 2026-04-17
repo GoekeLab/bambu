@@ -171,6 +171,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(mode == "fusion"){
             NDR <- 1
             fusionMode <- TRUE
+            if(is.null(opt.discovery)) opt.discovery <- list()
+            opt.discovery$remove.subsetTx <- FALSE
+            opt.discovery$min.readCount <- 1
+            opt.discovery$min.sampleNumber <- 0
         }
         if(mode == "debug"){
             verbose <- TRUE
