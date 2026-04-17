@@ -49,7 +49,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
 #' Generate incompatible counts
 #' @noRd
 generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
-    genes <- unique(mcols(annotations)$GENEID)
+    genes <- levels(factor(unique(mcols(annotations)$GENEID)))
     rownames(incompatibleCountMatrix) <- genes[as.numeric(rownames(incompatibleCountMatrix))]
     geneMat <- sparseMatrix(length(genes), ncol(incompatibleCountMatrix), x = 0)
     rownames(geneMat) <- genes
