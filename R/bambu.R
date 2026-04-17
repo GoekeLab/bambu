@@ -304,11 +304,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 }
 
                 incompatibleCounts_i <- getIncompatibleCounts(quantData_i)[, columnIdx, drop = FALSE]
-                incompatibleCounts_i <- rowSums(incompatibleCounts_i)
 
                 return(bambu.quantify(readClassDt = getReadClassDt(quantData_i), columnIdx = columnIdx,
-                                            incompatibleCounts = data.table(GENEID.i = names(incompatibleCounts_i), counts = incompatibleCounts_i),
-                                            txid.index = mcols(annotations)$txid, GENEIDs = names(incompatibleCounts_i), isoreParameters = isoreParameters,
+                                            incompatibleCounts = data.table(GENEID.i = rownames(incompatibleCounts_i), counts = as.vector(incompatibleCounts_i)),
+                                            txid.index = mcols(annotations)$txid, GENEIDs = rownames(incompatibleCounts_i), isoreParameters = isoreParameters,
                                             emParameters = emParameters, trackReads = trackReads,
                                             verbose = verbose))}, 
                                             BPPARAM = bpParameters)
