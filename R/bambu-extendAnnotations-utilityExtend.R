@@ -872,7 +872,7 @@ setNDR <- function(extendedAnnotations, NDR = NULL, prefix = 'Bambu', baselineFD
 
 #' Extend annotations by clusters
 #' @noRd
-isore.extendAnnotations.clusters <- function(readClassList, annotations, clusters, NDR, isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE){
+isore.extendAnnotations.clusters <- function(readClassList, annotations, clusters, NDR, discoveryParameters, stranded, bpParameters, fusionMode, verbose = FALSE){
     message("--- Start extending annotations for clusters ---")
     #if clustering is a csv, create a list with the barcodes for each cluster
     #csv must have two cols with heading barcode, cluster
@@ -904,8 +904,8 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
         rowData(rcf.filt)$startSD <- 0
         rowData(rcf.filt)$endSD <- 0
         rowData(rcf.filt)$readCount.posStrand <- 0
-        thresholdIndex <- which(rowData(rcf.filt)$readCount>=isoreParameters$min.readCount)
-        model <- trainBambu(rcf.filt, verbose = verbose, min.readCount = isoreParameters$min.readCount)
+        thresholdIndex <- which(rowData(rcf.filt)$readCount>=discoveryParameters$min.readCount)
+        model <- trainBambu(rcf.filt, verbose = verbose, min.readCount = discoveryParameters$min.readCount)
         txScore <- getTranscriptScore(rowData(rcf.filt)[thresholdIndex,], model,
                                 defaultModels)
         rowData(rcf.filt)$txScore <- rep(NA,nrow(rcf.filt))
@@ -913,12 +913,12 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
         #txScores = cbind(txScores, rowData(rcf.filt)$txScore)
         rcfs.clusters[[names(clusters)[i]]] <- rcf.filt
         annotations.clusters[[names(clusters)[i]]] <- bambu.extendAnnotations(list(rcf.filt), annotations, NDR,
-                                isoreParameters, stranded, bpParameters, fusionMode, verbose)
+                                discoveryParameters, stranded, bpParameters, fusionMode, verbose)
     }
     if(length(rcfs.clusters)>0){
         print("--- Merging all individual clusters ---")
         annotations.clusters[["merged"]] <- bambu.extendAnnotations(rcfs.clusters, annotations, NDR,
-            isoreParameters, stranded, bpParameters, fusionMode, verbose)
+            discoveryParameters, stranded, bpParameters, fusionMode, verbose)
     }
       
     return(annotations.clusters)
