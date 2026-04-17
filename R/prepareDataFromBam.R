@@ -66,7 +66,7 @@ prepareDataFromBam <- function(bamFile, yieldSize = NULL, verbose = FALSE,
     readGrgList <- readGrgList <- readGrgList[sum(width(readGrgList)) > 1]
     numNoCBs <- sum(is.na(mcols(readGrgList)$CB))
     if(numNoCBs > 0){
-        message("Removing ", numNoCBs, " reads that were not assigned barcodes. If this is unexpected check the barcode map input")
+        message("Removing ", numNoCBs, " reads with no extracted cell barcode. If this is unexpected, check that extractBarcodeUMI is TRUE and that the BAM contains CB/UB tags or read names follow the CB_UMI_READNAME format.")
         readGrgList <- readGrgList[!is.na(mcols(readGrgList)$CB)]
     }
     if(dedupUMI){
