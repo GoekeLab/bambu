@@ -297,15 +297,16 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 iter <- clusters[[i]] 
               }
             }
-            countsSeCompressed <- bplapply(iter, FUN = function(columnIdx){ # previous i changed to j to avoid duplicated assignment 
+            nonuniqueCountMat_i <- generateNonUniqueCountMatrix(getReadClassDt(quantData_i), annotations, getSampleData(quantData_i)$id)
+            countsSeCompressed <- bplapply(iter, FUN = function(columnIdx){ # previous i changed to j to avoid duplicated assignment
                 #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
                 if(is.character(columnIdx)) {
                     columnIdx <- match(columnIdx, getSampleData(quantData_i)$id)
                 }
-                
+
                 incompatibleCounts_i <- getIncompatibleCounts(quantData_i)[, columnIdx, drop = FALSE]
                 incompatibleCounts_i <- rowSums(incompatibleCounts_i)
-                nonuniqueCounts_i <- getNonuniqueCounts(quantData_i)[, columnIdx, drop = FALSE]
+                nonuniqueCounts_i <- nonuniqueCountMat_i[, columnIdx, drop = FALSE]
                 nonuniqueCounts_i <- rowSums(nonuniqueCounts_i)
 
                 return(bambu.quantify(readClassDt = getReadClassDt(quantData_i), columnIdx = columnIdx,

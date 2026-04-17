@@ -8,7 +8,6 @@ setClass("quantData",
         sampleData          = "data.frame",
         readClassDt         = "data.table",
         incompatibleCounts  = "sparseMatrix",
-        nonuniqueCounts     = "sparseMatrix",
         distTable           = "ANY",
         readToTranscriptMap = "ANY"
     ),
@@ -31,14 +30,12 @@ setClass("quantData",
 #' @noRd
 constructQuantData <- function(sampleData, readClassDt,
                                incompatibleCounts,
-                               nonuniqueCounts,
                                distTable           = NULL,
                                readToTranscriptMap = NULL) {
     new("quantData",
         sampleData          = sampleData,
         readClassDt         = readClassDt,
         incompatibleCounts  = incompatibleCounts,
-        nonuniqueCounts     = nonuniqueCounts,
         distTable           = distTable,
         readToTranscriptMap = readToTranscriptMap)
 }
@@ -50,8 +47,6 @@ setGeneric("getReadClassDt",         function(x) standardGeneric("getReadClassDt
 #' @noRd
 setGeneric("getIncompatibleCounts",  function(x) standardGeneric("getIncompatibleCounts"))
 #' @noRd
-setGeneric("getNonuniqueCounts",     function(x) standardGeneric("getNonuniqueCounts"))
-#' @noRd
 setGeneric("getDistTable",           function(x) standardGeneric("getDistTable"))
 #' @noRd
 setGeneric("getReadToTranscriptMap", function(x) standardGeneric("getReadToTranscriptMap"))
@@ -62,8 +57,6 @@ setMethod("getSampleData",          "quantData", function(x) x@sampleData)
 setMethod("getReadClassDt",         "quantData", function(x) x@readClassDt)
 #' @noRd
 setMethod("getIncompatibleCounts",  "quantData", function(x) x@incompatibleCounts)
-#' @noRd
-setMethod("getNonuniqueCounts",     "quantData", function(x) x@nonuniqueCounts)
 #' @noRd
 setMethod("getDistTable",           "quantData", function(x) x@distTable)
 #' @noRd

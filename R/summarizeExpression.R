@@ -80,7 +80,9 @@ generateUniqueCountsSEFromQuantData <- function(quantData, annotations) {
     uniqueCounts <- do.call(cbind, uniqueCountsList)
 
     incompatibleCounts <- do.call(cbind, lapply(quantData, getIncompatibleCounts))
-    nonuniqueCounts <- do.call(cbind, lapply(quantData, getNonuniqueCounts))
+    nonuniqueCounts <- do.call(cbind, lapply(quantData, function(x) {
+        generateNonUniqueCountMatrix(getReadClassDt(x), annotations, getSampleData(x)$id)
+    }))
 
     colData <- do.call(rbind, lapply(quantData, getSampleData))
 
