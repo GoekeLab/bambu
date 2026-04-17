@@ -155,9 +155,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     ncore = 1, yieldSize = NULL, trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     sampleData = NULL, fusionMode = FALSE, verbose = FALSE, quantData = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
-    extractBarcodeUMI <- isTRUE(opt.singlecell$extractBarcodeUMI)
-    dedupUMI <- isTRUE(opt.singlecell$dedupUMI)
-    clusters <- opt.singlecell$clusters
     message(paste0("Running Bambu-v", "3.9.0"))
     if(!is.null(mode)){
         if(mode == "bulk"){
@@ -165,7 +162,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             processByBam <- TRUE
         }
         if(mode == "multiplexed"){
-            extractBarcodeUMI <- TRUE
+            opt.singlecell$extractBarcodeUMI <- TRUE
             opt.em <- list(degradationBias = FALSE)
             quant <- FALSE
             processByChromosome <- TRUE
@@ -193,7 +190,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
-    
+    extractBarcodeUMI <- isTRUE(opt.singlecell$extractBarcodeUMI)
+    dedupUMI <- isTRUE(opt.singlecell$dedupUMI)
+    clusters <- opt.singlecell$clusters
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, extractBarcodeUMI)
 	xgb.set.config(nthread = 1)
@@ -398,8 +397,7 @@ bambu.singlecell <- function(reads, annotations = NULL, genome = NULL, NDR = NUL
     clusters = NULL, discovery = TRUE, assignDist = TRUE, quant = TRUE,
     stranded = FALSE, ncore = 1, ...) {
     bambu(reads = reads, annotations = annotations, genome = genome, NDR = NDR,
-        opt.singlecell = list(extractBarcodeUMI = TRUE, dedupUMI = TRUE,
-            clusters = clusters),
+        opt.singlecell = list(extractBarcodeUMI = TRUE, dedupUMI = TRUE, clusters = clusters),
         discovery = discovery, assignDist = assignDist, quant = quant,
         stranded = stranded, ncore = ncore, ...)
 }
