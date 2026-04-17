@@ -62,6 +62,17 @@
 #'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
 #'     defaults to "Bambu"}
 #' }
+#' @param opt.rcAssignment A list of controlling parameters for the read class
+#' to transcript assignment process:
+#' \describe{
+#'     \item{min.exonDistance}{specifying minimum distance to known transcript
+#'     to be considered a valid match, defaults to 35bp}
+#'     \item{min.primarySecondaryDist}{specifying the minimum distance
+#'     threshold between primary and secondary assignments, defaults to 5bp}
+#'     \item{min.primarySecondaryDistStartEnd2}{specifying the minimum
+#'     distance threshold for start/end positions used for read assignment,
+#'     defaults to 5bp}
+#' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
 #' \describe{
@@ -141,8 +152,8 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
-    mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
-    assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
+    mode = NULL, opt.discovery = NULL, opt.rcAssignment = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE,
+    assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,
     trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
     fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL,
     sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
@@ -183,7 +194,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
     if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
-    
+    rcAssignmentParameters <- setRcAssignmentParameters(rcAssignmentParameters = opt.rcAssignment)
     emParameters <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
 	xgb.set.config(nthread = 1)
@@ -242,9 +253,9 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             quantData <- bplapply(seq_along(readClassList), function(i){
               assignReadClasstoTranscripts(
                 readClassList = readClassList[[i]],
-                annotations = annotations, 
-                isoreParameters = isoreParameters, 
-                verbose = verbose, 
+                annotations = annotations,
+                rcAssignmentParameters = rcAssignmentParameters,
+                verbose = verbose,
                 # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
                 sampleMetadata = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
                 demultiplexed = demultiplexed, 
