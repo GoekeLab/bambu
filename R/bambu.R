@@ -34,11 +34,8 @@
 #'     annotation to be assigned to the same gene id, defaults to 10bp}
 #'     \item{min.primarySecondaryDist}{specifying the minimum number of distance 
 #'     threshold, defaults to 5bp}
-#'     \item{min.primarySecondaryDistStartEnd1}{specifying the minimum number 
+#'     \item{min.primarySecondaryDistStartEnd1}{specifying the minimum number
 #'     of distance threshold, used for extending annotation, defaults to 5bp}
-#'     \item{min.primarySecondaryDistStartEnd2}{specifying the minimum number 
-#'     of distance threshold, used for estimating distance to annotation, 
-#'     defaults to 5bp}
 #'     \item{min.txScore.multiExon}{specifying the minimum transcript level 
 #'     threshold for multi-exon transcripts during sample combining, 
 #'     defaults to 0}
@@ -183,6 +180,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
     if(lowMemory)
         message("lowMemory has been deprecated and split into processByChromosome and processByBam. Please see Documentation")
+    if("min.primarySecondaryDistStartEnd2" %in% names(opt.discovery))
+        message("min.primarySecondaryDistStartEnd2 has been moved to opt.rcAssignment. Please pass this parameter via opt.rcAssignment instead.")
     if(is.null(annotations)){ 
         annotations <- GRangesList()
     } else {
