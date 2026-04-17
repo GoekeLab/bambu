@@ -101,6 +101,15 @@
 #' @param fusionMode A logical variable indicating whether run in fusion mode
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
+#' @param opt.singlecell A list of single-cell specific parameters:
+#' \describe{
+#'     \item{extractBarcodeUMI}{Logical, whether to extract cell barcodes and
+#'     UMIs from BAM tags or read names. Defaults to FALSE}
+#'     \item{dedupUMI}{Logical, whether to perform UMI-based deduplication per
+#'     barcode. Defaults to FALSE}
+#'     \item{clusters}{A named list mapping cluster names to barcode vectors,
+#'     used for cluster-level transcript discovery. Defaults to NULL}
+#' }
 #' @details
 #' @return \code{bambu} will output different results depending on whether
 #' \emph{quant} mode is on. By default, \emph{quant} is set to TRUE, so 
@@ -141,12 +150,14 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
-    mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
-    assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
-    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
-    fusionMode = FALSE, verbose = FALSE, extractBarcodeUMI = FALSE, quantData = NULL,
-    dedupUMI = FALSE, clusters = NULL,
+    mode = NULL, opt.discovery = NULL, opt.em = NULL, opt.singlecell = NULL,
+    rcOutDir = NULL, discovery = TRUE, assignDist = TRUE, quant = TRUE, stranded = FALSE,  
+    ncore = 1, yieldSize = NULL, trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
+    sampleData = NULL, fusionMode = FALSE, verbose = FALSE, quantData = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
+    extractBarcodeUMI <- isTRUE(opt.singlecell$extractBarcodeUMI)
+    dedupUMI <- isTRUE(opt.singlecell$dedupUMI)
+    clusters <- opt.singlecell$clusters
     message(paste0("Running Bambu-v", "3.9.0"))
     if(!is.null(mode)){
         if(mode == "bulk"){
@@ -338,39 +349,57 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
   }
 
-#' Single-cell wrapper for bambu
-#' @title Single-cell isoform reconstruction and quantification
-#' @description Wrapper around \code{\link{bambu}} for single-cell data.
-#' Accepts an \code{opt.singlecell} list for single-cell specific parameters
-#' and passes all other arguments directly to \code{\link{bambu}}.
-#' @param opt.singlecell A list of single-cell specific parameters:
-#' \describe{
-#'     \item{extractBarcodeUMI}{Logical, whether to extract cell barcodes and
-#'     UMIs from BAM tags or read names. Defaults to FALSE}
-#'     \item{dedupUMI}{Logical, whether to perform UMI-based deduplication per
-#'     barcode. Defaults to FALSE}
-#'     \item{clusters}{A named list mapping cluster names to barcode vectors,
-#'     used for cluster-level transcript discovery. Defaults to NULL}
-#' }
-#' @inheritParams bambu
+#' Single-cell isoform reconstruction and quantification
+#' @title Single-cell isoform reconstruction and quantification with Bambu
+#' @description Analyse single-cell long-read RNA-seq data with Bambu,
+#' performing isoform discovery and quantification at single-cell resolution.
+#' This function calls the main \code{\link{bambu}} function with cell
+#' barcode/UMI extraction and UMI-based deduplication enabled by default,
+#' and returns a \emph{SummarizedExperiment} object with per-cell transcript
+#' expression estimates.
+#'
+#' We recommend processing single-cell data using the Bambu Nextflow pipeline,
+#' which handles preprocessing, barcode demultiplexing, and alignment prior to
+#' running this function. See \url{https://github.com/GoekeLab/bambu-singlecell-spatial}.
+#' @param reads A string or vector of strings specifying paths to BAM files.
+#' BAM files must contain cell barcode and UMI information, either as BAM tags
+#' (\code{CB} for cell barcode, \code{UB} for UMI) or encoded in the read name
+#' using the format \code{CB_UMI#READNAME} (note: \code{CB} and \code{UMI}
+#' must not contain underscores).
+#' @param annotations A path to a .gtf file or a \code{TxDb} object for
+#' transcript annotations. Defaults to NULL.
+#' @param genome A path to a fasta file or a \code{BSGenome} object.
+#' Defaults to NULL.
+#' @param NDR Numeric specifying the maximum NDR rate for novel transcript
+#' discovery. Defaults to NULL.
+#' @param discovery Logical, whether transcript discovery is performed.
+#' Defaults to TRUE.
+#' @param assignDist Logical, whether to assign reads to transcripts.
+#' Defaults to TRUE.
+#' @param quant Logical, whether quantification is performed. Defaults to TRUE.
+#' @param clusters A named list mapping cluster names to barcode vectors,
+#' used for cluster-level transcript discovery. Defaults to NULL.
+#' @param stranded Logical, whether reads are stranded. Defaults to FALSE.
+#' @param ncore Integer specifying the number of cores for parallel processing.
+#' Defaults to 1.
+#' @param ... Additional arguments passed to \code{\link{bambu}}, such as
+#' \code{verbose}, \code{lowMemory}, \code{opt.discovery}, etc.
+#' @examples
+#' sc.bam <- system.file("extdata", "demultiplexed.bam", package = "bambu")
+#' fa.file <- system.file("extdata",
+#'     "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
+#'     package = "bambu")
+#' gr <- readRDS(system.file("extdata",
+#'     "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
+#'     package = "bambu"))
+#' se <- bambu.singlecell(reads = sc.bam, annotations = gr, genome = fa.file)
 #' @export
 bambu.singlecell <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
-    mode = NULL, opt.discovery = NULL, opt.em = NULL, opt.singlecell = NULL,
-    rcOutDir = NULL, discovery = TRUE, assignDist = TRUE, quant = TRUE,
-    stranded = FALSE, ncore = 1, yieldSize = NULL, trackReads = FALSE,
-    returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
-    fusionMode = FALSE, verbose = FALSE, quantData = NULL,
-    processByChromosome = FALSE, processByBam = TRUE) {
-    extractBarcodeUMI <- isTRUE(opt.singlecell$extractBarcodeUMI)
-    dedupUMI <- isTRUE(opt.singlecell$dedupUMI)
-    clusters <- opt.singlecell$clusters
+    clusters = NULL, discovery = TRUE, assignDist = TRUE, quant = TRUE,
+    stranded = FALSE, ncore = 1, ...) {
     bambu(reads = reads, annotations = annotations, genome = genome, NDR = NDR,
-        mode = mode, opt.discovery = opt.discovery, opt.em = opt.em,
-        rcOutDir = rcOutDir, discovery = discovery, assignDist = assignDist,
-        quant = quant, stranded = stranded, ncore = ncore, yieldSize = yieldSize,
-        trackReads = trackReads, returnDistTable = returnDistTable,
-        lowMemory = lowMemory, sampleData = sampleData, fusionMode = fusionMode,
-        verbose = verbose, extractBarcodeUMI = extractBarcodeUMI,
-        quantData = quantData, dedupUMI = dedupUMI, clusters = clusters,
-        processByChromosome = processByChromosome, processByBam = processByBam)
+        opt.singlecell = list(extractBarcodeUMI = TRUE, dedupUMI = TRUE,
+            clusters = clusters),
+        discovery = discovery, assignDist = assignDist, quant = quant,
+        stranded = stranded, ncore = ncore, ...)
 }
