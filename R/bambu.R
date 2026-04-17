@@ -191,11 +191,11 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             genomeSequence = genome, discovery = discovery, 
             sampleNames = sampleNames, sampleData = sampleData, quantData = quantData)
     }
-    isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
+    opt.discovery <- setDiscoveryParameters(discoveryParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
-    if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
-    rcAssignmentParameters <- setRcAssignmentParameters(rcAssignmentParameters = opt.rcAssignment)
-    emParameters <- setEmParameters(emParameters = opt.em)
+    if(!is.null(opt.discovery$max.txNDR)) NDR = opt.discovery$max.txNDR
+    opt.rcAssignment <- setRcAssignmentParameters(rcAssignmentParameters = opt.rcAssignment)
+    opt.em <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
 	xgb.set.config(nthread = 1)
     # only when reads is not NULL, this proceed, otherwise, it will jump to quant step
@@ -221,7 +221,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                 genomeSequence = genome, 
                                                 readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
                                                 bpParameters = bpParameters, stranded = stranded, verbose = verbose,
-                                                isoreParameters = isoreParameters, trackReads = trackReads, 
+                                                discoveryParameters = opt.discovery, trackReads = trackReads,
                                                 fusionMode = fusionMode, 
                                                 processByChromosome = processByChromosome, processByBam = processByBam, 
                                                 demultiplexed = demultiplexed,
@@ -234,14 +234,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if (discovery) {
             message("--- Start extending annotations ---")
             extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-                                                           isoreParameters, stranded, bpParameters, fusionMode, verbose)
+                                                           opt.discovery, stranded, bpParameters, fusionMode, verbose)
             metadata(extendedAnnotations)$warnings = warnings
             
             #### cluster based transcript discovery
             if(!is.null(clusters)){
                 annotations.clusters <- isore.extendAnnotations.clusters(readClassList,
-                                                                         annotations, clusters, NDR, 
-                                                                         isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE)  
+                                                                         annotations, clusters, NDR,
+                                                                         opt.discovery, stranded, bpParameters, fusionMode, verbose = FALSE)
                 metadata(extendedAnnotations)$clusters <- annotations.clusters    
             }
             annotations <- extendedAnnotations
@@ -254,7 +254,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
               assignReadClasstoTranscripts(
                 readClassList = readClassList[[i]],
                 annotations = annotations,
-                rcAssignmentParameters = rcAssignmentParameters,
+                rcAssignmentParameters = opt.rcAssignment,
                 verbose = verbose,
                 # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
                 sampleMetadata = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
@@ -270,10 +270,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     if (quant) {
         message("--- Start isoform EM quantification ---")
         if(!is.null(NDR) & !discovery)# this step is used when reset NDR is needed 
-            annotations <- setNDR(annotations, NDR, 
-                                  prefix = isoreParameters$prefix, 
-                baselineFDR = isoreParameters[["baselineFDR"]], 
-                defaultModels2 = isoreParameters[["defaultModels"]])
+            annotations <- setNDR(annotations, NDR,
+                                  prefix = opt.discovery$prefix,
+                baselineFDR = opt.discovery[["baselineFDR"]],
+                defaultModels2 = opt.discovery[["defaultModels"]])
         if(length(annotations)==0) stop("No valid annotations, if running
                                     de novo please try less stringent parameters")
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
@@ -318,8 +318,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 }
                 return(bambu.quantify(readClassDt = metadata(quantData_i)$readClassDt, countMatrix = countMatrix, 
                                             incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(metadata(quantData_i)$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
-                                            txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i, isoreParameters = isoreParameters,
-                                            emParameters = emParameters, trackReads = trackReads, 
+                                            txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i,
+                                            emParameters = opt.em, trackReads = trackReads, 
                                             verbose = verbose))}, 
                                             BPPARAM = bpParameters)
             end.ptm <- proc.time()

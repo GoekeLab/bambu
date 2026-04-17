@@ -3,14 +3,14 @@
 #' @inheritParams bambu
 #' @noRd
 bambu.extendAnnotations <- function(readClassList, annotations, NDR,
-    isoreParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE) {
+    discoveryParameters, stranded, bpParameters, fusionMode = FALSE, verbose = FALSE) {
     start.ptm_all <- proc.time()
     combinedTxCandidates <- isore.combineTranscriptCandidates(readClassList,
         stranded, ## stranded used for unspliced reduce  
-        min.readCount = isoreParameters[["min.readCount"]], 
-        min.readFractionByGene = isoreParameters[["min.readFractionByGene"]],
-        min.txScore.multiExon = isoreParameters[["min.txScore.multiExon"]],
-        min.txScore.singleExon = isoreParameters[["min.txScore.singleExon"]],
+        min.readCount = discoveryParameters[["min.readCount"]], 
+        min.readFractionByGene = discoveryParameters[["min.readFractionByGene"]],
+        min.txScore.multiExon = discoveryParameters[["min.txScore.multiExon"]],
+        min.txScore.singleExon = discoveryParameters[["min.txScore.singleExon"]],
         bpParameters,
         verbose)
     end.ptm_all <- proc.time()
@@ -20,21 +20,21 @@ bambu.extendAnnotations <- function(readClassList, annotations, NDR,
     annotations <- isore.extendAnnotations(
         combinedTranscripts = combinedTxCandidates,
         annotationGrangesList = annotations,
-        remove.subsetTx = isoreParameters[["remove.subsetTx"]],
-        min.sampleNumber = isoreParameters[["min.sampleNumber"]],
+        remove.subsetTx = discoveryParameters[["remove.subsetTx"]],
+        min.sampleNumber = discoveryParameters[["min.sampleNumber"]],
         NDR = NDR,
-        min.exonDistance = isoreParameters[["min.exonDistance"]],
-        min.exonOverlap = isoreParameters[["min.exonOverlap"]],
+        min.exonDistance = discoveryParameters[["min.exonDistance"]],
+        min.exonOverlap = discoveryParameters[["min.exonOverlap"]],
         min.primarySecondaryDist = 
-        isoreParameters[['min.primarySecondaryDist']], 
+        discoveryParameters[['min.primarySecondaryDist']], 
         min.primarySecondaryDistStartEnd = 
-        isoreParameters[['min.primarySecondaryDistStartEnd1']],
+        discoveryParameters[['min.primarySecondaryDistStartEnd1']],
         min.readFractionByEqClass =  
-        isoreParameters[['min.readFractionByEqClass']],
+        discoveryParameters[['min.readFractionByEqClass']],
         fusionMode = fusionMode,
-        prefix = isoreParameters[["prefix"]],
-        baselineFDR = isoreParameters[["baselineFDR"]],
-        defaultModels = isoreParameters[["defaultModels"]],
+        prefix = discoveryParameters[["prefix"]],
+        baselineFDR = discoveryParameters[["baselineFDR"]],
+        defaultModels = discoveryParameters[["defaultModels"]],
         verbose = verbose)
     end.ptm_all <- proc.time()
     if (verbose) message("extend annotations in ",

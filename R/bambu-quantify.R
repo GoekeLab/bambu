@@ -2,9 +2,9 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, txid.index, GENEIDs, emParameters, 
+bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, txid.index, GENEIDs, emParameters,
                            trackReads = FALSE, returnDistTable = FALSE,
-                           verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+                           verbose = FALSE) {
     start.ptm <- proc.time()
     readClassDt$nobs = countMatrix[readClassDt$eqClass.match]
     readClassDt$nobs[is.na(readClassDt$nobs)] = 0

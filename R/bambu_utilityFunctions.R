@@ -13,17 +13,17 @@ setBiocParallelParameters <- function(reads, ncore, verbose, demultiplexed){
 }
 
 
-#' setIsoreparameters
+#' setDiscoveryParameters
 #' @noRd
-setIsoreParameters <- function(isoreParameters){
+setDiscoveryParameters <- function(discoveryParameters){
     # ===# set default controlling parameters for isoform reconstruction  #===#
-    isoreParameters.default <- list(
-        remove.subsetTx = TRUE, 
+    discoveryParameters.default <- list(
+        remove.subsetTx = TRUE,
         min.readCount = 2,
         min.readFractionByGene = 0.05,
         min.sampleNumber = 1,
         min.exonDistance = 35,
-        min.exonOverlap = 10, 
+        min.exonOverlap = 10,
         min.primarySecondaryDist = 5,
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
         min.primarySecondaryDistStartEnd2 = 5, # for read assignment
@@ -34,10 +34,10 @@ setIsoreParameters <- function(isoreParameters){
         returnModel = FALSE,
         baselineFDR = 0.1,
         min.readFractionByEqClass = 0,
-        prefix = "Bambu") 
-    isoreParameters <- 
-        updateParameters(isoreParameters, isoreParameters.default)
-    return(isoreParameters)
+        prefix = "Bambu")
+    discoveryParameters <-
+        updateParameters(discoveryParameters, discoveryParameters.default)
+    return(discoveryParameters)
 }
 
 
