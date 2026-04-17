@@ -55,5 +55,5 @@ generateIncompatibleCounts <- function(incompatibleCountMatrix, annotations){
     rownames(geneMat) <- genes
     colnames(geneMat) <- colnames(incompatibleCountMatrix)
     geneMat[match(rownames(incompatibleCountMatrix), rownames(geneMat)), ] <- incompatibleCountMatrix
-    return(geneMat)
+    return(geneMat[unique(mcols(annotations)$GENEID), , drop = FALSE])
 }
