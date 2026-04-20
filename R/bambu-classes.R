@@ -3,13 +3,28 @@
 #' @importFrom data.table data.table
 #' @importClassesFrom Matrix Matrix
 #' @importClassesFrom data.table data.table
+
+# Valid values for metadata(se)$seType, which identifies the SE variant:
+#   EMCounts     — transcript-level SE with EM-estimated counts (main bambu output)
+#   geneCounts   — gene-level SE derived by collapsing transcript counts
+#   uniqueCounts — transcript-level SE with uniquely-assigned counts only, no EM
+SE_TYPES <- c(
+    EMCounts     = "EMCounts",
+    geneCounts   = "geneCounts",
+    uniqueCounts = "uniqueCounts"
+)
+
+# quantData holds per-sample intermediate results from the assignDist step.
+# distTable and readToTranscriptMap are optional: populated only when
+# returnDistTable=TRUE or trackReads=TRUE respectively, and lifted into
+# metadata(countsSe) at the end of bambu().
 setClass("quantData",
     slots = c(
-        sampleData          = "data.frame",
-        readClassDt         = "data.table",
-        incompatibleCounts  = "sparseMatrix",
-        distTable           = "ANY",
-        readToTranscriptMap = "ANY"
+        sampleData          = "data.frame",   # per-sample metadata (id, sampleName)
+        readClassDt         = "data.table",   # read-class-level count and assignment data
+        incompatibleCounts  = "sparseMatrix", # counts of reads incompatible with any annotation
+        distTable           = "ANY",          # read-class-to-transcript compatibility table (DataFrame or NULL)
+        readToTranscriptMap = "ANY"           # per-read assignment to transcripts (tibble or NULL)
     ),
     prototype = list(
         sampleData  = data.frame(id = integer(), sampleName = character()),

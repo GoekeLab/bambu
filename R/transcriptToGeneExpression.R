@@ -46,7 +46,7 @@ transcriptToGeneExpression <- function(se) {
             CPM = counts.CPM),
         rowRanges = exByGene[RowNames],
         colData = ColData)
-    metadata(seOutput)$seType <- "geneCounts"
+    metadata(seOutput)$seType <- SE_TYPES[["geneCounts"]]
     return(seOutput)
 }
 
@@ -95,7 +95,7 @@ generateUniqueCountsSEFromQuantData <- function(quantData, annotations) {
     colData(se) <- DataFrame(colData)
     metadata(se)$incompatibleCounts <- incompatibleCounts
     metadata(se)$nonuniqueCounts <- nonuniqueCounts
-    metadata(se)$seType <- "uniqueCounts"
+    metadata(se)$seType <- SE_TYPES[["uniqueCounts"]]
     return(se)
 }
 

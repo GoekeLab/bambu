@@ -287,7 +287,7 @@ combineCountSes <- function(countsSe, colDataList, annotations){
                                                         fullLengthCounts = countsDataMat$fullLengthCounts, 
                                                         uniqueCounts = countsDataMat$uniqueCounts))
     metadata(combinedCountsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
-    metadata(combinedCountsSe)$seType <- "EMCounts"
+    metadata(combinedCountsSe)$seType <- SE_TYPES[["EMCounts"]]
     rowRanges(combinedCountsSe) <- annotations
 
     colData(combinedCountsSe) <- DataFrame(bind_rows(colDataList))
