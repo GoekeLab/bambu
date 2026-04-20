@@ -12,7 +12,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     readClassDt$eqClass.match = match(readClassDt$eqClassById,metadata(readClassList)$eqClassById)
 
     # Add columnIds and columnCounts columns
-    readClassDt[, `:=`(columnIds = as.list(rep(NA, .N)), columnCounts = as.list(rep(NA, .N)))]
+    readClassDt[, `:=`(columnIds = vector("list", .N), columnCounts = vector("list", .N))]
     observedIdx <- which(!is.na(readClassDt$eqClass.match))
     readClassDt$columnIds[observedIdx] <- metadata(readClassList)$columnIds[readClassDt$eqClass.match[observedIdx]]
     readClassDt$columnCounts[observedIdx] <- metadata(readClassList)$columnCounts[readClassDt$eqClass.match[observedIdx]]
@@ -29,11 +29,17 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, isoreParame
     incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix
     incompatibleCounts <- generateIncompatibleCounts(incompatibleCountMatrix, annotations)
 
-    distTable <- if(returnDistTable) metadata(metadata(readClassList)$readClassDist)$distTableOld else NULL
+    distTable <- if(returnDistTable) {
+        metadata(metadata(readClassList)$readClassDist)$distTableOld
+    } else{
+        NULL
+    }
 
-    readToTranscriptMap <- if(trackReads) generateReadToTranscriptMap(readClassList,
-                                        metadata(readClassList)$readClassDist,
-                                        annotations) else NULL
+    readToTranscriptMap <- if(trackReads) {
+        generateReadToTranscriptMap(readClassList, metadata(readClassList)$readClassDist,annotations)
+    } else{
+        NULL
+    }
 
     quantData <- constructQuantData(
         sampleData          = data.frame(ColData),
