@@ -81,14 +81,14 @@ generateUniqueCountsSEFromQuantData <- function(quantData, annotations) {
         colnames(uniqueCounts) <- rownames(getSampleData(x))
         return(uniqueCounts)
     })
-    uniqueCounts <- do.call(cbind, uniqueCountsList)
+    uniqueCounts <- do.call(cbind, unname(uniqueCountsList))
 
-    incompatibleCounts <- do.call(cbind, lapply(quantData, getIncompatibleCounts))
-    nonuniqueCounts <- do.call(cbind, lapply(quantData, function(x) {
+    incompatibleCounts <- do.call(cbind, unname(lapply(quantData, getIncompatibleCounts)))
+    nonuniqueCounts <- do.call(cbind, unname(lapply(quantData, function(x) {
         generateNonUniqueCountMatrix(getReadClassDt(x), annotations, getSampleData(x)$id)
-    }))
+    })))
 
-    colData <- do.call(rbind, lapply(quantData, getSampleData))
+    colData <- do.call(rbind, unname(lapply(quantData, getSampleData)))
 
     se <- SummarizedExperiment(assays = SimpleList(counts = uniqueCounts))
     rowRanges(se) <- annotations
