@@ -3,30 +3,28 @@
 #' setBiocParallelParameters
 #' @importFrom BiocParallel bpparam
 #' @noRd
-setBiocParallelParameters <- function(reads, ncore, verbose, demultiplexed){
+setBiocParallelParameters <- function(reads, ncore, verbose, extractBarcodeUMI){
     bpParameters <- bpparam()
     #===# set parallel options: otherwise use parallel to distribute samples
-    # when demultiplexed is FALSE, isFALSE(demultiplexed) is TRUE
-    bpParameters$workers <- ifelse(length(reads) == 1 & isFALSE(demultiplexed), 1, ncore)
+    bpParameters$workers <- ifelse(length(reads) == 1 & !extractBarcodeUMI, 1, ncore)
     bpParameters$progressbar <- ifelse(length(reads) > 1 & !verbose, TRUE, FALSE)
     return(bpParameters)
 }
 
 
-#' setIsoreparameters
+#' setDiscoveryParameters
 #' @noRd
-setIsoreParameters <- function(isoreParameters){
+setDiscoveryParameters <- function(discoveryParameters){
     # ===# set default controlling parameters for isoform reconstruction  #===#
-    isoreParameters.default <- list(
-        remove.subsetTx = TRUE, 
+    discoveryParameters.default <- list(
+        remove.subsetTx = TRUE,
         min.readCount = 2,
         min.readFractionByGene = 0.05,
         min.sampleNumber = 1,
         min.exonDistance = 35,
-        min.exonOverlap = 10, 
+        min.exonOverlap = 10,
         min.primarySecondaryDist = 5,
         min.primarySecondaryDistStartEnd1 = 5, # for creating new annotations
-        min.primarySecondaryDistStartEnd2 = 5, # for read assignment
         min.txScore.multiExon = 0,
         min.txScore.singleExon = 1,
         fitReadClassModel = TRUE,
@@ -34,10 +32,23 @@ setIsoreParameters <- function(isoreParameters){
         returnModel = FALSE,
         baselineFDR = 0.1,
         min.readFractionByEqClass = 0,
-        prefix = "Bambu") 
-    isoreParameters <- 
-        updateParameters(isoreParameters, isoreParameters.default)
-    return(isoreParameters)
+        prefix = "Bambu")
+    discoveryParameters <-
+        updateParameters(discoveryParameters, discoveryParameters.default)
+    return(discoveryParameters)
+}
+
+
+#' setRcAssignmentParameters
+#' @noRd
+setRcAssignmentParameters <- function(rcAssignmentParameters){
+    rcAssignmentParameters.default <- list(
+        min.exonDistance = 35,
+        min.primarySecondaryDist = 5,
+        min.primarySecondaryDistStartEnd2 = 5)
+    rcAssignmentParameters <-
+        updateParameters(rcAssignmentParameters, rcAssignmentParameters.default)
+    return(rcAssignmentParameters)
 }
 
 
@@ -72,8 +83,8 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param readClass.outputDir path to readClass output directory
 #' @importFrom methods is
 #' @noRd
-checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence, 
-                        discovery, sampleNames, sampleData, quantData){
+checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
+                        discovery, sampleData, quantData){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
@@ -146,14 +157,6 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
             warning("Note that use of FaFile using Rsamtools in Windows is a bit
             fuzzy, recommend to provide the path as a string variable to avoid
             use of Rsamtools for opening.")
-    }
-
-    #check single-cell and spatial inputs match
-    if(!is.null(sampleNames)){
-        if(length(reads)!=length(sampleNames)){
-            stop("There are not the same number of sampleNames as input files to reads. ",
-            "Make sure these two arguments are vectors of the same length")
-        }
     }
 
     if(!is.null(sampleData)){
@@ -242,11 +245,11 @@ handleWarnings <- function(readClassList, verbose){
 }
 
 #' Calculate the dist table used for Bambu Quantification
-calculateDistTable <- function(readClassList, annotations, isoreParameters, verbose, returnDistTable){
+calculateDistTable <- function(readClassList, annotations, rcAssignmentParameters, verbose, returnDistTable){
     readClassDist <- isore.estimateDistanceToAnnotations(readClassList, annotations,
-                                                            min.exonDistance = isoreParameters[["min.exonDistance"]],
-                                                            min.primarySecondaryDist = isoreParameters[['min.primarySecondaryDist']],
-                                                            min.primarySecondaryDistStartEnd = isoreParameters[['min.primarySecondaryDistStartEnd2']],
+                                                            min.exonDistance = rcAssignmentParameters[["min.exonDistance"]],
+                                                            min.primarySecondaryDist = rcAssignmentParameters[['min.primarySecondaryDist']],
+                                                            min.primarySecondaryDistStartEnd = rcAssignmentParameters[['min.primarySecondaryDistStartEnd2']],
                                                             verbose = verbose)
         metadata(readClassDist)$distTable <- modifyIncompatibleAssignment(metadata(readClassDist)$distTable)
         if(returnDistTable) metadata(readClassDist)$distTableOld <- metadata(readClassDist)$distTable
@@ -298,25 +301,25 @@ combineCountSes <- function(countsSe, colDataList, annotations){
 #' Generate the colData using the external sampleMetadata.csv provided by the user in the sampleMetadata argument
 #' @param readClassList A list object containingmetadata about read classes.
 #' @param sampleMetadata A path to a CSV file or NULL/NA if there is no metadata for the sample.
-#' @param demultiplexed Logical; indicates if data is demultiplexed.
+#' @param extractBarcodeUMI Logical; indicates if barcodes and UMIs are extracted.
 #'
 #' @return A DataFrame containing colData for the sample.
 #' @export
-generateColData <- function(readClassList, sampleMetadata, demultiplexed) {
+generateColData <- function(readClassList, sampleMetadata, extractBarcodeUMI) {
   sampleMetadataDf <- if (is.null(sampleMetadata) || is.na(sampleMetadata)) {
-    if (demultiplexed) tibble(barcode = character()) else tibble(sampleName = character())
+    if (extractBarcodeUMI) tibble(barcode = character()) else tibble(sampleName = character())
   } else {
     fread(sampleMetadata)
   }
 
-  joinKey <- if (demultiplexed) "barcode" else "sampleName"
+  joinKey <- if (extractBarcodeUMI) "barcode" else "sampleName"
 
   colData <- tibble(
-      id = metadata(readClassList)$sampleData$id, 
+      id = metadata(readClassList)$sampleData$id,
       sampleName = metadata(readClassList)$sampleData$sampleName
-  ) 
+  )
 
-  if (demultiplexed) {
+  if (extractBarcodeUMI) {
       colData <- colData %>%
         mutate(barcode = metadata(readClassList)$sampleData$barcode)
   }

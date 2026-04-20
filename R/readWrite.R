@@ -16,8 +16,8 @@
 #' ))
 #' path <- tempdir()
 #' writeBambuOutput(se, path)
-writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE, 
-                             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE, seperateSamples = FALSE) {
+writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
+                             outputAll = TRUE, outputBambuModels = TRUE, outputNovelOnly = TRUE) {
     if (missing(se) | missing(path)) {
         stop("Both summarizedExperiment object from bambu and
             the path for the output files are required.")
@@ -59,29 +59,6 @@ writeBambuOutput <- function(se, path, prefix = "", outputExtendedAnno = TRUE,
         #R.utils::gzip(paste0(outdir, "txANDgenes.tsv"))
         #R.utils::gzip(paste0(outdir, "genes.tsv"))
 
-        #If there are multiple samples (when demultiplexed), seperate each sample into its own directory
-        if(seperateSamples){
-            fullSe = se
-            for(sampleName in unique(colData(fullSe)$sampleName)){
-                dir.create(file.path(outdir, sampleName), showWarnings = FALSE)
-                se = fullSe[,colData(fullSe)$sampleName == sampleName]
-                metadata(se)$incompatibleCounts = metadata(se)$incompatibleCounts[,colData(fullSe)$sampleName == sampleName]
-                for(d in names(assays(se))){
-                    writeCountsOutput(se, varname=d,
-                                feature='transcript',outdir=paste0(outdir, sampleName,"/"), prefix)
-                }
-                if(!is.null(metadata(se)$incompatibleCounts)){
-                    estimates = metadata(se)$incompatibleCounts
-                    estimatesfn <- paste(outdir, "/", sampleName,"/", prefix, "incompatibleCounts.mtx", sep = "")
-                        Matrix::writeMM(estimates, estimatesfn)
-                }
-                seGene <- transcriptToGeneExpression(se)
-                writeCountsOutput(seGene, varname='counts', feature='gene',paste0(outdir, sampleName,"/"), prefix)
-                utils::write.table(colData(se), file = paste0(outdir, "/", sampleName, "/", prefix, "sampleData.tsv"), 
-                    sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-                #utils::write.table(paste0(colnames(se), "-1"), file = paste0(outdir, "barcodes.tsv"), quote = FALSE, row.names = FALSE, col.names = FALSE)
-            }
-        }
     }
 }
 

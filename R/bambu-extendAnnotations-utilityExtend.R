@@ -112,7 +112,7 @@ filterTranscriptsByAnnotation <- function(rowDataCombined, annotationGrangesList
   } else if(is.null(NDR)) {
           NDR <- 0.5
   }
-  filterSet <- (rowDataCombined$NDR <= NDR | rowDataCombined$readClassType == "equal:compatible")
+  filterSet <- ((!is.na(rowDataCombined$NDR) & rowDataCombined$NDR <= NDR) | rowDataCombined$readClassType == "equal:compatible")
   lowConfidenceTranscripts <- combindRowDataWithRanges(
         rowDataCombined[!filterSet,], 
         exonRangesCombined[!filterSet])
@@ -224,7 +224,7 @@ calculateNDROnTranscripts <- function(combinedTranscripts, useTxScore = FALSE){
     } else {
         combinedTranscripts$NDR <- calculateNDR(combinedTranscripts$maxTxScore, equal)
     }
-    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==-1] <- 1
+    combinedTranscripts$NDR[combinedTranscripts$maxTxScore==-1] <- NA
     return(combinedTranscripts)
 }
 
@@ -827,7 +827,6 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @description This function train a model for use on other data
 #' @param extendedAnnotations A GRangesList object produced from bambu(quant = FALSE) or rowRanges(se)
 #' @param NDR The maximum NDR for novel transcripts to be in extendedAnnotations (0-1). If not provided a recommended NDR is calculated.
-#' @param includeRef A boolean which if TRUE will also filter out reference annotations based on their NDR
 #' @param prefix A string which determines which transcripts are considered novel by bambu and will be filtered (by default = 'Bambu')
 #' @param baselineFDR a value between 0-1. Bambu uses this FDR on the trained model to recommend an equivilent NDR threshold to be used for the sample. By default, a baseline FDR of 0.1 is used. This does not impact the analysis if an NDR is set.
 #' @param defaultModels a bambu trained model object that bambu will use when fitReadClassModel==FALSE or the data is not suitable for training, defaults to the pretrained model in the bambu package
@@ -835,7 +834,7 @@ addGeneIdsToReadClassTable <- function(readClassTable, distTable,
 #' @details 
 #' @return extendedAnnotations with a new NDR threshold
 #' @export
-setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix = 'Bambu', baselineFDR = 0.1, defaultModels2 = defaultModels){
+setNDR <- function(extendedAnnotations, NDR = NULL, prefix = 'Bambu', baselineFDR = 0.1, defaultModels2 = defaultModels){
     #Check to see if the annotations/gtf are dervived from Bambu
     if(is.null(mcols(extendedAnnotations)$NDR)){
         warning("Annotations were not extended by Bambu (or the wrong prefix was provided). NDR can not be set")
@@ -852,17 +851,10 @@ setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix =
         message("Recommending a novel discovery rate (NDR) of: ", NDR)
     }
 
-    #If reference annotations should be filtered too (note that reference annotations with no read support arn't filtered)
-    if(includeRef){
-        toRemove <- (!is.na(mcols(extendedAnnotations)$NDR) & mcols(extendedAnnotations)$NDR > NDR)
-        toAdd <- !is.na(mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR) & 
-            mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR  
-    } else {
-        toRemove <- (mcols(extendedAnnotations)$NDR > NDR & 
-            grepl(prefix, mcols(extendedAnnotations)$TXNAME))
-        toAdd <- (mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR & 
-            grepl(prefix, mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$TXNAME))     
-    }
+    toRemove <- (mcols(extendedAnnotations)$NDR > NDR &
+        grepl(prefix, mcols(extendedAnnotations)$TXNAME))
+    toAdd <- (mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$NDR <= NDR &
+        grepl(prefix, mcols(metadata(extendedAnnotations)$lowConfidenceTranscripts)$TXNAME))
   
   temp <- c(metadata(extendedAnnotations)$lowConfidenceTranscripts[!toAdd], extendedAnnotations[toRemove])
   extendedAnnotations <- c(extendedAnnotations[!toRemove], metadata(extendedAnnotations)$lowConfidenceTranscripts[toAdd])
@@ -880,7 +872,7 @@ setNDR <- function(extendedAnnotations, NDR = NULL, includeRef = FALSE, prefix =
 
 #' Extend annotations by clusters
 #' @noRd
-isore.extendAnnotations.clusters <- function(readClassList, annotations, clusters, NDR, isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE){
+isore.extendAnnotations.clusters <- function(readClassList, annotations, clusters, NDR, discoveryParameters, stranded, bpParameters, fusionMode, verbose = FALSE){
     message("--- Start extending annotations for clusters ---")
     #if clustering is a csv, create a list with the barcodes for each cluster
     #csv must have two cols with heading barcode, cluster
@@ -898,7 +890,7 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
     for(i in seq_along(clusters)){
         print(names(clusters)[i])
         ###TODO need to account for the sample name here which is added to the barcode
-        index <- match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples)) 
+        index <- match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples))
         index <- index[!is.na(index)]
         print(length(index))
         if(length(index)<20) next
@@ -912,8 +904,8 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
         rowData(rcf.filt)$startSD <- 0
         rowData(rcf.filt)$endSD <- 0
         rowData(rcf.filt)$readCount.posStrand <- 0
-        thresholdIndex <- which(rowData(rcf.filt)$readCount>=isoreParameters$min.readCount)
-        model <- trainBambu(rcf.filt, verbose = verbose, min.readCount = isoreParameters$min.readCount)
+        thresholdIndex <- which(rowData(rcf.filt)$readCount>=discoveryParameters$min.readCount)
+        model <- trainBambu(rcf.filt, verbose = verbose, min.readCount = discoveryParameters$min.readCount)
         txScore <- getTranscriptScore(rowData(rcf.filt)[thresholdIndex,], model,
                                 defaultModels)
         rowData(rcf.filt)$txScore <- rep(NA,nrow(rcf.filt))
@@ -921,12 +913,12 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
         #txScores = cbind(txScores, rowData(rcf.filt)$txScore)
         rcfs.clusters[[names(clusters)[i]]] <- rcf.filt
         annotations.clusters[[names(clusters)[i]]] <- bambu.extendAnnotations(list(rcf.filt), annotations, NDR,
-                                isoreParameters, stranded, bpParameters, fusionMode, verbose)
+                                discoveryParameters, stranded, bpParameters, fusionMode, verbose)
     }
     if(length(rcfs.clusters)>0){
         print("--- Merging all individual clusters ---")
         annotations.clusters[["merged"]] <- bambu.extendAnnotations(rcfs.clusters, annotations, NDR,
-            isoreParameters, stranded, bpParameters, fusionMode, verbose)
+            discoveryParameters, stranded, bpParameters, fusionMode, verbose)
     }
       
     return(annotations.clusters)

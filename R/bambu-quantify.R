@@ -4,7 +4,7 @@
 #' @noRd
 bambu.quantify <- function(readClassDt, columnIdx, incompatibleCounts, txid.index, GENEIDs, emParameters,
                            trackReads = FALSE, returnDistTable = FALSE,
-                           verbose = FALSE, isoreParameters = setIsoreParameters(NULL)) {
+                           verbose = FALSE) {
     start.ptm <- proc.time()
 
     # Calculate nobs for sample(s) columnIdx

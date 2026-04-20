@@ -34,11 +34,8 @@
 #'     annotation to be assigned to the same gene id, defaults to 10bp}
 #'     \item{min.primarySecondaryDist}{specifying the minimum number of distance 
 #'     threshold, defaults to 5bp}
-#'     \item{min.primarySecondaryDistStartEnd1}{specifying the minimum number 
+#'     \item{min.primarySecondaryDistStartEnd1}{specifying the minimum number
 #'     of distance threshold, used for extending annotation, defaults to 5bp}
-#'     \item{min.primarySecondaryDistStartEnd2}{specifying the minimum number 
-#'     of distance threshold, used for estimating distance to annotation, 
-#'     defaults to 5bp}
 #'     \item{min.txScore.multiExon}{specifying the minimum transcript level 
 #'     threshold for multi-exon transcripts during sample combining, 
 #'     defaults to 0}
@@ -61,6 +58,17 @@
 #'     caution. defaults to 0}
 #'     \item{prefix}{specifying prefix for new gene Ids (genePrefix.number),
 #'     defaults to "Bambu"}
+#' }
+#' @param opt.rcAssignment A list of controlling parameters for the read class
+#' to transcript assignment process:
+#' \describe{
+#'     \item{min.exonDistance}{specifying minimum distance to known transcript
+#'     to be considered a valid match, defaults to 35bp}
+#'     \item{min.primarySecondaryDist}{specifying the minimum distance
+#'     threshold between primary and secondary assignments, defaults to 5bp}
+#'     \item{min.primarySecondaryDistStartEnd2}{specifying the minimum
+#'     distance threshold for start/end positions used for read assignment,
+#'     defaults to 5bp}
 #' }
 #' @param opt.em A list of controlling parameters for quantification
 #' algorithm estimation process:
@@ -101,6 +109,15 @@
 #' @param fusionMode A logical variable indicating whether run in fusion mode
 #' @param verbose A logical variable indicating whether processing messages will
 #' be printed.
+#' @param opt.singlecell A list of single-cell specific parameters:
+#' \describe{
+#'     \item{extractBarcodeUMI}{Logical, whether to extract cell barcodes and
+#'     UMIs from BAM tags or read names. Defaults to FALSE}
+#'     \item{dedupUMI}{Logical, whether to perform UMI-based deduplication per
+#'     barcode. Defaults to FALSE}
+#'     \item{clusters}{A named list mapping cluster names to barcode vectors,
+#'     used for cluster-level transcript discovery. Defaults to NULL}
+#' }
 #' @details
 #' @return \code{bambu} will output different results depending on whether
 #' \emph{quant} mode is on. By default, \emph{quant} is set to TRUE, so 
@@ -141,11 +158,10 @@
 #'     genome = fa.file,  discovery = TRUE, quant = TRUE)
 #' @export
 bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
-    mode = NULL, opt.discovery = NULL, opt.em = NULL, rcOutDir = NULL, discovery = TRUE, 
-    assignDist = TRUE, quant = TRUE, stranded = FALSE,  ncore = 1, yieldSize = NULL,  
-    trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, sampleData = NULL,
-    fusionMode = FALSE, verbose = FALSE, demultiplexed = FALSE, quantData = NULL,
-    sampleNames = NULL, cleanReads = FALSE, dedupUMI = FALSE, barcodesToFilter = NULL, clusters = NULL,
+    mode = NULL, opt.discovery = NULL, opt.rcAssignment = NULL, opt.em = NULL, opt.singlecell = NULL,
+    rcOutDir = NULL, discovery = TRUE, assignDist = TRUE, quant = TRUE, stranded = FALSE,  
+    ncore = 1, yieldSize = NULL, trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
+    sampleData = NULL, fusionMode = FALSE, verbose = FALSE, quantData = NULL,
     processByChromosome = FALSE, processByBam = TRUE) {
     message(paste0("Running Bambu-v", "3.9.0"))
     if(!is.null(mode)){
@@ -154,8 +170,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             processByBam <- TRUE
         }
         if(mode == "multiplexed"){
-            demultiplexed <- TRUE
-            cleanReads <- TRUE
+            opt.singlecell$extractBarcodeUMI <- TRUE
             opt.em <- list(degradationBias = FALSE)
             quant <- FALSE
             processByChromosome <- TRUE
@@ -163,6 +178,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(mode == "fusion"){
             NDR <- 1
             fusionMode <- TRUE
+            if(is.null(opt.discovery)) opt.discovery <- list()
+            opt.discovery$remove.subsetTx <- FALSE
+            opt.discovery$min.readCount <- 1
+            opt.discovery$min.sampleNumber <- 0
         }
         if(mode == "debug"){
             verbose <- TRUE
@@ -172,20 +191,25 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
     if(lowMemory)
         message("lowMemory has been deprecated and split into processByChromosome and processByBam. Please see Documentation")
+    if("min.primarySecondaryDistStartEnd2" %in% names(opt.discovery))
+        message("min.primarySecondaryDistStartEnd2 has been moved to opt.rcAssignment. Please pass this parameter via opt.rcAssignment instead.")
     if(is.null(annotations)){ 
         annotations <- GRangesList()
     } else {
         annotations <- checkInputs(annotations, reads,
-            readClass.outputDir = rcOutDir, 
-            genomeSequence = genome, discovery = discovery, 
-            sampleNames = sampleNames, sampleData = sampleData, quantData = quantData)
+            readClass.outputDir = rcOutDir,
+            genomeSequence = genome, discovery = discovery,
+            sampleData = sampleData, quantData = quantData)
     }
-    isoreParameters <- setIsoreParameters(isoreParameters = opt.discovery)
+    opt.discovery <- setDiscoveryParameters(discoveryParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
-    if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
-    
-    emParameters <- setEmParameters(emParameters = opt.em)
-    bpParameters <- setBiocParallelParameters(reads, ncore, verbose, demultiplexed)
+    if(!is.null(opt.discovery$max.txNDR)) NDR = opt.discovery$max.txNDR
+    opt.rcAssignment <- setRcAssignmentParameters(rcAssignmentParameters = opt.rcAssignment)
+    opt.em <- setEmParameters(emParameters = opt.em)
+    extractBarcodeUMI <- isTRUE(opt.singlecell$extractBarcodeUMI)
+    dedupUMI <- isTRUE(opt.singlecell$dedupUMI)
+    clusters <- opt.singlecell$clusters
+    bpParameters <- setBiocParallelParameters(reads, ncore, verbose, extractBarcodeUMI)
 	xgb.set.config(nthread = 1)
     # only when reads is not NULL, this proceed, otherwise, it will jump to quant step
     if(!is.null(reads)){ 
@@ -210,12 +234,11 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                 genomeSequence = genome, 
                                                 readClass.outputDir = rcOutDir, yieldSize = yieldSize, 
                                                 bpParameters = bpParameters, stranded = stranded, verbose = verbose,
-                                                isoreParameters = isoreParameters, trackReads = trackReads, 
+                                                discoveryParameters = opt.discovery, trackReads = trackReads,
                                                 fusionMode = fusionMode, 
                                                 processByChromosome = processByChromosome, processByBam = processByBam, 
-                                                demultiplexed = demultiplexed,
-                                                sampleNames = sampleNames, cleanReads = cleanReads, 
-                                                dedupUMI = dedupUMI,barcodesToFilter = barcodesToFilter)
+                                                extractBarcodeUMI = extractBarcodeUMI,
+                                                dedupUMI = dedupUMI)
         }
         
         #warnings = handleWarnings(readClassList, verbose)
@@ -223,14 +246,14 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if (discovery) {
             message("--- Start extending annotations ---")
             extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
-                                                           isoreParameters, stranded, bpParameters, fusionMode, verbose)
+                                                           opt.discovery, stranded, bpParameters, fusionMode, verbose)
             metadata(extendedAnnotations)$warnings = warnings
             
             #### cluster based transcript discovery
             if(!is.null(clusters)){
                 annotations.clusters <- isore.extendAnnotations.clusters(readClassList,
-                                                                         annotations, clusters, NDR, 
-                                                                         isoreParameters, stranded, bpParameters, fusionMode, verbose = FALSE)  
+                                                                         annotations, clusters, NDR,
+                                                                         opt.discovery, stranded, bpParameters, fusionMode, verbose = FALSE)
                 metadata(extendedAnnotations)$clusters <- annotations.clusters    
             }
             annotations <- extendedAnnotations
@@ -242,12 +265,12 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             quantData <- bplapply(seq_along(readClassList), function(i){
               assignReadClasstoTranscripts(
                 readClassList = readClassList[[i]],
-                annotations = annotations, 
-                isoreParameters = isoreParameters, 
-                verbose = verbose, 
+                annotations = annotations,
+                rcAssignmentParameters = opt.rcAssignment,
+                verbose = verbose,
                 # for bulk data, there is one sampleData (keep sampleData[1]), for single-cell, there is one per sample
                 sampleMetadata = if(length(sampleData) == 1) sampleData[1] else sampleData[i],
-                demultiplexed = demultiplexed, 
+                extractBarcodeUMI = extractBarcodeUMI,
                 returnDistTable = returnDistTable,
                 trackReads = trackReads
               )
@@ -260,10 +283,10 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     if (quant) {
         message("--- Start isoform EM quantification ---")
         if(!is.null(NDR) & !discovery)# this step is used when reset NDR is needed 
-            annotations <- setNDR(annotations, NDR, 
-                                  prefix = isoreParameters$prefix, 
-                baselineFDR = isoreParameters[["baselineFDR"]], 
-                defaultModels2 = isoreParameters[["defaultModels"]])
+            annotations <- setNDR(annotations, NDR,
+                                  prefix = opt.discovery$prefix,
+                baselineFDR = opt.discovery[["baselineFDR"]],
+                defaultModels2 = opt.discovery[["defaultModels"]])
         if(length(annotations)==0) stop("No valid annotations, if running
                                     de novo please try less stringent parameters")
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
@@ -277,17 +300,17 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             # single-cell mode: iter is an integer vector of column indices, one per barcode
             iter <- seq_len(nrow(getSampleData(quantData_i)))
             if(!is.null(clusters)){
-              if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList 
+              if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList
                 clusterMaps <- NULL
                 for(j in seq_along(getSampleData(quantData_i)$sampleName)){ #load in a file per sample name provided
                   clusterMap <- fread(clusters[[j]], header = FALSE, 
                                       data.table = FALSE)
-                  # read.table(clusters[[j]], 
-                  #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","), 
+                  # read.table(clusters[[j]],
+                  #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","),
                   #     header = FALSE)
                   clusterMap[,1] <- paste0(getSampleData(quantData_i)$sampleName[j],
                                            "_",clusterMap[,1])
-                  clusterMaps <- rbind(clusterMaps, clusterMap)                        
+                  clusterMaps <- rbind(clusterMaps, clusterMap)
                 }
                 clustering <- splitAsList(clusterMaps[,1], clusterMaps[,2])
                 rm(clusterMaps)
@@ -307,7 +330,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
 
                 return(bambu.quantify(readClassDt = getReadClassDt(quantData_i), columnIdx = columnIdx,
                                             incompatibleCounts = data.table(GENEID.i = rownames(incompatibleCounts_i), counts = as.vector(incompatibleCounts_i)),
-                                            txid.index = mcols(annotations)$txid, GENEIDs = rownames(incompatibleCounts_i), isoreParameters = isoreParameters,
+                                            txid.index = mcols(annotations)$txid, GENEIDs = rownames(incompatibleCounts_i),
                                             emParameters = emParameters, trackReads = trackReads,
                                             verbose = verbose))}, 
                                             BPPARAM = bpParameters)
@@ -348,3 +371,57 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         return(countsSe)
     }
   }
+
+#' Single-cell isoform reconstruction and quantification
+#' @title Single-cell isoform reconstruction and quantification with Bambu
+#' @description Analyse single-cell long-read RNA-seq data with Bambu,
+#' performing isoform discovery and quantification at single-cell resolution.
+#' This function calls the main \code{\link{bambu}} function with cell
+#' barcode/UMI extraction and UMI-based deduplication enabled by default,
+#' and returns a \emph{SummarizedExperiment} object with per-cell transcript
+#' expression estimates.
+#'
+#' We recommend processing single-cell data using the Bambu Nextflow pipeline,
+#' which handles preprocessing, barcode demultiplexing, and alignment prior to
+#' running this function. See \url{https://github.com/GoekeLab/bambu-singlecell-spatial}.
+#' @param reads A string or vector of strings specifying paths to BAM files.
+#' BAM files must contain cell barcode and UMI information, either as BAM tags
+#' (\code{CB} for cell barcode, \code{UB} for UMI) or encoded in the read name
+#' using the format \code{CB_UMI#READNAME} (note: \code{CB} and \code{UMI}
+#' must not contain underscores).
+#' @param annotations A path to a .gtf file or a \code{TxDb} object for
+#' transcript annotations. Defaults to NULL.
+#' @param genome A path to a fasta file or a \code{BSGenome} object.
+#' Defaults to NULL.
+#' @param NDR Numeric specifying the maximum NDR rate for novel transcript
+#' discovery. Defaults to NULL.
+#' @param discovery Logical, whether transcript discovery is performed.
+#' Defaults to TRUE.
+#' @param assignDist Logical, whether to assign reads to transcripts.
+#' Defaults to TRUE.
+#' @param quant Logical, whether quantification is performed. Defaults to TRUE.
+#' @param clusters A named list mapping cluster names to barcode vectors,
+#' used for cluster-level transcript discovery. Defaults to NULL.
+#' @param stranded Logical, whether reads are stranded. Defaults to FALSE.
+#' @param ncore Integer specifying the number of cores for parallel processing.
+#' Defaults to 1.
+#' @param ... Additional arguments passed to \code{\link{bambu}}, such as
+#' \code{verbose}, \code{lowMemory}, \code{opt.discovery}, etc.
+#' @examples
+#' sc.bam <- system.file("extdata", "demultiplexed.bam", package = "bambu")
+#' fa.file <- system.file("extdata",
+#'     "Homo_sapiens.GRCh38.dna_sm.primary_assembly_chr9_1_1000000.fa",
+#'     package = "bambu")
+#' gr <- readRDS(system.file("extdata",
+#'     "annotationGranges_txdbGrch38_91_chr9_1_1000000.rds",
+#'     package = "bambu"))
+#' se <- bambu.singlecell(reads = sc.bam, annotations = gr, genome = fa.file)
+#' @export
+bambu.singlecell <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
+    clusters = NULL, discovery = TRUE, assignDist = TRUE, quant = TRUE,
+    stranded = FALSE, ncore = 1, ...) {
+    bambu(reads = reads, annotations = annotations, genome = genome, NDR = NDR,
+        opt.singlecell = list(extractBarcodeUMI = TRUE, dedupUMI = TRUE, clusters = clusters),
+        discovery = discovery, assignDist = assignDist, quant = quant,
+        stranded = stranded, ncore = ncore, ...)
+}
