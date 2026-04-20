@@ -14,7 +14,7 @@
 #' @noRd
 bambu.processReads <- function(reads, annotations, genomeSequence,
     readClass.outputDir=NULL, yieldSize=1000000, bpParameters, 
-    stranded=FALSE, verbose=FALSE, isoreParameters = setIsoreParameters(NULL),
+    stranded=FALSE, verbose=FALSE, discoveryParameters = setDiscoveryParameters(NULL),
     processByChromosome = FALSE, processByBam = TRUE, trackReads = trackReads, fusionMode = fusionMode, 
     extractBarcodeUMI = FALSE, dedupUMI = FALSE) {
     genomeSequence <- checkInputSequence(genomeSequence)
@@ -40,11 +40,11 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
         reads <- BamFileList(reads, yieldSize = yieldSize)
         names(reads) <- tools::file_path_sans_ext(BiocGenerics::basename(reads))
     }
-    min.readCount <- isoreParameters[["min.readCount"]]
-    fitReadClassModel <- isoreParameters[["fitReadClassModel"]]
-    defaultModels <- isoreParameters[["defaultModels"]]
-    returnModel <- isoreParameters[["returnModel"]]
-    min.exonOverlap <- isoreParameters[["min.exonOverlap"]]
+    min.readCount <- discoveryParameters[["min.readCount"]]
+    fitReadClassModel <- discoveryParameters[["fitReadClassModel"]]
+    defaultModels <- discoveryParameters[["defaultModels"]]
+    returnModel <- discoveryParameters[["returnModel"]]
+    min.exonOverlap <- discoveryParameters[["min.exonOverlap"]]
 
     if(processByBam){
         readClassList <- bplapply(seq_along(reads), function(i) {
