@@ -331,7 +331,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 return(bambu.quantify(readClassDt = getReadClassDt(quantData_i), columnIdx = columnIdx,
                                             incompatibleCounts = data.table(GENEID.i = rownames(incompatibleCounts_i), counts = as.vector(incompatibleCounts_i)),
                                             txid.index = mcols(annotations)$txid, GENEIDs = rownames(incompatibleCounts_i),
-                                            emParameters = emParameters, trackReads = trackReads,
+                                            emParameters = opt.em, trackReads = trackReads,
                                             verbose = verbose))}, 
                                             BPPARAM = bpParameters)
             end.ptm <- proc.time()

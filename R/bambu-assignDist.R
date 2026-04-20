@@ -24,7 +24,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations, rcAssignmen
         mutate(aval = 1) %>%
         data.table()
     #return non-em counts
-    ColData <- generateColData(readClassList, sampleMetadata, demultiplexed)
+    ColData <- generateColData(readClassList, sampleMetadata, extractBarcodeUMI)
     
     incompatibleCountMatrix <- metadata(readClassList)$incompatibleCountMatrix
     incompatibleCounts <- generateIncompatibleCounts(incompatibleCountMatrix, annotations)
