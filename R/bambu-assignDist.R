@@ -2,8 +2,8 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-assignReadClasstoTranscripts <- function(readClassList, annotations,
-                                        rcAssignmentParameters, verbose, sampleMetadata, demultiplexed,
+assignReadClasstoTranscripts <- function(readClassList, annotations, rcAssignmentParameters,
+                                        verbose, sampleMetadata, extractBarcodeUMI,
                                         returnDistTable = FALSE, trackReads = TRUE) {
     if (is.character(readClassList)) readClassList <- readRDS(file = readClassList)
     metadata(readClassList)$readClassDist <- calculateDistTable(readClassList, annotations, rcAssignmentParameters, verbose, returnDistTable)
@@ -17,7 +17,7 @@ assignReadClasstoTranscripts <- function(readClassList, annotations,
         mutate(aval = 1) %>%
         data.table()
     #return non-em counts
-    ColData <- generateColData(readClassList, sampleMetadata, demultiplexed)
+    ColData <- generateColData(readClassList, sampleMetadata, extractBarcodeUMI)
     quantData <- SummarizedExperiment(assays = SimpleList(
         counts = generateUniqueCounts(readClassDt, metadata(readClassList)$countMatrix, annotations)),
         rowRanges = annotations,

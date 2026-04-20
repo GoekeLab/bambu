@@ -890,7 +890,7 @@ isore.extendAnnotations.clusters <- function(readClassList, annotations, cluster
     for(i in seq_along(clusters)){
         print(names(clusters)[i])
         ###TODO need to account for the sample name here which is added to the barcode
-        index <- match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples)) 
+        index <- match(clusters[[i]],gsub('demultiplexed','',metadata(readClassList[[1]])$samples))
         index <- index[!is.na(index)]
         print(length(index))
         if(length(index)<20) next
