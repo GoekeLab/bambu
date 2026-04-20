@@ -203,12 +203,12 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     }
     opt.discovery <- setDiscoveryParameters(discoveryParameters = opt.discovery)
     #below line is to be compatible with earlier version of running bambu
-    if(!is.null(isoreParameters$max.txNDR)) NDR = isoreParameters$max.txNDR
+    if(!is.null(opt.discovery$max.txNDR)) NDR = opt.discovery$max.txNDR
+    opt.rcAssignment <- setRcAssignmentParameters(rcAssignmentParameters = opt.rcAssignment)
+    opt.em <- setEmParameters(emParameters = opt.em)
     extractBarcodeUMI <- isTRUE(opt.singlecell$extractBarcodeUMI)
     dedupUMI <- isTRUE(opt.singlecell$dedupUMI)
     clusters <- opt.singlecell$clusters
-    opt.rcAssignment <- setRcAssignmentParameters(rcAssignmentParameters = opt.rcAssignment)
-    opt.em <- setEmParameters(emParameters = opt.em)
     bpParameters <- setBiocParallelParameters(reads, ncore, verbose, extractBarcodeUMI)
 	xgb.set.config(nthread = 1)
     # only when reads is not NULL, this proceed, otherwise, it will jump to quant step
