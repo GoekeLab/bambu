@@ -36,12 +36,15 @@
 #' @importFrom dplyr left_join mutate group_by summarise cur_group_id ungroup
 #' @export
 summariseByExpression <- function(se, type = "exon") {
+    # build the grouping index and output ranges for the requested type
     index <- switch(type,
         exon = buildExonIndex(se),
         gene = buildGeneIndex(se),
         stop("Unsupported type: '", type, "'")
     )
 
+    # sparse aggregation matrix: rows = groups, cols = transcripts
+    # multiplying by transcript counts gives group-level counts
     txNames <- rownames(se)
     nGroups <- length(index$outRanges)
     groupNames <- names(index$outRanges)
@@ -54,8 +57,11 @@ summariseByExpression <- function(se, type = "exon") {
         dimnames = list(groupNames, txNames)
     )
 
+    # aggregate transcript counts to group level
     counts <- aggregationMat %*% assays(se)$counts
 
+    # for gene level, add reads that could not be assigned to any transcript
+    # but were localised to a gene, stored in metadata by bambu
     if (type == "gene" && !is.null(metadata(se)$incompatibleCounts)) {
         incompat <- metadata(se)$incompatibleCounts
         if ("nonuniqueCounts" %in% names(metadata(se)))
@@ -67,12 +73,13 @@ summariseByExpression <- function(se, type = "exon") {
         counts <- counts + incompat
     }
 
+    # compute CPM from aggregated counts
     counts.total <- colSums(counts)
     counts.total[counts.total == 0] <- 1
     cpm <- counts / counts.total * 10^6
 
+    # aggregate optional assays if present
     outAssays <- SimpleList(counts = counts, CPM = cpm)
-
     for (i in c("fullLengthCounts", "uniqueCounts")) {
         if (i %in% names(assays(se))) {
             outAssays[[i]] <- aggregationMat %*% assays(se)[[i]]
@@ -94,6 +101,7 @@ summariseByExpression <- function(se, type = "exon") {
 #'     named EX1, EX2, ..., with mcols GENEID, txNames, and exonClass.
 #' @noRd
 buildExonIndex <- function(se) {
+    # one row per exon-transcript pair, joined with transcript metadata
     txDf <- as.data.frame(rowData(se))[, c("TXNAME", "GENEID", "novelTranscript"), drop = FALSE]
     exonRanges <- unlist(rowRanges(se), use.names = TRUE)
     flatDf <- data.frame(
@@ -105,10 +113,12 @@ buildExonIndex <- function(se) {
         stringsAsFactors = FALSE
     ) %>%
         left_join(txDf, by = "TXNAME") %>%
+        # assign each unique exon locus a group index
         group_by(seqnames, start, end, strand) %>%
         mutate(group_idx = cur_group_id()) %>%
         ungroup()
 
+    # one row per unique exon locus with summarised metadata
     groupMeta <- flatDf %>%
         group_by(group_idx) %>%
         summarise(
@@ -122,6 +132,7 @@ buildExonIndex <- function(se) {
             .groups   = "drop"
         )
 
+    # build output GRanges with exon metadata
     outRanges <- GRanges(
         seqnames = groupMeta$seqnames,
         ranges   = IRanges(start = groupMeta$start, end = groupMeta$end),
@@ -146,9 +157,11 @@ buildExonIndex <- function(se) {
 #'     GENEID, with mcols GENEID and newGeneClass.
 #' @noRd
 buildGeneIndex <- function(se) {
+    # one row per transcript; group_idx preserves first-appearance order of GENEIDs
     rd <- as.data.frame(rowData(se))[, c("TXNAME", "GENEID", "txClassDescription"), drop = FALSE] %>%
         mutate(group_idx = match(GENEID, unique(GENEID)))
 
+    # one row per gene with class label derived from txClassDescription
     groupMeta <- rd %>%
         group_by(group_idx) %>%
         summarise(
@@ -157,6 +170,7 @@ buildGeneIndex <- function(se) {
             .groups      = "drop"
         )
 
+    # build output GRangesList of reduced exon ranges per gene
     outRanges <- reducedRangesByGenes(rowRanges(se))[groupMeta$GENEID]
     mcols(outRanges)$GENEID       <- groupMeta$GENEID
     mcols(outRanges)$newGeneClass <- groupMeta$newGeneClass
