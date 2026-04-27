@@ -10,7 +10,7 @@ bambu.quantify <- function(readClassDt, columnIdx, incompatibleCounts, txid.inde
     # Calculate nobs for sample(s) columnIdx
     # Use data.table syntax for in-place creation of nobs column for the scope of this function
     readClassDt[, nobs := {
-        ids <- columnIds[[1]]
+        ids <- columnIdx[[1]]
         if (is.null(ids) || length(ids) == 0 || is.na(ids[1])) {
             0L
         } else if (length(columnIdx) == 1) {
