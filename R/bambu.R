@@ -275,7 +275,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 trackReads = trackReads
               )
             }, BPPARAM = bpParameters)
-            names(quantData) <- names(readClassList)
+            names(quantData) <- unname(sapply(readClassFile, colnames))
             if (!quant) return(quantData)
         }
     }
@@ -340,7 +340,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 ColNames <- c(ColNames, names(iter))
                 colData.all[[i]] <- data.frame(
                   id = names(countsSeCompressed), 
-                  sampleName = names(countsSeCompressed),
+                  sampleName = sapply(strsplit(names(countsSeCompressed), "_"), `[`, 1),
+                  cluster = sapply(strsplit(names(countsSeCompressed), "_"), `[`, 2),
                   row.names = names(countsSeCompressed)
                 )
             } else{
