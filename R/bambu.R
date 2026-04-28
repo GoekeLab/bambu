@@ -275,7 +275,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 trackReads = trackReads
               )
             }, BPPARAM = bpParameters)
-            names(quantData) <- unname(sapply(readClassFile, colnames))
+            names(quantData) <- unname(sapply(readClassList, colnames))
             if (!quant) return(quantData)
         }
     }
