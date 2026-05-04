@@ -340,8 +340,8 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 ColNames <- c(ColNames, names(iter))
                 colData.all[[i]] <- data.frame(
                   id = names(countsSeCompressed),
-                  sampleName = sapply(strsplit(names(countsSeCompressed), "_"), `[`, 1),
-                  cluster = sapply(strsplit(names(countsSeCompressed), "_"), `[`, 2),
+                  sampleName = sub("_[^_]+$", "", names(countsSeCompressed)),
+                  cluster = sub(".*_", "", names(countsSeCompressed)),
                   row.names = names(countsSeCompressed)
                 )
             } else{
