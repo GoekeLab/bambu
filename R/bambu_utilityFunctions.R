@@ -290,6 +290,7 @@ combineCountSes <- function(countsSe, colDataList, annotations){
                                                         fullLengthCounts = countsDataMat$fullLengthCounts, 
                                                         uniqueCounts = countsDataMat$uniqueCounts))
     metadata(combinedCountsSe)$incompatibleCounts <- countsDataMat$incompatibleCounts
+    metadata(combinedCountsSe)$seType <- SE_TYPES[["EMCounts"]]
     rowRanges(combinedCountsSe) <- annotations
 
     colData(combinedCountsSe) <- DataFrame(bind_rows(colDataList))
@@ -333,7 +334,7 @@ generateColData <- function(readClassList, sampleMetadata, extractBarcodeUMI) {
 }
 
 # Quick wrapper function (https://stackoverflow.com/questions/13273833/merging-multiple-data-tables)
-#' @noRd 
+#' @noRd
 merge_wrapper <- function(x,y){
     merge.data.table(x,y,by = "GENEID",all=TRUE)
 }

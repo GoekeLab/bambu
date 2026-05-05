@@ -2,14 +2,29 @@
 #' @inheritParams bambu
 #' @import data.table
 #' @noRd
-bambu.quantify <- function(readClassDt, countMatrix, incompatibleCountMatrix, txid.index, GENEIDs, emParameters,
+bambu.quantify <- function(readClassDt, columnIdx, incompatibleCounts, txid.index, GENEIDs, emParameters,
                            trackReads = FALSE, returnDistTable = FALSE,
                            verbose = FALSE) {
     start.ptm <- proc.time()
-    readClassDt$nobs = countMatrix[readClassDt$eqClass.match]
-    readClassDt$nobs[is.na(readClassDt$nobs)] = 0
+
+    # Calculate nobs for sample(s) columnIdx
+    # Use data.table syntax for in-place creation of nobs column for the scope of this function
+    readClassDt[, nobs := {
+        ids <- columnIdx[[1]]
+        if (is.null(ids) || length(ids) == 0 || is.na(ids[1])) {
+            0L
+        } else if (length(columnIdx) == 1) {
+            # single-cell: look up the single barcode's read count directly
+            match_idx <- match(columnIdx, ids)
+            if (is.na(match_idx)) 0L else columnCounts[[1]][match_idx]
+        } else {
+            # cluster: sum read counts across all barcodes in the cluster
+            sum(columnCounts[[1]][ids %in% columnIdx])
+        }
+    }, by = eqClassId]
+
     compatibleCounts <- bambu.quantDT(readClassDt, emParameters = emParameters,verbose = verbose)
-    incompatibleCounts <- incompatibleCountMatrix[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
+    incompatibleCounts <- incompatibleCounts[data.table(GENEID.i = GENEIDs), on = "GENEID.i"]
     incompatibleCounts[is.na(counts), counts := 0]
     compatibleCounts <- calculateCPM(compatibleCounts, incompatibleCounts)
     counts <- compatibleCounts[match(txid.index, txid)]

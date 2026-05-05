@@ -56,6 +56,7 @@ bambu.processReads <- function(reads, annotations, genomeSequence,
             processByChromosome = processByChromosome, trackReads = trackReads, fusionMode = fusionMode, 
             extractBarcodeUMI = extractBarcodeUMI, dedupUMI = dedupUMI, index = 1)},
             BPPARAM = bpParameters)
+        names(readClassList) <- names(reads)
     } else {
         readGrgList <- bplapply(seq_along(reads), function(i) {
             bambu.readsByFile(bam.file = reads[i],
@@ -162,22 +163,23 @@ bambu.processReadsByFile <- function(bam.file, genomeSequence, annotations,
 
     mcols(readGrgList)$id <- seq_along(readGrgList) 
 
-    if(extractBarcodeUMI){
-        mcols(readGrgList)$sampleID <- as.numeric(mcols(readGrgList)$CB)
+    if(extractBarcodeUMI){ 
+        mcols(readGrgList)$columnID <- as.numeric(mcols(readGrgList)$CB)
     } else {
-        mcols(readGrgList)$sampleID <- index
+        mcols(readGrgList)$columnID <- index
     }
         
+    runName <- names(bam.file)[1]
     # construct read classes for each chromosome seperately 
     if(processByChromosome){
         se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-                                                      annotations, stranded, verbose,bam.file)
+                                                      annotations, stranded, verbose, bam.file)
     } else{
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se <- isore.constructReadClasses(readGrgList, 
-                                              unlisted_junctions, uniqueJunctions, runName = "TODO",
+                                              unlisted_junctions, uniqueJunctions, runName = runName,
                                               annotations, stranded, verbose)
 
     }
@@ -297,18 +299,18 @@ bambu.readsByFile <- function(bam.file, genomeSequence, annotations,
 constructReadClasses <- function(readGrgList, genomeSequence, annotations,
     stranded = FALSE, min.readCount = 2, 
     fitReadClassModel = TRUE, min.exonOverlap = 10, defaultModels = NULL, returnModel = FALSE, 
-    verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE){
+    verbose = FALSE, processByChromosome = FALSE, trackReads = FALSE, fusionMode = FALSE, runName = "sample"){
     
     if(processByChromosome){
         # construct read classes for each chromosome seperately 
         se <- lowMemoryConstructReadClasses(readGrgList, genomeSequence, 
-                                            annotations, stranded, verbose,"TODO", fusionMode)
+                                            annotations, stranded, verbose, runName, fusionMode)
     } else{
         unlisted_junctions <- unlistIntrons(readGrgList, use.ids = TRUE)
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se <- isore.constructReadClasses(readGrgList, 
-                                              unlisted_junctions, uniqueJunctions, runName = "TODO",
+                                              unlisted_junctions, uniqueJunctions, runName = runName,
                                               annotations, stranded, verbose)
 
     }
@@ -336,13 +338,14 @@ constructReadClasses <- function(readGrgList, genomeSequence, annotations,
 #' Low memory mode for construct read classes (processByChromosome)
 #' @noRd
 lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence, 
-                                          annotations, stranded, verbose,bam.file, fusionMode = FALSE){
+                                          annotations, stranded, verbose, bam.file, fusionMode = FALSE){
     if(fusionMode){
         readGrgList <- list(readGrgList)
         names(readGrgList) <- c("fusion")
     } else{
         readGrgList <- split(readGrgList, getChrFromGrList(readGrgList))
     }
+    runName <- names(bam.file)[1]
     se <- lapply(names(readGrgList),FUN = function(i){
         if(length(readGrgList[[i]]) == 0) return(NULL)
         # create error and strand corrected junction tables
@@ -350,7 +353,7 @@ lowMemoryConstructReadClasses <- function(readGrgList, genomeSequence,
         uniqueJunctions <- isore.constructJunctionTables(unlisted_junctions, 
                                                          annotations,genomeSequence, stranded = stranded, verbose = verbose)
         se.temp <- isore.constructReadClasses(readGrgList[[i]], 
-                                              unlisted_junctions, uniqueJunctions, runName = "TODO",
+                                              unlisted_junctions, uniqueJunctions, runName = runName,
                                               annotations, stranded, verbose)
         return(se.temp)
     })
@@ -385,10 +388,12 @@ splitReadClassFiles = function(readClassFile){
     distTable <- metadata(metadata(readClassFile)$readClassDist)$distTable  
     eqClasses <- distTable %>% group_by(eqClassById) %>% 
         distinct(eqClassById, readCount,GENEID, totalWidth, firstExonWidth, .keep_all = TRUE)
-    eqClasses$sampleIDs <- rowData(readClassFile)$sampleIDs[match(eqClasses$readClassId, rownames(readClassFile))]
+    eqClasses$columnIds <- rowData(readClassFile)$columnIds[match(eqClasses$readClassId, rownames(readClassFile))]
     eqClasses <- eqClasses %>% summarise(nobs = sum(readCount),
-                                                sampleIDs = list(unlist(sampleIDs)))
-    counts.table <- tableFunction(eqClasses$sampleIDs)
+                                                columnIds = list(unlist(columnIds)))
+    counts.table <- tableFunction(eqClasses$columnIds)
+    metadata(readClassFile)$columnIds <- lapply(counts.table, function(x) as.numeric(names(x)))
+    metadata(readClassFile)$columnCounts <- lapply(counts.table, function(x) as.numeric(x))
     counts <- sparseMatrix(
         i = rep(seq_along(counts.table), lengths(counts.table)),
         j = as.numeric(names(unlist(counts.table))),
@@ -397,14 +402,14 @@ splitReadClassFiles = function(readClassFile){
     #incompatible counts
     distTable <- metadata(metadata(readClassFile)$readClassDist)$distTable.incompatible
     if(nrow(distTable)==0) {
-        counts.incompatible <- sparseMatrix(i= 1, j = 1, x = 0,
-        dims = c(1, length(metadata(readClassFile)$sampleData$id)))
-        rownames(counts.incompatible) <- "TODO"
+        counts.incompatible <- sparseMatrix(i= integer(0), j = integer(0), x = numeric(0),
+        dims = c(0, length(metadata(readClassFile)$sampleData$id)))
+        rownames(counts.incompatible) <- character(0)
     } else{
-        distTable$sampleIDs <- rowData(readClassFile)$sampleIDs[match(distTable$readClassId, rownames(readClassFile))]
+        distTable$columnIds <- rowData(readClassFile)$columnIds[match(distTable$readClassId, rownames(readClassFile))]
         distTable <- distTable %>% group_by(GENEID.i) %>% summarise(counts = sum(readCount),
-                    sampleIDs = list(unlist(sampleIDs)))
-        counts.table <- lapply(distTable$sampleIDs, FUN = function(x){table(x)})
+                    columnIds = list(unlist(columnIds)))
+        counts.table <- lapply(distTable$columnIds, FUN = function(x){table(x)})
         counts.incompatible <- sparseMatrix(
             i = rep(seq_along(counts.table), lengths(counts.table)),
             j = as.numeric(names(unlist(counts.table))),
@@ -416,7 +421,6 @@ splitReadClassFiles = function(readClassFile){
     colnames(counts) <- metadata(readClassFile)$sampleData$id
     metadata(readClassFile)$eqClassById <- eqClasses$eqClassById
     #rownames(counts) = eqClasses$eqClassById
-    metadata(readClassFile)$countMatrix <- counts
     metadata(readClassFile)$incompatibleCountMatrix <- counts.incompatible  
     return(readClassFile)
 }
@@ -426,7 +430,7 @@ splitReadClassFiles = function(readClassFile){
 #' @importFrom Matrix
 #' @noRd
 splitReadClassFilesByRC <- function(readClassFile){
-    counts.table <- tableFunction(rowData(readClassFile)$sampleIDs)
+    counts.table <- tableFunction(rowData(readClassFile)$columnIds)
     counts <- sparseMatrix(
         i = rep(seq_along(counts.table), lengths(counts.table)),
         j = as.numeric(names(unlist(counts.table))),

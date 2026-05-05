@@ -275,6 +275,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                 trackReads = trackReads
               )
             }, BPPARAM = bpParameters)
+            names(quantData) <- names(readClassList)
             if (!quant) return(quantData)
         }
     }
@@ -289,7 +290,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         if(length(annotations)==0) stop("No valid annotations, if running
                                     de novo please try less stringent parameters")
         if(is.null(quantData)) stop("quantData must be provided or assignDist = TRUE")
-        GENEIDs.i <- as.numeric(factor(unique(mcols(annotations)$GENEID)))
         start.ptm <- proc.time()
         countsSeCompressed.all <- NULL
         ColNames <- c()
@@ -297,17 +297,18 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         for(i in seq_along(quantData)){
             quantData_i <- quantData[[i]]
             #load in the barcode clustering from file if provided
-            iter <- seq_len(ncol(metadata(quantData_i)$countMatrix)) # iter is integer
+            # single-cell mode: iter is an integer vector of column indices, one per barcode
+            iter <- seq_len(nrow(getSampleData(quantData_i)))
             if(!is.null(clusters)){
               if(class(clusters[[i]])!="CompressedCharacterList"){ # !is.list(clusters) is FALSE for CompressedCharacterList
                 clusterMaps <- NULL
-                for(j in seq_along(metadata(quantData_i)$sampleNames)){ #load in a file per sample name provided
-                  clusterMap <- fread(clusters[[j]], header = FALSE,
+                for(j in seq_along(getSampleData(quantData_i)$sampleName)){ #load in a file per sample name provided
+                  clusterMap <- fread(clusters[[j]], header = FALSE, 
                                       data.table = FALSE)
                   # read.table(clusters[[j]],
                   #     sep = ifelse(grepl(".tsv$",clusters[[j]]), "\t", ","),
                   #     header = FALSE)
-                  clusterMap[,1] <- paste0(metadata(quantData_i)$sampleNames[j],
+                  clusterMap[,1] <- paste0(getSampleData(quantData_i)$sampleName[j],
                                            "_",clusterMap[,1])
                   clusterMaps <- rbind(clusterMaps, clusterMap)
                 }
@@ -319,19 +320,18 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
               } else{ #if clusters is a list
                 iter <- clusters[[i]]
               }
+              # cluster mode: convert barcode strings to integer column indices;
+              # iter becomes a named list of integer vectors, one per cluster
+              iter <- lapply(iter, match, getSampleData(quantData_i)$id)
             }
-            countsSeCompressed <- bplapply(iter, FUN = function(j){ # previous i changed to j to avoid duplicated assignment 
-                #i = iter[i %in% colnames(metadata(quantData_i)$countMatrix)] #bug, after assignment, i become emptyprint(i)
-                countMatrix <- unname(metadata(quantData_i)$countMatrix[,j]) # same here 
-                incompatibleCountMatrix <- unname(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
-                if(!is.null(dim(countMatrix))){
-                    countMatrix <- rowSums(countMatrix)
-                    incompatibleCountMatrix <- rowSums(metadata(quantData_i)$incompatibleCountMatrix[,j]) # same here
-                }
-                return(bambu.quantify(readClassDt = metadata(quantData_i)$readClassDt, countMatrix = countMatrix, 
-                                            incompatibleCountMatrix = data.table(GENEID.i = as.numeric(rownames(metadata(quantData_i)$incompatibleCountMatrix)), counts = incompatibleCountMatrix),
-                                            txid.index = mcols(annotations)$txid, GENEIDs = GENEIDs.i,
-                                            emParameters = opt.em, trackReads = trackReads, 
+            countsSeCompressed <- bplapply(iter, FUN = function(columnIdx){ # previous i changed to j to avoid duplicated assignment
+
+                incompatibleCounts_i <- getIncompatibleCounts(quantData_i)[, columnIdx, drop = FALSE]
+
+                return(bambu.quantify(readClassDt = getReadClassDt(quantData_i), columnIdx = columnIdx,
+                                            incompatibleCounts = data.table(GENEID.i = rownames(incompatibleCounts_i), counts = rowSums(incompatibleCounts_i)),
+                                            txid.index = mcols(annotations)$txid, GENEIDs = rownames(incompatibleCounts_i),
+                                            emParameters = opt.em, trackReads = trackReads,
                                             verbose = verbose))}, 
                                             BPPARAM = bpParameters)
             end.ptm <- proc.time()
@@ -339,24 +339,34 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             if(!is.null(clusters)){
                 ColNames <- c(ColNames, names(iter))
                 colData.all[[i]] <- data.frame(
-                  id = names(countsSeCompressed), 
-                  sampleName = names(countsSeCompressed),
+                  id = names(countsSeCompressed),
+                  sampleName = sub("_[^_]+$", "", names(countsSeCompressed)),
+                  cluster = sub(".*_", "", names(countsSeCompressed)),
                   row.names = names(countsSeCompressed)
                 )
             } else{
-                ColNames <- c(ColNames, colnames(quantData_i)) 
-                colData.all[[i]] <- data.frame(colData(quantData_i))
+                ColNames <- c(ColNames, rownames(getSampleData(quantData_i)))
+                colData.all[[i]] <- data.frame(getSampleData(quantData_i))
             }
             countsSeCompressed.all <- c(countsSeCompressed.all, countsSeCompressed)
         }
         names(countsSeCompressed.all) <- ColNames   
         
         countsSe <- combineCountSes(countsSeCompressed.all, colData.all, annotations)
+        if(trackReads){
+            readToTranscriptMaps = list()
+            for(i in seq_along(quantData)){
+                readToTranscriptMaps[[i]] <- getReadToTranscriptMap(quantData[[i]])
+            }
+            names(readToTranscriptMaps) <- names(quantData)
+            metadata(countsSe)$readToTranscriptMaps <- readToTranscriptMaps
+        }
         if(returnDistTable){
             distTables = list()
             for(i in seq_along(quantData)){
-                distTables[[i]] <- metadata(quantData[[i]])$distTable
+                distTables[[i]] <- getDistTable(quantData[[i]])
             }
+            names(distTables) <- names(quantData)
             metadata(countsSe)$distTables <- distTables
         }
         return(countsSe)

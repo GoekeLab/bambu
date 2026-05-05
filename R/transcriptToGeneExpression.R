@@ -2,7 +2,7 @@
 #' @title transcript to gene expression
 #' @param se a summarizedExperiment object from \code{\link{bambu}}
 #' @return A SummarizedExperiment object
-#' @import data.table 
+#' @import data.table
 #' @export
 #' @examples
 #' se <- readRDS(system.file("extdata",
@@ -12,17 +12,15 @@
 #' transcriptToGeneExpression(se)
 transcriptToGeneExpression <- function(se) {
     counts <- assays(se)$counts
-    runnames <- colnames(counts)[-1]
     rowDataSe <- as.data.table(rowData(se))
-    
-    counts  = fac2sparse(factor(rowData(se)$GENEID, levels = unique(rowData(se)$GENEID))) %*% counts
-    if(!is.null(metadata(se)$incompatibleCounts)){
+
+    counts = fac2sparse(factor(rowData(se)$GENEID, levels = unique(rowData(se)$GENEID))) %*% counts
+    if (!is.null(metadata(se)$incompatibleCounts)) {
         incompatibleCounts <- metadata(se)$incompatibleCounts
-        if("nonuniqueCounts" %in% names(metadata(se))){
-            incompatibleCounts = incompatibleCounts + metadata(se)$nonuniqueCounts
-        }
-        incompatibleCounts = Matrix(incompatibleCounts[match(rownames(counts), rownames(incompatibleCounts)),], sparse = TRUE)
-        counts = counts + incompatibleCounts
+        if ("nonuniqueCounts" %in% names(metadata(se)))
+            incompatibleCounts <- incompatibleCounts + metadata(se)$nonuniqueCounts
+        incompatibleCounts <- Matrix(incompatibleCounts[match(rownames(counts), rownames(incompatibleCounts)), ], sparse = TRUE)
+        counts <- counts + incompatibleCounts
     }
     counts.total = colSums(counts)
     counts.total[counts.total==0] = 1
@@ -48,6 +46,55 @@ transcriptToGeneExpression <- function(se) {
             CPM = counts.CPM),
         rowRanges = exByGene[RowNames],
         colData = ColData)
-    
+    metadata(seOutput)$seType <- SE_TYPES[["geneCounts"]]
     return(seOutput)
+}
+
+#' Generate a SummarizedExperiment of unique counts from quantData
+#' @description This function is intended to be used after the transcript
+#'   discovery and \code{assignDist} steps in \code{\link{bambu}}. It builds a
+#'   transcript-level SummarizedExperiment containing raw unique counts (reads
+#'   uniquely assigned to a single transcript) without EM estimation, which can
+#'   be passed directly to \code{\link{transcriptToGeneExpression}} to obtain
+#'   gene-level counts as uniqueCounts + nonuniqueCounts + incompatibleCounts.
+#' @param quantData a list of quantData objects produced by the assignDist step
+#' @param annotations a GRangesList of transcript annotations
+#' @return A SummarizedExperiment object with \code{assays$uniqueCounts},
+#'   \code{metadata$incompatibleCounts}, and \code{metadata$nonuniqueCounts}
+#' @import data.table
+#' @noRd
+generateUniqueCountsSEFromQuantData <- function(quantData, annotations) {
+    uniqueCountsList <- lapply(quantData, function(x) {
+        readClassDt <- getReadClassDt(x)
+        x_filtered <- readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
+
+        uniqueCounts <- if (nrow(x_filtered) == 0) {
+            sparseMatrix(i = 1, j = 1, x = 0, dims = c(length(annotations), nrow(getSampleData(x))))
+        } else {
+            txids <- mcols(annotations)$txid
+            i <- rep(match(x_filtered$txid, txids), lengths(x_filtered$columnIds))
+            j <- unlist(x_filtered$columnIds)
+            x_vals <- unlist(x_filtered$columnCounts)
+            sparseMatrix(i = i, j = j, x = x_vals, dims = c(length(annotations), nrow(getSampleData(x))))
+        }
+        rownames(uniqueCounts) <- names(annotations)
+        colnames(uniqueCounts) <- rownames(getSampleData(x))
+        return(uniqueCounts)
+    })
+    uniqueCounts <- do.call(cbind, unname(uniqueCountsList))
+
+    incompatibleCounts <- do.call(cbind, unname(lapply(quantData, getIncompatibleCounts)))
+    nonuniqueCounts <- do.call(cbind, unname(lapply(quantData, function(x) {
+        generateNonUniqueCountMatrix(getReadClassDt(x), annotations, getSampleData(x)$id)
+    })))
+
+    colData <- do.call(rbind, unname(lapply(quantData, getSampleData)))
+
+    se <- SummarizedExperiment(assays = SimpleList(counts = uniqueCounts))
+    rowRanges(se) <- annotations
+    colData(se) <- DataFrame(colData)
+    metadata(se)$incompatibleCounts <- incompatibleCounts
+    metadata(se)$nonuniqueCounts <- nonuniqueCounts
+    metadata(se)$seType <- SE_TYPES[["uniqueCounts"]]
+    return(se)
 }
