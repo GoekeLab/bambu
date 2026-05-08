@@ -55,7 +55,7 @@ constructQuantData <- function(sampleData, readClassDt,
         readToTranscriptMap = readToTranscriptMap)
 }
 
-#' @export
+#' @noRd
 setGeneric("getSampleData",          function(x) standardGeneric("getSampleData"))
 #' @noRd
 setGeneric("getReadClassDt",         function(x) standardGeneric("getReadClassDt"))
@@ -66,7 +66,7 @@ setGeneric("getDistTable",           function(x) standardGeneric("getDistTable")
 #' @noRd
 setGeneric("getReadToTranscriptMap", function(x) standardGeneric("getReadToTranscriptMap"))
 
-#' @exportMethod getSampleData
+#' @noRd
 setMethod("getSampleData",          "quantData", function(x) x@sampleData)
 #' @noRd
 setMethod("getReadClassDt",         "quantData", function(x) x@readClassDt)
