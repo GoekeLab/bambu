@@ -62,7 +62,7 @@ transcriptToGeneExpression <- function(se) {
 #' @return A SummarizedExperiment object with \code{assays$uniqueCounts},
 #'   \code{metadata$incompatibleCounts}, and \code{metadata$nonuniqueCounts}
 #' @import data.table
-#' @noRd
+#' @export
 generateUniqueCountsSEFromQuantData <- function(quantData, annotations) {
     uniqueCountsList <- lapply(quantData, function(x) {
         readClassDt <- getReadClassDt(x)
