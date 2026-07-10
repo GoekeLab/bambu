@@ -116,7 +116,7 @@
 #'     \item{dedupUMI}{Logical, whether to perform UMI-based deduplication per
 #'     barcode. Defaults to FALSE}
 #'     \item{clusters}{A named list mapping cluster names to barcode vectors,
-#'     used for cluster-level transcript discovery. Defaults to NULL}
+#'     used for cluster-level quantification. Defaults to NULL}
 #' }
 #' @details
 #' @return \code{bambu} will output different results depending on whether
@@ -162,12 +162,11 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
     rcOutDir = NULL, discovery = TRUE, assignDist = TRUE, quant = TRUE, stranded = FALSE,  
     ncore = 1, yieldSize = NULL, trackReads = FALSE, returnDistTable = FALSE, lowMemory = FALSE, 
     sampleData = NULL, fusionMode = FALSE, verbose = FALSE, quantData = NULL,
-    processByChromosome = FALSE, processByBam = TRUE) {
+    processByChromosome = FALSE) {
     message(paste0("Running Bambu-v", "3.9.0"))
     if(!is.null(mode)){
         if(mode == "bulk"){
             processByChromosome <- FALSE
-            processByBam <- TRUE
         }
         if(mode == "multiplexed"){
             opt.singlecell$extractBarcodeUMI <- TRUE
@@ -190,7 +189,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
         }
     }
     if(lowMemory)
-        message("lowMemory has been deprecated and split into processByChromosome and processByBam. Please see Documentation")
+        message("lowMemory has been replaced by processByChromosome. Please see Documentation")
     if("min.primarySecondaryDistStartEnd2" %in% names(opt.discovery))
         message("min.primarySecondaryDistStartEnd2 has been moved to opt.rcAssignment. Please pass this parameter via opt.rcAssignment instead.")
     if(is.null(annotations)){ 
@@ -236,7 +235,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
                                                 bpParameters = bpParameters, stranded = stranded, verbose = verbose,
                                                 discoveryParameters = opt.discovery, trackReads = trackReads,
                                                 fusionMode = fusionMode, 
-                                                processByChromosome = processByChromosome, processByBam = processByBam, 
+                                                processByChromosome = processByChromosome,
                                                 extractBarcodeUMI = extractBarcodeUMI,
                                                 dedupUMI = dedupUMI)
         }
@@ -248,14 +247,6 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
             extendedAnnotations <- bambu.extendAnnotations(readClassList, annotations, NDR,
                                                            opt.discovery, stranded, bpParameters, fusionMode, verbose)
             metadata(extendedAnnotations)$warnings = warnings
-            
-            #### cluster based transcript discovery
-            if(!is.null(clusters)){
-                annotations.clusters <- isore.extendAnnotations.clusters(readClassList,
-                                                                         annotations, clusters, NDR,
-                                                                         opt.discovery, stranded, bpParameters, fusionMode, verbose = FALSE)
-                metadata(extendedAnnotations)$clusters <- annotations.clusters    
-            }
             annotations <- extendedAnnotations
             
             if (!quant & !assignDist) return(annotations)
@@ -402,7 +393,7 @@ bambu <- function(reads, annotations = NULL, genome = NULL, NDR = NULL,
 #' Defaults to TRUE.
 #' @param quant Logical, whether quantification is performed. Defaults to TRUE.
 #' @param clusters A named list mapping cluster names to barcode vectors,
-#' used for cluster-level transcript discovery. Defaults to NULL.
+#' used for cluster-level quantification. Defaults to NULL.
 #' @param stranded Logical, whether reads are stranded. Defaults to FALSE.
 #' @param ncore Integer specifying the number of cores for parallel processing.
 #' Defaults to 1.

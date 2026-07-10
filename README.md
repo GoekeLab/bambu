@@ -504,7 +504,7 @@ readClassFile <- bambu(reads = samples, annotations = annotations, genome = fa.f
 
 #### Transcript Discovery:
 
-Transript discovery can be run as usual as typically bulk-level discovery is suitable. However cluster-level transcript discovery can be preformed using the clusters argument which can be redone done after clustering. 
+Transript discovery can be run as usual as typically bulk-level discovery is suitable.
 
 ```rscript
 extendedAnno <- bambu(reads = readClassFile, annotations = annotations, genome = fa.file, ncore = 1, discovery = TRUE, quant = FALSE, demultiplexed = TRUE, verbose = FALSE, assignDist = FALSE)
@@ -597,7 +597,7 @@ se <- bambu( reads = NULL,
 | discovery | A logical variable indicating whether annotations are to be extended for quantification, defaults to TRUE. |
 | quant | A logical variable indicating whether quantification will be performed, defaults to TRUE. |
 | verbose | A logical variable indicating whether processing messages will be printed. |
-| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br/> bulk - <br/>&nbsp;&nbsp;&nbsp;&nbsp;processByBam = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromsome = FALSE<br/>multiplexed - <br/>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br/>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromosome = TRUE<br/>fusion - <br/>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br/>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br/>debug -<br/>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
+| mode | A string that will set other input arguments ['bulk', 'multiplexed', 'fusion', 'debug']<br/> bulk - <br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromsome = FALSE<br/>multiplexed - <br/>&nbsp;&nbsp;&nbsp;&nbsp;demultiplex = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;cleanReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;opt.em = list(degradationBias = FALSE)<br/>&nbsp;&nbsp;&nbsp;&nbsp;quant = FALSE<br/>&nbsp;&nbsp;&nbsp;&nbsp;processByChromosome = TRUE<br/>fusion - <br/>&nbsp;&nbsp;&nbsp;&nbsp;NDR = 1<br/>&nbsp;&nbsp;&nbsp;&nbsp;fusionMode = TRUE<br/>debug -<br/>&nbsp;&nbsp;&nbsp;&nbsp;verbose = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;trackReads = TRUE<br/>&nbsp;&nbsp;&nbsp;&nbsp;returnDistTable = TRUE |
 | demultiplexed | A logical variable indicating whether the input bam file is demultiplexed. The barcode and umi either need to be present in the read name or the $BC and $UG tags, defaults to FALSE. Alternatively a path to a csv file can be provided where column 1 is read names, column 2 is barcodes, and column 3 is UMI. |
 | spatial | A path to the barcode whitelist containing X and Y coordinates, defaults to null. If provided, the file should contain 3 columns with or without header, where the first column is the barcode, and the second and third column contains the x and y coordinates information accordingly. Compressed file format is accepted as well.|
 | assignDist | A logical variable indicating whether read class to transcript assignment will be performed, defaults to TRUE. |
@@ -607,7 +607,6 @@ se <- bambu( reads = NULL,
 | dedupUMI | A logical variable indicating whether UMI deduplication is performed. The longest read per UMI will be used and the rest discarded, defaults to FALSE.|
 | barcodesToFilter | A vector of strings indicating the barcodes to be filtered out in reads.|
 | clusters | Either a list containing the barcodes for each cluster, or a path to a csv file containg the barcode to cluster mapping. When provided, clusters will be used during discovery and EM quant steps, defaults to null. |
-| processByBam | A logical variable indicating if each input bam file will be processed seperately (TRUE) or all are read in and processed together (FALSE), defaults to TRUE |
 | processByChromosome | A logical variable indicating if read classes will be constructed with all reads together (FALSE), or done by chromsome which uses less memory, but provides less information for the junction correction model (TRUE), defaults to FALSE |
 
 ### setNDR() arguments
