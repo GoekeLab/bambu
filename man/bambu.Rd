@@ -9,10 +9,14 @@ bambu(
   annotations = NULL,
   genome = NULL,
   NDR = NULL,
+  mode = NULL,
   opt.discovery = NULL,
+  opt.rcAssignment = NULL,
   opt.em = NULL,
+  opt.singlecell = NULL,
   rcOutDir = NULL,
   discovery = TRUE,
+  assignDist = TRUE,
   quant = TRUE,
   stranded = FALSE,
   ncore = 1,
@@ -20,8 +24,11 @@ bambu(
   trackReads = FALSE,
   returnDistTable = FALSE,
   lowMemory = FALSE,
+  sampleData = NULL,
   fusionMode = FALSE,
-  verbose = FALSE
+  verbose = FALSE,
+  quantData = NULL,
+  processByChromosome = FALSE
 )
 }
 \arguments{
@@ -57,11 +64,8 @@ reconstruction process:
     annotation to be assigned to the same gene id, defaults to 10bp}
     \item{min.primarySecondaryDist}{specifying the minimum number of distance 
     threshold, defaults to 5bp}
-    \item{min.primarySecondaryDistStartEnd1}{specifying the minimum number 
+    \item{min.primarySecondaryDistStartEnd1}{specifying the minimum number
     of distance threshold, used for extending annotation, defaults to 5bp}
-    \item{min.primarySecondaryDistStartEnd2}{specifying the minimum number 
-    of distance threshold, used for estimating distance to annotation, 
-    defaults to 5bp}
     \item{min.txScore.multiExon}{specifying the minimum transcript level 
     threshold for multi-exon transcripts during sample combining, 
     defaults to 0}
@@ -86,6 +90,18 @@ reconstruction process:
     defaults to "Bambu"}
 }}
 
+\item{opt.rcAssignment}{A list of controlling parameters for the read class
+to transcript assignment process:
+\describe{
+    \item{min.exonDistance}{specifying minimum distance to known transcript
+    to be considered a valid match, defaults to 35bp}
+    \item{min.primarySecondaryDist}{specifying the minimum distance
+    threshold between primary and secondary assignments, defaults to 5bp}
+    \item{min.primarySecondaryDistStartEnd2}{specifying the minimum
+    distance threshold for start/end positions used for read assignment,
+    defaults to 5bp}
+}}
+
 \item{opt.em}{A list of controlling parameters for quantification
 algorithm estimation process:
 \describe{
@@ -96,8 +112,12 @@ algorithm estimation process:
     defaults to 0.0001}
     \item{minvalue}{specifying the minvalue for convergence consideration, 
     defaults to 0.00000001}
-     \item{sig.digit}{specifying the maximum significant digits of the reported estimates}
+    \item{sig.digit}{specifying the maximum significant digits of the reported estimates}
 }}
+
+\item{opt.singlecell}{A list of parameters for bambu's single-cell module
+(\code{extractBarcodeUMI}, \code{dedupUMI}, and \code{clusters}). See
+\code{\link{bambu.singlecell}} for details.}
 
 \item{rcOutDir}{A string variable specifying the path to where
 read class files will be saved.}
@@ -105,7 +125,10 @@ read class files will be saved.}
 \item{discovery}{A logical variable indicating whether annotations
 are to be extended. Defaults to TRUE}
 
-\item{quant}{A logical variable indicating whether quantification will 
+\item{assignDist}{A logical variable indicating whether read-class-to-transcript
+assignment will be performed, defaults to TRUE}
+
+\item{quant}{A logical variable indicating whether quantification will
 be performed. If false the output type will change. Defaults to TRUE}
 
 \item{stranded}{A boolean for strandedness, defaults to FALSE.}
@@ -126,6 +149,12 @@ distTables. The output is a list with an entry for each sample.}
 
 \item{lowMemory}{Read classes will be processed by chromosomes when lowMemory 
 is specified. This option provides an efficient way to process big samples.}
+
+\item{sampleData}{A character vector of paths to metadata CSV files (or \code{NA} if 
+unavailable for specific samples); defaults to \code{NULL}. Files must contain a 
+"sampleName" column for bulk data or a "barcode" column for single-cell/spatial data. 
+For bulk data, one metadata CSV file for all samples is sufficient, whereas single-cell/spatial 
+data requires one metadata CSV file per sample.}
 
 \item{fusionMode}{A logical variable indicating whether run in fusion mode}
 

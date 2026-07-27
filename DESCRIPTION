@@ -45,7 +45,8 @@ Suggests:
     purrr,
     apeglm,
     utils,
-    DEXSeq
+    DEXSeq,
+    Seurat
 Enhances: parallel
 SystemRequirements:
 biocViews: 
