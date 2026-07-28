@@ -81,10 +81,11 @@ updateParameters <- function(Parameters, Parameters.default) {
 #' @param reads path to BAM file(s)
 #' @param readClass.file path to readClass file(s)
 #' @param readClass.outputDir path to readClass output directory
+#' @param clusters NULL, a named vector (names are cell/spot ids in sampleName_barcode format, values are cluster labels), a data.frame with id (sampleName_barcode) and cluster columns, or a path to a .csv/.tsv/.txt file holding that data.frame
 #' @importFrom methods is
 #' @noRd
 checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
-                        discovery, sampleData, quantData){
+                        discovery, sampleData, quantData, clusters = NULL){
     # ===# Check annotation inputs #===#
     if (!is.null(annotations)) {
         if (is(annotations, "CompressedGRangesList")) {
@@ -159,6 +160,7 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
             use of Rsamtools for opening.")
     }
 
+    # ===# Check sampleData inputs #===#
     if(!is.null(sampleData)){
         if (!all(grepl("\\.(csv|tsv|txt)$", na.omit(sampleData), ignore.case = TRUE))){
             stop("Not all paths for sample metadata files are .csv/.tsv/.txt files")
@@ -171,6 +173,31 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence,
                 "These two arguments (sampleData & reads) must be vectors of the same length. ",
                 "If a specific sample has no metadata, please use 'NA' as a placeholder in the sampleData vector."
             )
+        }
+    }
+
+    # ===# Check clusters inputs #===#
+    if(!is.null(clusters)){
+        if(is.atomic(clusters) && !is.null(names(clusters))){ # named vector check
+            if(length(clusters) == 0){
+                stop("clusters named vector must not be empty")
+            }
+        } else if(is.data.frame(clusters)){ # data.frame object check
+            if(!all(c("id", "cluster") %in% colnames(clusters))){
+                stop("clusters data frame must have columns named 'id' and 'cluster'")
+            }
+        } else if(is.character(clusters) && length(clusters) == 1){ # path check
+            if(!file.exists(clusters)){
+                stop("clusters file does not exist: ", clusters)
+            }
+            if(!grepl("\\.(csv|tsv|txt)$", clusters, ignore.case = TRUE)){
+                stop("clusters must be a .csv/.tsv/.txt file")
+            }
+            if(!all(c("id", "cluster") %in% colnames(fread(clusters, nrows = 0)))){
+                stop("clusters file must be a data frame with columns named 'id' and 'cluster'")
+            }
+        } else {
+            stop("clusters must be a named vector, a data.frame with 'id' and 'cluster' columns, or a .csv/.tsv/.txt file path")
         }
     }
     return(annotations)

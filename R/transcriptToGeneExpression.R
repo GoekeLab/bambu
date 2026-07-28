@@ -24,7 +24,7 @@ transcriptToGeneExpression <- function(se) {
     }
     counts.total = colSums(counts)
     counts.total[counts.total==0] = 1
-    counts.CPM = counts/counts.total * 10^6
+    counts.CPM = counts %*% Diagonal(x = 1 / counts.total) * 10^6
 
     ## geneRanges
     exByGene <- reducedRangesByGenes(rowRanges(se))
@@ -50,20 +50,54 @@ transcriptToGeneExpression <- function(se) {
     return(seOutput)
 }
 
-#' Generate a SummarizedExperiment of unique counts from quantData
+#' @title Unique-count SummarizedExperiment from Bambu read-to-transcript assignments
 #' @description This function is intended to be used after the transcript
-#'   discovery and \code{assignDist} steps in \code{\link{bambu}}. It builds a
-#'   transcript-level SummarizedExperiment containing raw unique counts (reads
-#'   uniquely assigned to a single transcript) without EM estimation, which can
-#'   be passed directly to \code{\link{transcriptToGeneExpression}} to obtain
-#'   gene-level counts as uniqueCounts + nonuniqueCounts + incompatibleCounts.
-#' @param quantData a list of quantData objects produced by the assignDist step
-#' @param annotations a GRangesList of transcript annotations
-#' @return A SummarizedExperiment object with \code{assays$uniqueCounts},
-#'   \code{metadata$incompatibleCounts}, and \code{metadata$nonuniqueCounts}
+#' discovery and read-to-transcript assignment steps in \code{\link{bambu}} /
+#' \code{\link{bambu.singlecell}}. It generates a transcript-level SummarizedExperiment
+#' containing raw unique counts (reads uniquely assigned to a single transcript) without
+#' EM estimation. This function is useful for highly multiplexed, sparse data (such as
+#' single cell and spatial data) where the EM does not have sufficient information to
+#' provide accurate transcript expression estimates.
+#' @param quantData A list of \code{quantData} objects, one per sample, produced by the
+#' read-to-transcript assignment step of \code{\link{bambu.singlecell}}
+#' (\code{output = "quantData"}) or the equivalent \code{assignDist = TRUE} run of
+#' \code{\link{bambu}}.
+#' @param annotations A \code{GRangesList} of transcript annotations matching the ones used to
+#' produce \code{quantData}, typically the extended annotations from transcript discovery.
+#' @return A \code{SummarizedExperiment} with one row per transcript and one column per cell
+#' (or sample). Pass it to \code{\link{transcriptToGeneExpression}} to collapse the unique
+#' counts to the gene level. It contains:
+#' \describe{
+#'     \item{\code{assays(se)$counts}}{a sparse matrix of unique counts, i.e. reads uniquely
+#'     assigned to a single transcript.}
+#'     \item{\code{rowRanges(se)}}{the transcript \code{annotations} provided in the argument.}
+#'     \item{\code{colData(se)}}{per-cell (or per-sample) metadata carried over from
+#'     \code{quantData}, such as \code{id}, \code{sampleName}, and \code{barcode}.}
+#'     \item{\code{metadata(se)$incompatibleCounts}}{per-gene counts of reads not compatible
+#'     with any annotated transcript. \code{\link{transcriptToGeneExpression}} adds these back
+#'     into the gene-level counts to give more accurate gene expression estimates, so reads
+#'     that cannot be pinned to one transcript still count toward their gene.}
+#'     \item{\code{metadata(se)$nonuniqueCounts}}{per-gene counts of reads compatible with more
+#'     than one transcript (ambiguous assignments). Like \code{incompatibleCounts}, these are
+#'     added back into the gene-level counts by \code{\link{transcriptToGeneExpression}} for
+#'     more accurate gene expression estimates, and also indicate how many reads were
+#'     ambiguously assigned.}
+#'     \item{\code{metadata(se)$seType}}{a label identifying the \code{SummarizedExperiment} object as \code{"uniqueCounts"} type}
+#' }
+#' @seealso \code{\link{bambu.singlecell}} and \code{\link{bambu}} for producing \code{quantData};
+#' \code{\link{transcriptToGeneExpression}} to collapse the result to gene-level counts.
+#' @examples
+#' ## This works on both bulk and single-cell quantData;
+#' ## here we demonstrate with the single-cell test data.
+#' rds.dir <- system.file("extdata", "single_cell", package = "bambu")
+#' quantData <- readRDS(file.path(rds.dir,
+#'     "quantData_GIS_cellMix_HepG2-A549-H9-HEYA8_5primeSingleCell_multisample_chr9_1_1000000.rds"))
+#' extendedAnnotations <- readRDS(file.path(rds.dir,
+#'     "extendedAnnotations_GIS_cellMix_HepG2-A549-H9-HEYA8_5primeSingleCell_multisample_chr9_1_1000000.rds"))
+#' uniqueCountsSe <- getUniqueCountsSe(quantData, extendedAnnotations)
 #' @import data.table
 #' @export
-generateUniqueCountsSEFromQuantData <- function(quantData, annotations) {
+getUniqueCountsSe <- function(quantData, annotations) {
     uniqueCountsList <- lapply(quantData, function(x) {
         readClassDt <- getReadClassDt(x)
         x_filtered <- readClassDt %>% filter(!multi_align & !is.na(eqClass.match))
