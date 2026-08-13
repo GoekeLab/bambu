@@ -45,6 +45,7 @@ if (getRversion() >= "2.15.1") {
         "maxTxScore.noFit.combined","maxTxScore.noFit.new",
         "txScore.noFit","n.obs","nObs_list","K_list","txids_list",
         "anyEqual","txScore.noFit","txidTemp",
-        "subjectHits.y", "txNumberFiltered"
+        "subjectHits.y", "txNumberFiltered",
+        "li", "gi", "nsrc", "nsrp", "nstx", "mts", "mtsnf"
     ))
 }
