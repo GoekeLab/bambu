@@ -1,3 +1,8 @@
+bambu v3.13.2 (change date: 2026-08-13)
+==========================================
+Minor fixes:
+    * Reduced peak memory in combineSplicedTranscriptModels by storing the per-sample start/end/readCount values in long form instead of one column trio per sample. The wide table is almost entirely empty at scale (0.813% occupancy at 1109 samples), and the join fold held a second copy of it, so large sample sets could not complete. Output is unchanged; the previous implementation is retained and used whenever the sparse path cannot guarantee an identical result.
+
 bambu v3.2.0 (change date: 2023-Apr-26)
 ==========================================
 Minor fixes:

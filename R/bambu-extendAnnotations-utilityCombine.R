@@ -31,38 +31,240 @@ isore.combineTranscriptCandidates <- function(readClassList,
 
 
 #' combine spliced transcript models
+#'
+#' Dispatches to a sparse reduction, falling back to the original dense
+#' implementation when the sparse path cannot reproduce it exactly (see
+#' combineSplicedTranscriptModelsSparse). Both return the same 12 columns,
+#' in the same order, with the same row order.
 #' @noRd
-combineSplicedTranscriptModels <- function(readClassList, bpParameters, 
-        min.readCount, min.readFractionByGene, min.txScore.multiExon, 
+combineSplicedTranscriptModels <- function(readClassList, bpParameters,
+        min.readCount, min.readFractionByGene, min.txScore.multiExon,
         min.txScore.singleExon, verbose){
     bpParameters$progressbar = FALSE
     options(scipen = 999) #maintain numeric basepair locations not sci.notfi.
     start.ptm <- proc.time()
     n_sample <- length(readClassList)
-    nGroups = max(ceiling(n_sample/10),min(bpworkers(bpParameters), 
+    nGroups = max(ceiling(n_sample/10),min(bpworkers(bpParameters),
                                             round(n_sample/2)))
     indexList <- sample(rep(seq_len(nGroups), length.out=n_sample))
     indexList <- splitAsList(seq_len(n_sample), indexList)
-    combinedFeatureTibbleList <- bplapply(seq_along(indexList), function(g){
-        indexVec <- indexList[[g]]
-        return(sequentialCombineFeatureTibble(readClassList[indexVec],
-            indexVec, intraGroup = TRUE, 
-            min.readCount = min.readCount, 
-            min.readFractionByGene = min.readFractionByGene, 
-            min.txScore.multiExon = min.txScore.multiExon,
-            min.txScore.singleExon = min.txScore.singleExon))
-    }, BPPARAM = bpParameters)
-    combinedFeatureTibble <- 
-        sequentialCombineFeatureTibble(combinedFeatureTibbleList, 
-            indexList = NULL, intraGroup = FALSE) 
-    combinedFeatureTibble <- updateStartEndReadCount(combinedFeatureTibble)
+    combinedFeatureTibble <- NULL
+    ## With fewer than 3 samples nGroups is 1, so the dense path performs no
+    ## full_join at all and its NSample* columns stay logical while maxTxScore
+    ## keeps NAs. Reproducing that column-type quirk is not worth it; defer.
+    if (n_sample >= 3)
+        combinedFeatureTibble <- combineSplicedTranscriptModelsSparse(
+            readClassList, indexList, bpParameters, min.readCount,
+            min.readFractionByGene, min.txScore.multiExon,
+            min.txScore.singleExon)
+    if (is.null(combinedFeatureTibble))
+        combinedFeatureTibble <- combineSplicedTranscriptModelsDense(
+            readClassList, indexList, bpParameters, min.readCount,
+            min.readFractionByGene, min.txScore.multiExon,
+            min.txScore.singleExon)
     end.ptm <- proc.time()
     if (verbose) message("combing spliced feature tibble objects across all ",
         "samples in ", round((end.ptm - start.ptm)[3] / 60, 1)," mins.")
     return(combinedFeatureTibble)
 }
 
-#' Sequentially combine feature tibbles 
+#' combine spliced transcript models by joining per-sample columns
+#'
+#' The original implementation: builds one wide table carrying a start, end and
+#' readCount column per sample, then reduces it row-wise.
+#' @noRd
+combineSplicedTranscriptModelsDense <- function(readClassList, indexList,
+        bpParameters, min.readCount, min.readFractionByGene,
+        min.txScore.multiExon, min.txScore.singleExon){
+    combinedFeatureTibbleList <- bplapply(seq_along(indexList), function(g){
+        indexVec <- indexList[[g]]
+        return(sequentialCombineFeatureTibble(readClassList[indexVec],
+            indexVec, intraGroup = TRUE,
+            min.readCount = min.readCount,
+            min.readFractionByGene = min.readFractionByGene,
+            min.txScore.multiExon = min.txScore.multiExon,
+            min.txScore.singleExon = min.txScore.singleExon))
+    }, BPPARAM = bpParameters)
+    combinedFeatureTibble <-
+        sequentialCombineFeatureTibble(combinedFeatureTibbleList,
+            indexList = NULL, intraGroup = FALSE)
+    return(updateStartEndReadCount(combinedFeatureTibble))
+}
+
+#' combine spliced transcript models without materialising per-sample columns
+#'
+#' The dense path builds a table whose rows are distinct intron chains and whose
+#' columns are 3n+9 for n samples. Because a read class is observed in only a
+#' small fraction of samples, that table is almost entirely NA -- measured at
+#' 0.813% occupancy for n = 1109 -- and the join fold holds a second copy of it,
+#' so peak memory reaches several times the table itself and large sample sets
+#' cannot complete.
+#'
+#' This stores only the populated (chain, sample) cells in long form and reduces
+#' them by chain, which makes memory scale with observations rather than with
+#' rows x samples.
+#'
+#' Returns NULL when it cannot guarantee an identical result, so the caller can
+#' fall back to the dense implementation.
+#' @noRd
+combineSplicedTranscriptModelsSparse <- function(readClassList, indexList,
+        bpParameters, min.readCount, min.readFractionByGene,
+        min.txScore.multiExon, min.txScore.singleExon){
+    res <- bplapply(seq_along(indexList), function(g){
+        indexVec <- as.integer(indexList[[g]])
+        return(sparseGroupFeatures(readClassList[indexVec], indexVec,
+            min.readCount = min.readCount,
+            min.readFractionByGene = min.readFractionByGene,
+            min.txScore.multiExon = min.txScore.multiExon,
+            min.txScore.singleExon = min.txScore.singleExon))
+    }, BPPARAM = bpParameters)
+    if (any(vapply(res, is.null, logical(1)))) return(NULL)
+    ## Global first-appearance key ids, over the same group-major traversal the
+    ## dense path uses, so row order is preserved.
+    allk <- rbindlist(lapply(res, `[[`, "gk"), idcol = "g")
+    for (i in seq_along(res)) res[[i]]$gk <- NULL
+    allk[, gi := .GRP, by = c("intronStarts", "intronEnds", "chr", "strand")]
+    nkey <- max(allk$gi)
+    keyDT <- allk[!duplicated(gi), .(intronStarts, intronEnds, chr, strand)]
+    if (nrow(keyDT) != nkey) return(NULL)
+    agg <- allk[, .(nsrc = sum(nsrc), nsrp = sum(nsrp), nstx = sum(nstx),
+        mts = max(mts), mtsnf = max(mtsnf)), by = gi]
+    if (!identical(agg$gi, seq_len(nkey))) return(NULL)
+    cellCount <- vapply(seq_along(res), function(i) nrow(res[[i]]$cells), 0L)
+    gvec <- allk$g
+    giVec <- allk$gi
+    rm(allk)
+    GI <- integer(sum(cellCount)); ST <- integer(sum(cellCount))
+    EN <- integer(sum(cellCount)); RC <- integer(sum(cellCount))
+    pos <- 1L
+    for (i in seq_along(res)){
+        cl <- res[[i]]$cells
+        keyMap <- giVec[gvec == i] # group-local id -> global id
+        if (nrow(cl)){
+            sl <- pos:(pos + nrow(cl) - 1L)
+            GI[sl] <- keyMap[cl$li]
+            ST[sl] <- cl$start; EN[sl] <- cl$end; RC[sl] <- cl$readCount
+            pos <- pos + nrow(cl)
+        }
+        res[[i]]$cells <- NULL
+    }
+    rm(res, gvec, giVec)
+    if (anyNA(ST) || anyNA(EN) || anyNA(RC)) return(NULL)
+    ord <- order(GI, method = "radix")
+    GI <- GI[ord]; ST <- ST[ord]; EN <- EN[ord]; RC <- RC[ord]
+    rm(ord)
+    reduced <- reduceSparseCells(GI, ST, EN, RC, nkey)
+    if (is.null(reduced)) return(NULL)
+    ## A missing score is stored as -Inf while reducing so max() stays valid.
+    mts <- agg$mts; mts[is.infinite(mts) & mts < 0] <- NA_real_
+    mtsnf <- agg$mtsnf; mtsnf[is.infinite(mtsnf) & mtsnf < 0] <- NA_real_
+    ## pmax() on a logical returns double, so the dense path's NSample* columns
+    ## are double once any join has happened. Match that.
+    return(data.table(start = reduced$start, end = reduced$end,
+        readCount = reduced$readCount, intronStarts = keyDT$intronStarts,
+        intronEnds = keyDT$intronEnds, chr = keyDT$chr,
+        strand = keyDT$strand, maxTxScore = as.numeric(mts),
+        maxTxScore.noFit = as.numeric(mtsnf),
+        NSampleReadCount = as.numeric(agg$nsrc),
+        NSampleReadProp = as.numeric(agg$nsrp),
+        NSampleTxScore = as.numeric(agg$nstx)))
+}
+
+#' summarise one group of samples into a key table and its populated cells
+#' @noRd
+sparseGroupFeatures <- function(readClassList, indexVec, min.readCount,
+        min.readFractionByGene, min.txScore.multiExon, min.txScore.singleExon){
+    tabs <- vector("list", length(indexVec))
+    for (s in seq_along(indexVec)){
+        featureTibble <- extractFeaturesFromReadClassSE(
+            readClassSe = readClassList[[s]], sample_id = indexVec[s],
+            min.readCount = min.readCount,
+            min.readFractionByGene = min.readFractionByGene,
+            min.txScore.multiExon = min.txScore.multiExon,
+            min.txScore.singleExon = min.txScore.singleExon)
+        setDT(featureTibble)
+        ## One row per key per sample is what makes per-key counters equal to
+        ## per-row counters; a duplicate would fan out in the dense join.
+        if (anyDuplicated(featureTibble,
+            by = c("intronStarts", "intronEnds", "chr", "strand")))
+            return(NULL)
+        tabs[[s]] <- featureTibble
+    }
+    big <- rbindlist(tabs)
+    rm(tabs)
+    big[, li := .GRP, by = c("intronStarts", "intronEnds", "chr", "strand")]
+    gk <- big[, .(intronStarts = intronStarts[1L],
+        intronEnds = intronEnds[1L], chr = chr[1L], strand = strand[1L],
+        nsrc = sum(NSampleReadCount), nsrp = sum(NSampleReadProp),
+        nstx = sum(NSampleTxScore, na.rm = TRUE), # NA counts as 0, as pmax0NA
+        mts = if (all(is.na(maxTxScore))) -Inf else
+            max(maxTxScore, na.rm = TRUE),
+        mtsnf = if (all(is.na(maxTxScore.noFit))) -Inf else
+            max(maxTxScore.noFit, na.rm = TRUE)), by = li]
+    if (!identical(gk$li, seq_len(nrow(gk)))) return(NULL)
+    gk[, li := NULL]
+    return(list(gk = gk, cells = big[, .(li, start, end, readCount)]))
+}
+
+#' reduce long-form cells to one start, end and readCount per key
+#' @noRd
+reduceSparseCells <- function(GI, ST, EN, RC, nkey, cellChunk = 2e7){
+    readCountSum <- numeric(nkey)
+    summed <- rowsum(as.numeric(RC), GI, reorder = FALSE)
+    readCountSum[as.integer(rownames(summed))] <- summed[, 1L]
+    rm(summed)
+    if (any(readCountSum > .Machine$integer.max)) return(NULL)
+    startOut <- rep(Inf, nkey)
+    endOut <- rep(Inf, nkey)
+    ## Chunk on key boundaries so no key is split across calls.
+    brk <- c(0L, which(GI[-1L] != GI[-length(GI)]), length(GI))
+    step <- max(1L, as.integer(cellChunk))
+    b0 <- 1L
+    while (b0 <= length(brk) - 1L){
+        b1 <- b0
+        while (b1 < length(brk) - 1L && (brk[b1 + 2L] - brk[b0]) <= step)
+            b1 <- b1 + 1L
+        idx <- (brk[b0] + 1L):brk[b1 + 1L]
+        keys <- GI[idx]
+        loK <- keys[1L]; hiK <- keys[length(keys)]
+        startOut[loK:hiK] <- upperMedianByGroup(keys - loK + 1L, ST[idx],
+            RC[idx], hiK - loK + 1L)
+        endOut[loK:hiK] <- upperMedianByGroup(keys - loK + 1L, EN[idx],
+            RC[idx], hiK - loK + 1L)
+        b0 <- b1 + 1L
+    }
+    if (any(is.infinite(startOut)) || any(is.infinite(endOut))) return(NULL)
+    return(list(start = as.integer(startOut), end = as.integer(endOut),
+        readCount = as.integer(readCountSum)))
+}
+
+#' readCount-weighted median per group, without expanding the values
+#'
+#' readCountWeightedMedian() repeats each value by its read count, takes the
+#' type 7 median and snaps up to the nearest observed value. Because the weights
+#' are integers that is exactly the element at floor(N/2)+1 of the expanded
+#' sorted vector, which can be located from the cumulative weights alone.
+#' @noRd
+upperMedianByGroup <- function(groupIndex, values, weights, ngroup){
+    out <- rep(Inf, ngroup)
+    if (!length(groupIndex)) return(out)
+    ord <- order(groupIndex, values, method = "radix")
+    groupIndex <- groupIndex[ord]
+    values <- values[ord]
+    cumWeight <- cumsum(as.numeric(weights[ord]))
+    starts <- c(1L, which(groupIndex[-1L] !=
+        groupIndex[-length(groupIndex)]) + 1L)
+    priorWeight <- c(0, cumWeight)[starts]
+    lastIdx <- c(starts[-1L] - 1L, length(cumWeight))
+    groupTotal <- cumWeight[lastIdx] - priorWeight
+    target <- priorWeight + floor(groupTotal / 2) + 1
+    hit <- findInterval(target - 0.5, cumWeight) + 1L
+    nonEmpty <- groupTotal > 0
+    out[groupIndex[starts][nonEmpty]] <- values[hit[nonEmpty]]
+    return(out)
+}
+
+#' Sequentially combine feature tibbles
 #' @noRd
 sequentialCombineFeatureTibble <- function(readClassList,
         indexList,intraGroup,min.readCount,min.readFractionByGene,
