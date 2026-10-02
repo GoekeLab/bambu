@@ -147,11 +147,16 @@ checkInputs <- function(annotations, reads, readClass.outputDir, genomeSequence)
 checkInputSequence <- function(genomeSequence) {
     if (is.null(genomeSequence)) stop("Reference genome sequence is missing,
         please provide fasta file or BSgenome name, see available.genomes()")
+    if (is.character(genomeSequence) && !file.exists(genomeSequence)) {
+        isBSgenomeName <- tryCatch(
+            genomeSequence %in% BSgenome::available.genomes(),
+            error = function(cond) FALSE)
+        if (isBSgenomeName) {
+            genomeSequence <- BSgenome::getBSgenome(genomeSequence)
+            return(genomeSequence)
+        }
+    }
     if(is.character(genomeSequence)){
-    if (genomeSequence %in% BSgenome::available.genomes()) {
-        genomeSequence <- BSgenome::getBSgenome(genomeSequence)
-        return(genomeSequence)
-    } 
     tryCatch(
     {
         if (.Platform$OS.type == "windows") {
