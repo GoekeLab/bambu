@@ -235,7 +235,7 @@ a function to visualise the extended annotation and expression estimation for
 individual genes. Here we look at gene ENSG00000099968 and visualise the
 transcript coordinates for annotated and novel isoforms and expression levels 
 for these isoforms across all samples. 
-```{r, fig.width = 8, fig.height = 10}
+```{r, fig.width = 8, fig.height = 10, eval = FALSE}
 plotBambu(se.multiSample, type = "annotation", gene_id = "ENSG00000099968")
 ```
 
