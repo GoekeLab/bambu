@@ -498,6 +498,17 @@ rowData(se)
 
 ### Release History
 
+**bambu v3.15.1**
+
+Release date: 2026-10-02
+
+Minor changes:
+
+- temporarily disable ggbio related functions in vignettes and unit test function
+- disable activation of BSgenome when local existing genome fasta file is provided [issue](https://github.com/GoekeLab/bambu/issues/339)
+- update contact email addresses 
+
+
 **bambu v3.12.1**
 
 Release date: 2026-01-14
