@@ -1,3 +1,10 @@
+bambu v3.15.1 (change date: 2026-10-02)
+==========================================
+Minor changes:
+    * Temporarily disable ggbio related functions in vignettes and unit test function
+	* Disable activation of BSgenome when local existing genome fasta file is provided [issue](https://github.com/GoekeLab/bambu/issues/339)
+	* Update contact email addresses 
+
 bambu v3.2.0 (change date: 2023-Apr-26)
 ==========================================
 Minor fixes:
