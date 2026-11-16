@@ -91,22 +91,27 @@ sequentialCombineFeatureTibble <- function(readClassList,
 updateStartEndReadCount <- function(combinedFeatureTibble){
     cells <- rbindlist(combinedFeatureTibble$cells)
     chains <- as.data.table(combinedFeatureTibble$chains)
-    startEndDt <- cells[,
-        .(start = readCountWeightedMedian(.SD, "start", "readCount"),
-        end = readCountWeightedMedian(.SD, "end", "readCount"),
-        readCount = sum(readCount)), keyby = chain]
-    return(cbind(startEndDt[, .(start, end, readCount)],
+    readCount <- cells[, .(readCount = sum(readCount)), keyby = chain]$readCount
+    return(data.table(
+        start = readCountWeightedMedian(cells$chain, cells$start, cells$readCount),
+        end = readCountWeightedMedian(cells$chain, cells$end, cells$readCount),
+        readCount = readCount,
         chains[, .(intronStarts, intronEnds, chr, strand, maxTxScore,
             maxTxScore.noFit, NSampleReadCount, NSampleReadProp,
             NSampleTxScore)]))
 }
 
-#' Function to get median value without interpolation using certain column names
+#' Get the median of each chain's values, weighted by read count, without
+#' interpolation: element floor(N/2)+1 of the values repeated by read count.
+#' Chains must be numbered 1 to k.
 #' @noRd
-readCountWeightedMedian <- function(dt, valuevar, timesvar){
-    sortVector <- rep(na.omit(unlist(dt[,..valuevar])), 
-                times = as.integer(na.omit(unlist(dt[,..timesvar]))))
-    return(min(sortVector[sortVector>=quantile(sortVector, probs = 0.5)]))
+readCountWeightedMedian <- function(chain, value, readCount){
+    ord <- order(chain, value, method = "radix")
+    cum <- cumsum(as.numeric(readCount[ord]))
+    last <- cumsum(tabulate(chain))
+    prior <- c(0, cum[last])[seq_along(last)]
+    return(value[ord][findInterval(prior + floor((cum[last] - prior) / 2) + 0.5,
+        cum) + 1L])
 }
 
 
