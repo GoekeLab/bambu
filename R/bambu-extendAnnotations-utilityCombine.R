@@ -86,15 +86,15 @@ sequentialCombineFeatureTibble <- function(readClassList,
 
 
 
-#' Collapse the long-form cells to one row per intron chain
+#' Collapse the long-form sample chain rows to one row per intron chain
 #' @noRd
 updateStartEndReadCount <- function(combinedFeatureTibble){
-    cells <- rbindlist(combinedFeatureTibble$cells)
+    sampleChainRows <- rbindlist(combinedFeatureTibble$sampleChainRows)
     chains <- as.data.table(combinedFeatureTibble$chains)
-    readCount <- cells[, .(readCount = sum(readCount)), keyby = chain]$readCount
+    readCount <- sampleChainRows[, .(readCount = sum(readCount)), keyby = chain]$readCount
     return(data.table(
-        start = readCountWeightedMedian(cells$chain, cells$start, cells$readCount),
-        end = readCountWeightedMedian(cells$chain, cells$end, cells$readCount),
+        start = readCountWeightedMedian(sampleChainRows$chain, sampleChainRows$start, sampleChainRows$readCount),
+        end = readCountWeightedMedian(sampleChainRows$chain, sampleChainRows$end, sampleChainRows$readCount),
         readCount = readCount,
         chains[, .(intronStarts, intronEnds, chr, strand, maxTxScore,
             maxTxScore.noFit, NSampleReadCount, NSampleReadProp,
@@ -116,16 +116,16 @@ readCountWeightedMedian <- function(chain, value, readCount){
 
 
 #' Function to combine featureTibble and create the NSample variables.
-#' Returns a list: chains has one row per intron chain, and cells holds the
-#' start, end and readCount of each chain in each sample in long form, where
-#' cells$chain is a row number of chains.
+#' Returns a list: chains has one row per intron chain, and sampleChainRows
+#' holds the start, end and readCount of each chain in each sample in long
+#' form, where sampleChainRows$chain is a row number of chains.
 #' @noRd
 combineFeatureTibble <- function(combinedFeatureTibble,
         featureTibbleSummarised, intraGroup = TRUE){
     new <- featureTibbleSummarised
     if (intraGroup) {
         new <- list(chains = select(new, -start, -end, -readCount),
-            cells = list(data.table(chain = seq_len(nrow(new)),
+            sampleChainRows = list(data.table(chain = seq_len(nrow(new)),
                 start = new$start, end = new$end, readCount = new$readCount)))
     }
     if (is.null(combinedFeatureTibble)) return(new)
@@ -149,9 +149,11 @@ combineFeatureTibble <- function(combinedFeatureTibble,
     rowOfNew <- integer(nrow(new$chains))
     inNew <- which(!is.na(combinedTable$newRow))
     rowOfNew[combinedTable$newRow[inNew]] <- inNew
-    newCells <- lapply(new$cells, function(x) x[, chain := rowOfNew[chain]])
+    newSampleChainRows <- lapply(new$sampleChainRows,
+        function(x) x[, chain := rowOfNew[chain]])
     return(list(chains = select(combinedTable, -newRow),
-        cells = c(combinedFeatureTibble$cells, newCells)))
+        sampleChainRows = c(combinedFeatureTibble$sampleChainRows,
+            newSampleChainRows)))
 }
 #' pmax replace NAs with 0
 #' @noRd
