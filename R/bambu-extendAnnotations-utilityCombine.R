@@ -86,7 +86,9 @@ sequentialCombineFeatureTibble <- function(readClassList,
 
 
 
-#' Collapse the long-form sample chain rows to one row per intron chain
+#' Collapse the long-form sample chain rows to one row per intron chain,
+#' containing the read count-weighted median start and end coordinates and
+#' the total read count
 #' @noRd
 updateStartEndReadCount <- function(combinedFeatureTibble){
     sampleChainRows <- rbindlist(combinedFeatureTibble$sampleChainRows)
@@ -101,9 +103,10 @@ updateStartEndReadCount <- function(combinedFeatureTibble){
             NSampleTxScore)]))
 }
 
-#' Get the median of each chain's values, weighted by read count, without
-#' interpolation: element floor(N/2)+1 of the values repeated by read count.
-#' Chains must be numbered 1 to k.
+#' Get the median of each chain's start or end across samples, weighted by
+#' read count. Sorts all rows by chain and value, and keeps a running total
+#' of the read count within each chain. For a chain with N reads, picks the
+#' first row whose running total reaches floor(N/2)+1
 #' @noRd
 readCountWeightedMedian <- function(chain, value, readCount){
     ord <- order(chain, value, method = "radix")
@@ -117,8 +120,8 @@ readCountWeightedMedian <- function(chain, value, readCount){
 
 #' Function to combine featureTibble and create the NSample variables.
 #' Returns a list: chains has one row per intron chain, and sampleChainRows
-#' holds the start, end and readCount of each chain in each sample in long
-#' form, where sampleChainRows$chain is a row number of chains.
+#' holds a row number, and the start, end and readCount of each chain from
+#' each sample in long form.
 #' @noRd
 combineFeatureTibble <- function(combinedFeatureTibble,
         featureTibbleSummarised, intraGroup = TRUE){
