@@ -79,78 +79,84 @@ sequentialCombineFeatureTibble <- function(readClassList,
                     min.txScore.singleExon = min.txScore.singleExon)
         }
         combinedFeatureTibble <- combineFeatureTibble(combinedFeatureTibble,
-            combinedListNew, index = indexList[s], intraGroup)
+            combinedListNew, intraGroup)
     }
     return(combinedFeatureTibble)
 }
 
 
 
-#' @noRd 
-updateStartEndReadCount <- function(combinedFeatureTibble){
-    setDT(combinedFeatureTibble)
-    combinedFeatureTibble[, rowID := .I]
-    
-    colNames <- colnames(combinedFeatureTibble)
-    readCountCols <- sort(colNames[grep("^readCount", colNames)]) # to make sure it's ordered by sample name
-    startCols <- sort(colNames[grep("^start", colNames)])
-    endCols <- sort(colNames[grep("^end", colNames)])
-    
-    startEndDt <- combinedFeatureTibble[, 
-        .(start = readCountWeightedMedian(.SD,x,y),
-        end = readCountWeightedMedian(.SD,z,y),
-        readCount = sum(.SD[,y], na.rm = TRUE)),
-        by = rowID,  env = I(list(x = startCols, y = readCountCols,z = endCols))]
-
-    combinedFeatureTibble <- startEndDt[combinedFeatureTibble[,.(intronStarts, intronEnds, chr, strand, maxTxScore, 
-                                                                 maxTxScore.noFit, NSampleReadCount, NSampleReadProp, 
-                                                                 NSampleTxScore, rowID)], on = "rowID"]
-    combinedFeatureTibble[, rowID := NULL]
-    return(combinedFeatureTibble)
-}
-
-#' Function to get median value without interpolation using certain column names
+#' Collapse the long-form sample chain rows to one row per intron chain,
+#' containing the read count-weighted median start and end coordinates and
+#' the total read count
 #' @noRd
-readCountWeightedMedian <- function(dt, valuevar, timesvar){
-    sortVector <- rep(na.omit(unlist(dt[,..valuevar])), 
-                times = as.integer(na.omit(unlist(dt[,..timesvar]))))
-    return(min(sortVector[sortVector>=quantile(sortVector, probs = 0.5)]))
+updateStartEndReadCount <- function(combinedFeatureTibble){
+    sampleChainRows <- rbindlist(combinedFeatureTibble$sampleChainRows)
+    chains <- as.data.table(combinedFeatureTibble$chains)
+    readCount <- sampleChainRows[, .(readCount = sum(readCount)), keyby = chain]$readCount
+    return(data.table(
+        start = readCountWeightedMedian(sampleChainRows$chain, sampleChainRows$start, sampleChainRows$readCount),
+        end = readCountWeightedMedian(sampleChainRows$chain, sampleChainRows$end, sampleChainRows$readCount),
+        readCount = readCount,
+        chains[, .(intronStarts, intronEnds, chr, strand, maxTxScore,
+            maxTxScore.noFit, NSampleReadCount, NSampleReadProp,
+            NSampleTxScore)]))
+}
+
+#' Get the median of each chain's start or end across samples, weighted by
+#' read count. Sorts all rows by chain and value, and keeps a running total
+#' of the read count within each chain. For a chain with N reads, picks the
+#' first row whose running total reaches floor(N/2)+1
+#' @noRd
+readCountWeightedMedian <- function(chain, value, readCount){
+    ord <- order(chain, value, method = "radix")
+    cum <- cumsum(as.numeric(readCount[ord]))
+    last <- cumsum(tabulate(chain))
+    prior <- c(0, cum[last])[seq_along(last)]
+    return(value[ord][findInterval(prior + floor((cum[last] - prior) / 2) + 0.5,
+        cum) + 1L])
 }
 
 
-#' Function to combine featureTibble and create the NSample variables 
+#' Function to combine featureTibble and create the NSample variables.
+#' Returns a list: chains has one row per intron chain, and sampleChainRows
+#' holds a row number, and the start, end and readCount of each chain from
+#' each sample in long form.
 #' @noRd
 combineFeatureTibble <- function(combinedFeatureTibble,
-        featureTibbleSummarised, index=1, intraGroup = TRUE){ 
-    if (is.null(combinedFeatureTibble)) { 
-        combinedTable <- featureTibbleSummarised %>% 
-            select(intronStarts, intronEnds, chr, strand, maxTxScore, 
-            maxTxScore.noFit, NSampleReadCount, NSampleReadProp,NSampleTxScore, 
-            starts_with('start'), starts_with('end'), starts_with('readCount'))
-    } else { 
-        combinedTable = full_join(combinedFeatureTibble, 
-            featureTibbleSummarised, by = c('intronStarts', 'intronEnds', 'chr',
-            'strand'), suffix=c('.combined','.new')) %>% 
-            mutate(NSampleReadCount=pmax0NA(NSampleReadCount.combined) + 
-                        pmax0NA(NSampleReadCount.new), 
-                    NSampleReadProp = pmax0NA(NSampleReadProp.combined) + 
-                        pmax0NA(NSampleReadProp.new), 
-                    NSampleTxScore = pmax0NA(NSampleTxScore.combined) + 
-                        pmax0NA(NSampleTxScore.new),
-                    maxTxScore = pmax(maxTxScore.combined, 
-                        maxTxScore.new, na.rm = TRUE),
-                    maxTxScore.noFit = pmax(maxTxScore.noFit.combined, 
-                        maxTxScore.noFit.new, na.rm = TRUE)) %>% 
-            select(intronStarts, intronEnds, chr, strand,
-            NSampleReadCount, NSampleReadProp, NSampleTxScore, maxTxScore, 
-            maxTxScore.noFit, starts_with('start'), starts_with('end'), 
-            starts_with('readCount')) 
-    } 
-    if(intraGroup) 
-        combinedTable <- 
-            rename_with(combinedTable, ~gsub('^(end|start|readCount)$',
-                                            paste0('\\1\\.',index), .x)) 
-    return(combinedTable) 
+        featureTibbleSummarised, intraGroup = TRUE){
+    new <- featureTibbleSummarised
+    if (intraGroup) {
+        new <- list(chains = select(new, -start, -end, -readCount),
+            sampleChainRows = list(data.table(chain = seq_len(nrow(new)),
+                start = new$start, end = new$end, readCount = new$readCount)))
+    }
+    if (is.null(combinedFeatureTibble)) return(new)
+    combinedTable <- full_join(combinedFeatureTibble$chains,
+            mutate(new$chains, newRow = row_number()),
+            by = c('intronStarts', 'intronEnds', 'chr', 'strand'),
+            suffix = c('.combined', '.new')) %>%
+        mutate(NSampleReadCount = pmax0NA(NSampleReadCount.combined) +
+                    pmax0NA(NSampleReadCount.new),
+                NSampleReadProp = pmax0NA(NSampleReadProp.combined) +
+                    pmax0NA(NSampleReadProp.new),
+                NSampleTxScore = pmax0NA(NSampleTxScore.combined) +
+                    pmax0NA(NSampleTxScore.new),
+                maxTxScore = pmax(maxTxScore.combined,
+                    maxTxScore.new, na.rm = TRUE),
+                maxTxScore.noFit = pmax(maxTxScore.noFit.combined,
+                    maxTxScore.noFit.new, na.rm = TRUE)) %>%
+        select(intronStarts, intronEnds, chr, strand, NSampleReadCount,
+            NSampleReadProp, NSampleTxScore, maxTxScore, maxTxScore.noFit,
+            newRow)
+    rowOfNew <- integer(nrow(new$chains))
+    inNew <- which(!is.na(combinedTable$newRow))
+    rowOfNew[combinedTable$newRow[inNew]] <- inNew
+    newSampleChainRows <- lapply(new$sampleChainRows,
+        function(x) x[, chain := rowOfNew[chain]])
+    return(list(chains = select(combinedTable, -newRow),
+        sampleChainRows = c(combinedFeatureTibble$sampleChainRows,
+            newSampleChainRows)))
 }
 #' pmax replace NAs with 0
 #' @noRd
